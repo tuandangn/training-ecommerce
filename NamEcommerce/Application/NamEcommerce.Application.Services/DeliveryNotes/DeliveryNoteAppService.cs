@@ -2,51 +2,114 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Application.Services.Notifications;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
-using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
+using NamEcommerce.Domain.Specifications.Inventory;
 
 namespace NamEcommerce.Application.Services.DeliveryNotes;
 
-public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
+public sealed class DeliveryNoteAppService(
+    IDeliveryNoteManager deliveryNoteManager,
+    IWarehouseAppService warehouseAppService,
+    IUserAppService userAppService,
+    ISystemNotificationAppService systemNotificationAppService,
+    IEntityDataReader<Order> orderDataReader,
+    IEntityDataReader<ProductReservationLedger> productReservationDataReader,
+    IEntityDataReader<InventoryStock> inventoryStockDataReader,
+    ILocalizationAppService localizationAppService) : IDeliveryNoteAppService
 {
-    private readonly IDeliveryNoteManager _deliveryNoteManager;
-    private readonly IWarehouseAppService _warehouseAppService;
-    private readonly IUserAppService _userAppService;
-    private readonly ISystemNotificationAppService _systemNotificationAppService;
-
-    public DeliveryNoteAppService(
-        IDeliveryNoteManager deliveryNoteManager,
-        IWarehouseAppService warehouseAppService,
-        IUserAppService userAppService,
-        ISystemNotificationAppService systemNotificationAppService)
+    public async Task<CreateDeliveryNoteResultAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
     {
-        _deliveryNoteManager = deliveryNoteManager;
-        _warehouseAppService = warehouseAppService;
-        _userAppService = userAppService;
-        _systemNotificationAppService = systemNotificationAppService;
-    }
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+        {
+            return new CreateDeliveryNoteResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.OrderIsNotFound"
+            };
+        }
 
-    public async Task<DeliveryNoteAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
-    {
-        var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId);
+        var warehouse = await warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId).ConfigureAwait(false);
         if (warehouse is null)
-            throw new WarehouseIsNotFoundException(dto.WarehouseId);
+        {
+            return new CreateDeliveryNoteResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.WarehouseIsNotFound"
+            };
+        }
 
         foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
         {
             if (warehouseId == dto.WarehouseId)
                 continue;
 
-            if (await _warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
-                throw new WarehouseIsNotFoundException(warehouseId);
+            if (await warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
+            {
+                if (warehouse is null)
+                {
+                    return new CreateDeliveryNoteResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.WarehouseIsNotFound"
+                    };
+                }
+            }
+        }
+
+        var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
+        var itemsByProduct = dto.Items
+            .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
+            .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
+        foreach (var item in itemsByProduct)
+        {
+            var reservedQuantity = (await productReservationDataReader.GetListAsync(new ProductReservationLedgersOfOrderSpecification(item.ProductId, order.Id)).ConfigureAwait(false))
+                .Sum(reservation => reservation.QuantityDelta);
+            if (reservedQuantity < item.Quantity)
+            {
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = localizationAppService.GetValue("Error.CannotReleaseMoreThanReserved", [reservedQuantity, item.Quantity])
+                };
+            }
+        }
+
+        var itemsByProductWarehouse = dto.Items
+            .GroupBy(item => new { orderItemsById[item.OrderItemId].ProductId, item.WarehouseId })
+            .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
+        foreach (var item in itemsByProductWarehouse)
+        {
+            var stock = await inventoryStockDataReader.FirstOrDefaultAsync(new InventoryStockSpecification(item.ProductId, item.WarehouseId)).ConfigureAwait(false);
+            if (stock is null)
+            {
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = localizationAppService.GetValue("Error.InsufficientStock", [item.ProductId, item.WarehouseId, item.Quantity, 0])
+                };
+            }
+            if (stock.QuantityAvailable < item.Quantity)
+            {
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = localizationAppService.GetValue("Error.InsufficientStock", [item.ProductId, item.WarehouseId, item.Quantity, stock.QuantityAvailable])
+                };
+            }
         }
 
         var domainDto = new CreateDeliveryNoteDto
@@ -68,12 +131,16 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                 Quantity = i.Quantity
             }).ToList()
         };
+        var result = await deliveryNoteManager.CreateFromOrderAsync(domainDto).ConfigureAwait(false);
 
-        var result = await _deliveryNoteManager.CreateFromOrderAsync(domainDto).ConfigureAwait(false);
-        return result.ToDto();
+        return new CreateDeliveryNoteResultAppDto
+        {
+            Success = true,
+            CreatedId = result.Id
+        };
     }
 
-    public async Task<Guid> CreateAsDeliveredFromVendorReturnAsync(CreateDeliveryNoteFromVendorReturnAppDto dto)
+    public async Task<CreateDeliveryNoteResultAppDto> CreateAsDeliveredFromVendorReturnAsync(CreateDeliveryNoteFromVendorReturnAppDto dto)
     {
         var domainDto = new CreateDeliveryNoteFromVendorReturnDto
         {
@@ -87,25 +154,30 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                 UnitCost = i.UnitCost
             })
         };
+        var createdId = await deliveryNoteManager.CreateAsDeliveredAsync(domainDto).ConfigureAwait(false);
 
-        return await _deliveryNoteManager.CreateAsDeliveredAsync(domainDto).ConfigureAwait(false);
+        return new CreateDeliveryNoteResultAppDto
+        {
+            Success = true,
+            CreatedId = createdId
+        };
     }
 
     public async Task CancelAsync(Guid id)
     {
-        await _deliveryNoteManager.CancelAsync(id).ConfigureAwait(false);
+        await deliveryNoteManager.CancelAsync(id).ConfigureAwait(false);
     }
 
     public async Task ConfirmAsync(Guid id)
     {
-        await _deliveryNoteManager.ConfirmAsync(id).ConfigureAwait(false);
+        await deliveryNoteManager.ConfirmAsync(id).ConfigureAwait(false);
     }
 
     public async Task<CommonActionResultDto> MarkDeliveringAsync(Guid id)
     {
         try
         {
-            await _deliveryNoteManager.MarkDeliveringAsync(id).ConfigureAwait(false);
+            await deliveryNoteManager.MarkDeliveringAsync(id).ConfigureAwait(false);
             return CommonActionResultDto.CreateSuccess();
         }
         catch (NamEcommerceDomainException ex)
@@ -118,13 +190,13 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
     {
         try
         {
-            var note = await _deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+            var note = await deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
             var isCompletedByAdminOnBehalf = note is not null
                 && note.AssignedDeliveryUserId.HasValue
                 && note.Status != DeliveryNoteStatus.Delivered
                 && !string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
 
-            await _deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
+            await deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
                 PictureIds = dto.PictureIds,
@@ -142,8 +214,8 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                             AcceptedQuantity = item.AcceptedQuantity,
                             RejectedQuantity = item.RejectedQuantity,
                             RejectReason = item.RejectReason
-                          }).ToList()
-                      }
+                        }).ToList()
+                    }
                 ,
                 CompletionMetadata = dto.CompletionMetadata is null
                     ? null
@@ -160,7 +232,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             }).ConfigureAwait(false);
 
             if (isCompletedByAdminOnBehalf)
-                await _systemNotificationAppService.CreateAsync(
+                await systemNotificationAppService.CreateAsync(
                     DeliveryNoteSystemNotificationComposer.ShipperNotResponded(
                         note!.Id, note.Code, note.AssignedDeliveryFullName)).ConfigureAwait(false);
 
@@ -199,7 +271,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             };
         }
 
-        var user = await _userAppService.GetUserByIdAsync(dto.AssignedDeliveryUserId).ConfigureAwait(false);
+        var user = await userAppService.GetUserByIdAsync(dto.AssignedDeliveryUserId).ConfigureAwait(false);
         if (user is null)
         {
             return new AssignDeliveryUserResultAppDto
@@ -209,7 +281,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             };
         }
 
-        var isDeliveryStaff = await _userAppService
+        var isDeliveryStaff = await userAppService
             .IsUserInRoleAsync(user.Id, SystemUserRoleNames.DeliveryStaff)
             .ConfigureAwait(false);
         if (!isDeliveryStaff)
@@ -223,7 +295,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 
         try
         {
-            await _deliveryNoteManager.AssignDeliveryUserAsync(new AssignDeliveryUserDto
+            await deliveryNoteManager.AssignDeliveryUserAsync(new AssignDeliveryUserDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
                 AssignedDeliveryUserId = user.Id,
@@ -248,7 +320,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 
     public async Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id)
     {
-        var result = await _deliveryNoteManager.GetByIdAsync(id).ConfigureAwait(false);
+        var result = await deliveryNoteManager.GetByIdAsync(id).ConfigureAwait(false);
         return result?.ToDto();
     }
 
@@ -257,7 +329,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         // For simplicity, we use GetListAsync and filter it down.
         // In a real app we might add a specific domain query.
         // Assuming page 0 to MAX gets enough for a single order's notes.
-        var paged = await _deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
+        var paged = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
         return paged.Where(d => d.OrderId == orderId)
                     .Select(d => d.ToDto())
                     .OrderBy(d => d.CreatedOnUtc)
@@ -266,7 +338,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 
     public async Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
-        var paged = await _deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+        var paged = await deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var mappedItems = paged.Items.Select(d => d.ToDto()).ToList();
         var result = PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
         return (PagedDataAppDto<DeliveryNoteAppDto>)result;

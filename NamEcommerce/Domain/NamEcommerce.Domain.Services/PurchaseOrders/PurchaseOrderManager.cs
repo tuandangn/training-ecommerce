@@ -23,6 +23,7 @@ using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -45,6 +46,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IDirectShipManager _directShipManager;
     private readonly IVendorDebtManager _vendorDebtManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
+    private readonly EntityCodeGenerator _codeGenerator;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
@@ -58,7 +60,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IDirectShipManager directShipManager,
         IVendorDebtManager vendorDebtManager,
-        ICurrentUserAccessor currentUserAccessor)
+        ICurrentUserAccessor currentUserAccessor,
+        EntityCodeGenerator codeGenerator)
     {
         _purchaseOrderRepository = poRepository;
         _purchaseOrderDataReader = purchaseOrderDataReader;
@@ -75,6 +78,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _directShipManager = directShipManager;
         _vendorDebtManager = vendorDebtManager;
         _currentUserAccessor = currentUserAccessor;
+        _codeGenerator = codeGenerator;
     }
 
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
@@ -220,7 +224,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto)
     {
-        var source = await _purchaseOrderDataReader.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
+        var source = await _purchaseOrderRepository.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
         if (source is null)
             throw new PurchaseOrderIsNotFoundException(dto.SourcePurchaseOrderId);
 
@@ -419,7 +423,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         }
 
         var createResult = await CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(createResult.CreatedId).ConfigureAwait(false);
+        // Repository.GetByIdAsync tìm được PO vừa stage (chưa save) trong ChangeTracker — reader query DB sẽ không thấy
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(createResult.CreatedId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(createResult.CreatedId);
 
@@ -439,7 +444,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (items.Count == 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemRequired");
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
         if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
@@ -468,7 +473,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.Id);
 
@@ -515,7 +520,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
@@ -549,7 +554,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
@@ -577,7 +582,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task ClosePartialAsync(Guid purchaseOrderId, string reason)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -601,7 +606,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -801,13 +806,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+        var goodsReceipt = await _goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new GoodsReceiptIsNotFoundException(dto.Id);
 
         if (goodsReceipt.PurchaseOrderId.HasValue)
             throw new GoodsReceiptCannotSetToPurchaseOrderException();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         if (!purchaseOrder.CanReceiveGoods())
@@ -863,7 +868,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var goodsReceipt = await _goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.Id);
 
@@ -886,7 +891,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (linkedDebt is not null && (linkedDebt.PaidAmount > 0 || linkedDebt.RemainingAmount != linkedDebt.TotalAmount))
             throw new GoodsReceiptCannotDeleteDueToTouchedDebtException(dto.Id);
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -960,7 +965,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task VerifyStatusAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1035,7 +1040,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1116,7 +1121,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (additionalTax < 0)
             throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1149,7 +1154,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         Guid purchaseOrderId, Guid purchaseOrderItemId, decimal oversupplyQuantity, Guid warehouseId,
         CancellationToken ct = default)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         var item = purchaseOrder.Items.FirstOrDefault(i => i.Id == purchaseOrderItemId)
@@ -1161,7 +1166,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task CancelAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1205,9 +1210,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = _purchaseOrderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
-        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+        var prefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(_codeGenerator.Next(prefix, () => _purchaseOrderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
     }
 
     private async Task<PurchaseOrder> CreatePurchaseOrderAggregateAsync(

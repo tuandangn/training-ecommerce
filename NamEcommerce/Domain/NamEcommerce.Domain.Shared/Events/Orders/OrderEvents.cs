@@ -58,7 +58,7 @@ public sealed record OrderItemRemoved(
 /// Đơn đã được kết sổ và hoàn thành.
 /// Handler hiện tại release phần global reservation còn lại của đơn.
 /// </summary>
-public sealed record OrderCompleted(Guid OrderId) : DomainEvent, IReliableDomainEvent;
+public sealed record OrderCompleted(Guid OrderId) : DomainEvent;
 
 /// <summary>
 /// Thông tin giao hàng (shipping address / expected shipping date) được cập nhật.
@@ -80,7 +80,7 @@ public sealed record OrderItemDelivered(
 /// </summary>
 public sealed record OrderCancelled(
     Guid OrderId,
-    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent, IReliableDomainEvent;
+    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent;
 
 /// <summary>
 /// Toàn bộ dòng hàng của đơn đã được giao đến khách hàng.

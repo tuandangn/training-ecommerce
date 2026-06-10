@@ -20,7 +20,11 @@ public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWo
         CancellationToken cancellationToken)
     {
         var response = await next().ConfigureAwait(false);
-        await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+        var requestName = typeof(TRequest).Name;
+        if (requestName.EndsWith("Command"))
+            await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
+
         return response;
     }
 }

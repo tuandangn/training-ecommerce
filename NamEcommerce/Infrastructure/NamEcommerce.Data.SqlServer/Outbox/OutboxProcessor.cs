@@ -122,14 +122,14 @@ public sealed class OutboxProcessor : BackgroundService
                 return;
             }
 
-            if (JsonSerializer.Deserialize(message.Payload, clrType, SerializerOptions) is not IIntegrationEvent integrationEvent)
+            if (JsonSerializer.Deserialize(message.Payload, clrType, SerializerOptions) is not INotification notification)
             {
-                message.MarkAsFailed($"Deserialized payload is null or not an IIntegrationEvent (type='{message.Type}').");
+                message.MarkAsFailed($"Deserialized payload is null or not an INotification (type='{message.Type}').");
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            await publisher.Publish(integrationEvent, cancellationToken).ConfigureAwait(false);
+            await publisher.Publish(notification, cancellationToken).ConfigureAwait(false);
             message.MarkAsProcessed();
         }
         catch (Exception ex)

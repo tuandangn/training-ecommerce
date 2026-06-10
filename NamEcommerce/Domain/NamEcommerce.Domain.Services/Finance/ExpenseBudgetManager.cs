@@ -12,20 +12,23 @@ public class ExpenseBudgetManager(
 {
     public async Task UpsertAsync(UpsertExpenseBudgetDto dto)
     {
-        var existing = budgetReader.DataSource
-            .FirstOrDefault(b => b.ExpenseType == dto.ExpenseType
-                && b.Year == dto.Year
-                && b.Month == dto.Month);
+        var existingId = budgetReader.DataSource
+            .Where(b => b.ExpenseType == dto.ExpenseType && b.Year == dto.Year && b.Month == dto.Month)
+            .Select(b => b.Id)
+            .FirstOrDefault();
 
-        if (existing is not null)
+        if (existingId != Guid.Empty)
         {
-            existing.UpdateAmount(dto.Amount);
-            await budgetRepository.UpdateAsync(existing).ConfigureAwait(false);
+            var existing = await budgetRepository.GetByIdAsync(existingId).ConfigureAwait(false);
+            if (existing is not null)
+            {
+                existing.UpdateAmount(dto.Amount);
+                await budgetRepository.UpdateAsync(existing).ConfigureAwait(false);
+                return;
+            }
         }
-        else
-        {
-            var budget = new ExpenseBudget(Guid.NewGuid(), dto.ExpenseType, dto.Year, dto.Month, dto.Amount);
-            await budgetRepository.InsertAsync(budget).ConfigureAwait(false);
-        }
+
+        var budget = new ExpenseBudget(Guid.NewGuid(), dto.ExpenseType, dto.Year, dto.Month, dto.Amount);
+        await budgetRepository.InsertAsync(budget).ConfigureAwait(false);
     }
 }

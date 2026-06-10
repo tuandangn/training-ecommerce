@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -22,13 +23,13 @@ public sealed class DeliveryRunManager(
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IDeliveryNoteManager deliveryNoteManager,
     ICustomerDebtManager customerDebtManager,
-    ICurrentUserAccessor currentUserAccessor) : IDeliveryRunManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : IDeliveryRunManager
 {
     private string GenerateCode()
     {
         var prefix = $"DVR-{DateTime.UtcNow:yyyyMMdd}";
-        var count = runReader.SecuredDataSource.Count(run => run.Code.StartsWith(prefix));
-        return $"{prefix}-{(count + 1):D3}";
+        return entityCodeGenerator.Next(prefix, () => runReader.SecuredDataSource.Count(run => run.Code.StartsWith(prefix)));
     }
 
     public async Task<DeliveryRunDto> CreateAsync(CreateDeliveryRunDto dto)

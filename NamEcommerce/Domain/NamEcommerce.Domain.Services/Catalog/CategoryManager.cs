@@ -47,7 +47,7 @@ public sealed class CategoryManager : ICategoryManager
 
     public async Task DeleteCategoryAsync(Guid id)
     {
-        var category = await _categoryDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var category = await _categoryRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (category is null)
             throw new CategoryIsNotFoundException(id);
 
@@ -55,10 +55,14 @@ public sealed class CategoryManager : ICategoryManager
 
         await _categoryRepository.DeleteAsync(category).ConfigureAwait(false);
 
-        var children = (await _categoryDataReader.GetAllAsync().ConfigureAwait(false))
-            .Where(cat => cat.ParentId == category.Id).ToList();
-        foreach (var child in children)
+        var childIds = _categoryDataReader.DataSource
+            .Where(cat => cat.ParentId == category.Id)
+            .Select(cat => cat.Id)
+            .ToList();
+        foreach (var childId in childIds)
         {
+            var child = await _categoryRepository.GetByIdAsync(childId).ConfigureAwait(false);
+            if (child is null) continue;
             child.RemoveParent();
             child.MarkParentChanged();
             await _categoryRepository.UpdateAsync(child).ConfigureAwait(false);
@@ -114,7 +118,7 @@ public sealed class CategoryManager : ICategoryManager
 
     public async Task<CategoryDto> SetParentCategoryAsync(Guid categoryId, Guid parentId, int onParentDisplayOrder)
     {
-        var child = await _categoryDataReader.GetByIdAsync(categoryId).ConfigureAwait(false);
+        var child = await _categoryRepository.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (child is null)
             throw new CategoryIsNotFoundException(categoryId);
 
@@ -132,7 +136,7 @@ public sealed class CategoryManager : ICategoryManager
 
         dto.Verify();
 
-        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var category = await _categoryRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (category is null)
             throw new CategoryIsNotFoundException(dto.Id);
 

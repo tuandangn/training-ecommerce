@@ -65,7 +65,7 @@ Khi làm việc với UI/UX hãy áp dụng Hệ màu/Font từ DESIGN.md kết 
 
 **Manager:** inject `IRepository<T>` (write) + `IEntityDataReader<T>` (read). Publish events qua `IEventPublisher`. Input DTO has `Verify()` (throw exception).
 
-**Repository semantics (Unit of Work):** `IRepository<T>` stage changes (no SaveChanges inside). `UnitOfWorkBehavior` commits once at end of every MediatR Command. `IEntityDataReader<T>` is **read-only / untracked** — use `IRepository<T>.GetByIdAsync` when you need a tracked entity for concurrency checks.
+**Repository semantics (Unit of Work):** `IRepository<T>` stage changes (no SaveChanges inside). `UnitOfWorkBehavior` commits once at end of every MediatR Command. `IEntityDataReader<T>` is **read-only / untracked** — use `IRepository<T>.GetByIdAsync` when you need a tracked entity for concurrency checks (load-for-write pattern). All domain events go through Outbox (eventual, OutboxProcessor dispatches in a fresh DI scope); handlers must be idempotent. Background services that call AppServices/Managers directly must get `IUnitOfWork` from their DI scope and call `CommitAsync` after completing writes. Use `EntityCodeGenerator` (Scoped) for entity code generation to prevent duplicate codes within a single command.
 
 **AppService:** Input DTO có `Validate()` (return `(bool, string?)`). Not throw exceptions — return result object with `Success = false`.
 

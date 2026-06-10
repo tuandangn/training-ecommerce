@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Models.FastSales;
 using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Controllers;
@@ -65,7 +66,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         return ToQuickSaleJson(result);
     }
 
-    private IActionResult ToQuickSaleJson(Contracts.Models.FastSales.QuickSaleResultModel result)
+    private IActionResult ToQuickSaleJson(QuickSaleResultModel result)
     {
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.FastSaleFailed") });

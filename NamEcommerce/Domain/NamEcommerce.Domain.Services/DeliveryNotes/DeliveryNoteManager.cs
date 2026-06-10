@@ -23,6 +23,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
@@ -30,7 +31,7 @@ namespace NamEcommerce.Domain.Services.DeliveryNotes;
 public sealed class DeliveryNoteManager(
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
-    IEntityDataReader<Order> orderReader,
+    IEntityDataReader<Order> orderReader, IRepository<Order> orderRepository,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IOrderManager orderManager,
     IInventoryStockManager stockManager,
@@ -38,13 +39,13 @@ public sealed class DeliveryNoteManager(
     IProductReservationManager productReservationManager,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<VendorReturn> vendorReturnReader,
-    ICustomerReturnManager customerReturnManager) : IDeliveryNoteManager
+    ICustomerReturnManager customerReturnManager,
+    EntityCodeGenerator entityCodeGenerator) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"{DeliveryNote.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = deliveryNoteReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
-        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+        var prefix = $"{DeliveryNote.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => deliveryNoteReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
     }
 
     private async Task<decimal> GetDisplayCostAsync(Guid productId)
@@ -55,9 +56,11 @@ public sealed class DeliveryNoteManager(
 
     public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         dto.Verify();
 
-        var order = await orderReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -68,7 +71,6 @@ public sealed class DeliveryNoteManager(
 
         EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
-        // Validate AmountToCollect không vượt phần còn phải thu của order
         if (dto.AmountToCollect > 0)
         {
             var existingCollect = deliveryNoteReader.DataSource
@@ -83,15 +85,6 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
             .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
             .ToList();
-        var itemsByProductWarehouse = dto.Items
-            .GroupBy(item => new
-            {
-                orderItemsById[item.OrderItemId].ProductId,
-                item.WarehouseId
-            })
-            .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
-            .ToList();
-
         foreach (var item in itemsByProduct)
         {
             var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, order.Id).ConfigureAwait(false);
@@ -99,6 +92,10 @@ public sealed class DeliveryNoteManager(
                 throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
         }
 
+        var itemsByProductWarehouse = dto.Items
+            .GroupBy(item => new { orderItemsById[item.OrderItemId].ProductId, item.WarehouseId })
+            .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
         foreach (var item in itemsByProductWarehouse)
         {
             var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, item.WarehouseId).ConfigureAwait(false);
@@ -125,11 +122,9 @@ public sealed class DeliveryNoteManager(
             amountToCollect: dto.AmountToCollect,
             surchargeReason: dto.SurchargeReason,
             createdByUserId: order.CreatedByUserId
-        )
-        {
-            OrderCode = order.Code,
-            WarehouseName = dto.WarehouseName
-        };
+        );
+        deliveryNote.OrderCode = order.Code;
+        deliveryNote.WarehouseName = dto.WarehouseName;
 
         foreach (var itemDto in dto.Items)
         {
@@ -344,13 +339,7 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        EnsureQuantitiesCanBeDelivered(
-            order,
-            new Dictionary<Guid, decimal>
-            {
-                [orderItem.Id] = dto.Quantity
-            },
-            includeDirectShipOutstanding: false);
+        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal> {[orderItem.Id] = dto.Quantity }, includeDirectShipOutstanding: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -607,14 +596,11 @@ public sealed class DeliveryNoteManager(
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
     {
-        var baseQuery = deliveryNoteReader.DataSource; // Eager loading should happen here if possible, but IEntityDataReader usually handles it
-        // Or we map manually. Assuming GetByIdAsync works normally but doesn't eager load Items if not configured.
-        // Actually, we should just query and map.
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(id).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
-    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, 
+    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize,
         string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
         var query = deliveryNoteReader.DataSource;
@@ -845,16 +831,14 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private void EnsureQuantitiesCanBeDelivered(
-        Order order,
+    private void EnsureQuantitiesCanBeDelivered(Order order,
         IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem,
         bool includeDirectShipOutstanding = true)
     {
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
         var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(
-            order.Id,
-            requestedOrderItemIds);
+            order.Id, requestedOrderItemIds);
         var directShipOutstandingQuantitiesByOrderItem = includeDirectShipOutstanding
             ? GetDirectShipOutstandingQuantitiesByOrderItem(requestedOrderItemIds)
             : [];
@@ -877,9 +861,7 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(
-        Guid orderId,
-        IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];

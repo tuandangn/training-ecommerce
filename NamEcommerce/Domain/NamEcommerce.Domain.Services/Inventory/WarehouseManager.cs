@@ -53,7 +53,7 @@ public sealed class WarehouseManager : IWarehouseManager
 
     public async Task DeleteWarehouseAsync(Guid id)
     {
-        var warehouse = await _warehouseDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var warehouse = await _warehouseRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(id);
 
@@ -140,7 +140,7 @@ public sealed class WarehouseManager : IWarehouseManager
 
         dto.Verify();
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id);
+        var warehouse = await _warehouseRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (warehouse is null)
             throw new ArgumentException("Warehouse is not found", nameof(dto));
 

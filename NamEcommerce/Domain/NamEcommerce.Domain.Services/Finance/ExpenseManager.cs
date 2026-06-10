@@ -48,7 +48,7 @@ public class ExpenseManager : IExpenseManager
 
     public async Task UpdateExpenseAsync(UpdateExpenseDto dto)
     {
-        var expense = await _expenseDataReader.GetByIdAsync(dto.Id);
+        var expense = await _expenseRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (expense is null)
             throw new ArgumentException($"Expense with ID {dto.Id} not found.");
 
@@ -58,7 +58,7 @@ public class ExpenseManager : IExpenseManager
 
     public async Task DeleteExpenseAsync(Guid id)
     {
-        var expense = await _expenseDataReader.GetByIdAsync(id);
+        var expense = await _expenseRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (expense is not null)
         {
             await _expenseRepository.DeleteAsync(expense);

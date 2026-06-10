@@ -47,7 +47,7 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
 
     public async Task DeleteUnitMeasurementAsync(Guid id)
     {
-        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (unitMeasurement is null)
             throw new ArgumentException("Unit measurement is not found", nameof(id));
 
@@ -62,7 +62,7 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
 
         dto.Verify();
 
-        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (unitMeasurement is null)
             throw new ArgumentException("Unit measurement is not found", nameof(dto));
 

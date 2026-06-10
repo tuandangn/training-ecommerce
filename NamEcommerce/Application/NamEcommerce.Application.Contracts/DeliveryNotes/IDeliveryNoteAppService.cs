@@ -5,9 +5,9 @@ namespace NamEcommerce.Application.Contracts.DeliveryNotes;
 
 public interface IDeliveryNoteAppService
 {
-    Task<DeliveryNoteAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto);
+    Task<CreateDeliveryNoteResultAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto);
 
-    Task<Guid> CreateAsDeliveredFromVendorReturnAsync(CreateDeliveryNoteFromVendorReturnAppDto dto);
+    Task<CreateDeliveryNoteResultAppDto> CreateAsDeliveredFromVendorReturnAsync(CreateDeliveryNoteFromVendorReturnAppDto dto);
     
     Task CancelAsync(Guid id);
     

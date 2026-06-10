@@ -27,10 +27,13 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     }
 
     public async Task<IList<TEntity>> GetListAsync(ISpecification<TEntity> spec)
-        => await ApplySpecification(spec).ToListAsync();
+        => await ApplySpecification(spec).ToListAsync().ConfigureAwait(false);
+
+    public Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec)
+        => ApplySpecification(spec).FirstOrDefaultAsync();
 
     public async Task<bool> AnyAsync(ISpecification<TEntity> spec)
-        => await DataSource.AnyAsync(spec.Criteria);
+        => await DataSource.AnyAsync(spec.Criteria).ConfigureAwait(false);
 
     public IQueryable<TEntity> SecuredDataSource => ((NamEcommerceEfDbContext)_dbContext).Set<TEntity>().IgnoreQueryFilters().AsNoTracking();
 
@@ -40,15 +43,15 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public Task<TEntity?> GetByIdAsync(Guid id)
         => DataSource.FirstOrDefaultAsync(e => e.Id == id);
 
-    public Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
     {
         if (!ids.Any())
-            return Task.FromResult(Enumerable.Empty<TEntity>());
+            return [];
 
         var query = from entity in DataSource
                     where ids.Contains(entity.Id)
                     select entity;
 
-        return Task.FromResult<IEnumerable<TEntity>>(query);
+        return await query.ToListAsync().ConfigureAwait(false);
     }
 }

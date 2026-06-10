@@ -1,5 +1,6 @@
 using NamEcommerce.Application.Contracts.Dtos.Notifications;
 using NamEcommerce.Application.Contracts.Notifications;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
@@ -52,6 +53,7 @@ public sealed class DeliveryNoteReconciliationHostedService(
             var debtReader = scope.ServiceProvider.GetRequiredService<IEntityDataReader<CustomerDebt>>();
             var stockLogReader = scope.ServiceProvider.GetRequiredService<IEntityDataReader<StockMovementLog>>();
             var notificationService = scope.ServiceProvider.GetRequiredService<ISystemNotificationAppService>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
             var threshold = DateTime.UtcNow.AddMinutes(-ThresholdMinutes);
 
@@ -118,6 +120,8 @@ public sealed class DeliveryNoteReconciliationHostedService(
                     }
                 }
             }
+
+            await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {

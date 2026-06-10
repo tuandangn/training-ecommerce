@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
 
@@ -21,27 +22,25 @@ public sealed class CustomerDebtManager(
     IRepository<CustomerCreditNote> creditNoteRepository,
     IEntityDataReader<CustomerCreditNote> creditNoteReader,
     IEntityDataReader<Customer> customerReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteReader) : ICustomerDebtManager
+    IEntityDataReader<DeliveryNote> deliveryNoteReader,
+    EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
 {
-    private async Task<string> GenerateDebtCodeAsync()
+    private Task<string> GenerateDebtCodeAsync()
     {
-        var monthPrefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
-        var count = debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
-        return $"{monthPrefix}-{(count + 1):D3}";
+        var prefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
     }
 
-    private async Task<string> GeneratePaymentCodeAsync()
+    private Task<string> GeneratePaymentCodeAsync()
     {
-        var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
-        var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
-        return $"{monthPrefix}-{(count + 1):D3}";
+        var prefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(prefix))));
     }
 
     private Task<string> GenerateCreditNoteCodeAsync()
     {
-        var monthPrefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
-        var count = creditNoteReader.SecuredDataSource.Count(c => c.Code.StartsWith(monthPrefix));
-        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+        var prefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => creditNoteReader.SecuredDataSource.Count(c => c.Code.StartsWith(prefix))));
     }
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)

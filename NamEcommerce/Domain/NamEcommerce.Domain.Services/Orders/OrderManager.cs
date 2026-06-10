@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -17,6 +18,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -28,15 +30,16 @@ public sealed class OrderManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IProductReservationManager productReservationManager,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
     IInventoryStockManager stockManager,
-    ICurrentUserAccessor currentUserAccessor) : IOrderManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : IOrderManager
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = orderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
-        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+        var prefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => orderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
     }
 
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
@@ -69,6 +72,13 @@ public sealed class OrderManager(
 
         var insertedOrder = await orderRepository.InsertAsync(order).ConfigureAwait(false);
 
+        foreach (var itemGroup in order.OrderItems.GroupBy(item => item.ProductId))
+        {
+            await productReservationManager.ReserveAsync(
+                itemGroup.Key, itemGroup.Sum(item => item.Quantity),
+                order.Id, ProductReservationReason.OrderCreated, order.Id).ConfigureAwait(false);
+        }
+
         return new CreateOrderResultDto { CreatedId = insertedOrder.Id };
     }
 
@@ -78,7 +88,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var order = await orderDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.Id);
 
@@ -103,7 +113,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var order = await orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(orderId);
 
@@ -125,7 +135,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -162,7 +172,7 @@ public sealed class OrderManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -188,7 +198,7 @@ public sealed class OrderManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -213,8 +223,7 @@ public sealed class OrderManager(
 
     public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
     {
-        var order = await orderDataReader.GetByIdAsync(id).ConfigureAwait(false);
-
+        var order = await orderRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (order is null)
             return null;
         return order.ToDto();
@@ -309,7 +318,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -326,7 +335,7 @@ public sealed class OrderManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -341,7 +350,7 @@ public sealed class OrderManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -353,7 +362,7 @@ public sealed class OrderManager(
 
     public async Task DeleteOrderAsync(DeleteOrderDto dto)
     {
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
@@ -375,7 +384,7 @@ public sealed class OrderManager(
 
     public async Task CancelOrderAsync(CancelOrderDto dto)
     {
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 

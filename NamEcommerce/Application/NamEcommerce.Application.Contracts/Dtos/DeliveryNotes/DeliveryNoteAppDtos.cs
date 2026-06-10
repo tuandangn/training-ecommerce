@@ -109,13 +109,19 @@ public sealed record CreateDeliveryNoteAppDto
         return (true, string.Empty);
     }
 }
-
 [Serializable]
 public sealed record CreateDeliveryNoteItemAppDto
 {
     public required Guid OrderItemId { get; init; }
     public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
+}
+[Serializable]
+public sealed record CreateDeliveryNoteResultAppDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public Guid? CreatedId { get; set; }
 }
 
 [Serializable]
@@ -126,7 +132,6 @@ public sealed record DeliveryAcceptanceItemAppDto
     public required decimal RejectedQuantity { get; init; }
     public string? RejectReason { get; init; }
 }
-
 [Serializable]
 public sealed record DeliveryAcceptanceAppDto
 {
@@ -157,7 +162,6 @@ public sealed record MarkDeliveryNoteDeliveredAppDto
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
     public DeliveryCompletionMetadataAppDto? CompletionMetadata { get; init; }
 }
-
 [Serializable]
 public sealed record MarkDeliveryNoteDeliveredResultAppDto
 {
@@ -181,7 +185,6 @@ public sealed record AssignDeliveryUserAppDto
         return (true, null);
     }
 }
-
 [Serializable]
 public sealed record AssignDeliveryUserResultAppDto
 {
@@ -196,7 +199,6 @@ public sealed record CreateDeliveryNoteFromVendorReturnAppDto
     public required Guid WarehouseId { get; init; }
     public required IEnumerable<CreateDeliveryNoteFromVendorReturnItemAppDto> Items { get; init; }
 }
-
 [Serializable]
 public sealed record CreateDeliveryNoteFromVendorReturnItemAppDto
 {

@@ -13,6 +13,8 @@ public interface IEntityDataReader<TEntity> : IGetByIdService<TEntity> where TEn
 
     IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec);
 
+    Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec);
+
     Task<IList<TEntity>> GetListAsync(ISpecification<TEntity> spec);
 
     Task<bool> AnyAsync(ISpecification<TEntity> spec);

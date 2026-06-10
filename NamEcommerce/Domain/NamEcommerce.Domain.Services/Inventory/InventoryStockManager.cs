@@ -694,7 +694,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         dto.Verify();
 
-        var stock = await _inventoryStockDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var stock = await _inventoryStockRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (stock is null)
             throw new StockNotFoundException("Error.StockNotFound", dto.Id);
 

@@ -59,7 +59,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
         return new CreateDeliveryNoteResultModel
         {
             Success = true,
-            CreatedId = result.Id
+            CreatedId = result.CreatedId
         };
     }
 }

@@ -19,6 +19,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -34,7 +35,8 @@ public sealed class CustomerReturnManager(
     ICustomerDebtManager customerDebtManager,
     IExpenseManager expenseManager,
     IProductReservationManager productReservationManager,
-    ICurrentUserAccessor currentUserAccessor) : ICustomerReturnManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : ICustomerReturnManager
 {
     public async Task<CustomerReturnDto> CreateAsync(CreateCustomerReturnDto dto)
     {
@@ -162,7 +164,7 @@ public sealed class CustomerReturnManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+        var customerReturn = await customerReturnRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.Id);
 
         customerReturn.Note = dto.Note;
@@ -175,7 +177,7 @@ public sealed class CustomerReturnManager(
 
     public async Task MoveToInspectingAsync(Guid id)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var customerReturn = await customerReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
 
         customerReturn.MoveToInspecting();
@@ -185,7 +187,7 @@ public sealed class CustomerReturnManager(
 
     public async Task ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var customerReturn = await customerReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
 
         if (warehouseId.HasValue)
@@ -260,7 +262,7 @@ public sealed class CustomerReturnManager(
 
     public async Task CancelAsync(Guid id)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var customerReturn = await customerReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
 
         await ReleaseCompensatedReservationAsync(customerReturn).ConfigureAwait(false);
@@ -452,7 +454,7 @@ public sealed class CustomerReturnManager(
     /// </summary>
     public async Task FinalizeConfirmAsync(Guid returnId, Guid generatedGoodsReceiptId, decimal netRefundAmount)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(returnId).ConfigureAwait(false);
+        var customerReturn = await customerReturnRepository.GetByIdAsync(returnId).ConfigureAwait(false);
         if (customerReturn is null) return;
 
         // Idempotency guard — đã xử lý rồi thì không làm lại
@@ -494,9 +496,8 @@ public sealed class CustomerReturnManager(
 
     private string GenerateCode()
     {
-        var datePrefix = $"TKH-{DateTime.UtcNow:yyyyMMdd}";
-        var count = customerReturnDataReader.DataSource.Count(r => r.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var prefix = $"TKH-{DateTime.UtcNow:yyyyMMdd}";
+        return entityCodeGenerator.Next(prefix, () => customerReturnDataReader.DataSource.Count(r => r.Code.StartsWith(prefix)));
     }
 
     private async Task<List<DeliveryNote>> GetDeliveredNotesForReturnAsync(Guid customerId, Guid? deliveryNoteId)

@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -15,13 +16,13 @@ namespace NamEcommerce.Domain.Services.Debts;
 public sealed class VendorRefundManager(
     IRepository<VendorRefund> refundRepository,
     IEntityDataReader<VendorRefund> refundReader,
-    IEntityDataReader<VendorReturn> vendorReturnReader) : IVendorRefundManager
+    IEntityDataReader<VendorReturn> vendorReturnReader,
+    EntityCodeGenerator entityCodeGenerator) : IVendorRefundManager
 {
-    private async Task<string> GenerateCodeAsync()
+    private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"PT-NCC-R-{DateTime.UtcNow:yyMM}";
-        var count = refundReader.SecuredDataSource.Count(r => r.Code.StartsWith(monthPrefix));
-        return $"{monthPrefix}-{(count + 1):D3}";
+        var prefix = $"PT-NCC-R-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => refundReader.SecuredDataSource.Count(r => r.Code.StartsWith(prefix))));
     }
 
     public async Task<VendorRefundDto> CreateAsync(CreateVendorRefundDto dto)

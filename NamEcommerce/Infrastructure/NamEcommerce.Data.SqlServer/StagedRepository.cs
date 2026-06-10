@@ -43,7 +43,11 @@ public sealed class StagedRepository<TEntity> : IRepository<TEntity> where TEnti
     }
 
     public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => await _context.FindAsync<TEntity>(new object?[] { id }, cancellationToken).ConfigureAwait(false);
+    {
+        // FindAsync bỏ qua soft-delete query filter — tự lọc để giữ semantics như DataSource
+        var entity = await _context.FindAsync<TEntity>(new object?[] { id }, cancellationToken).ConfigureAwait(false);
+        return entity is ISoftDeletable { IsDeleted: true } ? null : entity;
+    }
 
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => Task.FromResult<IEnumerable<TEntity>>(_context.Set<TEntity>().AsNoTracking());

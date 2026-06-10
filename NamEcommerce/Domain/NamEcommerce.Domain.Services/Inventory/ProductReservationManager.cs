@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Specifications.Inventory;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
@@ -26,10 +27,11 @@ public sealed class ProductReservationManager : IProductReservationManager
             .Where(entry => entry.ProductId == productId)
             .Sum(entry => entry.QuantityDelta));
 
-    public Task<decimal> GetReservedForOrderAsync(Guid productId, Guid orderId)
-        => Task.FromResult(_dataReader.DataSource
-            .Where(entry => entry.ProductId == productId && entry.OrderId == orderId)
-            .Sum(entry => entry.QuantityDelta));
+    public async Task<decimal> GetReservedForOrderAsync(Guid productId, Guid orderId)
+    {
+        return _dataReader.ApplySpecification(new ProductReservationLedgersOfOrderSpecification(productId, orderId))
+                .Sum(entry => entry.QuantityDelta);
+    }
 
     public Task<decimal> GetReleasedByReferenceAsync(Guid productId, Guid orderId, ProductReservationReason reason, Guid referenceId)
         => Task.FromResult(Math.Abs(_dataReader.DataSource
@@ -66,12 +68,8 @@ public sealed class ProductReservationManager : IProductReservationManager
         });
     }
 
-    public async Task ReserveAsync(
-        Guid productId,
-        decimal quantity,
-        Guid orderId,
-        ProductReservationReason reason,
-        Guid? referenceId = null)
+    public async Task ReserveAsync(Guid productId, decimal quantity,
+        Guid orderId, ProductReservationReason reason, Guid? referenceId = null)
     {
         EnsureValid(productId, quantity, orderId);
 
@@ -80,12 +78,8 @@ public sealed class ProductReservationManager : IProductReservationManager
         await _repository.InsertAsync(entry).ConfigureAwait(false);
     }
 
-    public async Task ReleaseAsync(
-        Guid productId,
-        decimal quantity,
-        Guid orderId,
-        ProductReservationReason reason,
-        Guid? referenceId = null)
+    public async Task ReleaseAsync(Guid productId, decimal quantity,
+        Guid orderId, ProductReservationReason reason, Guid? referenceId = null)
     {
         EnsureValid(productId, quantity, orderId);
 
@@ -101,12 +95,8 @@ public sealed class ProductReservationManager : IProductReservationManager
         await _repository.InsertAsync(entry).ConfigureAwait(false);
     }
 
-    public Task AdjustAsync(
-        Guid productId,
-        decimal deltaQuantity,
-        Guid orderId,
-        ProductReservationReason reserveReason,
-        ProductReservationReason releaseReason,
+    public Task AdjustAsync( Guid productId, decimal deltaQuantity,
+        Guid orderId, ProductReservationReason reserveReason, ProductReservationReason releaseReason,
         Guid? referenceId = null)
     {
         if (deltaQuantity == 0) return Task.CompletedTask;
