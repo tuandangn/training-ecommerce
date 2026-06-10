@@ -35,6 +35,7 @@ public sealed class CustomerPaymentMapping : IEntityTypeConfiguration<CustomerPa
         builder.Property(x => x.UpdatedOnUtc).IsRequired(false);
 
         builder.Property(x => x.IsApplied).IsRequired().HasDefaultValue(false);
+        builder.Property(x => x.AppliedAmount).IsRequired().HasColumnType("decimal(18,2)").HasDefaultValue(0m);
         builder.Property(x => x.AppliedOnUtc).IsRequired(false);
     }
 }

@@ -1,5 +1,6 @@
 #region using
 
+using MediatR;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -93,12 +94,29 @@ using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.CustomerPortal;
+using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Entities.Finance;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Entities.Notifications;
+using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Entities.StockAdjustment;
+using NamEcommerce.Domain.Entities.StockTransfer;
+using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Authorization;
 using NamEcommerce.Web.Services.Permissions;
+using NamEcommerce.Web.Framework.Behaviors;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Hubs.Notifications;
@@ -186,7 +204,81 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             opts.EnableSensitiveDataLogging(true);
 
     });
-    services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
+    // Đảm bảo IDbContext và IUnitOfWork resolve cùng 1 scoped instance với NamEcommerceEfDbContext
+    services.AddScoped<IDbContext>(sp => sp.GetRequiredService<NamEcommerceEfDbContext>());
+    services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<NamEcommerceEfDbContext>());
+    // Staged repositories — all entities commit atomically via UnitOfWorkBehavior at end of each command
+    // Debts
+    services.AddScoped<IRepository<CustomerDebt>, StagedRepository<CustomerDebt>>();
+    services.AddScoped<IRepository<CustomerPayment>, StagedRepository<CustomerPayment>>();
+    services.AddScoped<IRepository<CustomerCreditNote>, StagedRepository<CustomerCreditNote>>();
+    services.AddScoped<IRepository<CustomerRefund>, StagedRepository<CustomerRefund>>();
+    services.AddScoped<IRepository<VendorDebt>, StagedRepository<VendorDebt>>();
+    services.AddScoped<IRepository<VendorPayment>, StagedRepository<VendorPayment>>();
+    services.AddScoped<IRepository<VendorCreditNote>, StagedRepository<VendorCreditNote>>();
+    services.AddScoped<IRepository<VendorRefund>, StagedRepository<VendorRefund>>();
+    services.AddScoped<IRepository<BankTransferPaymentIntent>, StagedRepository<BankTransferPaymentIntent>>();
+    services.AddScoped<IRepository<BankTransferVerificationLog>, StagedRepository<BankTransferVerificationLog>>();
+    services.AddScoped<IRepository<CassoReconciliationRun>, StagedRepository<CassoReconciliationRun>>();
+    // Inventory
+    services.AddScoped<IRepository<InventoryStock>, StagedRepository<InventoryStock>>();
+    services.AddScoped<IRepository<StockMovementLog>, StagedRepository<StockMovementLog>>();
+    services.AddScoped<IRepository<ProductReservationLedger>, StagedRepository<ProductReservationLedger>>();
+    services.AddScoped<IRepository<Warehouse>, StagedRepository<Warehouse>>();
+    services.AddScoped<IRepository<InventoryCostingPolicy>, StagedRepository<InventoryCostingPolicy>>();
+    services.AddScoped<IRepository<InventoryCostLedgerEntry>, StagedRepository<InventoryCostLedgerEntry>>();
+    services.AddScoped<IRepository<InventoryCostLayer>, StagedRepository<InventoryCostLayer>>();
+    services.AddScoped<IRepository<InventoryCostAllocation>, StagedRepository<InventoryCostAllocation>>();
+    services.AddScoped<IRepository<InventoryCostRebuildRun>, StagedRepository<InventoryCostRebuildRun>>();
+    // StockTransfer / StockAdjustment
+    services.AddScoped<IRepository<StockTransferNote>, StagedRepository<StockTransferNote>>();
+    services.AddScoped<IRepository<StockAdjustmentNote>, StagedRepository<StockAdjustmentNote>>();
+    // Orders / DeliveryNotes / Returns / GoodsReceipts / PurchaseOrders
+    services.AddScoped<IRepository<Order>, StagedRepository<Order>>();
+    services.AddScoped<IRepository<OrderItemChangeAudit>, StagedRepository<OrderItemChangeAudit>>();
+    services.AddScoped<IRepository<DeliveryNote>, StagedRepository<DeliveryNote>>();
+    services.AddScoped<IRepository<DeliveryRun>, StagedRepository<DeliveryRun>>();
+    services.AddScoped<IRepository<CustomerReturn>, StagedRepository<CustomerReturn>>();
+    services.AddScoped<IRepository<VendorReturn>, StagedRepository<VendorReturn>>();
+    services.AddScoped<IRepository<GoodsReceipt>, StagedRepository<GoodsReceipt>>();
+    services.AddScoped<IRepository<PurchaseOrder>, StagedRepository<PurchaseOrder>>();
+    services.AddScoped<IRepository<PurchaseOrderItemAllocation>, StagedRepository<PurchaseOrderItemAllocation>>();
+    services.AddScoped<IRepository<PurchaseOrderItemChangeAudit>, StagedRepository<PurchaseOrderItemChangeAudit>>();
+    services.AddScoped<IRepository<DirectShipAddressChangeLog>, StagedRepository<DirectShipAddressChangeLog>>();
+    // Catalog
+    services.AddScoped<IRepository<Category>, StagedRepository<Category>>();
+    services.AddScoped<IRepository<Product>, StagedRepository<Product>>();
+    services.AddScoped<IRepository<ProductPriceHistory>, StagedRepository<ProductPriceHistory>>();
+    services.AddScoped<IRepository<UnitMeasurement>, StagedRepository<UnitMeasurement>>();
+    services.AddScoped<IRepository<Vendor>, StagedRepository<Vendor>>();
+    // Customers / Users
+    services.AddScoped<IRepository<Customer>, StagedRepository<Customer>>();
+    services.AddScoped<IRepository<User>, StagedRepository<User>>();
+    services.AddScoped<IRepository<Role>, StagedRepository<Role>>();
+    services.AddScoped<IRepository<UserRole>, StagedRepository<UserRole>>();
+    // Finance
+    services.AddScoped<IRepository<AccountingSetup>, StagedRepository<AccountingSetup>>();
+    services.AddScoped<IRepository<BankAccount>, StagedRepository<BankAccount>>();
+    services.AddScoped<IRepository<Expense>, StagedRepository<Expense>>();
+    services.AddScoped<IRepository<ExpenseBudget>, StagedRepository<ExpenseBudget>>();
+    services.AddScoped<IRepository<FixedAsset>, StagedRepository<FixedAsset>>();
+    // Media / Notifications
+    services.AddScoped<IRepository<Picture>, StagedRepository<Picture>>();
+    services.AddScoped<IRepository<SystemNotification>, StagedRepository<SystemNotification>>();
+    services.AddScoped<IRepository<SystemNotificationRead>, StagedRepository<SystemNotificationRead>>();
+    // CustomerPortal
+    services.AddScoped<IRepository<CustomerDeliveryFeedback>, StagedRepository<CustomerDeliveryFeedback>>();
+    services.AddScoped<IRepository<CustomerOrderRequest>, StagedRepository<CustomerOrderRequest>>();
+    services.AddScoped<IRepository<CustomerOtpChallenge>, StagedRepository<CustomerOtpChallenge>>();
+    services.AddScoped<IRepository<CustomerPaymentIntent>, StagedRepository<CustomerPaymentIntent>>();
+    services.AddScoped<IRepository<CustomerPortalAccount>, StagedRepository<CustomerPortalAccount>>();
+    services.AddScoped<IRepository<CustomerPortalNotification>, StagedRepository<CustomerPortalNotification>>();
+    services.AddScoped<IRepository<CustomerPortalSession>, StagedRepository<CustomerPortalSession>>();
+    services.AddScoped<IRepository<CustomerPortalSettings>, StagedRepository<CustomerPortalSettings>>();
+    services.AddScoped<IRepository<CustomerReturnRequest>, StagedRepository<CustomerReturnRequest>>();
+    services.AddScoped<IRepository<CustomerSecurityEvent>, StagedRepository<CustomerSecurityEvent>>();
+    services.AddScoped<IRepository<DeliveryNoteAccessToken>, StagedRepository<DeliveryNoteAccessToken>>();
+    // Fallback — open-generic for any entity type not explicitly registered above
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
     services.AddScoped(typeof(IGetByIdService<>), typeof(EntityDataReader<>));
@@ -196,6 +288,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
     services.AddHostedService<OutboxProcessor>();
     services.AddHostedService<CassoReconciliationHostedService>();
+    services.AddHostedService<DeliveryNoteReconciliationHostedService>();
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
@@ -350,6 +443,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         config.RegisterServicesFromAssemblyContaining<CategoryAppService>();
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
+        config.AddBehavior(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>));
     });
 
     services.AddLocalization();

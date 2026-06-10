@@ -55,13 +55,23 @@ public sealed record CustomerPayment : AppAggregateEntity
     public DateTime? UpdatedOnUtc { get; private set; }
 
     public bool IsApplied { get; private set; }
+    public decimal AppliedAmount { get; private set; }
+    public decimal RemainingApplicableAmount => Amount - AppliedAmount;
     public DateTime? AppliedOnUtc { get; private set; }
+
+    internal void ApplyAmount(decimal applied)
+    {
+        if (applied <= 0) return;
+        if (AppliedOnUtc is null)
+            AppliedOnUtc = DateTime.UtcNow;
+        AppliedAmount += applied;
+        IsApplied = AppliedAmount >= Amount;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
 
     internal void MarkAsApplied()
     {
-        IsApplied = true;
-        AppliedOnUtc = DateTime.UtcNow;
-        UpdatedOnUtc = DateTime.UtcNow;
+        ApplyAmount(RemainingApplicableAmount);
     }
 
     /// <summary>

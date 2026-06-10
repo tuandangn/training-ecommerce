@@ -10,6 +10,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
@@ -400,6 +401,17 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
+        var hasDraftDn = deliveryNoteDataReader.DataSource.Any(dn =>
+            dn.OrderId == dto.OrderId && dn.Status == DeliveryNoteStatus.Draft);
+        if (hasDraftDn)
+        {
+            return new CompleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.OrderHasDraftDeliveryNotes"
+            };
+        }
+
         try
         {
             await orderManager.CompleteOrderAsync(new CompleteOrderDto
@@ -412,7 +424,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 Success = true
             };
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
             return new CompleteOrderResultAppDto
             {
@@ -664,7 +676,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
             return new CancelOrderResultAppDto { Success = true };
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
             return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
         }

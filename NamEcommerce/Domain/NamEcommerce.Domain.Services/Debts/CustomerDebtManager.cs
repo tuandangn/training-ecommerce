@@ -98,19 +98,27 @@ public sealed class CustomerDebtManager(
             dueDateUtc: dto.DueDateUtc
         )
         {
-            CustomerAddress = customer.PhoneNumber,
+            CustomerAddress = customer.Address,
             CustomerPhone = customer.PhoneNumber
         };
 
-        // 2. Auto-allocate deposits (Tiền cọc)
-        var deposits = paymentReader.DataSource
-            .Where(p => p.OrderId == deliveryNote.OrderId && p.PaymentType == PaymentType.Deposit && !p.IsApplied)
+        // 2. Auto-allocate deposits (Tiền cọc) — FIFO by PaidOnUtc, partial apply
+        var depositIds = paymentReader.DataSource
+            .Where(p => p.OrderId == deliveryNote.OrderId
+                     && p.PaymentType == PaymentType.Deposit
+                     && p.AppliedAmount < p.Amount)
+            .OrderBy(p => p.PaidOnUtc)
+            .Select(p => p.Id)
             .ToList();
 
-        foreach (var deposit in deposits)
+        foreach (var depositId in depositIds)
         {
-            debt.ApplyPayment(deposit.Amount);
-            deposit.MarkAsApplied();
+            if (debt.RemainingAmount <= 0) break;
+            var deposit = await paymentRepository.GetByIdAsync(depositId).ConfigureAwait(false);
+            if (deposit is null || deposit.RemainingApplicableAmount <= 0) continue;
+            var toApply = Math.Min(deposit.RemainingApplicableAmount, debt.RemainingAmount);
+            deposit.ApplyAmount(toApply);
+            debt.ApplyPayment(toApply);
             await paymentRepository.UpdateAsync(deposit).ConfigureAwait(false);
         }
 
@@ -162,18 +170,24 @@ public sealed class CustomerDebtManager(
         }
         else if (dto.DeliveryNoteId.HasValue)
         {
-            // Try to find the debt for this delivery note
-            var debt = debtReader.DataSource.FirstOrDefault(d => d.DeliveryNoteId == dto.DeliveryNoteId.Value);
-            if (debt != null)
+            var debtId = debtReader.DataSource
+                .Where(d => d.DeliveryNoteId == dto.DeliveryNoteId.Value)
+                .Select(d => d.Id)
+                .FirstOrDefault();
+            if (debtId != Guid.Empty)
             {
-                if (payment.Amount > debt.RemainingAmount)
-                    throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
+                var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
+                if (debt != null)
+                {
+                    if (payment.Amount > debt.RemainingAmount)
+                        throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
 
-                debt.ApplyPayment(payment.Amount);
-                payment.MarkAsApplied();
-                payment.CustomerDebtId = debt.Id;
-                debt.MarkUpdated();
-                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+                    debt.ApplyPayment(payment.Amount);
+                    payment.MarkAsApplied();
+                    payment.CustomerDebtId = debt.Id;
+                    debt.MarkUpdated();
+                    await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+                }
             }
         }
 
@@ -243,17 +257,21 @@ public sealed class CustomerDebtManager(
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
-        var pendingDebts = debtReader.DataSource
+        var pendingDebtIds = debtReader.DataSource
             .Where(d => d.CustomerId == dto.CustomerId && d.RemainingAmount > 0)
             .OrderBy(d => d.CreatedOnUtc)
+            .Select(d => d.Id)
             .ToList();
 
         var results = new List<CustomerPaymentDto>();
         var remaining = dto.Amount;
 
-        foreach (var debt in pendingDebts)
+        foreach (var debtId in pendingDebtIds)
         {
             if (remaining <= 0) break;
+
+            var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
+            if (debt is null || debt.RemainingAmount <= 0) continue;
 
             var applyAmount = Math.Min(remaining, debt.RemainingAmount);
             var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
@@ -287,7 +305,7 @@ public sealed class CustomerDebtManager(
             remaining -= applyAmount;
         }
 
-        // Nếu còn dư tiền sau khi trả hết nợ → lưu làm tiền cọc chung
+        // Nếu còn dư tiền sau khi trả hết nợ → lưu làm tiền chung (General)
         if (remaining > 0)
         {
             var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
@@ -297,7 +315,7 @@ public sealed class CustomerDebtManager(
                 customerName: customer.FullName,
                 amount: remaining,
                 paymentMethod: dto.PaymentMethod,
-                paymentType: PaymentType.Deposit,
+                paymentType: PaymentType.General,
                 paidOnUtc: dto.PaidOnUtc,
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
@@ -341,32 +359,41 @@ public sealed class CustomerDebtManager(
 
         if (sourceId.HasValue)
         {
-            var sourceDebt = debtReader.DataSource
-                .FirstOrDefault(d => d.CustomerId == customerId
+            var sourceDebtId = debtReader.DataSource
+                .Where(d => d.CustomerId == customerId
                     && d.DeliveryNoteId == sourceId.Value
-                    && d.RemainingAmount > 0);
+                    && d.RemainingAmount > 0)
+                .Select(d => d.Id)
+                .FirstOrDefault();
 
-            if (sourceDebt is not null)
+            if (sourceDebtId != Guid.Empty)
             {
-                var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
-                creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
-                sourceDebt.MarkUpdated();
-                await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
+                var sourceDebt = await debtRepository.GetByIdAsync(sourceDebtId).ConfigureAwait(false);
+                if (sourceDebt is not null)
+                {
+                    var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
+                    creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
+                    sourceDebt.MarkUpdated();
+                    await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
+                }
             }
         }
 
         if (creditNote.RemainingAmount > 0)
         {
-            var otherDebts = debtReader.DataSource
+            var otherDebtIds = debtReader.DataSource
                 .Where(d => d.CustomerId == customerId
                          && d.RemainingAmount > 0
                          && (!sourceId.HasValue || d.DeliveryNoteId != sourceId.Value))
                 .OrderBy(d => d.CreatedOnUtc)
+                .Select(d => d.Id)
                 .ToList();
 
-            foreach (var debt in otherDebts)
+            foreach (var debtId in otherDebtIds)
             {
                 if (creditNote.RemainingAmount <= 0) break;
+                var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
+                if (debt is null) continue;
                 var applyAmount = Math.Min(creditNote.RemainingAmount, debt.RemainingAmount);
                 creditNote.AllocateToDebt(debt, applyAmount, null);
                 debt.MarkUpdated();
@@ -426,9 +453,9 @@ public sealed class CustomerDebtManager(
         {
             var depositBalance = paymentReader.DataSource
                 .Where(p => p.CustomerId == item.CustomerId
-                         && p.PaymentType == PaymentType.Deposit
-                         && !p.IsApplied)
-                .Sum(p => p.Amount);
+                         && (p.PaymentType == PaymentType.Deposit || p.PaymentType == PaymentType.General)
+                         && p.AppliedAmount < p.Amount)
+                .Sum(p => p.Amount - p.AppliedAmount);
 
             results.Add(new CustomerDebtSummaryDto
             {
@@ -472,7 +499,9 @@ public sealed class CustomerDebtManager(
         }
 
         var deposits = paymentReader.DataSource
-            .Where(p => p.CustomerId == customerId && p.PaymentType == PaymentType.Deposit && !p.IsApplied)
+            .Where(p => p.CustomerId == customerId
+                     && (p.PaymentType == PaymentType.Deposit || p.PaymentType == PaymentType.General)
+                     && p.AppliedAmount < p.Amount)
             .OrderByDescending(p => p.PaidOnUtc)
             .ToList();
 
@@ -482,7 +511,7 @@ public sealed class CustomerDebtManager(
             .Take(20)
             .ToList();
 
-        var depositBalance = deposits.Sum(p => p.Amount);
+        var depositBalance = deposits.Sum(p => p.Amount - p.AppliedAmount);
         var unappliedCreditNotes = creditNoteReader.DataSource
             .Where(c => c.CustomerId == customerId
                 && c.Status != CreditNoteStatus.Cancelled

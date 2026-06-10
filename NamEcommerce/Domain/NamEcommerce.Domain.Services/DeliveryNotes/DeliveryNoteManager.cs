@@ -12,6 +12,7 @@ using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions;
@@ -66,6 +67,17 @@ public sealed class DeliveryNoteManager(
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
         EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
+
+        // Validate AmountToCollect không vượt phần còn phải thu của order
+        if (dto.AmountToCollect > 0)
+        {
+            var existingCollect = deliveryNoteReader.DataSource
+                .Where(dn => dn.OrderId == dto.OrderId && dn.Status != DeliveryNoteStatus.Cancelled)
+                .Sum(dn => dn.AmountToCollect);
+            var remaining = order.OrderTotal + dto.Surcharge - existingCollect;
+            if (dto.AmountToCollect > remaining)
+                throw new AmountToCollectExceedsOrderRemainingException(dto.AmountToCollect, remaining);
+        }
 
         var itemsByProduct = dto.Items
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
@@ -147,6 +159,13 @@ public sealed class DeliveryNoteManager(
 
         if (deliveryNote.Status != DeliveryNoteStatus.Draft)
             throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
+
+        if (deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && deliveryNote.OrderId != Guid.Empty)
+        {
+            var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            if (order is { OrderStatus: OrderStatus.Completed or OrderStatus.Cancelled })
+                throw new DeliveryNoteOrderAlreadyClosedException(deliveryNote.OrderId, order.OrderStatus);
+        }
 
         deliveryNote.Confirm();
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);

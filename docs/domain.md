@@ -274,14 +274,25 @@ public static class XyzExtensions
 
 ## IEntityDataReader và IRepository — tóm tắt
 
+`IEntityDataReader<T>` chỉ trả về **untracked** entity — dùng cho read-only.  
+`IRepository<T>` stage thay đổi (không gọi SaveChanges bên trong) — `UnitOfWorkBehavior` commit cuối mỗi Command.
+
 ```csharp
-// Read
+// Read-only — tất cả đều untracked (AsNoTracking)
 await _xyzDataReader.GetByIdAsync(id);
 await _xyzDataReader.GetAllAsync();
-_xyzDataReader.DataSource.Where(...).OrderBy(...).ToList(); // ONLY NECESSARY
+_xyzDataReader.DataSource.Where(...).OrderBy(...).ToList();
 
-// Write
+// Tracked load — dùng khi cần concurrency rowversion hoặc identity-map guarantee
+await _xyzRepository.GetByIdAsync(id);
+
+// Write — stage thay đổi, không save ngay; commit xảy ra cuối pipeline
 await _xyzRepository.InsertAsync(xyz);
-await _xyzRepository.UpdateAsync(xyz);
+await _xyzRepository.UpdateAsync(xyz);   // handle cả tracked lẫn detached entity
 await _xyzRepository.DeleteAsync(xyz);
+
+// Pattern sửa entity:
+var xyz = await _xyzDataReader.GetByIdAsync(id) ?? throw new XyzNotFoundException(id);
+xyz.SomeMutation();                          // mutate
+await _xyzRepository.UpdateAsync(xyz);       // StagedRepository tự attach nếu detached
 ```

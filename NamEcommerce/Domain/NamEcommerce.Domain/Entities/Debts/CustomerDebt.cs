@@ -103,21 +103,20 @@ public sealed record CustomerDebt : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    internal void ApplyPayment(decimal amount)
+    internal decimal ApplyPayment(decimal amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0) return 0m;
 
-        PaidAmount += amount;
-        RemainingAmount -= amount;
-
-        if (RemainingAmount < 0)
-            RemainingAmount = 0;
+        var applied = Math.Min(amount, RemainingAmount);
+        PaidAmount += applied;
+        RemainingAmount -= applied;
 
         Status = RemainingAmount <= 0
             ? DebtStatus.FullyPaid
             : DebtStatus.PartiallyPaid;
 
         UpdatedOnUtc = DateTime.UtcNow;
+        return applied;
     }
 
     internal void ApplyCreditNote(decimal amount)

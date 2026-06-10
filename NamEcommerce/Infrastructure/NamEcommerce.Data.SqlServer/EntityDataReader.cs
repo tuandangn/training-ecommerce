@@ -38,7 +38,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
         => _dbContext.GetDataAsync<TEntity>();
 
     public Task<TEntity?> GetByIdAsync(Guid id)
-        => _dbContext.FindAsync<TEntity>(id);
+        => DataSource.FirstOrDefaultAsync(e => e.Id == id);
 
     public Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
     {

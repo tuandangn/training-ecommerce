@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Contracts\NamEcommerce.Application.Contracts.csproj" />
 		<ProjectReference Include="..\NamEcommerce.Web.Contracts\NamEcommerce.Web.Contracts.csproj" />
+		<ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data\NamEcommerce.Data.Contracts.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />

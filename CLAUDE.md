@@ -65,6 +65,8 @@ Khi làm việc với UI/UX hãy áp dụng Hệ màu/Font từ DESIGN.md kết 
 
 **Manager:** inject `IRepository<T>` (write) + `IEntityDataReader<T>` (read). Publish events qua `IEventPublisher`. Input DTO has `Verify()` (throw exception).
 
+**Repository semantics (Unit of Work):** `IRepository<T>` stage changes (no SaveChanges inside). `UnitOfWorkBehavior` commits once at end of every MediatR Command. `IEntityDataReader<T>` is **read-only / untracked** — use `IRepository<T>.GetByIdAsync` when you need a tracked entity for concurrency checks.
+
 **AppService:** Input DTO có `Validate()` (return `(bool, string?)`). Not throw exceptions — return result object with `Success = false`.
 
 **Controller:** chỉ inject `IMediator` + `IModelFactory`. Consice, not business logic.

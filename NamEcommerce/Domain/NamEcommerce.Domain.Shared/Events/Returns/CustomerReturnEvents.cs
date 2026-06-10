@@ -12,7 +12,7 @@ public sealed record CustomerReturnConfirmed(
     Guid CustomerReturnId,
     Guid DeliveryNoteId,
     Guid CustomerId,
-    Guid WarehouseId) : DomainEvent;
+    Guid WarehouseId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu trả hàng khách bị huỷ (Draft/Inspecting → Cancelled).
@@ -28,4 +28,4 @@ public sealed record CustomerReturnOverRefunded(
     Guid CustomerReturnId,
     Guid CustomerId,
     decimal OverAmount,
-    Guid? OverRefundedDebtId) : DomainEvent;
+    Guid? OverRefundedDebtId) : DomainEvent, IReliableDomainEvent;
