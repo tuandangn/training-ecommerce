@@ -194,25 +194,6 @@ public sealed class InventoryStockManager : IInventoryStockManager
             : RevertReceiveAsync(productId, warehouseId, missingQuantity, goodsReceiptId, modifiedByUserId);
     }
 
-    public async Task UpdateAverageCostAsync(Guid productId, Guid warehouseId, decimal newAverageCost)
-    {
-        if (newAverageCost < 0)
-            throw new InvalidStockOperationException("Error.StockAverageCostCannotBeNegative");
-
-        var stock = await TryGetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
-        if (stock is null)
-            throw new StockNotFoundException("Error.StockNotFound", productId, warehouseId);
-
-        // Idempotent — nếu giá trị không đổi thì không cần update để tránh sinh dirty record vô ích.
-        if (stock.AverageCost == newAverageCost)
-            return;
-
-        stock.AverageCost = newAverageCost;
-        stock.UpdatedOnUtc = DateTime.UtcNow;
-
-        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
-    }
-
     public Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize,
         Guid? warehouseId = null, Guid? productId = null, string? keywords = null)
         => GetInventoryStocksAsync(pageIndex, pageSize, [warehouseId], [productId], keywords: keywords);

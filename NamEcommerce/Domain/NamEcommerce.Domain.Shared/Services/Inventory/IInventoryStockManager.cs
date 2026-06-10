@@ -18,14 +18,6 @@ public interface IInventoryStockManager
     Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId);
     Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId);
 
-    /// <summary>
-    /// Legacy compatibility: cập nhật AverageCost snapshot trên InventoryStock.
-    /// Giá vốn authoritative hiện nằm trong InventoryCostLedger/Allocation.
-    /// </summary>
-    /// <exception cref="InvalidStockOperationException">newAverageCost &lt; 0</exception>
-    /// <exception cref="StockNotFoundException">không tìm thấy InventoryStock cho cặp (productId, warehouseId)</exception>
-    Task UpdateAverageCostAsync(Guid productId, Guid warehouseId, decimal newAverageCost);
-    
     Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null);
     Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null);
     Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = 2);

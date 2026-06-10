@@ -197,9 +197,10 @@ public class AccountingController(
     [HttpGet]
     public async Task<IActionResult> BalanceSheet(DateTime? asOf)
     {
-        var date = asOf ?? DateTime.Today;
-        var model = await reportService.GetBalanceSheetAsync(date).ConfigureAwait(false);
-        ViewBag.AsOf = date;
+        var displayDate = asOf ?? DateTime.Today;
+        var queryDate = displayDate.Date.AddDays(1).AddTicks(-1);
+        var model = await reportService.GetBalanceSheetAsync(queryDate).ConfigureAwait(false);
+        ViewBag.AsOf = displayDate;
         return View(model);
     }
 
@@ -236,11 +237,12 @@ public class AccountingController(
     [HttpGet]
     public async Task<IActionResult> ExportBalanceSheetExcel(DateTime? asOf)
     {
-        var date = asOf ?? DateTime.Today;
-        var model = await reportService.GetBalanceSheetAsync(date).ConfigureAwait(false);
+        var displayDate = asOf ?? DateTime.Today;
+        var queryDate = displayDate.Date.AddDays(1).AddTicks(-1);
+        var model = await reportService.GetBalanceSheetAsync(queryDate).ConfigureAwait(false);
         var bytes = AccountingExcelExporter.ExportBalanceSheet(model);
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"B01_CDKT_{date:yyyyMMdd}.xlsx");
+            $"B01_CDKT_{displayDate:yyyyMMdd}.xlsx");
     }
 
     [HttpGet]

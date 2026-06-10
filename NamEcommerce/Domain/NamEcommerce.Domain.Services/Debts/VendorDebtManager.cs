@@ -453,6 +453,21 @@ public sealed class VendorDebtManager(
         return inserted.ToDto();
     }
 
+    public async Task ConsumeCreditNoteByRefundAsync(Guid vendorReturnId, decimal refundAmount)
+    {
+        var creditNote = creditNoteReader.DataSource
+            .FirstOrDefault(c => c.SourceReturnId == vendorReturnId
+                              && c.Status != CreditNoteStatus.Cancelled
+                              && c.RemainingAmount > 0);
+        if (creditNote is null) return;
+
+        var tracked = await creditNoteRepository.GetByIdAsync(creditNote.Id).ConfigureAwait(false);
+        if (tracked is null) return;
+
+        tracked.ConsumeByRefund(refundAmount);
+        await creditNoteRepository.UpdateAsync(tracked).ConfigureAwait(false);
+    }
+
     public async Task ReverseCreditNoteFromVendorReturnAsync(Guid returnId, string reason)
     {
         var creditNote = creditNoteReader.DataSource

@@ -6,11 +6,11 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Application.Contracts.Inventory;
 
 namespace NamEcommerce.Application.Services.Finance;
 
@@ -30,6 +30,7 @@ public sealed class AccountingReportService : IAccountingReportService
     private readonly IEntityDataReader<VendorRefund> _vendorRefunds;
     private readonly IAccountingSetupAppService _setupService;
     private readonly ICashBookService _cashBookService;
+    private readonly IInventoryCostingAppService _inventoryCostingService;
 
     public AccountingReportService(
         IEntityDataReader<DeliveryNote> deliveryNotes,
@@ -45,7 +46,8 @@ public sealed class AccountingReportService : IAccountingReportService
         IEntityDataReader<CustomerRefund> refunds,
         IEntityDataReader<VendorRefund> vendorRefunds,
         IAccountingSetupAppService setupService,
-        ICashBookService cashBookService)
+        ICashBookService cashBookService,
+        IInventoryCostingAppService inventoryCostingService)
     {
         _deliveryNotes = deliveryNotes;
         _creditNotes = creditNotes;
@@ -61,6 +63,7 @@ public sealed class AccountingReportService : IAccountingReportService
         _vendorRefunds = vendorRefunds;
         _setupService = setupService;
         _cashBookService = cashBookService;
+        _inventoryCostingService = inventoryCostingService;
     }
 
     // ── B02 ───────────────────────────────────────────────────────────────────
@@ -163,11 +166,23 @@ public sealed class AccountingReportService : IAccountingReportService
         var b02 = await GetIncomeStatementAsync(period).ConfigureAwait(false);
         var totalDepreciation = b02.SellingDepreciation + b02.AdminDepreciation;
 
-        var arEnd = GetNetAccountsReceivable(end);
+        var refundsOut = -(_refunds.DataSource
+            .Where(r => r.Status == CustomerRefundStatus.Completed
+                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
+            .Sum(r => (decimal?)r.Amount) ?? 0);
+
+        var vendorRefundsIn = _vendorRefunds.DataSource
+            .Where(r => r.Status == VendorRefundStatus.Completed
+                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
+            .Sum(r => (decimal?)r.Amount) ?? 0;
+
+        // Credit notes consumed by cash refunds should still count as AR/AP timing
+        // differences because their cash impact is tracked separately in refundsOut/vendorRefundsIn.
+        var arEnd = GetNetAccountsReceivable(end) + refundsOut;
         var arBegin = GetNetAccountsReceivable(start.AddDays(-1));
         var arChange = -(arEnd - arBegin);
 
-        var apEnd = GetNetAccountsPayable(end);
+        var apEnd = GetNetAccountsPayable(end) - vendorRefundsIn;
         var apBegin = GetNetAccountsPayable(start.AddDays(-1));
         var apChange = apEnd - apBegin;
 
@@ -194,16 +209,6 @@ public sealed class AccountingReportService : IAccountingReportService
         var vatEnd = GetVatPayable(end);
         var vatBegin = GetVatPayable(start.AddDays(-1));
         var vatChange = vatEnd - vatBegin;
-
-        var refundsOut = -(_refunds.DataSource
-            .Where(r => r.Status == CustomerRefundStatus.Completed
-                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
-            .Sum(r => (decimal?)r.Amount) ?? 0);
-
-        var vendorRefundsIn = _vendorRefunds.DataSource
-            .Where(r => r.Status == VendorRefundStatus.Completed
-                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
-            .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var assetPurchases = -(_fixedAssets.DataSource
             .Where(a => a.AcquisitionDate >= start && a.AcquisitionDate <= end)
@@ -262,7 +267,13 @@ public sealed class AccountingReportService : IAccountingReportService
         var bankBalances = await _cashBookService.GetBankBalancesAsync(asOf).ConfigureAwait(false);
 
         var ar = GetNetAccountsReceivable(asOf);
-        var inventory = _inventoryStocks.DataSource.Sum(s => s.QuantityOnHand * s.AverageCost);
+
+        var inventory = 0m;
+        foreach (var stock in _inventoryStocks.DataSource.Where(stock => stock.QuantityOnHand > 0).ToList())
+        {
+            var cost = await _inventoryCostingService.GetCurrentProductCostPriceAsync(stock.ProductId).ConfigureAwait(false);
+            inventory += cost * stock.QuantityOnHand;
+        }
 
         var grossAssets = _fixedAssets.DataSource
             .Where(a => a.Status != FixedAssetStatus.Disposed || (a.DisposedOnUtc.HasValue && a.DisposedOnUtc > asOf))
@@ -314,13 +325,15 @@ public sealed class AccountingReportService : IAccountingReportService
 
     private decimal GetNetAccountsReceivable(DateTime asOf)
     {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+
         var gross = _customerDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= asOf
+            .Where(d => d.CreatedOnUtc <= cutoff
                      && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
             .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
 
         var creditNoteOffset = _creditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= asOf
+            .Where(cn => cn.CreatedOnUtc <= cutoff
                       && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
             .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
 
@@ -329,13 +342,15 @@ public sealed class AccountingReportService : IAccountingReportService
 
     private decimal GetNetAccountsPayable(DateTime asOf)
     {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+
         var gross = _vendorDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= asOf
+            .Where(d => d.CreatedOnUtc <= cutoff
                      && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
             .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
 
         var creditNoteOffset = _vendorCreditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= asOf
+            .Where(cn => cn.CreatedOnUtc <= cutoff
                       && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
             .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
 
@@ -344,8 +359,10 @@ public sealed class AccountingReportService : IAccountingReportService
 
     private decimal GetVatPayable(DateTime asOf)
     {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+
         var deliveredNoteIds = _deliveryNotes.DataSource
-            .Where(dn => dn.Status == DeliveryNoteStatus.Delivered && dn.DeliveredOnUtc <= asOf)
+            .Where(dn => dn.Status == DeliveryNoteStatus.Delivered && dn.DeliveredOnUtc <= cutoff)
             .Select(dn => dn.Id)
             .ToHashSet();
 
@@ -355,11 +372,11 @@ public sealed class AccountingReportService : IAccountingReportService
             .Sum(i => (decimal?)i.TaxAmount) ?? 0;
 
         var vatIn = _expenses.DataSource
-            .Where(e => e.IncurredDate <= asOf)
+            .Where(e => e.IncurredDate <= cutoff)
             .Sum(e => (decimal?)e.TaxAmount) ?? 0;
 
         var vatInGoods = _goodsReceipts.DataSource
-            .Where(gr => gr.ReceivedOnUtc <= asOf)
+            .Where(gr => gr.ReceivedOnUtc <= cutoff)
             .SelectMany(gr => gr.Items)
             .Sum(i => (decimal?)i.TaxAmount) ?? 0;
 

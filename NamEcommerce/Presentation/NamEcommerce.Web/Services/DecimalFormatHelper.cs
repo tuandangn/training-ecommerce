@@ -46,24 +46,31 @@ public static class DecimalFormatHelper
         return $"{intPart},{fracPart}";
     }
 
-    // ── private: format ──────────────────────────────────────
-
     private static string InsertThousandSeparator(string intStr, char sep, char? endSymbol = null)
     {
-        var sb = new StringBuilder();
-        int count = 0;
+        if (string.IsNullOrEmpty(intStr)) return intStr;
 
-        for (int i = intStr.Length - 1; i >= 0; i--)
+        // Chuyển chuỗi sang số (decimal để tránh mất góc thập phân)
+        if (decimal.TryParse(intStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal number))
         {
-            if (count > 0 && count % 3 == 0)
-                sb.Insert(0, sep);
-            sb.Insert(0, intStr[i]);
-            count++;
-        }
-        if (endSymbol.HasValue)
-            sb.AppendFormat(" {0}", endSymbol.Value);
+            // Tạo cấu hình định dạng tùy biến theo ký tự 'sep' bạn truyền vào
+            var nfi = new NumberFormatInfo
+            {
+                NumberGroupSeparator = sep.ToString(),
+                NumberDecimalSeparator = sep == '.' ? "," : "." // Nếu phân cách hàng nghìn là '.' thì thập phân là ',' và ngược lại
+            };
 
-        return sb.ToString();
+            // Định dạng số (N0 nếu là số nguyên, hoặc dùng N nếu có thập phân)
+            // Bạn có thể dùng định dạng mặc định là "N" để tự giữ lại phần thập phân
+            string formatted = number.ToString("#,##0.######", nfi);
+
+            if (endSymbol.HasValue)
+                formatted += $" {endSymbol.Value}";
+
+            return formatted;
+        }
+
+        return intStr; // Trả về chuỗi gốc nếu không parse được thành số
     }
 
     // ── Số → chữ Tiếng Việt ──────────────────────────────────

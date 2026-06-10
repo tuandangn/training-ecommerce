@@ -378,6 +378,21 @@ public sealed class CustomerDebtManager(
         return MapToCreditNoteDto(inserted);
     }
 
+    public async Task ConsumeCreditNoteByRefundAsync(Guid customerReturnId, decimal refundAmount)
+    {
+        var creditNote = creditNoteReader.DataSource
+            .FirstOrDefault(c => c.SourceReturnId == customerReturnId
+                              && c.Status != CreditNoteStatus.Cancelled
+                              && c.RemainingAmount > 0);
+        if (creditNote is null) return;
+
+        var tracked = await creditNoteRepository.GetByIdAsync(creditNote.Id).ConfigureAwait(false);
+        if (tracked is null) return;
+
+        tracked.ConsumeByRefund(refundAmount);
+        await creditNoteRepository.UpdateAsync(tracked).ConfigureAwait(false);
+    }
+
     public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
         // Load tất cả debts vào memory rồi group (phù hợp với quy mô cửa hàng)
