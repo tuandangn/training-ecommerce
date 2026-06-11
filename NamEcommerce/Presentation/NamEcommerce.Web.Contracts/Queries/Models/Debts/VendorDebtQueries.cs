@@ -22,3 +22,17 @@ public sealed class GetVendorPaymentReceiptQuery : IRequest<VendorPaymentReceipt
 {
     public required Guid PaymentId { get; init; }
 }
+
+public sealed class GetVendorLedgerListQuery : IRequest<VendorLedgerListModel>
+{
+    public string? Keywords { get; set; }
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 15;
+}
+
+public sealed class GetVendorLedgerDetailsQuery : IRequest<VendorLedgerDetailsModel?>
+{
+    public required Guid VendorId { get; init; }
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 50;
+}

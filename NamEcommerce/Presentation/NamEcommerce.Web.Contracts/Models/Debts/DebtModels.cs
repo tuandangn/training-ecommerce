@@ -130,17 +130,12 @@ public sealed record CustomerPaymentReceiptModel
     public DateTime PaidOn { get; init; }
 }
 
-/// <summary>Form submit khi thu tiền (cả thu riêng lẫn thu linh động).</summary>
+/// <summary>Form submit khi thu tiền từ khách.</summary>
 public sealed class RecordPaymentModel
 {
     public Guid CustomerId { get; set; }
-    /// <summary>Nếu có → thu tiền cho 1 phiếu cụ thể. Nếu null → FIFO linh động.</summary>
-    public Guid? CustomerDebtId { get; set; }
-    public Guid? OrderId { get; set; }
-
     public decimal Amount { get; set; }
     public int PaymentMethod { get; set; }
-    public int PaymentType { get; set; }
     public string? Note { get; set; }
     public DateTime PaidOnUtc { get; set; } = DateTime.UtcNow;
 }
@@ -152,4 +147,46 @@ public sealed class CustomerDebtSearchModel
     public string? Keywords { get; set; }
     public int PageIndex { get; set; } = 1;
     public int PageSize { get; set; } = 15;
+}
+
+// ── Ledger-based models (Phase 3 cutover) ────────────────────────────────────
+
+public sealed class CustomerLedgerListModel
+{
+    public string? Keywords { get; set; }
+    public IPagedDataModel<CustomerDebtBalanceSummaryModel>? Data { get; set; }
+}
+
+public sealed record CustomerDebtBalanceSummaryModel
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public decimal Balance { get; init; }
+    public DateTime? LastEntryOnUtc { get; init; }
+}
+
+public sealed class CustomerLedgerDetailsModel
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public decimal Balance { get; init; }
+    public DateTime? LastEntryOnUtc { get; init; }
+    public IList<CustomerLedgerStatementEntryModel> Statement { get; init; } = [];
+    public int PageIndex { get; set; } = 1;
+    public int TotalCount { get; set; }
+}
+
+public sealed record CustomerLedgerStatementEntryModel
+{
+    public required Guid EntryId { get; init; }
+    public int EntryType { get; init; }
+    public decimal Amount { get; init; }
+    public decimal RunningBalance { get; init; }
+    public int ReferenceType { get; init; }
+    public Guid? ReferenceId { get; init; }
+    public string? ReferenceCode { get; init; }
+    public string? Note { get; init; }
+    public DateTime OccurredAtUtc { get; init; }
 }

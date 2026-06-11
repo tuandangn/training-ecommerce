@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
-using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -24,6 +23,7 @@ public sealed class VendorDebtManager(
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptReader,
+    IVendorLedgerManager vendorLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : IVendorDebtManager
 {
     private Task<string> GenerateDebtCodeAsync()
@@ -66,8 +66,17 @@ public sealed class VendorDebtManager(
         };
 
         debt.MarkCreated();
-        await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        return debt.ToDto();
+        var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordChargeAsync(new RecordVendorLedgerChargeDto
+        {
+            VendorId = dto.VendorId,
+            Amount = dto.TotalAmount,
+            ReferenceType = VendorLedgerReferenceType.None,
+            OccurredAtUtc = inserted.CreatedOnUtc
+        }).ConfigureAwait(false);
+
+        return inserted.ToDto();
     }
 
     public async Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto)
@@ -103,33 +112,17 @@ public sealed class VendorDebtManager(
             VendorAddress = vendor.Address
         };
 
-        // Auto-apply AdvancePayments chưa dùng của NCC này — load tracked qua repository để không attach trùng
-        var advancePaymentIds = paymentReader.DataSource
-            .Where(p => p.VendorId == vendor.Id
-                     && p.PaymentType == PaymentType.AdvancePayment
-                     && !p.IsApplied)
-            .OrderBy(p => p.PaidOnUtc)
-            .Select(p => p.Id)
-            .ToList();
-
-        foreach (var advanceId in advancePaymentIds)
-        {
-            if (debt.RemainingAmount <= 0) break;
-
-            var advance = await paymentRepository.GetByIdAsync(advanceId).ConfigureAwait(false);
-            if (advance is null || advance.IsApplied) continue;
-
-            var applyAmount = Math.Min(advance.Amount, debt.RemainingAmount);
-            debt.ApplyPayment(applyAmount);
-            advance.MarkAsApplied();
-            advance.VendorDebtId = debt.Id;
-            advance.PurchaseOrderId = purchaseOrder.Id;
-            advance.PurchaseOrderCode = purchaseOrder.Code;
-            await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
-        }
-
         debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordChargeAsync(new RecordVendorLedgerChargeDto
+        {
+            VendorId = dto.VendorId,
+            Amount = dto.TotalAmount,
+            ReferenceType = VendorLedgerReferenceType.None,
+            OccurredAtUtc = inserted.CreatedOnUtc
+        }).ConfigureAwait(false);
+
         return inserted.ToDto();
     }
 
@@ -165,31 +158,18 @@ public sealed class VendorDebtManager(
             VendorAddress = vendor.Address
         };
 
-        // Auto-apply AdvancePayments chưa dùng của NCC này — load tracked qua repository để không attach trùng
-        var advancePaymentIds = paymentReader.DataSource
-            .Where(p => p.VendorId == vendor.Id
-                     && p.PaymentType == PaymentType.AdvancePayment
-                     && !p.IsApplied)
-            .OrderBy(p => p.PaidOnUtc)
-            .Select(p => p.Id)
-            .ToList();
-
-        foreach (var advanceId in advancePaymentIds)
-        {
-            if (debt.RemainingAmount <= 0) break;
-
-            var advance = await paymentRepository.GetByIdAsync(advanceId).ConfigureAwait(false);
-            if (advance is null || advance.IsApplied) continue;
-
-            var applyAmount = Math.Min(advance.Amount, debt.RemainingAmount);
-            debt.ApplyPayment(applyAmount);
-            advance.MarkAsApplied();
-            advance.VendorDebtId = debt.Id;
-            await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
-        }
-
         debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordChargeAsync(new RecordVendorLedgerChargeDto
+        {
+            VendorId = dto.VendorId,
+            Amount = dto.TotalAmount,
+            ReferenceType = VendorLedgerReferenceType.GoodsReceipt,
+            ReferenceId = dto.GoodsReceiptId,
+            OccurredAtUtc = inserted.CreatedOnUtc
+        }).ConfigureAwait(false);
+
         return inserted.ToDto();
     }
 
@@ -219,107 +199,26 @@ public sealed class VendorDebtManager(
             PurchaseOrderId = dto.PurchaseOrderId
         };
 
-        // Nếu gắn với debt cụ thể, áp dụng thanh toán vào debt đó
-        if (dto.VendorDebtId.HasValue)
-        {
-            var debt = await debtRepository.GetByIdAsync(dto.VendorDebtId.Value).ConfigureAwait(false);
-            if (debt != null)
-            {
-                if (payment.Amount > debt.RemainingAmount)
-                    throw new VendorPaymentExceedsRemainingException(payment.Amount, debt.RemainingAmount);
-
-                debt.ApplyPayment(payment.Amount);
-                payment.MarkAsApplied();
-                payment.PurchaseOrderId = debt.PurchaseOrderId;
-                payment.PurchaseOrderCode = debt.PurchaseOrderCode;
-                debt.MarkUpdated();
-                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            }
-        }
-
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordPaymentAsync(new RecordVendorLedgerPaymentDto
+        {
+            VendorId = dto.VendorId,
+            Amount = dto.Amount,
+            ReferenceId = inserted.Id,
+            ReferenceCode = inserted.Code,
+            OccurredAtUtc = inserted.PaidOnUtc,
+            CreatedByUserId = dto.RecordedByUserId
+        }).ConfigureAwait(false);
+
         return inserted.ToDto();
     }
 
     public async Task<IList<VendorPaymentDto>> RecordFlexiblePaymentForVendorAsync(CreateVendorPaymentDto dto)
     {
-        dto.Verify();
-
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
-        if (vendor == null)
-            throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
-
-        // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO) — load tracked qua repository
-        var pendingDebtIds = debtReader.DataSource
-            .Where(d => d.VendorId == dto.VendorId && d.RemainingAmount > 0)
-            .OrderBy(d => d.CreatedOnUtc)
-            .Select(d => d.Id)
-            .ToList();
-
-        var results = new List<VendorPaymentDto>();
-        var remaining = dto.Amount;
-
-        foreach (var debtId in pendingDebtIds)
-        {
-            if (remaining <= 0) break;
-
-            var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
-            if (debt is null || debt.RemainingAmount <= 0) continue;
-
-            var applyAmount = Math.Min(remaining, debt.RemainingAmount);
-            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
-
-            var payment = new VendorPayment(
-                code: code,
-                vendorId: vendor.Id,
-                vendorName: vendor.Name,
-                amount: applyAmount,
-                paymentMethod: dto.PaymentMethod,
-                paymentType: PaymentType.VendorDebtPayment,
-                paidOnUtc: dto.PaidOnUtc,
-                recordedByUserId: dto.RecordedByUserId,
-                note: dto.Note
-            )
-            {
-                VendorDebtId = debt.Id,
-                PurchaseOrderId = debt.PurchaseOrderId,
-                PurchaseOrderCode = debt.PurchaseOrderCode
-            };
-
-            debt.ApplyPayment(applyAmount);
-            payment.MarkAsApplied();
-
-            debt.MarkUpdated();
-            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            payment.MarkCreated();
-            var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-            results.Add(inserted.ToDto());
-
-            remaining -= applyAmount;
-        }
-
-        // Nếu còn dư tiền sau khi trả hết nợ → lưu làm AdvancePayment
-        if (remaining > 0)
-        {
-            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
-            var overpayment = new VendorPayment(
-                code: code,
-                vendorId: vendor.Id,
-                vendorName: vendor.Name,
-                amount: remaining,
-                paymentMethod: dto.PaymentMethod,
-                paymentType: PaymentType.AdvancePayment,
-                paidOnUtc: dto.PaidOnUtc,
-                recordedByUserId: dto.RecordedByUserId,
-                note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ NCC" : dto.Note
-            );
-            overpayment.MarkCreated();
-            var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
-            results.Add(inserted.ToDto());
-        }
-
-        return results;
+        var payment = await RecordPaymentAsync(dto).ConfigureAwait(false);
+        return [payment];
     }
 
     public async Task<VendorPaymentDto> RecordAdvancePaymentAsync(CreateVendorPaymentDto dto)
@@ -346,6 +245,17 @@ public sealed class VendorDebtManager(
 
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordPaymentAsync(new RecordVendorLedgerPaymentDto
+        {
+            VendorId = dto.VendorId,
+            Amount = dto.Amount,
+            ReferenceId = inserted.Id,
+            ReferenceCode = inserted.Code,
+            OccurredAtUtc = inserted.PaidOnUtc,
+            CreatedByUserId = dto.RecordedByUserId
+        }).ConfigureAwait(false);
+
         return inserted.ToDto();
     }
 
@@ -436,45 +346,17 @@ public sealed class VendorDebtManager(
             sourcePurchaseOrderId,
             amount);
 
-        var sourceDebtId = ResolveSourceDebtId(vendorId, sourceGoodsReceiptId, sourcePurchaseOrderId);
-        if (sourceDebtId.HasValue)
-        {
-            var sourceDebt = await debtRepository.GetByIdAsync(sourceDebtId.Value).ConfigureAwait(false);
-            if (sourceDebt is not null && sourceDebt.RemainingAmount > 0)
-            {
-                var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
-                creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
-                sourceDebt.MarkUpdated();
-                await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
-            }
-        }
-
-        if (creditNote.RemainingAmount > 0)
-        {
-            var otherDebtIds = debtReader.DataSource
-                .Where(d => d.VendorId == vendorId
-                         && d.RemainingAmount > 0
-                         && (!sourceGoodsReceiptId.HasValue || d.GoodsReceiptId != sourceGoodsReceiptId.Value)
-                         && (!sourcePurchaseOrderId.HasValue || d.PurchaseOrderId != sourcePurchaseOrderId.Value))
-                .OrderBy(d => d.CreatedOnUtc)
-                .Select(d => d.Id)
-                .ToList();
-
-            foreach (var debtId in otherDebtIds)
-            {
-                if (creditNote.RemainingAmount <= 0) break;
-
-                var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
-                if (debt is null || debt.RemainingAmount <= 0) continue;
-
-                var applyAmount = Math.Min(creditNote.RemainingAmount, debt.RemainingAmount);
-                creditNote.AllocateToDebt(debt, applyAmount, null);
-                debt.MarkUpdated();
-                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            }
-        }
-
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
+
+        await vendorLedgerManager.RecordReturnCreditAsync(new RecordVendorLedgerReturnCreditDto
+        {
+            VendorId = vendorId,
+            Amount = amount,
+            ReferenceId = returnId,
+            ReferenceCode = returnCode,
+            OccurredAtUtc = inserted.CreatedOnUtc
+        }).ConfigureAwait(false);
+
         return inserted.ToDto();
     }
 
@@ -504,48 +386,16 @@ public sealed class VendorDebtManager(
         var creditNote = await creditNoteRepository.GetByIdAsync(creditNoteId).ConfigureAwait(false);
         if (creditNote is null) return;
 
-        var activeAllocations = creditNote.Allocations
-            .Where(a => !a.IsReversed)
-            .ToList();
-
-        foreach (var allocation in activeAllocations)
-        {
-            var debt = await debtRepository.GetByIdAsync(allocation.VendorDebtId).ConfigureAwait(false);
-            if (debt is null) continue;
-
-            debt.ReverseCreditNote(allocation.Amount);
-            creditNote.ReverseAllocation(allocation, null, reason);
-            debt.MarkUpdated();
-            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-        }
-
         creditNote.Cancel();
         await creditNoteRepository.UpdateAsync(creditNote).ConfigureAwait(false);
-    }
 
-    private Guid? ResolveSourceDebtId(Guid vendorId, Guid? sourceGoodsReceiptId, Guid? sourcePurchaseOrderId)
-    {
-        if (sourceGoodsReceiptId.HasValue)
+        await vendorLedgerManager.RecordCorrectionAsync(new RecordVendorCorrectionDto
         {
-            var id = debtReader.DataSource.Where(d => d.VendorId == vendorId
-                    && d.GoodsReceiptId == sourceGoodsReceiptId.Value
-                    && d.RemainingAmount > 0)
-                .Select(d => d.Id)
-                .FirstOrDefault();
-            return id == Guid.Empty ? null : id;
-        }
-
-        if (sourcePurchaseOrderId.HasValue)
-        {
-            var id = debtReader.DataSource.Where(d => d.VendorId == vendorId
-                    && d.PurchaseOrderId == sourcePurchaseOrderId.Value
-                    && d.RemainingAmount > 0)
-                .Select(d => d.Id)
-                .FirstOrDefault();
-            return id == Guid.Empty ? null : id;
-        }
-
-        return null;
+            VendorId = creditNote.VendorId,
+            Amount = creditNote.Amount,
+            Note = reason,
+            OccurredAtUtc = DateTime.UtcNow
+        }).ConfigureAwait(false);
     }
 
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)

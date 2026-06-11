@@ -1,6 +1,6 @@
 @using NamEcommerce.Web.Contracts.Models.Debts
 @using NamEcommerce.Web.Models.CustomerDebts
-@model CustomerDebtListModel
+@model CustomerLedgerListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Công nợ khách hàng";
     var query = Model.Keywords;
@@ -9,7 +9,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Công nợ khách hàng</h1>
-        <p class="page-header-subtitle">Danh sách khách hàng còn nợ — nhấn vào tên để xem chi tiết từng khoản</p>
+        <p class="page-header-subtitle">Số dư công nợ theo từng khách — nhấn vào tên để xem sao kê</p>
     </div>
 </div>
 <div class="content-card" data-responsive-list data-list-key="customer-debt-list">
@@ -23,11 +23,8 @@
             <thead>
                 <tr>
                     <th class="ps-4">Khách hàng</th>
-                    <th class="text-center">Số phiếu nợ</th>
-                    <th class="text-end">Tổng nợ phát sinh</th>
-                    <th class="text-end">Đã thanh toán</th>
-                    <th class="text-end">Còn phải thu</th>
-                    <th class="text-end">Tiền cọc / dư</th>
+                    <th class="text-end">Số dư công nợ</th>
+                    <th class="text-end">Giao dịch cuối</th>
                     <th style="width: 80px;"></th>
                 </tr>
             </thead>
@@ -36,6 +33,8 @@
                 {
                     @foreach (var item in Model.Data)
                     {
+                        var isDebt = item.Balance > 0;
+                        var isCredit = item.Balance < 0;
                         <tr>
                             <td class="ps-4">
                                 <a asp-action="Details" asp-route-id="@item.CustomerId" class="fw-medium text-decoration-none">
@@ -51,34 +50,37 @@
                                     </div>
                                 }
                             </td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-dark border fw-normal">@item.DebtCount phiếu</span>
-                            </td>
-                            <td class="text-end fw-medium text-dark">
-                                @item.TotalDebtAmount.ToString(ViewConstants.CurrencyDisplayFormat)
-                            </td>
-                            <td class="text-end text-success fw-medium">
-                                @item.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)
-                            </td>
-                            <td class="text-end fw-bold @(item.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">
-                                @item.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
-                            </td>
                             <td class="text-end">
-                                @if (item.DepositBalance > 0)
+                                @if (isDebt)
                                 {
-                                    <span class="badge bg-info-subtle text-info border border-info-subtle fw-normal">
-                                        @item.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat)
-                                    </span>
+                                    <span class="fw-bold text-danger">@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                                    <div class="small text-muted">Còn nợ</div>
+                                }
+                                else if (isCredit)
+                                {
+                                    <span class="fw-bold text-success">@(Math.Abs(item.Balance).ToString(ViewConstants.CurrencyDisplayFormat))</span>
+                                    <div class="small text-success">Khách dư</div>
                                 }
                                 else
                                 {
-                                    <span class="text-muted small">—</span>
+                                    <span class="fw-bold text-muted">—</span>
+                                    <div class="small text-muted">Đã đủ</div>
+                                }
+                            </td>
+                            <td class="text-end text-muted small">
+                                @if (item.LastEntryOnUtc.HasValue)
+                                {
+                                    @item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
+                                }
+                                else
+                                {
+                                    <span>—</span>
                                 }
                             </td>
                             <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem chi tiết">
+                                <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
                                     <i class="bi bi-chevron-right"></i>
-                                    <span class="visually-hidden">Chi tiết</span>
+                                    <span class="visually-hidden">Sao kê</span>
                                 </a>
                             </td>
                         </tr>
@@ -87,7 +89,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="7">
+                        <td colspan="4">
                             <div class="empty-state py-5">
                                 <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
                                 <h5>Không có công nợ nào</h5>
@@ -106,6 +108,8 @@
         {
             @foreach (var item in Model.Data)
             {
+                var isDebt = item.Balance > 0;
+                var isCredit = item.Balance < 0;
                 <article class="list-card">
                     <div class="list-card-header">
                         <div class="list-card-title-group">
@@ -119,39 +123,33 @@
                                 </a>
                             }
                         </div>
-                        <span class="badge bg-light text-dark border fw-normal">@item.DebtCount phiếu</span>
+                        @if (isDebt)
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal">Còn nợ</span>
+                        }
+                        else if (isCredit)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">Dư</span>
+                        }
                     </div>
                     <div class="list-card-fields">
                         <div class="list-card-field">
-                            <span class="list-card-label">Tổng nợ phát sinh</span>
-                            <span class="list-card-value">@item.TotalDebtAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                            <span class="list-card-label">Số dư</span>
+                            <span class="list-card-value @(isDebt ? "text-danger" : isCredit ? "text-success" : "text-muted")">
+                                @(isCredit ? "-" : "")@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </span>
                         </div>
                         <div class="list-card-field">
-                            <span class="list-card-label">Đã thanh toán</span>
-                            <span class="list-card-value text-success">@item.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                        </div>
-                        <div class="list-card-field">
-                            <span class="list-card-label">Còn phải thu</span>
-                            <span class="list-card-value @(item.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">@item.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                        </div>
-                        <div class="list-card-field">
-                            <span class="list-card-label">Tiền cọc / dư</span>
+                            <span class="list-card-label">Giao dịch cuối</span>
                             <span class="list-card-value">
-                                @if (item.DepositBalance > 0)
-                                {
-                                    @item.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat)
-                                }
-                                else
-                                {
-                                    <span class="text-muted">—</span>
-                                }
+                                @(item.LastEntryOnUtc.HasValue ? item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")
                             </span>
                         </div>
                     </div>
                     <div class="list-card-actions">
-                        <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem chi tiết">
+                        <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
                             <i class="bi bi-chevron-right"></i>
-                            <span class="visually-hidden">Chi tiết</span>
+                            <span class="visually-hidden">Sao kê</span>
                         </a>
                     </div>
                 </article>

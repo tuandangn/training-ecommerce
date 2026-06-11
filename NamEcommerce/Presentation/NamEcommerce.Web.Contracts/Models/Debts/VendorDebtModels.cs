@@ -115,6 +115,48 @@ public sealed record VendorPaymentReceiptModel
     public DateTime PaidOn { get; init; }
 }
 
+// ── Ledger-based models (Phase 5 cutover) ────────────────────────────────────
+
+public sealed class VendorLedgerListModel
+{
+    public string? Keywords { get; set; }
+    public IPagedDataModel<VendorDebtBalanceSummaryModel>? Data { get; set; }
+}
+
+public sealed record VendorDebtBalanceSummaryModel
+{
+    public required Guid VendorId { get; init; }
+    public required string VendorName { get; init; }
+    public string? VendorPhone { get; init; }
+    public decimal Balance { get; init; }
+    public DateTime? LastEntryOnUtc { get; init; }
+}
+
+public sealed class VendorLedgerDetailsModel
+{
+    public required Guid VendorId { get; init; }
+    public required string VendorName { get; init; }
+    public string? VendorPhone { get; init; }
+    public decimal Balance { get; init; }
+    public DateTime? LastEntryOnUtc { get; init; }
+    public IList<VendorLedgerStatementEntryModel> Statement { get; init; } = [];
+    public int PageIndex { get; set; } = 1;
+    public int TotalCount { get; set; }
+}
+
+public sealed record VendorLedgerStatementEntryModel
+{
+    public required Guid EntryId { get; init; }
+    public int EntryType { get; init; }
+    public decimal Amount { get; init; }
+    public decimal RunningBalance { get; init; }
+    public int ReferenceType { get; init; }
+    public Guid? ReferenceId { get; init; }
+    public string? ReferenceCode { get; init; }
+    public string? Note { get; init; }
+    public DateTime OccurredAtUtc { get; init; }
+}
+
 /// <summary>Form submit khi chi tiền cho NCC (trả nợ riêng lẻ, FIFO, hoặc ứng trước).</summary>
 public sealed class RecordVendorPaymentModel
 {

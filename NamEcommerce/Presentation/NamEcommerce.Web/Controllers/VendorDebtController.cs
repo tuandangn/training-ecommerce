@@ -15,7 +15,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
     public async Task<IActionResult> Index(string? keywords, int pageIndex = 1)
     {
-        var model = await _mediator.Send(new GetVendorDebtListQuery
+        var model = await _mediator.Send(new GetVendorLedgerListQuery
         {
             Keywords = keywords,
             PageIndex = pageIndex
@@ -25,9 +25,13 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     }
 
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
-    public async Task<IActionResult> Details(Guid vendorId)
+    public async Task<IActionResult> Details(Guid vendorId, int pageIndex = 1)
     {
-        var model = await _mediator.Send(new GetVendorDebtDetailsQuery { VendorId = vendorId }).ConfigureAwait(false);
+        var model = await _mediator.Send(new GetVendorLedgerDetailsQuery
+        {
+            VendorId = vendorId,
+            PageIndex = pageIndex
+        }).ConfigureAwait(false);
         if (model == null)
         {
             NotifyError("Error.VendorDebtNotFound");

@@ -2,9 +2,11 @@
 @using NamEcommerce.Domain.Shared.Enums.Orders
 @using NamEcommerce.Web.Contracts.Models.Debts
 @using NamEcommerce.Web.Extensions
-@model CustomerDebtDetailsModel
+@model CustomerLedgerDetailsModel
 @{
-    ViewData[ViewConstants.PageTitle] = $"Công nợ: {Model.CustomerName}";
+    ViewData[ViewConstants.PageTitle] = $"Sao kê: {Model.CustomerName}";
+    var isCredit = Model.Balance < 0;
+    var isDebt = Model.Balance > 0;
 }
 
 <div class="page-header">
@@ -14,372 +16,238 @@
         </a>
         <div>
             <h1 class="page-header-title">@Model.CustomerName</h1>
-            <p class="page-header-subtitle mb-0">Tổng hợp công nợ — @Model.Debts.Count phiếu</p>
+            <p class="page-header-subtitle mb-0">Sao kê công nợ</p>
         </div>
     </div>
-    <div class="d-flex gap-2">
-        <a asp-action="Print" asp-route-id="@Model.CustomerId" target="_blank" class="btn btn-outline-secondary shadow-sm border">
-            <i class="bi bi-printer me-1"></i> In sao kê
-        </a>
-        @if (Model.TotalRemainingAmount > 0)
+    <div class="d-flex gap-2 align-items-center">
+        @if (isCredit)
         {
-            <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#flexiblePaymentModal">
-                <i class="bi bi-cash-coin me-1"></i> Thu tiền
-            </button>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 fw-bold">
+                <i class="bi bi-arrow-down-circle me-1"></i>
+                Khách dư @(Math.Abs(Model.Balance).ToString(ViewConstants.CurrencyDisplayFormat))
+            </span>
+            <a asp-controller="CustomerRefund" asp-action="Create" asp-route-customerId="@Model.CustomerId"
+               class="btn btn-outline-success shadow-sm border">
+                <i class="bi bi-cash-coin me-1"></i> Tạo phiếu hoàn tiền
+            </a>
         }
+        <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
+            <i class="bi bi-cash-coin me-1"></i> Thu tiền
+        </button>
     </div>
 </div>
 
 @* ── Summary cards ── *@
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Tổng nợ phát sinh</div>
-            <div class="fs-5 fw-bold text-dark">@Model.TotalDebtAmount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-4 @(isDebt ? "border-danger border" : isCredit ? "border-success border" : "")">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Số dư công nợ</div>
+            @if (isDebt)
+            {
+                <div class="fs-3 fw-bold text-danger">@Model.Balance.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+                <div class="small text-danger mt-1">Khách còn nợ</div>
+            }
+            else if (isCredit)
+            {
+                <div class="fs-3 fw-bold text-success">@(Math.Abs(Model.Balance).ToString(ViewConstants.CurrencyDisplayFormat))</div>
+                <div class="small text-success mt-1">Khách dư — cửa hàng nợ khách</div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-muted">0</div>
+                <div class="small text-muted mt-1">Đã thanh toán đủ</div>
+            }
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Đã thanh toán</div>
-            <div class="fs-5 fw-bold text-success">@Model.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(Model.TotalRemainingAmount > 0 ? "border-danger border" : "")">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Còn phải thu</div>
-            <div class="fs-4 fw-bold @(Model.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">
-                @Model.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-4">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Giao dịch cuối</div>
+            <div class="fs-5 fw-bold text-dark">
+                @(Model.LastEntryOnUtc.HasValue ? Model.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(Model.DepositBalance > 0 ? "border-info border" : "")">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Tiền cọc / dư</div>
-            <div class="fs-5 fw-bold @(Model.DepositBalance > 0 ? "text-info" : "text-muted")">
-                @Model.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat)
-            </div>
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-4">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Tổng giao dịch</div>
+            <div class="fs-5 fw-bold text-dark">@Model.TotalCount</div>
         </div>
     </div>
 </div>
 
-@* ── Tiền cọc alert ── *@
-@if (Model.DepositBalance > 0)
-{
-    <div class="alert alert-info border-0 rounded-4 mb-4 d-flex align-items-center gap-3">
-        <i class="bi bi-piggy-bank fs-4"></i>
-        <div>
-            <strong>Khách hàng có @Model.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat) tiền cọc / tiền dư</strong>
-            chưa được áp dụng vào bất kỳ khoản nợ nào.
-            Khi thu tiền, số dư này sẽ được tự động sử dụng trước.
-        </div>
-    </div>
-}
-
-@* ── Danh sách phiếu công nợ ── *@
-@if (Model.UnappliedCreditNotes.Any())
-{
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold text-uppercase small text-muted">Chứng từ điều chỉnh từ trả hàng chưa cấn trừ</h6>
-            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-normal">
-                @Model.UnappliedCreditNoteBalance.ToString(ViewConstants.CurrencyDisplayFormat)
-            </span>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="bg-light bg-opacity-50">
-                    <tr>
-                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã trả hàng</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Mã chứng từ</th>
-                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Số tiền gốc</th>
-                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Đã cấn trừ</th>
-                        <th class="text-end border-0 small text-uppercase text-muted fw-bold pe-4">Còn lại</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var credit in Model.UnappliedCreditNotes)
-                    {
-                        <tr>
-                            <td class="ps-4 fw-medium">
-                                <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@credit.SourceReturnId"
-                                   class="text-decoration-none">@credit.SourceReturnCode</a>
-                            </td>
-                            <td class="font-monospace small">@credit.Code</td>
-                            <td class="text-end">@credit.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
-                            <td class="text-end text-success">@credit.AppliedAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
-                            <td class="text-end fw-bold text-warning pe-4">@credit.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
-
+@* ── Sao kê ── *@
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 fw-bold text-uppercase small text-muted">Danh sách phiếu công nợ</h6>
-        <span class="badge bg-light text-dark border fw-normal">@Model.Debts.Count phiếu</span>
+    <div class="card-header bg-white border-bottom py-3 px-4">
+        <h6 class="mb-0 fw-bold text-uppercase small text-muted">Sao kê giao dịch</h6>
     </div>
-
-    @foreach (var debt in Model.Debts)
-    {
-        var status = (DebtStatus)debt.Status;
-        var isPaid = status == DebtStatus.FullyPaid;
-
-        <div class="border-bottom px-4 py-3">
-            @* Debt header row *@
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-dark">@debt.Code</span>
-                    <span class="badge rounded-pill @status.GetDisplayColor() px-2 py-1 fw-normal small">
-                        @status.GetDisplayText()
-                    </span>
-                    @if (debt.DueDateUtc.HasValue && debt.DueDateUtc.Value < DateTime.Now && !isPaid)
-                    {
-                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal small">
-                            <i class="bi bi-exclamation-triangle me-1"></i>Quá hạn
-                        </span>
-                    }
-                </div>
-                <div class="d-flex align-items-center gap-3 small text-muted">
-                    <span>
-                        <i class="bi bi-receipt me-1"></i>Đơn: <a asp-controller="Order" asp-action="Details" asp-route-id="@debt.OrderId" class="text-primary text-decoration-none fw-medium">@debt.OrderCode</a>
-                    </span>
-                    <span>
-                        <i class="bi bi-box-seam me-1"></i>Xuất: <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@debt.DeliveryNoteId" class="fw-medium text-decoration-none text-primary">@debt.DeliveryNoteCode</a>
-                    </span>
-                    <span class="text-muted">@debt.CreatedOnUtc.ToString(ViewConstants.DefaultDateFormat)</span>
-                </div>
-            </div>
-
-            @* Debt amounts *@
-            <div class="row g-2 mb-2">
-                <div class="col-auto">
-                    <span class="text-muted small">Tổng:</span>
-                    <span class="fw-medium ms-1">@debt.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                </div>
-                <div class="col-auto text-muted">·</div>
-                <div class="col-auto">
-                    <span class="text-muted small">Đã trả:</span>
-                    <span class="fw-medium text-success ms-1">@debt.PaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                </div>
-                <div class="col-auto text-muted">·</div>
-                <div class="col-auto">
-                    <span class="text-muted small">Còn lại:</span>
-                    <span class="fw-bold @(debt.RemainingAmount > 0 ? "text-danger" : "text-success") ms-1">
-                        @debt.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
-                    </span>
-                </div>
-                @if (!isPaid)
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="bg-light bg-opacity-50">
+                <tr>
+                    <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Ngày</th>
+                    <th class="border-0 small text-uppercase text-muted fw-bold">Loại</th>
+                    <th class="border-0 small text-uppercase text-muted fw-bold">Chứng từ</th>
+                    <th class="text-end border-0 small text-uppercase text-muted fw-bold">Phát sinh nợ</th>
+                    <th class="text-end border-0 small text-uppercase text-muted fw-bold">Phát sinh có</th>
+                    <th class="text-end border-0 small text-uppercase text-muted fw-bold pe-4">Số dư</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in Model.Statement)
                 {
-                    <div class="col-auto ms-auto">
-                        <button type="button"
-                                class="btn btn-sm btn-outline-primary rounded-3 btn-record-single-payment"
-                                data-debt-id="@debt.Id"
-                                data-remaining="@debt.RemainingAmount"
-                                data-code="@debt.Code"
-                                data-customer-id="@Model.CustomerId">
-                            <i class="bi bi-cash-coin me-1"></i>Thu khoản này
-                        </button>
-                    </div>
-                }
-            </div>
-
-            @* Payment history for this debt *@
-            @if (debt.Payments.Any())
-            {
-                <div class="mt-2 ps-3 border-start border-2 border-light">
-                    @foreach (var p in debt.Payments)
-                    {
-                        var method = (PaymentMethod)p.PaymentMethod;
-                        <div class="d-flex align-items-center justify-content-between py-1 small">
-                            <div class="d-flex align-items-center gap-2 text-muted">
-                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack")"></i>
-                                <span>@p.Code</span>
-                                <span>@p.PaidOnUtc.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                                @if (!string.IsNullOrEmpty(p.Note))
+                    var entryType = (CustomerLedgerEntryType)entry.EntryType;
+                    var refType = (CustomerLedgerReferenceType)entry.ReferenceType;
+                    var isCharge = entry.Amount > 0;
+                    <tr>
+                        <td class="ps-4 text-muted small text-nowrap">
+                            @entry.OccurredAtUtc.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
+                        </td>
+                        <td>
+                            @{
+                                var (badgeClass, label) = entryType switch
                                 {
-                                    <span class="text-muted fst-italic">— @p.Note</span>
+                                    CustomerLedgerEntryType.DeliveryNoteCharge => ("bg-danger-subtle text-danger", "Giao hàng"),
+                                    CustomerLedgerEntryType.OpeningBalance => ("bg-secondary-subtle text-secondary", "Đầu kỳ"),
+                                    CustomerLedgerEntryType.Payment => ("bg-success-subtle text-success", "Thu tiền"),
+                                    CustomerLedgerEntryType.ReturnCredit => ("bg-info-subtle text-info", "Trả hàng"),
+                                    CustomerLedgerEntryType.RefundPayout => ("bg-warning-subtle text-warning", "Hoàn tiền"),
+                                    CustomerLedgerEntryType.Correction => ("bg-secondary-subtle text-secondary", "Điều chỉnh"),
+                                    _ => ("bg-light text-muted", entryType.ToString())
+                                };
+                            }
+                            <span class="badge @badgeClass fw-normal">@label</span>
+                        </td>
+                        <td>
+                            @if (entry.ReferenceId.HasValue && !string.IsNullOrEmpty(entry.ReferenceCode))
+                            {
+                                @if (refType == CustomerLedgerReferenceType.DeliveryNote)
+                                {
+                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@entry.ReferenceId"
+                                       class="text-decoration-none fw-medium">@entry.ReferenceCode</a>
                                 }
+                                else if (refType == CustomerLedgerReferenceType.CustomerReturn)
+                                {
+                                    <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@entry.ReferenceId"
+                                       class="text-decoration-none fw-medium">@entry.ReferenceCode</a>
+                                }
+                                else if (refType == CustomerLedgerReferenceType.CustomerPayment)
+                                {
+                                    <a asp-action="Receipt" asp-route-paymentId="@entry.ReferenceId" target="_blank"
+                                       class="text-decoration-none fw-medium">@entry.ReferenceCode</a>
+                                }
+                                else
+                                {
+                                    <span class="fw-medium">@entry.ReferenceCode</span>
+                                }
+                            }
+                            @if (!string.IsNullOrEmpty(entry.Note))
+                            {
+                                <div class="text-muted small fst-italic">@entry.Note</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (isCharge)
+                            {
+                                <span class="fw-bold text-danger">@entry.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (!isCharge)
+                            {
+                                <span class="fw-bold text-success">@(Math.Abs(entry.Amount).ToString(ViewConstants.CurrencyDisplayFormat))</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end pe-4 fw-bold @(entry.RunningBalance > 0 ? "text-danger" : entry.RunningBalance < 0 ? "text-success" : "text-muted")">
+                            @entry.RunningBalance.ToString(ViewConstants.CurrencyDisplayFormat)
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Statement.Any())
+                {
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state py-5">
+                                <div class="empty-icon"><i class="bi bi-journal-text"></i></div>
+                                <h5>Chưa có giao dịch nào</h5>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-bold text-success">+@p.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                                <a asp-action="Receipt" asp-route-paymentId="@p.Id" target="_blank"
-                                   class="btn btn-xs btn-outline-secondary border-0" title="In biên lai">
-                                    <i class="bi bi-printer"></i>
-                                </a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            @if (debt.CreditNoteAllocations.Any())
-            {
-                <div class="mt-2 ps-3 border-start border-2 border-warning-subtle">
-                    @foreach (var allocation in debt.CreditNoteAllocations)
-                    {
-                        var reversed = allocation.ReversedOn.HasValue;
-                        <div class="d-flex align-items-center justify-content-between py-1 small @(reversed ? "text-muted" : "text-warning")">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-arrow-return-left"></i>
-                                <span>@(reversed ? "Đã đảo cấn trừ" : "Cấn trừ") từ trả hàng</span>
-                                <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@allocation.SourceReturnId"
-                                   class="text-decoration-none">@allocation.SourceReturnCode</a>
-                                <span class="font-monospace">@allocation.CreditNoteCode</span>
-                            </div>
-                            <span class="fw-bold">-@allocation.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-    }
-
-    @if (!Model.Debts.Any())
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalCount > 50)
     {
-        <div class="empty-state py-5">
-            <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
-            <h5>Không có phiếu công nợ nào</h5>
+        <div class="card-footer bg-light border-top py-3 px-4 d-flex justify-content-center gap-2">
+            @if (Model.PageIndex > 1)
+            {
+                <a asp-action="Details" asp-route-id="@Model.CustomerId" asp-route-pageIndex="@(Model.PageIndex - 1)"
+                   class="btn btn-sm btn-outline-secondary rounded-3">
+                    <i class="bi bi-chevron-left me-1"></i>Trước
+                </a>
+            }
+            <span class="btn btn-sm btn-light border rounded-3 disabled">
+                Trang @Model.PageIndex
+            </span>
+            @if (Model.TotalCount > Model.PageIndex * 50)
+            {
+                <a asp-action="Details" asp-route-id="@Model.CustomerId" asp-route-pageIndex="@(Model.PageIndex + 1)"
+                   class="btn btn-sm btn-outline-secondary rounded-3">
+                    Sau<i class="bi bi-chevron-right ms-1"></i>
+                </a>
+            }
         </div>
     }
 </div>
 
-@* ── Tiền cọc chưa áp dụng ── *@
-@if (Model.Deposits.Any())
-{
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold text-uppercase small text-muted">Tiền cọc / tiền dư chưa sử dụng</h6>
-            <span class="badge bg-info-subtle text-info border border-info-subtle fw-normal">
-                @Model.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat)
-            </span>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="bg-light bg-opacity-50">
-                    <tr>
-                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã phiếu</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Ngày nạp</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Hình thức</th>
-                        <th class="text-end border-0 small text-uppercase text-muted fw-bold pe-4">Số tiền</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var dep in Model.Deposits)
-                    {
-                        var method = (PaymentMethod)dep.PaymentMethod;
-                        <tr>
-                            <td class="ps-4 fw-medium">@dep.Code</td>
-                            <td class="text-muted small">@dep.PaidOnUtc.ToString(ViewConstants.DefaultDateTimeFormat)</td>
-                            <td>
-                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack") me-1 text-muted"></i>
-                                @method.GetDisplayText()
-                            </td>
-                            <td class="text-end fw-bold text-info pe-4">
-                                @dep.Amount.ToString(ViewConstants.CurrencyDisplayFormat)
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
-
-@* ── Lịch sử thanh toán gần nhất ── *@
-@if (Model.RecentPayments.Any())
-{
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header bg-white border-bottom py-3 px-4">
-            <h6 class="mb-0 fw-bold text-uppercase small text-muted">20 giao dịch gần nhất</h6>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="bg-light bg-opacity-50">
-                    <tr>
-                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã biên lai</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Ngày thu</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Hình thức</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Loại</th>
-                        <th class="border-0 small text-uppercase text-muted fw-bold">Ghi chú</th>
-                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Số tiền</th>
-                        <th class="border-0 pe-4" style="width:60px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in Model.RecentPayments)
-                    {
-                        var method = (PaymentMethod)p.PaymentMethod;
-                        var type = (PaymentType)p.PaymentType;
-                        <tr>
-                            <td class="ps-4 fw-medium">@p.Code</td>
-                            <td class="text-muted small">@p.PaidOnUtc.ToString(ViewConstants.DefaultDateTimeFormat)</td>
-                            <td>
-                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack") me-1 text-muted"></i>
-                                @method.GetDisplayText()
-                            </td>
-                            <td>
-                                <span class="badge @type.GetDisplayColor() fw-normal">@type.GetDisplayText()</span>
-                            </td>
-                            <td class="text-muted small">@p.Note</td>
-                            <td class="text-end fw-bold text-success">@p.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
-                            <td class="text-end pe-4">
-                                <a asp-action="Receipt" asp-route-paymentId="@p.Id" target="_blank"
-                                   class="btn btn-xs btn-outline-secondary border-0" title="In biên lai">
-                                    <i class="bi bi-printer"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
-<div class="modal fade" id="flexiblePaymentModal" tabindex="-1" aria-hidden="true">
+@* ── Modal thu tiền (đơn giản hóa) ── *@
+<div class="modal fade" id="recordPaymentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-white border-bottom-0 pt-4 px-4 pb-0">
-                <h5 class="modal-title fw-bold" id="flexModalTitle">Thu tiền — @Model.CustomerName</h5>
+                <h5 class="modal-title fw-bold">Thu tiền — @Model.CustomerName</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="flexiblePaymentForm">
+            <form id="recordPaymentForm">
                 <input type="hidden" name="customerId" value="@Model.CustomerId" />
-                <input type="hidden" name="customerDebtId" id="flexDebtId" value="" />
-                <input type="hidden" name="paymentType" value="@((int)PaymentType.DebtPayment)" />
-
                 <div class="modal-body p-4">
-                    <div id="flexPaymentInfo" class="alert alert-info border-0 rounded-3 small mb-4">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Tổng còn phải thu: <strong class="text-primary">@Model.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)</strong>
-                        @if (Model.DepositBalance > 0)
-                        {
-                            <span> · Tiền cọc sẵn có: <strong class="text-info">@Model.DepositBalance.ToString(ViewConstants.CurrencyDisplayFormat)</strong></span>
-                        }
-                        <br />
-                        <span class="text-muted">Số tiền sẽ được tự động phân bổ vào các khoản nợ cũ nhất trước. Tiền dư sẽ lưu làm tiền cọc.</span>
-                    </div>
-
+                    @if (isDebt)
+                    {
+                        <div class="alert alert-warning border-0 rounded-3 small mb-4">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Số dư còn nợ: <strong class="text-danger">@Model.Balance.ToString(ViewConstants.CurrencyDisplayFormat)</strong>
+                        </div>
+                    }
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Số tiền thu <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">
+                                Số tiền thu <span class="text-danger">*</span>
+                            </label>
                             <div class="input-group input-group-lg bg-light rounded-3 border">
                                 <input class="form-control bg-transparent border-0 fw-bold text-primary no-additional-element no-hint"
-                                    type="number" step="1000" name="amount" id="flexPaymentAmount" value="@Model.TotalRemainingAmount.DisplayCurrency()" 
-                                    required />
+                                       type="number" step="1000" name="amount"
+                                       value="@(isDebt ? Model.Balance.DisplayCurrency() : "")"
+                                       required />
                                 <span class="input-group-text bg-transparent border-0 fw-bold text-primary">đ</span>
                             </div>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Phương thức</label>
                             <div class="d-flex gap-2">
-                                <input type="radio" class="btn-check" name="paymentMethod" id="flexMethodCash" value="@((int)PaymentMethod.Cash)" checked>
-                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="flexMethodCash">
+                                <input type="radio" class="btn-check" name="paymentMethod" id="methodCash" value="@((int)PaymentMethod.Cash)" checked>
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="methodCash">
                                     <i class="bi bi-cash-stack me-1"></i>Tiền mặt
                                 </label>
-                                <input type="radio" class="btn-check" name="paymentMethod" id="flexMethodBank" value="@((int)PaymentMethod.BankTransfer)">
-                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="flexMethodBank">
+                                <input type="radio" class="btn-check" name="paymentMethod" id="methodBank" value="@((int)PaymentMethod.BankTransfer)">
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="methodBank">
                                     <i class="bi bi-bank me-1"></i>Chuyển khoản
                                 </label>
                             </div>
@@ -391,13 +259,14 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ghi chú</label>
-                            <textarea class="form-control rounded-3" name="note" rows="2" placeholder="VD: Khách trả qua tài khoản TCB..."></textarea>
+                            <textarea class="form-control rounded-3" name="note" rows="2"
+                                      placeholder="VD: Khách trả qua tài khoản TCB..."></textarea>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-top-0 p-4">
                     <button type="button" class="btn btn-light px-4 rounded-3 border" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="btnSubmitFlexPayment" class="btn btn-primary px-4 rounded-3 shadow-sm fw-bold">
+                    <button type="submit" id="btnSubmitPayment" class="btn btn-primary px-4 rounded-3 shadow-sm fw-bold">
                         <i class="bi bi-check2-circle me-1"></i>Xác nhận thu tiền
                     </button>
                 </div>
@@ -407,42 +276,13 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import { toast } from "/modules/modals.js";
 
         (function () {
-            const form = document.getElementById('flexiblePaymentForm');
-            const submitBtn = document.getElementById('btnSubmitFlexPayment');
-            const flexDebtId = document.getElementById('flexDebtId');
-            const flexAmount = document.getElementById('flexPaymentAmount');
-            const flexModalTitle = document.getElementById('flexModalTitle');
-            const totalRemaining = @Model.TotalRemainingAmount.ToString("#0");
+            const form = document.getElementById('recordPaymentForm');
+            const submitBtn = document.getElementById('btnSubmitPayment');
 
-            // Thu tiền một khoản cụ thể
-            document.querySelectorAll('.btn-record-single-payment').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const debtId = this.dataset.debtId;
-                    const remaining = parseFloat(this.dataset.remaining);
-                    const code = this.dataset.code;
-
-                    flexDebtId.value = debtId;
-                    flexAmount.value = remaining;
-                    flexModalTitle.textContent = `Thu tiền — Phiếu ${code}`;
-
-                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('flexiblePaymentModal'));
-                    modal.show();
-                });
-            });
-
-            // Thu tiền tổng (reset khi mở bằng nút header)
-            document.querySelector('[data-bs-target="#flexiblePaymentModal"]')?.addEventListener('click', function () {
-                flexDebtId.value = '';
-                flexAmount.value = totalRemaining;
-                flexModalTitle.textContent = '@Html.Raw(Model.CustomerName)';
-            });
-
-            // Submit
             $(form).on('submit', async function (e) {
                 e.preventDefault();
                 if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -451,13 +291,12 @@
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
 
-                const hasDebtId = flexDebtId.value !== '';
-                const url = hasDebtId
-                    ? '@Url.Action("RecordPayment")'
-                    : '@Url.Action("RecordFlexiblePayment")';
-
                 try {
-                    const response = await $.ajax({ url, type: 'POST', data: $(form).serialize() });
+                    const response = await $.ajax({
+                        url: '@Url.Action("RecordPayment")',
+                        type: 'POST',
+                        data: $(form).serialize()
+                    });
 
                     if (response.success) {
                         toast('Thành công', response.message, 'success');

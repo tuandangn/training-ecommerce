@@ -496,11 +496,6 @@ public sealed class CustomerReturnManager(
             OccurredAtUtc = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow
         }).ConfigureAwait(false);
 
-        if (creditNote.RemainingAmount > 0)
-        {
-            customerReturn.MarkOverRefunded(creditNote.RemainingAmount, null);
-            await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
-        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

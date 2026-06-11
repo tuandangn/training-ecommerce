@@ -289,3 +289,21 @@ export type PaymentIntent = {
   createdOn: string;
   completedOn?: string | null;
 };
+
+export type LedgerSummary = {
+  balance: number;
+  lastEntryOnUtc?: string | null;
+  recentEntries: LedgerStatementItem[];
+};
+
+export type LedgerStatementItem = {
+  entryId: string;
+  entryType: number;
+  amount: number;
+  runningBalance: number;
+  referenceType: number;
+  referenceId?: string | null;
+  referenceCode?: string | null;
+  note?: string | null;
+  occurredAtUtc: string;
+};

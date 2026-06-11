@@ -22,7 +22,6 @@ public sealed class RecordFlexiblePaymentHandler(
             CustomerId = request.Model.CustomerId,
             Amount = request.Model.Amount,
             PaymentMethod = request.Model.PaymentMethod,
-            PaymentType = request.Model.PaymentType,
             Note = request.Model.Note,
             PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
             RecordedByUserId = currentUser?.Id

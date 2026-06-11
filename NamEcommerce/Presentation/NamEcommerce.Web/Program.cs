@@ -253,6 +253,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
     services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
+    services.AddScoped<IVendorLedgerManager, VendorLedgerManager>();
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
     services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();

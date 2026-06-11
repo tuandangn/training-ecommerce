@@ -111,26 +111,6 @@ public sealed class CustomerDebtManager(
             CustomerPhone = customer.PhoneNumber
         };
 
-        // 2. Auto-allocate deposits (Tiền cọc) — FIFO by PaidOnUtc, partial apply
-        var depositIds = paymentReader.DataSource
-            .Where(p => p.OrderId == deliveryNote.OrderId
-                     && p.PaymentType == PaymentType.Deposit
-                     && p.AppliedAmount < p.Amount)
-            .OrderBy(p => p.PaidOnUtc)
-            .Select(p => p.Id)
-            .ToList();
-
-        foreach (var depositId in depositIds)
-        {
-            if (debt.RemainingAmount <= 0) break;
-            var deposit = await paymentRepository.GetByIdAsync(depositId).ConfigureAwait(false);
-            if (deposit is null || deposit.RemainingApplicableAmount <= 0) continue;
-            var toApply = Math.Min(deposit.RemainingApplicableAmount, debt.RemainingAmount);
-            deposit.ApplyAmount(toApply);
-            debt.ApplyPayment(toApply);
-            await paymentRepository.UpdateAsync(deposit).ConfigureAwait(false);
-        }
-
         debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
         return MapToDto(inserted);
@@ -161,44 +141,6 @@ public sealed class CustomerDebtManager(
             DeliveryNoteId = dto.DeliveryNoteId,
             CustomerDebtId = dto.CustomerDebtId
         };
-
-        // If it's a payment for a specific debt, apply it
-        if (dto.CustomerDebtId.HasValue)
-        {
-            var debt = await debtRepository.GetByIdAsync(dto.CustomerDebtId.Value).ConfigureAwait(false);
-            if (debt != null)
-            {
-                if (payment.Amount > debt.RemainingAmount)
-                    throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
-
-                debt.ApplyPayment(payment.Amount);
-                payment.MarkAsApplied();
-                debt.MarkUpdated();
-                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            }
-        }
-        else if (dto.DeliveryNoteId.HasValue)
-        {
-            var debtId = debtReader.DataSource
-                .Where(d => d.DeliveryNoteId == dto.DeliveryNoteId.Value)
-                .Select(d => d.Id)
-                .FirstOrDefault();
-            if (debtId != Guid.Empty)
-            {
-                var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
-                if (debt != null)
-                {
-                    if (payment.Amount > debt.RemainingAmount)
-                        throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
-
-                    debt.ApplyPayment(payment.Amount);
-                    payment.MarkAsApplied();
-                    payment.CustomerDebtId = debt.Id;
-                    debt.MarkUpdated();
-                    await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-                }
-            }
-        }
 
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
@@ -265,96 +207,10 @@ public sealed class CustomerDebtManager(
         };
     }
 
-    /// <summary>
-    /// Thanh toán linh động: phân bổ số tiền vào các debt còn lại của khách hàng theo thứ tự FIFO.
-    /// Nếu tiền thừa sau khi trả hết tất cả nợ, lưu dưới dạng CustomerPayment không gắn debt (General).
-    /// </summary>
     public async Task<IList<CustomerPaymentDto>> RecordFlexiblePaymentForCustomerAsync(CreateCustomerPaymentDto dto)
     {
-        dto.Verify();
-
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
-
-        await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
-        {
-            CustomerId = dto.CustomerId,
-            Amount = dto.Amount,
-            OccurredAtUtc = dto.PaidOnUtc,
-            CreatedByUserId = dto.RecordedByUserId,
-            Note = dto.Note
-        }).ConfigureAwait(false);
-
-        // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
-        var pendingDebtIds = debtReader.DataSource
-            .Where(d => d.CustomerId == dto.CustomerId && d.RemainingAmount > 0)
-            .OrderBy(d => d.CreatedOnUtc)
-            .Select(d => d.Id)
-            .ToList();
-
-        var results = new List<CustomerPaymentDto>();
-        var remaining = dto.Amount;
-
-        foreach (var debtId in pendingDebtIds)
-        {
-            if (remaining <= 0) break;
-
-            var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
-            if (debt is null || debt.RemainingAmount <= 0) continue;
-
-            var applyAmount = Math.Min(remaining, debt.RemainingAmount);
-            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
-
-            var payment = new CustomerPayment(
-                code: code,
-                customerId: customer.Id,
-                customerName: customer.FullName,
-                amount: applyAmount,
-                paymentMethod: dto.PaymentMethod,
-                paymentType: PaymentType.DebtPayment,
-                paidOnUtc: dto.PaidOnUtc,
-                recordedByUserId: dto.RecordedByUserId,
-                note: dto.Note
-            )
-            {
-                CustomerDebtId = debt.Id,
-                OrderId = debt.OrderId,
-                DeliveryNoteId = debt.DeliveryNoteId
-            };
-
-            debt.ApplyPayment(applyAmount);
-            payment.MarkAsApplied();
-
-            debt.MarkUpdated();
-            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            payment.MarkCreated();
-            var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-            results.Add(MapToPaymentDto(inserted));
-
-            remaining -= applyAmount;
-        }
-
-        // Nếu còn dư tiền sau khi trả hết nợ → lưu làm tiền chung (General)
-        if (remaining > 0)
-        {
-            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
-            var overpayment = new CustomerPayment(
-                code: code,
-                customerId: customer.Id,
-                customerName: customer.FullName,
-                amount: remaining,
-                paymentMethod: dto.PaymentMethod,
-                paymentType: PaymentType.General,
-                paidOnUtc: dto.PaidOnUtc,
-                recordedByUserId: dto.RecordedByUserId,
-                note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
-            );
-            overpayment.MarkCreated();
-            var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
-            results.Add(MapToPaymentDto(inserted));
-        }
-
-        return results;
+        var payment = await RecordPaymentAsync(dto).ConfigureAwait(false);
+        return [payment];
     }
 
     public async Task<CustomerCreditNoteDto> ApplyCreditNoteFromCustomerReturnAsync(
@@ -385,50 +241,6 @@ public sealed class CustomerDebtManager(
             returnCode,
             sourceId,
             amount);
-
-        if (sourceId.HasValue)
-        {
-            var sourceDebtId = debtReader.DataSource
-                .Where(d => d.CustomerId == customerId
-                    && d.DeliveryNoteId == sourceId.Value
-                    && d.RemainingAmount > 0)
-                .Select(d => d.Id)
-                .FirstOrDefault();
-
-            if (sourceDebtId != Guid.Empty)
-            {
-                var sourceDebt = await debtRepository.GetByIdAsync(sourceDebtId).ConfigureAwait(false);
-                if (sourceDebt is not null)
-                {
-                    var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
-                    creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
-                    sourceDebt.MarkUpdated();
-                    await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
-                }
-            }
-        }
-
-        if (creditNote.RemainingAmount > 0)
-        {
-            var otherDebtIds = debtReader.DataSource
-                .Where(d => d.CustomerId == customerId
-                         && d.RemainingAmount > 0
-                         && (!sourceId.HasValue || d.DeliveryNoteId != sourceId.Value))
-                .OrderBy(d => d.CreatedOnUtc)
-                .Select(d => d.Id)
-                .ToList();
-
-            foreach (var debtId in otherDebtIds)
-            {
-                if (creditNote.RemainingAmount <= 0) break;
-                var debt = await debtRepository.GetByIdAsync(debtId).ConfigureAwait(false);
-                if (debt is null) continue;
-                var applyAmount = Math.Min(creditNote.RemainingAmount, debt.RemainingAmount);
-                creditNote.AllocateToDebt(debt, applyAmount, null);
-                debt.MarkUpdated();
-                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            }
-        }
 
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
         return MapToCreditNoteDto(inserted);
