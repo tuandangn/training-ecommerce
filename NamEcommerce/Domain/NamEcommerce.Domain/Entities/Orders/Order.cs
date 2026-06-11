@@ -81,6 +81,9 @@ public sealed record Order : AppAggregateEntity
             RaiseDomainEvent(new OrderFullyDelivered(Id, CustomerId));
     }
 
+    internal void RequestQuickSaleDelivery(Guid deliveryNoteId, DateTime requestedAtUtc)
+        => RaiseDomainEvent(new QuickSaleDeliverRequested(Id, deliveryNoteId, requestedAtUtc));
+
     #endregion
 
     #region Methods

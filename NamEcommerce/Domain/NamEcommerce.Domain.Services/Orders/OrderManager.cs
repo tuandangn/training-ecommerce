@@ -393,6 +393,16 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
+    public async Task RequestQuickSaleDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        order.RequestQuickSaleDelivery(deliveryNoteId, requestedAtUtc);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
     private async Task EnsureAvailableForProductsWithoutVendorAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
     {
         foreach (var itemGroup in items.GroupBy(item => item.ProductId))

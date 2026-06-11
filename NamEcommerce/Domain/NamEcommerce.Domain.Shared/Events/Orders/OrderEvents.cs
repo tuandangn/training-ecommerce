@@ -101,3 +101,12 @@ public sealed record OrderDeleted(
 /// Snapshot số lượng cần release/reserve theo product tại thời điểm event được raise.
 /// </summary>
 public sealed record OrderReservationItem(Guid ProductId, decimal Quantity);
+
+/// <summary>
+/// Yêu cầu xử lý giao hàng cho QuickSale (DeliverNow).
+/// Handler sẽ dispatch stock, MarkReceivedByCustomer → raise DeliveryNoteDelivered → debt + ledger charge.
+/// </summary>
+public sealed record QuickSaleDeliverRequested(
+    Guid OrderId,
+    Guid DeliveryNoteId,
+    DateTime RequestedAtUtc) : DomainEvent, IReliableDomainEvent;
