@@ -19,3 +19,17 @@ public sealed class GetCustomerPaymentReceiptQuery : IRequest<CustomerPaymentRec
 {
     public required Guid PaymentId { get; init; }
 }
+
+public sealed class GetCustomerLedgerListQuery : IRequest<CustomerLedgerListModel>
+{
+    public string? Keywords { get; set; }
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 15;
+}
+
+public sealed class GetCustomerLedgerDetailsQuery : IRequest<CustomerLedgerDetailsModel?>
+{
+    public required Guid CustomerId { get; init; }
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 50;
+}

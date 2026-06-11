@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.StockTransfer;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.StockTransfer;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -24,13 +25,13 @@ public sealed class StockTransferNoteManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager,
-    ICurrentUserAccessor currentUserAccessor) : IStockTransferNoteManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : IStockTransferNoteManager
 {
     private string GenerateCode()
     {
         var prefix = $"PCT-{DateTime.UtcNow:yyyyMMdd}";
-        var count = noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix));
-        return $"{prefix}-{(count + 1):D3}";
+        return entityCodeGenerator.Next(prefix, () => noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix)));
     }
 
     public async Task<StockTransferNoteDto> CreateAsync(CreateStockTransferNoteDto dto)

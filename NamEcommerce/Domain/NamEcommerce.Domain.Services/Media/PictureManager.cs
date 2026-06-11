@@ -41,7 +41,7 @@ public sealed class PictureManager : IPictureManager
 
     public async Task DeletePictureAsync(Guid id)
     {
-        var picture = await _pictureDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var picture = await _pictureRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (picture is null)
             throw new ArgumentException("Picture is not found", nameof(id));
 

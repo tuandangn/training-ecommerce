@@ -1,57 +1,49 @@
-using MediatR;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
+using NamEcommerce.Domain.Entities.Outbox;
+using NamEcommerce.Domain.Shared.Events;
 
 namespace NamEcommerce.Data.SqlServer.Interceptors;
 
 /// <summary>
-/// EF Core <see cref="SaveChangesInterceptor"/> dispatch toàn bộ Domain Event được raise bởi các Aggregate
-/// đang được EF tracked, sau khi <c>SaveChanges</c> hoàn tất thành công.
-/// <para>Quy trình:</para>
-/// <list type="number">
-///   <item>Sau <c>SavedChangesAsync</c> — quét <see cref="DbContext.ChangeTracker"/> tìm các <see cref="AppAggregateEntity"/>.</item>
-///   <item>Thu thập <see cref="AppAggregateEntity.DomainEvents"/> từ mỗi entity.</item>
-///   <item>Clear domain events trên entity (tránh re-publish nếu cùng entity được SaveChanges lần nữa).</item>
-///   <item>Publish từng event qua <see cref="IPublisher"/> (MediatR).</item>
-/// </list>
+/// EF Core <see cref="SaveChangesInterceptor"/>: tại <c>SavingChanges</c>, serialize MỌI
+/// <see cref="IDomainEvent"/> từ ChangeTracker thành <c>OutboxMessage</c> rồi Add vào DbContext —
+/// atomic với business write trong cùng transaction. <c>OutboxProcessor</c> sẽ publish qua MediatR
+/// trong scope DI riêng (commit riêng + retry + dead-letter).
+/// <para>
+/// KHÔNG còn inline dispatch post-commit: handler chạy inline trên cùng DbContext vừa gây
+/// duplicate tracking (load lại entity đã tracked qua reader rồi attach), vừa mất write
+/// (stage sau lần SaveChanges duy nhất của request).
+/// </para>
 /// </summary>
 public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    public DomainEventDispatchInterceptor(IServiceProvider serviceProvider)
+    private static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        ArgumentNullException.ThrowIfNull(serviceProvider);
-        _serviceProvider = serviceProvider;
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        if (eventData.Context is not null)
+            SerializeEventsToOutbox(eventData.Context);
+        return base.SavingChanges(eventData, result);
     }
 
-    public override async ValueTask<int> SavedChangesAsync(
-        SaveChangesCompletedEventData eventData,
-        int result,
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        var resultValue = await base.SavedChangesAsync(eventData, result, cancellationToken)
-            .ConfigureAwait(false);
-
-        var context = eventData.Context;
-        if (context is not null)
-            await DispatchDomainEventsAsync(context, cancellationToken).ConfigureAwait(false);
-
-        return resultValue;
+        if (eventData.Context is not null)
+            SerializeEventsToOutbox(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
-    {
-        var resultValue = base.SavedChanges(eventData, result);
-
-        var context = eventData.Context;
-        if (context is not null)
-            DispatchDomainEventsAsync(context, default).GetAwaiter().GetResult();
-
-        return resultValue;
-    }
-
-    private async Task DispatchDomainEventsAsync(DbContext context, CancellationToken cancellationToken)
+    private static void SerializeEventsToOutbox(DbContext context)
     {
         var aggregates = context.ChangeTracker
             .Entries<AppAggregateEntity>()
@@ -61,14 +53,21 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
 
         if (aggregates.Count == 0) return;
 
-        var events = aggregates.SelectMany(a => a.DomainEvents).ToList();
-
         foreach (var aggregate in aggregates)
+        {
+            foreach (var evt in aggregate.DomainEvents)
+            {
+                var clrType = evt.GetType();
+                var typeName = clrType.AssemblyQualifiedName
+                    ?? throw new InvalidOperationException(
+                        $"Cannot resolve AssemblyQualifiedName for type '{clrType.FullName}'.");
+
+                var payload = JsonSerializer.Serialize(evt, clrType, SerializerOptions);
+                var message = OutboxMessage.Create(typeName, payload, evt.OccurredOnUtc);
+                context.Add(message);
+            }
+
             aggregate.ClearDomainEvents();
-
-        var publisher = _serviceProvider.GetRequiredService<IPublisher>();
-
-        foreach (var domainEvent in events)
-            await publisher.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
+        }
     }
 }

@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
@@ -12,9 +13,11 @@ namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
 public sealed class DeliveryNoteDeliveredHandler(
     ICustomerDebtManager debtManager,
+    ICustomerLedgerManager customerLedgerManager,
     IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<DeliveryNoteDelivered>
 {
     private readonly ICustomerDebtManager _debtManager = debtManager;
+    private readonly ICustomerLedgerManager _customerLedgerManager = customerLedgerManager;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService = deliveryNoteAppService;
 
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
@@ -38,6 +41,16 @@ public sealed class DeliveryNoteDeliveredHandler(
         };
 
         await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);
+
+        await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+        {
+            CustomerId = notification.CustomerId,
+            Amount = notification.AmountToCollect,
+            ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
+            ReferenceId = notification.DeliveryNoteId,
+            ReferenceCode = deliveryNote.Code,
+            OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
+        }).ConfigureAwait(false);
     }
 }
 

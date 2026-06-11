@@ -48,7 +48,7 @@ public sealed class CustomerManager : ICustomerManager
     public async Task<UpdateCustomerResultDto> UpdateCustomerAsync(UpdateCustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        var customer = await _customerDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var customer = await _customerRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.Id);
         if (customer.IsSystem)
             throw new NamEcommerceDomainException("Error.SystemCustomerCannotBeUpdated");
@@ -66,7 +66,7 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task DeleteCustomerAsync(Guid id)
     {
-        var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var customer = await _customerRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)
         {
             if (customer.IsSystem)

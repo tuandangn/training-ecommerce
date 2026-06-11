@@ -50,13 +50,7 @@
                     @if (Model.CanViewOrders)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") && !WebHelper.IsMatchRouteInfo("Order", "QuickCreate") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
-                        </li>
-                    }
-                    @if (Model.CanUseFastSale)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order", "QuickCreate") ? "active" : "")" asp-controller="Order" asp-action="QuickCreate">Bán nhanh</a>
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
                         </li>
                     }
                     @if (Model.CanUsePreparation)

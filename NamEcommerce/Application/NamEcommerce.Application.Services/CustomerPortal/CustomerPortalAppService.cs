@@ -22,6 +22,7 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.CustomerPortal;
@@ -32,6 +33,7 @@ public sealed class CustomerPortalAppService(
     IDeliveryNoteAppService deliveryNoteAppService,
     IDeliveryNoteManager deliveryNoteManager,
     ICustomerDebtAppService customerDebtAppService,
+    ICustomerLedgerManager customerLedgerManager,
     IOrderAppService orderAppService,
     ICustomerReturnAppService customerReturnAppService,
     IEntityDataReader<Order> orderReader,
@@ -791,6 +793,27 @@ public sealed class CustomerPortalAppService(
                 PaymentType = payment.PaymentType,
                 PaidOnUtc = payment.PaidOnUtc
             }).ToList()
+        };
+    }
+
+    public async Task<CustomerLedgerSummaryPortalAppDto> GetLedgerSummaryAsync(Guid customerId)
+    {
+        var summary = await customerLedgerManager.GetCustomerSummaryAsync(customerId).ConfigureAwait(false);
+        var statement = await customerLedgerManager.GetStatementAsync(customerId, pageSize: 30).ConfigureAwait(false);
+        return new CustomerLedgerSummaryPortalAppDto
+        {
+            Balance = summary?.Balance ?? 0,
+            LastEntryOnUtc = summary?.LastEntryOnUtc,
+            RecentEntries = statement.Items.Select(e => new CustomerLedgerStatementItemPortalAppDto(
+                e.EntryId,
+                (int)e.EntryType,
+                e.Amount,
+                e.RunningBalance,
+                (int)e.ReferenceType,
+                e.ReferenceId,
+                e.ReferenceCode,
+                e.Note,
+                e.OccurredAtUtc)).ToList()
         };
     }
 

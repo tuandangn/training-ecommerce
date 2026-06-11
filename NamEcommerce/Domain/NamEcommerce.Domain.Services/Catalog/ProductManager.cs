@@ -74,7 +74,7 @@ public sealed class ProductManager : IProductManager
 
     public async Task DeleteProductAsync(Guid id)
     {
-        var product = await _productDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var product = await _productRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(id);
 
@@ -166,7 +166,7 @@ public sealed class ProductManager : IProductManager
 
     public async Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder)
     {
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productRepository.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
@@ -176,7 +176,7 @@ public sealed class ProductManager : IProductManager
 
     public async Task RemoveProductVendorAsync(Guid productId, Guid vendorId)
     {
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productRepository.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
@@ -186,7 +186,7 @@ public sealed class ProductManager : IProductManager
 
     public async Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId)
     {
-        var product = await _productDataReader.GetByIdAsync(productId);
+        var product = await _productRepository.GetByIdAsync(productId);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
@@ -200,7 +200,7 @@ public sealed class ProductManager : IProductManager
 
         dto.Verify();
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await _productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 
@@ -271,7 +271,7 @@ public sealed class ProductManager : IProductManager
 
         dto.Verify();
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await _productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 

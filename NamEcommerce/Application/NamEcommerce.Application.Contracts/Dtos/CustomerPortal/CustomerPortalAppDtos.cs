@@ -459,6 +459,26 @@ public sealed record CustomerPaymentPortalAppDto
 }
 
 [Serializable]
+public sealed record CustomerLedgerSummaryPortalAppDto
+{
+    public decimal Balance { get; init; }
+    public DateTime? LastEntryOnUtc { get; init; }
+    public IList<CustomerLedgerStatementItemPortalAppDto> RecentEntries { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerLedgerStatementItemPortalAppDto(
+    Guid EntryId,
+    int EntryType,
+    decimal Amount,
+    decimal RunningBalance,
+    int ReferenceType,
+    Guid? ReferenceId,
+    string? ReferenceCode,
+    string? Note,
+    DateTime OccurredAtUtc);
+
+[Serializable]
 public sealed record CustomerOtpSendAppDto
 {
     public required int Channel { get; init; }

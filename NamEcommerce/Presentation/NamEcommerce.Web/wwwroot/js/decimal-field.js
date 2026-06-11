@@ -17,8 +17,6 @@
         decimalSeparator: ','
     };
 
-    // ---- Helpers -------------------------------------------------------
-
     function stripFormatting(str, decimals) {
         if (!str) return '';
         str = str.trim();
@@ -176,12 +174,21 @@
 
         var type = input.dataset.type;
 
-        input.addEventListener('focus', function () {
+        if (input._focusHandler)
+            input.removeEventListener('focus', input._focusHandler);
+        input.addEventListener('focus', function onFocus() {
+            this._focusHandler = onFocus;
             this.value = stripInputFormatting(this);
-            focusEnd(this);
+            if (this.value == '0')
+                this.select();
+            else
+                focusEnd(this);
         });
 
-        input.addEventListener('blur', function (e) {
+        if (input._blurHandler)
+            input.removeEventListener('blur', input._blurHandler);
+        input.addEventListener('blur', function onBlur(e) {
+            this._blurHandler = onBlur;
             // parseTypedDecimal vì tại đây value do user gõ, "." là thập phân
             // stripInputFormatting dùng heuristic "3 chữ số sau dấu chấm = hàng nghìn"
             // sẽ sai khi user gõ "1.004" với ý nghĩa một phẩy lẻ bốn
@@ -200,7 +207,10 @@
             }
         });
 
-        input.addEventListener('keypress', function (e) {
+        if (input._keyPressHandler)
+            input.removeEventListener('keypress', input._keyPressHandler);
+        input.addEventListener('keypress', function onKeyPress(e) {
+            this._keyPressHandler = onKeyPress;
             if (e.key == 'Enter' || e.code == 'Enter' || e.keyCode == 13)
                 return;
             var decimals = parseInt(this.dataset.decimals || '0', 10);
@@ -209,7 +219,10 @@
             if (char === '.' && this.value.includes('.')) e.preventDefault();
         });
 
-        input.addEventListener('paste', function (e) {
+        if (input._pasteHandler)
+            input.removeEventListener('paste', input._pasteHandler);
+        input.addEventListener('paste', function onPaste(e) {
+            this._pasteHandler = onPaste;
             e.preventDefault();
             var decimals = parseInt(this.dataset.decimals || '0', 10);
             var pasted = (e.clipboardData || window.clipboardData).getData('text');
@@ -455,8 +468,7 @@
         const formData = new FormData(form);
         const decimalFields = form.querySelectorAll('.decimal-input');
         for (const decimalField of decimalFields) {
-            const decimals = Number(decimalField.dataset.decimals) ?? 0;
-            formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
+            formData.set(decimalField.name, DecimalFields.stripInputFormatting(decimalField))
         }
         return formData;
     }

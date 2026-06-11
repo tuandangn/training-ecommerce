@@ -23,6 +23,7 @@ using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
@@ -31,6 +32,7 @@ namespace NamEcommerce.Domain.Services.GoodsReceipts;
 
 public sealed class GoodsReceiptManager(
     IRepository<GoodsReceipt> goodsReceiptRepository,
+    IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IEntityDataReader<Product> productDataReader,
     WarehouseSettings warehouseSettings,
@@ -45,13 +47,13 @@ public sealed class GoodsReceiptManager(
     IVendorReturnManager vendorReturnManager,
     IVendorDebtManager vendorDebtManager,
     IEntityDataReader<InventoryCostAllocation> inventoryCostAllocationReader,
-    IEntityDataReader<VendorDebt> vendorDebtReader) : IGoodsReceiptManager
+    IEntityDataReader<VendorDebt> vendorDebtReader,
+    EntityCodeGenerator entityCodeGenerator) : IGoodsReceiptManager
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = goodsReceiptDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
-        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+        var prefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
+        return Task.FromResult(entityCodeGenerator.Next(prefix, () => goodsReceiptDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
     }
 
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -92,7 +94,7 @@ public sealed class GoodsReceiptManager(
 
         dto.Verify();
 
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.Id);
 
@@ -127,7 +129,7 @@ public sealed class GoodsReceiptManager(
 
         dto.Verify();
 
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
 
@@ -205,7 +207,7 @@ public sealed class GoodsReceiptManager(
 
         dto.Verify();
 
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
 
@@ -256,7 +258,7 @@ public sealed class GoodsReceiptManager(
 
     public async Task DeleteGoodsReceiptAsync(DeleteGoodsReceiptDto dto)
     {
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
 
@@ -316,10 +318,9 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        //*TODO*
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
                 ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
                 : null;

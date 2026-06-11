@@ -20,6 +20,7 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
@@ -38,6 +39,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
     private readonly IEntityDataReader<Customer> _customerDataReader;
+    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
@@ -45,7 +47,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
         IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
         IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
-        IEntityDataReader<Customer> customerDataReader)
+        IEntityDataReader<Customer> customerDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -59,6 +61,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _deliveryNoteDataReader = deliveryNoteDataReader;
         _orderDataReader = orderDataReader;
         _customerDataReader = customerDataReader;
+        _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -145,6 +148,35 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     Success = false,
                     ErrorMessage = "Error.WarehouseIsNotFound"
                 };
+            }
+        }
+
+        foreach (var item in dto.Items)
+        {
+            var product = products.FirstOrDefault(product => product.Id == item.ProductId);
+            if (product is null)
+            {
+                return new CreatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new CreatePurchaseOrderResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
             }
         }
 
@@ -394,6 +426,16 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
         if (product is null)
             return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
+
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                if (!NumberHelper.IsValidDecimalPlace(dto.QuantityOrdered, unitMeasurement.DecimalPlaces))
+                    return CommonActionResultDto.CreateError("Error.QuantityMustBeInteger");
+            }
+        }
 
         var result = await _purchaseOrderManager.AddPurchaseOrderItemAsync(new AddPurchaseOrderItemDto
         {

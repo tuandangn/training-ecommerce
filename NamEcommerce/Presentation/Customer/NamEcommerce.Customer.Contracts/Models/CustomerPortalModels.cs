@@ -280,3 +280,21 @@ public sealed record CustomerPaymentIntentModel(
     string? FailureReason,
     DateTime CreatedOn,
     DateTime? CompletedOn);
+
+[Serializable]
+public sealed record CustomerLedgerSummaryModel(
+    decimal Balance,
+    DateTime? LastEntryOnUtc,
+    IList<CustomerLedgerStatementItemModel> RecentEntries);
+
+[Serializable]
+public sealed record CustomerLedgerStatementItemModel(
+    Guid EntryId,
+    int EntryType,
+    decimal Amount,
+    decimal RunningBalance,
+    int ReferenceType,
+    Guid? ReferenceId,
+    string? ReferenceCode,
+    string? Note,
+    DateTime OccurredAtUtc);

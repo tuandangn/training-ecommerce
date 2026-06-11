@@ -49,18 +49,29 @@ export default class QuickCreatePurchaseOrderController {
     }
 
     #bindBrowser() {
-        const bindEl = (elId) => {
-            const el = getEl(elId);
-            if (!el) return;
+        const productBrowserEl = getEl('productBrowser');
+        if (productBrowserEl) {
             const browser = new ProductBrowser(
-                el,
+                productBrowserEl,
                 (product) => this.#addOrIncrementProduct(product),
-                { purchase: true, colClass: el.dataset.colClass ?? 'col-12', initialShow: true }
+                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', initialShow: true }
             );
             browser.init();
-        };
-        bindEl('productBrowser');
-        bindEl('productBrowserMobile');
+        }
+
+        const mobileProductBrowserEl = getEl('productBrowserMobile');
+        if (mobileProductBrowserEl) {
+            const browser = new ProductBrowser(
+                mobileProductBrowserEl,
+                (product) => {
+                    const offCanvas = getEl('productBrowserOffcanvas');
+                    bootstrap.Offcanvas.getOrCreateInstance(offCanvas)?.hide();
+                    this.#addOrIncrementProduct(product);
+                },
+                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', notCollapsed: true }
+            );
+            browser.init();
+        }
     }
 
     #bindToggles() {
@@ -92,7 +103,7 @@ export default class QuickCreatePurchaseOrderController {
     async #addOrIncrementProduct(product) {
         const idx = this.#items.findIndex(i => i.productId === product.id);
         if (idx >= 0) {
-            this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
+            this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity };
             this.#renderItems();
             this.#renderSummary();
             this.#openEditor(idx);
@@ -123,7 +134,7 @@ export default class QuickCreatePurchaseOrderController {
         this.#renderItems();
         this.#renderSummary();
 
-        this.#openEditor(newIdx);
+        this.#openEditor(newIdx, { canRemove: false });
     }
 
     async #refreshPricesForVendor(vendorId) {
@@ -143,7 +154,7 @@ export default class QuickCreatePurchaseOrderController {
         this.#renderSummary();
     }
 
-    #openEditor(index) {
+    #openEditor(index, openOptions) {
         const item = this.#items[index];
         this.#itemEditor.open({
             name: item.productName,
@@ -168,7 +179,7 @@ export default class QuickCreatePurchaseOrderController {
                 this.#renderItems();
                 this.#renderSummary();
             }
-        });
+        }, openOptions);
     }
 
     #renderItems() {

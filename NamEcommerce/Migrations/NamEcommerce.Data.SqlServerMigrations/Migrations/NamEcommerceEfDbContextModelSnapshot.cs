@@ -1321,6 +1321,41 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("CassoReconciliationRuns", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerAccountBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastEntryOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerAccountBalance", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerCreditNote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1553,6 +1588,62 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("CustomerDebt", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EntryType")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReferenceType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("CustomerId", "OccurredAtUtc");
+
+                    b.HasIndex("CustomerId", "EntryType", "ReferenceId")
+                        .HasFilter("[ReferenceId] IS NOT NULL");
+
+                    b.ToTable("CustomerLedgerEntry", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerPayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1561,6 +1652,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AppliedAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<DateTime?>("AppliedOnUtc")
                         .HasColumnType("datetime2");
@@ -1716,6 +1812,41 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("CustomerId", "Status");
 
                     b.ToTable("CustomerRefund", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.VendorAccountBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastEntryOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("VendorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VendorId")
+                        .IsUnique();
+
+                    b.ToTable("VendorAccountBalance", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.VendorCreditNote", b =>
@@ -1953,6 +2084,62 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("VendorId");
 
                     b.ToTable("VendorDebt", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.VendorLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EntryType")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReferenceType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VendorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VendorId");
+
+                    b.HasIndex("VendorId", "OccurredAtUtc");
+
+                    b.HasIndex("VendorId", "EntryType", "ReferenceId")
+                        .HasFilter("[ReferenceId] IS NOT NULL");
+
+                    b.ToTable("VendorLedgerEntry", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.VendorPayment", b =>

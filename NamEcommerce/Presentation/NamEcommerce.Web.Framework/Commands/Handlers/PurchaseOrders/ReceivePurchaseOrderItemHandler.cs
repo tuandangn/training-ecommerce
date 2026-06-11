@@ -1,10 +1,13 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
@@ -14,20 +17,67 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
     private readonly ICurrentUserService _currentUserService;
     private readonly ISender _sender;
     private readonly IWarehouseAppService _warehouseAppService;
+    private readonly IProductAppService _productAppService;
+    private readonly IUnitMeasurementAppService _unitMeasurementAppService;
 
-    public ReceivePurchaseOrderItemHandler(IPurchaseOrderAppService appService,
-        ICurrentUserService currentUserService, ISender sender, IWarehouseAppService warehouseAppService)
+    public ReceivePurchaseOrderItemHandler(
+        IPurchaseOrderAppService appService, ICurrentUserService currentUserService, ISender sender,
+        IWarehouseAppService warehouseAppService, IProductAppService productAppService, IUnitMeasurementAppService unitMeasurementAppService)
     {
         _purchaseOrderAppService = appService;
         _currentUserService = currentUserService;
         _sender = sender;
         _warehouseAppService = warehouseAppService;
+        _productAppService = productAppService;
+        _unitMeasurementAppService = unitMeasurementAppService;
     }
 
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
-        if (request.QuantityDecimalPlaces == 0 && request.ReceivedQuantity != Math.Floor(request.ReceivedQuantity))
-            return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(request.PurchaseOrderId);
+        if (purchaseOrder is null)
+        {
+            return new ReceivePurchaseOrderItemResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.ProductIsNotFound"
+            };
+        }
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == request.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+        {
+            return new ReceivePurchaseOrderItemResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
+            };
+        }
+
+        var product = await _productAppService.GetProductByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+        {
+            return new ReceivePurchaseOrderItemResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+            };
+        }
+
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await _unitMeasurementAppService.GetUnitMeasurementByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                if (!NumberHelper.IsValidDecimalPlace(request.ReceivedQuantity, unitMeasurement.DecimalPlaces))
+                {
+                    return new ReceivePurchaseOrderItemResultModel
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.QuantityMustBeInteger"
+                    };
+                }
+            }
+        }
 
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
 
@@ -72,7 +122,6 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
             var physicalWarehouseRequired = request.ReceivedQuantity > maxAllocationQuantity;
 
-            var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(request.PurchaseOrderId).ConfigureAwait(false);
             warehouseId ??= purchaseOrder?.WarehouseId;
             if (!warehouseId.HasValue && physicalWarehouseRequired)
                 return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.WarehouseRequired" };

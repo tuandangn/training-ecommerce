@@ -54,12 +54,17 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task<CustomerPortalSettingsDto> UpdateSettingsAsync(bool otpEnabled, Guid? updatedByUserId, DateTime nowUtc)
     {
-        var settings = settingsReader.DataSource.OrderBy(settings => settings.CreatedOnUtc).FirstOrDefault()
-            ?? new CustomerPortalSettings(otpEnabled: false);
+        var existingId = settingsReader.DataSource
+            .OrderBy(s => s.CreatedOnUtc)
+            .Select(s => s.Id)
+            .FirstOrDefault();
+        var settings = existingId != Guid.Empty
+            ? await settingsRepository.GetByIdAsync(existingId).ConfigureAwait(false) ?? new CustomerPortalSettings(otpEnabled: false)
+            : new CustomerPortalSettings(otpEnabled: false);
 
         settings.UpdateOtpEnabled(otpEnabled, updatedByUserId, nowUtc);
 
-        var saved = settingsReader.DataSource.Any(existing => existing.Id == settings.Id)
+        var saved = existingId != Guid.Empty && settings.Id != Guid.Empty
             ? await settingsRepository.UpdateAsync(settings).ConfigureAwait(false)
             : await settingsRepository.InsertAsync(settings).ConfigureAwait(false);
 
@@ -68,14 +73,19 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true)
     {
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
-            ?? new CustomerPortalAccount(customerId);
+        var existingAccountId = accountReader.DataSource
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstOrDefault();
+        var account = existingAccountId != Guid.Empty
+            ? await accountRepository.GetByIdAsync(existingAccountId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
+            : new CustomerPortalAccount(customerId);
 
         account.SetPassword(passwordHash, passwordSalt);
         if (markLoginSucceeded)
             account.MarkLoginSucceeded();
 
-        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
+        if (existingAccountId != Guid.Empty && account.Id != Guid.Empty)
             await accountRepository.UpdateAsync(account).ConfigureAwait(false);
         else
             await accountRepository.InsertAsync(account).ConfigureAwait(false);
@@ -83,11 +93,16 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task BlockAccountAsync(Guid customerId)
     {
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
-            ?? new CustomerPortalAccount(customerId);
+        var existingBlockId = accountReader.DataSource
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstOrDefault();
+        var account = existingBlockId != Guid.Empty
+            ? await accountRepository.GetByIdAsync(existingBlockId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
+            : new CustomerPortalAccount(customerId);
         account.Block();
 
-        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
+        if (existingBlockId != Guid.Empty && account.Id != Guid.Empty)
             await accountRepository.UpdateAsync(account).ConfigureAwait(false);
         else
             await accountRepository.InsertAsync(account).ConfigureAwait(false);
@@ -95,9 +110,14 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task UnblockAccountAsync(Guid customerId)
     {
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId);
-        if (account is null)
-            return;
+        var existingUnblockId = accountReader.DataSource
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstOrDefault();
+        if (existingUnblockId == Guid.Empty) return;
+
+        var account = await accountRepository.GetByIdAsync(existingUnblockId).ConfigureAwait(false);
+        if (account is null) return;
 
         account.Unblock();
         await accountRepository.UpdateAsync(account).ConfigureAwait(false);
@@ -114,8 +134,13 @@ public sealed class CustomerPortalSecurityManager(
             return;
         }
 
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
-            ?? new CustomerPortalAccount(customerId);
+        var existingLocationId = accountReader.DataSource
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstOrDefault();
+        var account = existingLocationId != Guid.Empty
+            ? await accountRepository.GetByIdAsync(existingLocationId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
+            : new CustomerPortalAccount(customerId);
 
         account.UpdateLastKnownLocation(
             dto.Latitude,
@@ -124,7 +149,7 @@ public sealed class CustomerPortalSecurityManager(
             dto.Source.Trim(),
             dto.CapturedOnUtc);
 
-        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
+        if (existingLocationId != Guid.Empty && account.Id != Guid.Empty)
             await accountRepository.UpdateAsync(account).ConfigureAwait(false);
         else
             await accountRepository.InsertAsync(account).ConfigureAwait(false);
@@ -199,13 +224,18 @@ public sealed class CustomerPortalSecurityManager(
         challenge.MarkVerified(dto.NowUtc);
         await otpChallengeRepository.UpdateAsync(challenge).ConfigureAwait(false);
 
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == challenge.CustomerId)
-            ?? new CustomerPortalAccount(challenge.CustomerId);
-        account.MarkLoginSucceeded();
-        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
-            await accountRepository.UpdateAsync(account).ConfigureAwait(false);
+        var existingLoginId = accountReader.DataSource
+            .Where(a => a.CustomerId == challenge.CustomerId)
+            .Select(a => a.Id)
+            .FirstOrDefault();
+        var loginAccount = existingLoginId != Guid.Empty
+            ? await accountRepository.GetByIdAsync(existingLoginId).ConfigureAwait(false) ?? new CustomerPortalAccount(challenge.CustomerId)
+            : new CustomerPortalAccount(challenge.CustomerId);
+        loginAccount.MarkLoginSucceeded();
+        if (existingLoginId != Guid.Empty && loginAccount.Id != Guid.Empty)
+            await accountRepository.UpdateAsync(loginAccount).ConfigureAwait(false);
         else
-            await accountRepository.InsertAsync(account).ConfigureAwait(false);
+            await accountRepository.InsertAsync(loginAccount).ConfigureAwait(false);
 
         return new CustomerOtpVerifyResultDto
         {
@@ -304,12 +334,15 @@ public sealed class CustomerPortalSecurityManager(
         if (deliveryNoteId == Guid.Empty)
             return;
 
-        var tokens = accessTokenReader.DataSource
+        var tokenIds = accessTokenReader.DataSource
             .Where(token => token.DeliveryNoteId == deliveryNoteId && token.RevokedOnUtc == null)
+            .Select(token => token.Id)
             .ToList();
 
-        foreach (var token in tokens)
+        foreach (var tokenId in tokenIds)
         {
+            var token = await accessTokenRepository.GetByIdAsync(tokenId).ConfigureAwait(false);
+            if (token is null) continue;
             token.Revoke(nowUtc);
             await accessTokenRepository.UpdateAsync(token).ConfigureAwait(false);
         }

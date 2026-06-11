@@ -19,6 +19,8 @@ public interface ICustomerDebtManager
         string returnCode,
         Guid? sourceDeliveryNoteId,
         decimal amount);
+
+    Task ConsumeCreditNoteByRefundAsync(Guid customerReturnId, decimal refundAmount);
     
     Task<CustomerDebtDto?> GetDebtByIdAsync(Guid id);
 

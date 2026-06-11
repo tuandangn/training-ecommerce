@@ -47,7 +47,7 @@ public sealed class VendorManager : IVendorManager
 
     public async Task DeleteVendorAsync(Guid id)
     {
-        var vendor = await _vendorDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var vendor = await _vendorRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (vendor is null)
             throw new ArgumentException("Vendor is not found", nameof(id));
 
@@ -111,7 +111,7 @@ public sealed class VendorManager : IVendorManager
 
         dto.Verify();
 
-        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id);
+        var vendor = await _vendorRepository.GetByIdAsync(dto.Id);
         if (vendor is null)
             throw new ArgumentException("Vendor  is not found", nameof(dto));
 

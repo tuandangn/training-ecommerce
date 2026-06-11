@@ -44,5 +44,12 @@ public record AppAggregateEntity : AppEntity, ISoftDeletable
     /// </summary>
     public void ClearDomainEvents() => _domainEvents.Clear();
 
+    /// <summary>
+    /// Xoá các Domain Event thoả điều kiện <paramref name="predicate"/>.
+    /// Dùng để xoá <see cref="IReliableDomainEvent"/> sau khi đã serialize vào Outbox,
+    /// giữ lại các event khác để dispatch inline ở <c>SavedChanges</c>.
+    /// </summary>
+    public void ClearDomainEvents(Predicate<IDomainEvent> predicate) => _domainEvents.RemoveAll(predicate);
+
     #endregion
 }

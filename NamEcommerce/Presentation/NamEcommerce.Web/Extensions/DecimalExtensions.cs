@@ -19,8 +19,8 @@ public static class DecimalExtensions
     public static string DisplayVietnameseCurrencyHint(this decimal? value) 
         => DecimalFormatHelper.ToVietnameseCurrencyHint(value);
 
-    public static string DisplayQuantity(this decimal value) 
-        => DecimalFormatHelper.FormatQuantity(value);
-    public static string DisplayQuantity(this decimal? value) 
-        => DecimalFormatHelper.FormatQuantity(value);
+    public static string DisplayQuantity(this decimal value, int decimalPlaces = 2) 
+        => DecimalFormatHelper.FormatQuantity(value, decimalPlaces);
+    public static string DisplayQuantity(this decimal? value, int decimalPlaces = 2) 
+        => DecimalFormatHelper.FormatQuantity(value, decimalPlaces);
 }

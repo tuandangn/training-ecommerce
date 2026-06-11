@@ -10,7 +10,9 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
@@ -21,6 +23,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
     IInventoryStockManager inventoryStockManager,
     IDirectShipManager directShipManager) : IOrderAppService
 {
@@ -123,6 +126,22 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                if (!NumberHelper.IsValidDecimalPlace(dto.Quantity, unitMeasurement.DecimalPlaces))
+                {
+                    return new AddOrderItemResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.QuantityMustBeInteger"
+                    };
+                }
+            }
+        }
+
         if (!product.ProductVendors.Any())
         {
             var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(dto.ProductId).ConfigureAwait(false);
@@ -212,6 +231,22 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 Success = false,
                 ErrorMessage = "Error.ProductIsNotFound"
             };
+        }
+
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                if (!NumberHelper.IsValidDecimalPlace(dto.Quantity, unitMeasurement.DecimalPlaces))
+                {
+                    return new UpdateOrderItemResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.QuantityMustBeInteger"
+                    };
+                }
+            }
         }
 
         if (!product.ProductVendors.Any())
@@ -400,6 +435,17 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
+        var hasDraftDn = deliveryNoteDataReader.DataSource.Any(dn =>
+            dn.OrderId == dto.OrderId && dn.Status == DeliveryNoteStatus.Draft);
+        if (hasDraftDn)
+        {
+            return new CompleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.OrderHasDraftDeliveryNotes"
+            };
+        }
+
         try
         {
             await orderManager.CompleteOrderAsync(new CompleteOrderDto
@@ -412,7 +458,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 Success = true
             };
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
             return new CompleteOrderResultAppDto
             {
@@ -488,6 +534,25 @@ public sealed class OrderAppService(IOrderManager orderManager,
                     Success = false,
                     ErrorMessage = "Error.ProductIsNotFound"
                 };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    foreach (var item in itemGroup)
+                    {
+                        if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                        {
+                            return new CreateOrderResultAppDto
+                            {
+                                Success = false,
+                                ErrorMessage = "Error.QuantityMustBeInteger"
+                            };
+                        }
+                    }
+                }
             }
 
             if (product.ProductVendors.Any())
@@ -664,7 +729,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
             return new CancelOrderResultAppDto { Success = true };
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
             return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
         }

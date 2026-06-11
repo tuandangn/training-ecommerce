@@ -2,19 +2,53 @@ using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.StockTransfer;
 using NamEcommerce.Application.Contracts.StockTransfer;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.StockTransfer;
 using NamEcommerce.Domain.Shared.Enums.StockTransfer;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 
 namespace NamEcommerce.Application.Services.StockTransfer;
 
-public sealed class StockTransferNoteAppService(IStockTransferNoteManager manager) : IStockTransferNoteAppService
+public sealed class StockTransferNoteAppService(IStockTransferNoteManager manager, 
+    IEntityDataReader<Product> productDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader) : IStockTransferNoteAppService
 {
     public async Task<CreateStockTransferNoteResultAppDto> CreateAsync(CreateStockTransferNoteAppDto dto)
     {
         var (valid, error) = dto.Validate();
         if (!valid) return new CreateStockTransferNoteResultAppDto { Success = false, ErrorMessage = error };
+
+        foreach (var item in dto.Items)
+        {
+
+            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateStockTransferNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new CreateStockTransferNoteResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
+        }
 
         try
         {

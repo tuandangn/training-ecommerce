@@ -12,9 +12,6 @@ public sealed class CreateStockAdjustmentNoteHandler(
     public async Task<CreateStockAdjustmentNoteResultModel> Handle(
         CreateStockAdjustmentNoteCommand request, CancellationToken cancellationToken)
     {
-        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.PhysicalQuantity != Math.Floor(i.PhysicalQuantity)))
-            return new CreateStockAdjustmentNoteResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
-
         var dto = new CreateStockAdjustmentNoteAppDto
         {
             WarehouseId = request.WarehouseId,

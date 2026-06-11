@@ -1,6 +1,7 @@
 @using NamEcommerce.Web.Models.Users
 @model LoginModel
 @{
+    Layout = "_Layout.Anonymous";
     ViewData[ViewConstants.PageTitle] = "Đăng nhập";
     string? returnUrl = Context.Request.Query["ReturnUrl"];
 }

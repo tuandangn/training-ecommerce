@@ -13,7 +13,6 @@ public sealed record InventoryStock : AppAggregateEntity
 
         QuantityOnHand = 0;
         QuantityReserved = 0;
-        AverageCost = 0;
 
         UpdatedOnUtc = DateTime.UtcNow;
     }

@@ -26,7 +26,8 @@ public sealed class CustomerPortalQueryHandlers(
     IRequestHandler<GetCustomerReturnableItemsQuery, CustomerReturnableItemListModel>,
     IRequestHandler<GetCustomerReturnRequestsQuery, CustomerReturnRequestListModel>,
     IRequestHandler<GetCustomerReturnRequestDetailsQuery, CustomerReturnRequestDetailsModel?>,
-    IRequestHandler<GetCustomerDebtsQuery, CustomerDebtSummaryModel>
+    IRequestHandler<GetCustomerDebtsQuery, CustomerDebtSummaryModel>,
+    IRequestHandler<GetCustomerLedgerQuery, CustomerLedgerSummaryModel>
 {
     public async Task<PublicDeliveryNoteModel?> Handle(GetPublicDeliveryNoteQuery request, CancellationToken cancellationToken)
     {
@@ -196,6 +197,24 @@ public sealed class CustomerPortalQueryHandlers(
     {
         var summary = await portalAppService.GetDebtSummaryAsync(RequireCustomerId()).ConfigureAwait(false);
         return MapDebtSummary(summary);
+    }
+
+    public async Task<CustomerLedgerSummaryModel> Handle(GetCustomerLedgerQuery request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.GetLedgerSummaryAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerLedgerSummaryModel(
+            result.Balance,
+            result.LastEntryOnUtc,
+            result.RecentEntries.Select(e => new CustomerLedgerStatementItemModel(
+                e.EntryId,
+                e.EntryType,
+                e.Amount,
+                e.RunningBalance,
+                e.ReferenceType,
+                e.ReferenceId,
+                e.ReferenceCode,
+                e.Note,
+                e.OccurredAtUtc)).ToList());
     }
 
     private Guid RequireCustomerId()

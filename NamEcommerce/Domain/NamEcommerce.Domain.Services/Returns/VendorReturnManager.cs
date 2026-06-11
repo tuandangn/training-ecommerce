@@ -21,6 +21,7 @@ using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Services.Debts;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -40,7 +41,8 @@ public sealed class VendorReturnManager(
     IInventoryCostingManager inventoryCostingManager,
     IExpenseManager expenseManager,
     IVendorDebtManager vendorDebtManager,
-    ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : IVendorReturnManager
 {
     public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto)
     {
@@ -107,7 +109,7 @@ public sealed class VendorReturnManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(dto.Id);
 
         vendorReturn.Note = dto.Note;
@@ -120,7 +122,7 @@ public sealed class VendorReturnManager(
 
     public async Task MoveToInspectingAsync(Guid id)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
@@ -130,7 +132,7 @@ public sealed class VendorReturnManager(
 
     public async Task ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
         if (warehouseId.HasValue)
@@ -173,7 +175,7 @@ public sealed class VendorReturnManager(
 
     public async Task CancelAsync(Guid id)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
         vendorReturn.Cancel();
@@ -182,7 +184,7 @@ public sealed class VendorReturnManager(
 
     public async Task ReverseConfirmedAsync(Guid id, string reason)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
         EnsureCanReverseVendorReturn(vendorReturn, reason);
@@ -294,7 +296,7 @@ public sealed class VendorReturnManager(
 
     public async Task FinalizeConfirmAsync(Guid returnId, Guid generatedDeliveryNoteId, decimal totalReturnAmount)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(returnId).ConfigureAwait(false);
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(returnId).ConfigureAwait(false);
         if (vendorReturn is null) return;
 
         // Idempotency guard
@@ -337,9 +339,8 @@ public sealed class VendorReturnManager(
 
     private string GenerateCode()
     {
-        var datePrefix = $"TNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = vendorReturnDataReader.DataSource.Count(r => r.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var prefix = $"TNCC-{DateTime.UtcNow:yyyyMMdd}";
+        return entityCodeGenerator.Next(prefix, () => vendorReturnDataReader.DataSource.Count(r => r.Code.StartsWith(prefix)));
     }
 
     private static void EnsureCanReverseVendorReturn(VendorReturn vendorReturn, string reason)

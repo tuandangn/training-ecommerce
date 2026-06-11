@@ -1,5 +1,6 @@
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Settings;
 
@@ -55,6 +56,9 @@ public sealed class CassoReconciliationHostedService(
             {
                 Trigger = (int)CassoReconciliationRunTrigger.Scheduled
             }).ConfigureAwait(false);
+
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {

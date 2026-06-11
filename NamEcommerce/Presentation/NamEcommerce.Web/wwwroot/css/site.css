@@ -2115,9 +2115,13 @@ body {
 .order-workflow-info-grid,
 .workflow-metric-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.85rem;
 }
+.order-workflow-info-grid.three-columns{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 
 .order-workflow-info-grid > div,
 .workflow-metric {

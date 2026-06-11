@@ -34,7 +34,7 @@ public sealed class VendorReturnConfirmedEventHandler(
         if (vendorReturn.GeneratedDeliveryNoteId.HasValue) return;
 
         // 1. Tạo DeliveryNote xuất kho (SourceType=ToVendorReturn, Status=Delivered, trừ tồn inline)
-        var deliveryNoteId = await _deliveryNoteAppService.CreateAsDeliveredFromVendorReturnAsync(
+        var result = await _deliveryNoteAppService.CreateAsDeliveredFromVendorReturnAsync(
             new CreateDeliveryNoteFromVendorReturnAppDto
             {
                 VendorReturnId = notification.VendorReturnId,
@@ -48,9 +48,12 @@ public sealed class VendorReturnConfirmedEventHandler(
                 })
             }).ConfigureAwait(false);
 
+        if (!result.Success)
+            return;
+
         // 2. Ghi nhận DeliveryNoteId + giảm VendorDebt FIFO (net = Σ AcceptedTotal - AdditionalCost)
         var totalReturnAmount = vendorReturn.NetRecoveryAmount;
         await _vendorReturnManager.FinalizeConfirmAsync(
-            notification.VendorReturnId, deliveryNoteId, totalReturnAmount).ConfigureAwait(false);
+            notification.VendorReturnId, result.CreatedId!.Value, totalReturnAmount).ConfigureAwait(false);
     }
 }

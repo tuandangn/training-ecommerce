@@ -68,7 +68,7 @@ public sealed class BankAccountManager : IBankAccountManager
 
     public async Task UpdateAsync(UpdateBankAccountDto dto)
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == dto.Id)
+        var account = await _repository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new BankAccountNotFoundException(dto.Id);
         account.UpdateInfo(dto.DisplayName, dto.BankCode, dto.BankName, dto.AccountNumber, dto.AccountHolderName);
         await _repository.UpdateAsync(account).ConfigureAwait(false);
@@ -76,7 +76,7 @@ public sealed class BankAccountManager : IBankAccountManager
 
     public async Task SetDefaultAsync(Guid id)
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == id)
+        var account = await _repository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new BankAccountNotFoundException(id);
 
         await ClearAllDefaultsAsync().ConfigureAwait(false);
@@ -86,7 +86,7 @@ public sealed class BankAccountManager : IBankAccountManager
 
     public async Task DeactivateAsync(Guid id)
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == id)
+        var account = await _repository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new BankAccountNotFoundException(id);
         account.Deactivate();
         await _repository.UpdateAsync(account).ConfigureAwait(false);
@@ -94,7 +94,7 @@ public sealed class BankAccountManager : IBankAccountManager
 
     public async Task ActivateAsync(Guid id)
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == id)
+        var account = await _repository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new BankAccountNotFoundException(id);
         account.Activate();
         await _repository.UpdateAsync(account).ConfigureAwait(false);
@@ -102,9 +102,11 @@ public sealed class BankAccountManager : IBankAccountManager
 
     private async Task ClearAllDefaultsAsync()
     {
-        var currentDefaults = _dataReader.DataSource.Where(a => a.IsDefault).ToList();
-        foreach (var a in currentDefaults)
+        var defaultIds = _dataReader.DataSource.Where(a => a.IsDefault).Select(a => a.Id).ToList();
+        foreach (var id in defaultIds)
         {
+            var a = await _repository.GetByIdAsync(id).ConfigureAwait(false);
+            if (a is null) continue;
             a.ClearDefault();
             await _repository.UpdateAsync(a).ConfigureAwait(false);
         }

@@ -14,7 +14,7 @@ public sealed record CustomerRefundCreated(
 public sealed record CustomerRefundCompleted(
     Guid CustomerRefundId,
     Guid CustomerId,
-    decimal Amount) : DomainEvent;
+    decimal Amount) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu hoàn tiền bị huỷ — không thực hiện hoàn trả.

@@ -16,16 +16,10 @@ namespace NamEcommerce.Data.SqlServer.Outbox;
 /// <para>
 /// Quy trình mỗi tick:
 /// <list type="number">
-///   <item>Tạo scope DI mới — service phụ thuộc vào <c>NamEcommerceEfDbContext</c> (scoped).</item>
-///   <item>Query batch <see cref="OutboxProcessorOptions.BatchSize"/> message: <c>ProcessedOnUtc IS NULL</c> và <c>RetryCount &lt; MaxRetry</c>, sắp xếp theo <c>OccurredOnUtc</c> tăng dần.</item>
-///   <item>Với từng message: deserialize Payload theo Type → publish qua <see cref="IPublisher"/>.</item>
-///   <item>Thành công → <c>MarkAsProcessed()</c>; Lỗi → <c>MarkAsFailed(error)</c> + log.</item>
-///   <item><c>SaveChangesAsync</c> ở cuối batch.</item>
+///   <item>Query batch message IDs.</item>
+///   <item>Mỗi message xử lý trong scope DI riêng — đảm bảo handler fail không ảnh hưởng message khác.</item>
+///   <item>Thành công → <c>MarkAsProcessed()</c> + <c>SaveChanges</c>; Lỗi → <c>MarkAsFailed</c> + <c>SaveChanges</c> + log.</item>
 /// </list>
-/// </para>
-/// <para>
-/// Idempotency phụ thuộc vào handler — nếu cùng message được dispatch 2 lần, handler phải tự xử lý.
-/// Concurrency: instance nhiều nên dùng SQL row lock (sẽ thêm khi scale-out, hiện tại single-instance).
 /// </para>
 /// </summary>
 public sealed class OutboxProcessor : BackgroundService
@@ -88,32 +82,35 @@ public sealed class OutboxProcessor : BackgroundService
 
     private async Task ProcessBatchAsync(OutboxProcessorOptions opts, CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<NamEcommerceEfDbContext>();
-        var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
-
-        var messages = await dbContext.Set<OutboxMessage>()
-            .Where(m => m.ProcessedOnUtc == null && m.RetryCount < opts.MaxRetryCount)
-            .OrderBy(m => m.OccurredOnUtc)
-            .Take(opts.BatchSize)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (messages.Count == 0) return;
-
-        foreach (var message in messages)
+        IReadOnlyList<Guid> messageIds;
+        using (var readScope = _scopeFactory.CreateScope())
         {
-            await DispatchSingleAsync(message, publisher, cancellationToken).ConfigureAwait(false);
+            var db = readScope.ServiceProvider.GetRequiredService<NamEcommerceEfDbContext>();
+            messageIds = await db.Set<OutboxMessage>()
+                .Where(m => m.ProcessedOnUtc == null && m.RetryCount < opts.MaxRetryCount)
+                .OrderBy(m => m.OccurredOnUtc)
+                .Take(opts.BatchSize)
+                .Select(m => m.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var id in messageIds)
+            await ProcessSingleAsync(id, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task DispatchSingleAsync(
-        OutboxMessage message,
-        IPublisher publisher,
-        CancellationToken cancellationToken)
+    private async Task ProcessSingleAsync(Guid messageId, CancellationToken cancellationToken)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<NamEcommerceEfDbContext>();
+        var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+
+        var message = await db.Set<OutboxMessage>()
+            .FindAsync(new object?[] { messageId }, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (message is null) return;
+
         try
         {
             var clrType = Type.GetType(message.Type, throwOnError: false);
@@ -121,16 +118,18 @@ public sealed class OutboxProcessor : BackgroundService
             {
                 message.MarkAsFailed($"Cannot resolve CLR type '{message.Type}'.");
                 _logger.LogError("Outbox: unable to resolve type {TypeName} for message {Id}.", message.Type, message.Id);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            if (JsonSerializer.Deserialize(message.Payload, clrType, SerializerOptions) is not IIntegrationEvent integrationEvent)
+            if (JsonSerializer.Deserialize(message.Payload, clrType, SerializerOptions) is not INotification notification)
             {
-                message.MarkAsFailed($"Deserialized payload is null or not an IIntegrationEvent (type='{message.Type}').");
+                message.MarkAsFailed($"Deserialized payload is null or not an INotification (type='{message.Type}').");
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            await publisher.Publish(integrationEvent, cancellationToken).ConfigureAwait(false);
+            await publisher.Publish(notification, cancellationToken).ConfigureAwait(false);
             message.MarkAsProcessed();
         }
         catch (Exception ex)
@@ -139,5 +138,7 @@ public sealed class OutboxProcessor : BackgroundService
             _logger.LogWarning(ex, "Outbox: dispatch message {Id} (type={Type}) failed (retry={Retry}).",
                 message.Id, message.Type, message.RetryCount);
         }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

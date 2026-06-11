@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace NamEcommerce.Data.SqlServer;
 
-public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
+public sealed class NamEcommerceEfDbContext : DbContext, IDbContext, IUnitOfWork
 {
     public NamEcommerceEfDbContext(DbContextOptions<NamEcommerceEfDbContext> opts) : base(opts)
     {
@@ -73,9 +73,15 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
 
     async Task<TEntity> IDbContext.UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken)
     {
+        var entry = Entry(entity);
+        if (entry.State == EntityState.Detached)
+            Update(entity);
         await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity;
     }
+
+    public Task CommitAsync(CancellationToken cancellationToken = default)
+        => SaveChangesAsync(cancellationToken);
 
     async Task<IDataTransaction> IDbContext.BeginTransactionAsync(CancellationToken cancellationToken)
     {

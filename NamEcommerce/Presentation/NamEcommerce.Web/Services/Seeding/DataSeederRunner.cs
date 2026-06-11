@@ -1,6 +1,8 @@
+using NamEcommerce.Data.Contracts;
+
 namespace NamEcommerce.Web.Services.Seeding;
 
-public sealed class DataSeederRunner(IEnumerable<IDataSeeder> seeders, ILogger<DataSeederRunner> logger)
+public sealed class DataSeederRunner(IEnumerable<IDataSeeder> seeders, IUnitOfWork unitOfWork, ILogger<DataSeederRunner> logger)
 {
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
@@ -10,6 +12,7 @@ public sealed class DataSeederRunner(IEnumerable<IDataSeeder> seeders, ILogger<D
             try
             {
                 await seeder.SeedAsync(cancellationToken).ConfigureAwait(false);
+                await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
                 logger.LogInformation("Seeder {Seeder} completed.", name);
             }
             catch (Exception ex)

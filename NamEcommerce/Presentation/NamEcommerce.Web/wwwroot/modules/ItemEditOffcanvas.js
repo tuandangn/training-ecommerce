@@ -14,10 +14,13 @@ export default class ItemEditOffcanvas {
     #qtyInput;
     #priceInput;
     #totalEl;
+    #totalHintEl;
     #decrementBtn;
     #incrementBtn;
     #applyBtn;
     #deleteBtn;
+
+    #openOptions;
 
     // opts: { showPrice?: boolean, qtyLabel?: string }
     constructor(offcanvasEl, opts = {}) {
@@ -34,6 +37,7 @@ export default class ItemEditOffcanvas {
         this.#qtyInput = offcanvasEl.querySelector('[data-oe-qty]');
         this.#priceInput = offcanvasEl.querySelector('[data-oe-price]');
         this.#totalEl = offcanvasEl.querySelector('[data-oe-total]');
+        this.#totalHintEl = offcanvasEl.querySelector('[data-oe-total-hint]');
         this.#decrementBtn = offcanvasEl.querySelector('[data-oe-decrement]');
         this.#incrementBtn = offcanvasEl.querySelector('[data-oe-increment]');
         this.#applyBtn = offcanvasEl.querySelector('[data-oe-apply]');
@@ -58,9 +62,10 @@ export default class ItemEditOffcanvas {
 
     // item: { name, picture?, quantity, unitPrice, quantityDecimalPlaces, priceLabel? }
     // callbacks: { onApply(qty, price), onDelete() }
-    open(item, callbacks = {}) {
+    open(item, callbacks = {}, opts = {}) {
         this.#currentItem = item;
         this.#callbacks = callbacks;
+        this.#openOptions = Object.assign({ canRemove: true }, opts);
         this.#populate(item);
         this.#bsOffcanvas.show();
         this.#offcanvasEl.addEventListener('shown.bs.offcanvas', () => {
@@ -101,6 +106,8 @@ export default class ItemEditOffcanvas {
             this.#priceInput.value = DecimalFields.formatCurrency(item.unitPrice);
             this.#refreshTotal();
         }
+
+        this.#deleteBtn.classList.toggle('d-none', !this.#openOptions.canRemove);
     }
 
     #getQty() {
@@ -116,7 +123,13 @@ export default class ItemEditOffcanvas {
         if (!this.#showPrice) return;
         const total = this.#getQty() * this.#getPrice();
         if (this.#totalEl) {
-            this.#totalEl.textContent = DecimalFields.formatCurrency(total) + ' đ';
+            this.#totalEl.textContent = DecimalFields.formatCurrencyWithSymbol(total);
+        }
+        if (this.#totalHintEl) {
+            if (total > 0)
+                this.#totalHintEl.textContent = window.SoBangChu.docSoTien(total);
+            else
+                this.#totalHintEl.textContent = '';
         }
     }
 
@@ -137,6 +150,11 @@ export default class ItemEditOffcanvas {
     }
 
     async #confirmDelete() {
+        if (!this.#openOptions.canRemove)
+            return;
+
+        this.close();
+
         const result = await Swal.fire({
             title: 'Xóa hàng hóa?',
             text: `"${this.#currentItem?.name}" sẽ bị xóa khỏi đơn.`,

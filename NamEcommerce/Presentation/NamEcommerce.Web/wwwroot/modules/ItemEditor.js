@@ -13,8 +13,8 @@ export default class ItemEditor {
 
     // item: { name, picture?, quantity, unitPrice, quantityDecimalPlaces, priceLabel? }
     // callbacks: { onApply(qty, price), onDelete() }
-    open(item, callbacks = {}) {
+    open(item, callbacks = {}, openOptions = {}) {
         const isDesktop = window.matchMedia('(min-width: 992px)').matches;
-        (isDesktop ? this.#modal : this.#offcanvas)?.open(item, callbacks);
+        (isDesktop ? this.#modal : this.#offcanvas)?.open(item, callbacks, openOptions);
     }
 }

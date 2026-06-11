@@ -31,8 +31,8 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var existing = _dataReader.DataSource.FirstOrDefault();
-        if (existing is null)
+        var existingId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        if (existingId == Guid.Empty)
         {
             var setup = new AccountingSetup(
                 dto.FiscalYearStartMonth, dto.FiscalYearStartDay,
@@ -42,6 +42,8 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
             return inserted.ToDto();
         }
 
+        var existing = await _repository.GetByIdAsync(existingId).ConfigureAwait(false)
+            ?? throw new AccountingSetupNotFoundException();
         existing.Update(dto.FiscalYearStartMonth, dto.FiscalYearStartDay,
             dto.AccountingStartDate, dto.OpeningCash, dto.OpeningEquity, dto.DefaultTaxRate);
         var updated = await _repository.UpdateAsync(existing).ConfigureAwait(false);
@@ -50,7 +52,9 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
 
     public async Task FinalizeAsync()
     {
-        var setup = _dataReader.DataSource.FirstOrDefault()
+        var setupId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        if (setupId == Guid.Empty) throw new AccountingSetupNotFoundException();
+        var setup = await _repository.GetByIdAsync(setupId).ConfigureAwait(false)
             ?? throw new AccountingSetupNotFoundException();
         setup.ConfirmAndLock();
         await _repository.UpdateAsync(setup).ConfigureAwait(false);
@@ -58,7 +62,9 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
 
     public async Task UpdateCorporateTaxProvisionAsync(decimal? amount)
     {
-        var setup = _dataReader.DataSource.FirstOrDefault()
+        var setupId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        if (setupId == Guid.Empty) throw new AccountingSetupNotFoundException();
+        var setup = await _repository.GetByIdAsync(setupId).ConfigureAwait(false)
             ?? throw new AccountingSetupNotFoundException();
         setup.UpdateCorporateTaxProvision(amount);
         await _repository.UpdateAsync(setup).ConfigureAwait(false);

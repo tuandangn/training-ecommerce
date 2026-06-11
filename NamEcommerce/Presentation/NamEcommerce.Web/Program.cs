@@ -1,5 +1,6 @@
 #region using
 
+using MediatR;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -57,6 +58,7 @@ using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Data.SqlServer.Interceptors;
 using NamEcommerce.Data.SqlServer.Outbox;
 using NamEcommerce.Domain.Services.Catalog;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.CustomerPortal;
 using NamEcommerce.Domain.Services.Customers;
 using NamEcommerce.Domain.Services.Debts;
@@ -93,12 +95,29 @@ using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.CustomerPortal;
+using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Entities.Finance;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Entities.Notifications;
+using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Entities.StockAdjustment;
+using NamEcommerce.Domain.Entities.StockTransfer;
+using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Authorization;
 using NamEcommerce.Web.Services.Permissions;
+using NamEcommerce.Web.Framework.Behaviors;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Hubs.Notifications;
@@ -184,10 +203,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
         if (builder.Environment.IsDevelopment())
             opts.EnableSensitiveDataLogging(true);
-
     });
-    services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
-    services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
+    // Đảm bảo IDbContext và IUnitOfWork resolve cùng 1 scoped instance với NamEcommerceEfDbContext
+    services.AddScoped<IDbContext>(sp => sp.GetRequiredService<NamEcommerceEfDbContext>());
+    services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<NamEcommerceEfDbContext>());
+    services.AddScoped(typeof(IRepository<>), typeof(StagedRepository<>));
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
     services.AddScoped(typeof(IGetByIdService<>), typeof(EntityDataReader<>));
     services.AddScoped<IOutbox, OutboxAccessor>();
@@ -196,7 +216,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
     services.AddHostedService<OutboxProcessor>();
     services.AddHostedService<CassoReconciliationHostedService>();
+    services.AddHostedService<DeliveryNoteReconciliationHostedService>();
 
+    services.AddScoped<EntityCodeGenerator>();
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
     services.AddScoped<IUnitMeasurementManager, UnitMeasurementManager>();
@@ -224,12 +246,14 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
+    services.AddScoped<ICustomerLedgerManager, CustomerLedgerManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
     services.AddScoped<IBankTransferVerificationLogManager, BankTransferVerificationLogManager>();
     services.AddScoped<ICassoReconciliationRunManager, CassoReconciliationRunManager>();
     services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
     services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
+    services.AddScoped<IVendorLedgerManager, VendorLedgerManager>();
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
     services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();
@@ -350,6 +374,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         config.RegisterServicesFromAssemblyContaining<CategoryAppService>();
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
+        config.AddBehavior(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>));
     });
 
     services.AddLocalization();

@@ -38,7 +38,7 @@ public sealed class DirectShipManager(
         Guid allocationId, string address, string? contactName, string? contactPhone, int priority,
         CancellationToken ct = default)
     {
-        var allocation = await allocationReader.GetByIdAsync(allocationId)
+        var allocation = await allocationRepository.GetByIdAsync(allocationId)
             ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
         if (allocation.ReceivedQuantity >= allocation.AllocatedQuantity)
             throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAllocationNoRemainingQuantity");
@@ -90,7 +90,7 @@ public sealed class DirectShipManager(
         if (receivedDelta <= 0)
             return;
 
-        var allocation = await allocationReader.GetByIdAsync(allocationId)
+        var allocation = await allocationRepository.GetByIdAsync(allocationId)
             ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
         if (!allocation.IsDirectShip)
             return;
@@ -177,7 +177,7 @@ public sealed class DirectShipManager(
         Guid allocationId, string newAddress, string? newContactName, string? newContactPhone,
         Guid editedByUserId, string? reason, CancellationToken ct = default)
     {
-        var allocation = await allocationReader.GetByIdAsync(allocationId)
+        var allocation = await allocationRepository.GetByIdAsync(allocationId)
             ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
 
         var changeLog = new DirectShipAddressChangeLog(

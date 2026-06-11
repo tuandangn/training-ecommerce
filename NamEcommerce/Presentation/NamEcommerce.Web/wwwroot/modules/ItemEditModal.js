@@ -14,10 +14,13 @@ export default class ItemEditModal {
     #qtyInput;
     #priceInput;
     #totalEl;
+    #totalHintEl;
     #decrementBtn;
     #incrementBtn;
     #applyBtn;
     #deleteBtn;
+
+    #openOptions;
 
     constructor(modalEl, opts = {}) {
         this.#modalEl = modalEl;
@@ -33,6 +36,7 @@ export default class ItemEditModal {
         this.#qtyInput = modalEl.querySelector('[data-oe-qty]');
         this.#priceInput = modalEl.querySelector('[data-oe-price]');
         this.#totalEl = modalEl.querySelector('[data-oe-total]');
+        this.#totalHintEl = modalEl.querySelector('[data-oe-total-hint]');
         this.#decrementBtn = modalEl.querySelector('[data-oe-decrement]');
         this.#incrementBtn = modalEl.querySelector('[data-oe-increment]');
         this.#applyBtn = modalEl.querySelector('[data-oe-apply]');
@@ -55,9 +59,10 @@ export default class ItemEditModal {
         this.#bindEvents();
     }
 
-    open(item, callbacks = {}) {
+    open(item, callbacks = {}, opts = {}) {
         this.#currentItem = item;
         this.#callbacks = callbacks;
+        this.#openOptions = Object.assign({ canRemove: true }, opts);
         this.#populate(item);
         this.#bsModal.show();
         this.#modalEl.addEventListener('shown.bs.modal', () => {
@@ -98,6 +103,8 @@ export default class ItemEditModal {
             this.#priceInput.value = DecimalFields.formatCurrency(item.unitPrice);
             this.#refreshTotal();
         }
+
+        this.#deleteBtn.classList.toggle('d-none', !this.#openOptions.canRemove);
     }
 
     #getQty() {
@@ -113,7 +120,13 @@ export default class ItemEditModal {
         if (!this.#showPrice) return;
         const total = this.#getQty() * this.#getPrice();
         if (this.#totalEl) {
-            this.#totalEl.textContent = DecimalFields.formatCurrency(total) + ' đ';
+            this.#totalEl.textContent = DecimalFields.formatCurrencyWithSymbol(total);
+        }
+        if (this.#totalHintEl) {
+            if (total > 0)
+                this.#totalHintEl.textContent = window.SoBangChu.docSoTien(total);
+            else
+                this.#totalHintEl.textContent = '';
         }
     }
 
@@ -134,6 +147,11 @@ export default class ItemEditModal {
     }
 
     async #confirmDelete() {
+        if (!this.#openOptions.canRemove)
+            return;
+
+        this.close();
+
         const result = await Swal.fire({
             title: 'Xóa hàng hóa?',
             text: `"${this.#currentItem?.name}" sẽ bị xóa khỏi đơn.`,
@@ -146,7 +164,6 @@ export default class ItemEditModal {
         });
 
         if (result.isConfirmed) {
-            this.close();
             this.#callbacks.onDelete?.();
         }
     }

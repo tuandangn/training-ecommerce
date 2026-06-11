@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
 using NamEcommerce.Domain.Shared.Exceptions.StockAdjustment;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -19,13 +20,13 @@ public sealed class StockAdjustmentNoteManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<InventoryStock> stockDataReader,
-    ICurrentUserAccessor currentUserAccessor) : IStockAdjustmentNoteManager
+    ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator entityCodeGenerator) : IStockAdjustmentNoteManager
 {
     private string GenerateCode()
     {
         var prefix = $"PKK-{DateTime.UtcNow:yyyyMMdd}";
-        var count = noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix));
-        return $"{prefix}-{(count + 1):D3}";
+        return entityCodeGenerator.Next(prefix, () => noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix)));
     }
 
     public async Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto)

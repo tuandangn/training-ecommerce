@@ -19,9 +19,6 @@ public sealed class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Cre
 
     public async Task<CreateOrderResultModel> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
-        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.Quantity != Math.Floor(i.Quantity)))
-            return new CreateOrderResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
-
         var dto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
@@ -39,7 +36,6 @@ public sealed class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Cre
                 UnitPrice = item.UnitPrice
             });
         }
-
         var result = await _orderAppService.CreateOrderAsync(dto).ConfigureAwait(false);
 
         return new CreateOrderResultModel

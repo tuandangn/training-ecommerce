@@ -20,3 +20,4 @@ public sealed record GetCustomerReturnableItemsQuery : IRequest<CustomerReturnab
 public sealed record GetCustomerReturnRequestsQuery : IRequest<CustomerReturnRequestListModel>;
 public sealed record GetCustomerReturnRequestDetailsQuery(Guid ReturnRequestId) : IRequest<CustomerReturnRequestDetailsModel?>;
 public sealed record GetCustomerDebtsQuery : IRequest<CustomerDebtSummaryModel>;
+public sealed record GetCustomerLedgerQuery : IRequest<CustomerLedgerSummaryModel>;

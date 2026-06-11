@@ -26,7 +26,7 @@ public sealed record DeliveryNoteDelivered(
     Guid DeliveryNoteId,
     Guid OrderId,
     Guid CustomerId,
-    decimal AmountToCollect) : DomainEvent;
+    decimal AmountToCollect) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng bị huỷ.

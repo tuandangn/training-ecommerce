@@ -42,29 +42,31 @@ public sealed class CashBookService : ICashBookService
         var setup = await _setupService.GetSetupAsync().ConfigureAwait(false);
         if (!setup.IsConfigured) return 0;
 
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+
         var cashIn = _customerPayments.DataSource
-            .Where(p => p.PaymentMethod == PaymentMethod.Cash && p.PaidOnUtc <= asOf)
+            .Where(p => p.PaymentMethod == PaymentMethod.Cash && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var refundsOut = _refunds.DataSource
             .Where(r => r.PaymentMethod == PaymentMethod.Cash
                      && r.Status == CustomerRefundStatus.Completed
-                     && r.RefundedOnUtc <= asOf)
+                     && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorRefundsIn = _vendorRefunds.DataSource
             .Where(r => r.PaymentMethod == PaymentMethod.Cash
                      && r.Status == VendorRefundStatus.Completed
-                     && r.RefundedOnUtc <= asOf)
+                     && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorOut = _vendorPayments.DataSource
-            .Where(p => p.PaymentMethod == PaymentMethod.Cash && p.PaidOnUtc <= asOf)
+            .Where(p => p.PaymentMethod == PaymentMethod.Cash && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var expensesOut = _expenses.DataSource
             .Where(e => (e.PaymentMethod == null || e.PaymentMethod == PaymentMethod.Cash)
-                     && e.IncurredDate <= asOf)
+                     && e.IncurredDate <= cutoff)
             .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
@@ -136,28 +138,30 @@ public sealed class CashBookService : ICashBookService
 
     private decimal GetBankAccountBalance(Guid accountId, decimal openingBalance, DateTime asOf)
     {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+
         var cashIn = _customerPayments.DataSource
-            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= asOf)
+            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var refundsOut = _refunds.DataSource
             .Where(r => r.BankAccountId == accountId
                      && r.Status == CustomerRefundStatus.Completed
-                     && r.RefundedOnUtc <= asOf)
+                     && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorRefundsIn = _vendorRefunds.DataSource
             .Where(r => r.BankAccountId == accountId
                      && r.Status == VendorRefundStatus.Completed
-                     && r.RefundedOnUtc <= asOf)
+                     && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorOut = _vendorPayments.DataSource
-            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= asOf)
+            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var expensesOut = _expenses.DataSource
-            .Where(e => e.BankAccountId == accountId && e.IncurredDate <= asOf)
+            .Where(e => e.BankAccountId == accountId && e.IncurredDate <= cutoff)
             .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 

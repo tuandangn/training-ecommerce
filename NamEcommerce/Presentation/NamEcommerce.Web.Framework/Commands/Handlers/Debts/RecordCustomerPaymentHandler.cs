@@ -20,11 +20,8 @@ public sealed class RecordCustomerPaymentHandler(
         var dto = new CreateCustomerPaymentAppDto
         {
             CustomerId = request.Model.CustomerId,
-            CustomerDebtId = request.Model.CustomerDebtId,
-            OrderId = request.Model.OrderId,
             Amount = request.Model.Amount,
             PaymentMethod = request.Model.PaymentMethod,
-            PaymentType = request.Model.PaymentType,
             Note = request.Model.Note,
             PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
             RecordedByUserId = currentUser?.Id

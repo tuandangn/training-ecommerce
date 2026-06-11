@@ -15,7 +15,7 @@ public sealed record VendorReturnConfirmed(
     Guid? PurchaseOrderId,
     Guid? GoodsReceiptId,
     Guid VendorId,
-    Guid WarehouseId) : DomainEvent;
+    Guid WarehouseId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu trả hàng NCC bị huỷ (Draft/Inspecting → Cancelled).

@@ -101,6 +101,21 @@ public sealed record VendorCreditNote : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Đánh dấu phần còn lại của credit note đã được giải quyết bằng thu tiền mặt từ NCC.
+    /// Gọi khi VendorRefund hoàn thành để credit note không còn treo trên BalanceSheet.
+    /// </summary>
+    internal void ConsumeByRefund(decimal refundAmount)
+    {
+        var consume = Math.Min(refundAmount, RemainingAmount);
+        if (consume <= 0) return;
+
+        AppliedAmount += consume;
+        RemainingAmount = Amount - AppliedAmount;
+        Status = RemainingAmount <= 0 ? CreditNoteStatus.FullyApplied : CreditNoteStatus.PartiallyApplied;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal void Cancel()
     {
         if (_allocations.Any(a => !a.IsReversed))

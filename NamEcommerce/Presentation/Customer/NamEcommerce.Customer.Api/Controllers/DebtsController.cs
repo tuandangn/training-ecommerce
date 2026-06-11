@@ -11,4 +11,8 @@ public sealed class DebtsController(IMediator mediator) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
         => Ok(await mediator.Send(new GetCustomerDebtsQuery()).ConfigureAwait(false));
+
+    [HttpGet("ledger")]
+    public async Task<IActionResult> GetLedger()
+        => Ok(await mediator.Send(new GetCustomerLedgerQuery()).ConfigureAwait(false));
 }

@@ -12,9 +12,6 @@ public sealed class CreateStockTransferNoteHandler(
     public async Task<CreateStockTransferNoteResultModel> Handle(
         CreateStockTransferNoteCommand request, CancellationToken cancellationToken)
     {
-        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.Quantity != Math.Floor(i.Quantity)))
-            return new CreateStockTransferNoteResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
-
         var dto = new CreateStockTransferNoteAppDto
         {
             FromWarehouseId = request.FromWarehouseId,
@@ -27,8 +24,8 @@ public sealed class CreateStockTransferNoteHandler(
                 Quantity = i.Quantity
             }).ToList()
         };
-
         var result = await appService.CreateAsync(dto).ConfigureAwait(false);
+
         return new CreateStockTransferNoteResultModel
         {
             Success = result.Success,

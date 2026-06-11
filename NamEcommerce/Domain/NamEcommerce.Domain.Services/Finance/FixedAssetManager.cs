@@ -1,5 +1,6 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Finance;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Enums.Finance;
@@ -12,11 +13,13 @@ public sealed class FixedAssetManager : IFixedAssetManager
 {
     private readonly IRepository<FixedAsset> _repository;
     private readonly IEntityDataReader<FixedAsset> _dataReader;
+    private readonly EntityCodeGenerator _codeGenerator;
 
-    public FixedAssetManager(IRepository<FixedAsset> repository, IEntityDataReader<FixedAsset> dataReader)
+    public FixedAssetManager(IRepository<FixedAsset> repository, IEntityDataReader<FixedAsset> dataReader, EntityCodeGenerator codeGenerator)
     {
         _repository = repository;
         _dataReader = dataReader;
+        _codeGenerator = codeGenerator;
     }
 
     public Task<FixedAssetDto?> GetByIdAsync(Guid id)
@@ -51,7 +54,7 @@ public sealed class FixedAssetManager : IFixedAssetManager
 
     public async Task<FixedAssetDto> UpdateAsync(Guid id, string name, string? description, string? note, FixedAssetCostCenter costCenter)
     {
-        var asset = _dataReader.DataSource.FirstOrDefault(a => a.Id == id)
+        var asset = await _repository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new FixedAssetNotFoundException(id);
         asset.UpdateInfo(name, description, note, costCenter);
         var updated = await _repository.UpdateAsync(asset).ConfigureAwait(false);
@@ -60,17 +63,14 @@ public sealed class FixedAssetManager : IFixedAssetManager
 
     public async Task DisposeAsync(Guid id, DateTime disposedOnUtc)
     {
-        var asset = _dataReader.DataSource.FirstOrDefault(a => a.Id == id)
+        var asset = await _repository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new FixedAssetNotFoundException(id);
         asset.Dispose(disposedOnUtc);
         await _repository.UpdateAsync(asset).ConfigureAwait(false);
     }
 
     public Task<string> GenerateCodeAsync()
-    {
-        var count = _dataReader.DataSource.Count();
-        return Task.FromResult($"TSCĐ-{(count + 1):D3}");
-    }
+        => Task.FromResult(_codeGenerator.Next("TSCĐ", () => _dataReader.DataSource.Count()));
 }
 
 internal static class FixedAssetExtensions
