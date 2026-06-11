@@ -545,15 +545,11 @@ public sealed class DeliveryNoteManager(
         string note)
     {
         if (targetQuantity <= 0)
-        {
             return;
-        }
 
         var stock = await stockManager.GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
-        if (stock is null || stock.QuantityReserved < targetQuantity)
-        {
+        if (stock is null)
             return;
-        }
 
         await stockManager.ReleaseReservedStockAsync(
             productId,

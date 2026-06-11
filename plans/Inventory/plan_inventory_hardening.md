@@ -2,6 +2,11 @@
 
 Fix các lỗi tiềm ẩn của quản lý tồn kho (nhập, xuất, chuyển kho, điều chỉnh, giá vốn) từ đợt review 2026-06-10. Plan này độc lập với `plans/Orders/plan_sales_workflow_hardening.md` nhưng có 2 điểm giao nhau (ghi rõ ở mục Phụ thuộc).
 
+#LƯU Ý:
+- KHÔNG VIẾT THÊM TEST
+- KHÔNG THÊM MIGRATION
+- CHỈ CHẠY "dotnet build * " KHI THẬT SỰ CẦN THIẾT
+
 ## Bối cảnh kỹ thuật (xác minh từ code)
 
 - `NamEcommerceEfDbContext`: mỗi `InsertAsync`/`UpdateAsync` của repository gọi `SaveChangesAsync` ngay → các thao tác nhiều bước KHÔNG nguyên tử trừ khi tự wrap `BeginTransactionAsync` (mới chỉ `DeliveryRunManager`, `FastSaleAppService` làm).

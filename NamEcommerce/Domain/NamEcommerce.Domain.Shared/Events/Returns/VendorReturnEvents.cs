@@ -30,4 +30,4 @@ public sealed record VendorReturnCancelled(Guid VendorReturnId) : DomainEvent;
 public sealed record VendorReturnOverRecovered(
     Guid VendorReturnId,
     Guid VendorId,
-    decimal OverAmount) : DomainEvent;
+    decimal OverAmount) : DomainEvent, IReliableDomainEvent;

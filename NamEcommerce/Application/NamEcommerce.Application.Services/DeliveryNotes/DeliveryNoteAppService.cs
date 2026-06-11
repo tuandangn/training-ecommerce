@@ -117,7 +117,7 @@ public sealed class DeliveryNoteAppService(
             .ToList();
         foreach (var item in itemsByProduct)
         {
-            var reservedQuantity = (await productReservationDataReader.GetListAsync(new ProductReservationLedgersOfOrderSpecification(item.ProductId, order.Id)).ConfigureAwait(false))
+            var reservedQuantity = (await productReservationDataReader.GetListAsync(new ProductReservationsOfOrderSpec(item.ProductId, order.Id)).ConfigureAwait(false))
                 .Sum(reservation => reservation.QuantityDelta);
             if (reservedQuantity < item.Quantity)
             {
@@ -135,7 +135,7 @@ public sealed class DeliveryNoteAppService(
             .ToList();
         foreach (var item in itemsByProductWarehouse)
         {
-            var stock = await inventoryStockDataReader.FirstOrDefaultAsync(new InventoryStockSpecification(item.ProductId, item.WarehouseId)).ConfigureAwait(false);
+            var stock = await inventoryStockDataReader.FirstOrDefaultAsync(new ProductInventoryStockSpec(item.ProductId, item.WarehouseId)).ConfigureAwait(false);
             if (stock is null)
             {
                 return new CreateDeliveryNoteResultAppDto

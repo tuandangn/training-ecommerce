@@ -38,11 +38,10 @@ public sealed record InventoryStock : AppAggregateEntity
     
     public DateTime? LastStocktakeDate { get; internal set; }
     
-    /// <summary>
-    /// Tracks when the current reservation expires. Auto-release if exceeded.
-    /// Null means no active reservation or unrestricted reservation.
-    /// </summary>
+    [Obsolete("Use StockReservationEntry ledger. Will be removed in a future migration.")]
     public DateTime? ReservedUntilUtc { get; internal set; }
-    
+
     public DateTime UpdatedOnUtc { get; internal set; }
+
+    public byte[] RowVersion { get; internal set; } = [];
 }

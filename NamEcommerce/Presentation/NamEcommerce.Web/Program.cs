@@ -56,6 +56,7 @@ using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Data.SqlServer.Interceptors;
+using NamEcommerce.Data.SqlServer.BackgroundServices;
 using NamEcommerce.Data.SqlServer.Outbox;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
@@ -217,6 +218,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddHostedService<OutboxProcessor>();
     services.AddHostedService<CassoReconciliationHostedService>();
     services.AddHostedService<DeliveryNoteReconciliationHostedService>();
+    services.AddHostedService<InventoryReconciliationService>();
+    services.AddHostedService<StaleDeliveryNoteNotifierService>();
 
     services.AddScoped<EntityCodeGenerator>();
     services.AddScoped<IUserManager, UserManager>();
@@ -229,6 +232,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<InventoryStockManager>();
     services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
     services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
+    services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IOrderItemChangeAuditManager, OrderItemChangeAuditManager>();
     services.AddScoped<IPurchaseOrderItemChangeAuditManager, PurchaseOrderItemChangeAuditManager>();

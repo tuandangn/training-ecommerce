@@ -81,6 +81,8 @@ public sealed record InventoryCostMovementResultDto
     public required decimal UnitCost { get; init; }
     public required decimal TotalCost { get; init; }
     public required InventoryCostingStatus Status { get; init; }
+    /// <summary>Global weighted-average cost after this movement. Display cache only.</summary>
+    public decimal AverageCostAfter { get; init; }
 }
 
 [Serializable]

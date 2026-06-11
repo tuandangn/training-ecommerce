@@ -10,7 +10,7 @@ public sealed record PurchaseOrderCreated(
 
 public sealed record PurchaseOrderUpdated(Guid PurchaseOrderId) : DomainEvent;
 
-public sealed record PurchaseOrderCancelled(Guid PurchaseOrderId) : DomainEvent;
+public sealed record PurchaseOrderCancelled(Guid PurchaseOrderId) : DomainEvent, IReliableDomainEvent;
 
 public sealed record PurchaseOrderStatusChanged(
     Guid PurchaseOrderId,
@@ -51,6 +51,6 @@ public sealed record PurchaseOrderItemReceived(
     Guid PurchaseOrderId,
     Guid PurchaseOrderItemId,
     decimal ReceivedQuantity,
-    Guid? GoodsReceiptId = null) : DomainEvent;
+    Guid? GoodsReceiptId = null) : DomainEvent, IReliableDomainEvent;
 
-public sealed record PurchaseOrderBulkReceived(Guid PurchaseOrderId) : DomainEvent;
+public sealed record PurchaseOrderBulkReceived(Guid PurchaseOrderId) : DomainEvent, IReliableDomainEvent;

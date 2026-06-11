@@ -26,7 +26,7 @@ public sealed record OrderItemAdded(
     Guid ProductId,
     decimal Quantity,
     decimal UnitPrice,
-    string? ProductName) : DomainEvent;
+    string? ProductName) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Một dòng hàng trong đơn được sửa số lượng / đơn giá.
@@ -40,7 +40,7 @@ public sealed record OrderItemUpdated(
     decimal Quantity,
     decimal UnitPrice,
     decimal OldUnitPrice,
-    string? ProductName) : DomainEvent;
+    string? ProductName) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Một dòng hàng bị xoá khỏi đơn.
@@ -52,13 +52,13 @@ public sealed record OrderItemRemoved(
     Guid ProductId,
     decimal Quantity,
     decimal UnitPrice,
-    string? ProductName) : DomainEvent;
+    string? ProductName) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Đơn đã được kết sổ và hoàn thành.
 /// Handler hiện tại release phần global reservation còn lại của đơn.
 /// </summary>
-public sealed record OrderCompleted(Guid OrderId) : DomainEvent;
+public sealed record OrderCompleted(Guid OrderId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Thông tin giao hàng (shipping address / expected shipping date) được cập nhật.
@@ -80,13 +80,13 @@ public sealed record OrderItemDelivered(
 /// </summary>
 public sealed record OrderCancelled(
     Guid OrderId,
-    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent;
+    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Toàn bộ dòng hàng của đơn đã được giao đến khách hàng.
 /// Handler release pending allocations của đơn.
 /// </summary>
-public sealed record OrderFullyDelivered(Guid OrderId, Guid CustomerId) : DomainEvent;
+public sealed record OrderFullyDelivered(Guid OrderId, Guid CustomerId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Đơn bị xoá (soft delete).
@@ -95,7 +95,7 @@ public sealed record OrderFullyDelivered(Guid OrderId, Guid CustomerId) : Domain
 public sealed record OrderDeleted(
     Guid OrderId,
     string OrderCode,
-    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent;
+    IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Snapshot số lượng cần release/reserve theo product tại thời điểm event được raise.

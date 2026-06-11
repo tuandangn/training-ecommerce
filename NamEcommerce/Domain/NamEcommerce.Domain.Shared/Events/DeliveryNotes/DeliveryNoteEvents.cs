@@ -6,7 +6,7 @@ namespace NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 public sealed record DeliveryNoteCreated(
     Guid DeliveryNoteId,
     Guid OrderId,
-    Guid CustomerId) : DomainEvent;
+    Guid CustomerId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng đã được duyệt — stock được reserve cho phiếu này.
@@ -15,9 +15,9 @@ public sealed record DeliveryNoteConfirmed(Guid DeliveryNoteId) : DomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng đang trong tình trạng giao (Confirmed → Delivering).
-/// Hiện không có handler — event để audit/tracking trạng thái giao hàng.
+/// Handler <c>DeliveryNoteDeliveringStockHandler</c>: <c>DispatchStockUpToAsync</c> (trừ tồn kho) + <c>RegisterOutboundAsync</c> (ghi giá vốn).
 /// </summary>
-public sealed record DeliveryNoteDelivering(Guid DeliveryNoteId) : DomainEvent;
+public sealed record DeliveryNoteDelivering(Guid DeliveryNoteId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng đã giao thành công — stock đã trừ, đơn hàng đã đánh dấu item delivered, sẵn sàng sinh công nợ.

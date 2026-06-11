@@ -21,6 +21,9 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Specifications.Customers;
+using NamEcommerce.Domain.Specifications.Orders;
+using NamEcommerce.Domain.Shared.Specifications;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -242,35 +245,22 @@ public sealed class OrderManager(
         if (status != null && status.Any())
             query = query.Where(order => status.Contains(order.OrderStatus));
 
+        var specification = new CompositeSpecification<Order>();
         if (!string.IsNullOrEmpty(keywords))
         {
-            var normalizedKeywords = TextHelper.Normalize(keywords);
-            var uppercaseKeywords = keywords.Trim().ToUpper();
-            var customerIds = customerDataReader.DataSource
-                .Where(c => c.FullName.Value.ToUpper().Contains(uppercaseKeywords) || c.FullName.Value.ToUpper().Contains(normalizedKeywords) || c.FullName.NormalizedValue.Contains(normalizedKeywords)
-                    || c.Address.Value.ToUpper().Contains(uppercaseKeywords) || c.Address.Value.ToUpper().Contains(normalizedKeywords) || c.Address.NormalizedValue.Contains(normalizedKeywords)
-                    || c.PhoneNumber.Contains(keywords))
-                .Select(v => v.Id)
-                .ToList()
-                .OfType<Guid?>()
-                .ToList();
-            IList<Guid?> userIds = [];
+            specification.Or(new OrderKeywordSearchSpec(keywords));
 
-            query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
-                || (order.ShippingAddress.Value != null && (order.ShippingAddress.Value.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.Value.ToUpper().Contains(normalizedKeywords) || order.ShippingAddress.NormalizedValue.Contains(normalizedKeywords)))
-                || customerIds.Contains(order.CustomerId)
-                || userIds.Contains(order.CreatedByUserId));
+            var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
+            var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
+            specification.Or(new OrdersOfBuyersSpec(customerIds));
         }
 
-        var total = query.Count();
-        var data = query
-            .OrderByDescending(o => o.CreatedOnUtc)
-            .ThenByDescending(o => o.ExpectedShippingDateUtc)
-            .Skip(pageIndex * pageSize).Take(pageSize)
-            .ToList();
+        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
 
-        var pagedData = PagedDataDto.Create(data.Select(order => order.ToDto()), pageIndex, pageSize, total);
-        return pagedData;
+        var total = await orderDataReader.CountAsync(specification).ConfigureAwait(false);
+        var pagedData = await orderDataReader.GetPagedListAsync(specification, pageIndex, pageSize).ConfigureAwait(false);
+
+        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, total);
     }
 
     public Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)

@@ -78,7 +78,8 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
                 note: $"Nhập từ phiếu {goodsReceipt.Id}",
                 receivedByUserId: goodsReceipt.CreatedByUserId,
                 referenceType: (int)StockReferenceType.GoodsReceipt,
-                referenceId: goodsReceipt.Id
+                referenceId: goodsReceipt.Id,
+                enforceCapacity: false
             ).ConfigureAwait(false);
 
             var inboundResult = await _inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto

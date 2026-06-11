@@ -19,6 +19,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
     private readonly IEntityDataReader<InventoryCostLedgerEntry> _ledgerReader;
     private readonly IEntityDataReader<InventoryCostLayer> _layerReader;
     private readonly IEntityDataReader<InventoryCostAllocation> _allocationReader;
+    private readonly IProductCostingLock _costingLock;
 
     public InventoryCostingManager(
         IRepository<InventoryCostingPolicy> policyRepository,
@@ -29,7 +30,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         IEntityDataReader<InventoryCostingPolicy> policyReader,
         IEntityDataReader<InventoryCostLedgerEntry> ledgerReader,
         IEntityDataReader<InventoryCostLayer> layerReader,
-        IEntityDataReader<InventoryCostAllocation> allocationReader)
+        IEntityDataReader<InventoryCostAllocation> allocationReader,
+        IProductCostingLock costingLock)
     {
         _policyRepository = policyRepository;
         _ledgerRepository = ledgerRepository;
@@ -40,6 +42,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         _ledgerReader = ledgerReader;
         _layerReader = layerReader;
         _allocationReader = allocationReader;
+        _costingLock = costingLock;
     }
 
     public async Task<InventoryCostMovementResultDto> RegisterInboundAsync(RegisterInventoryInboundCostDto dto)
@@ -53,6 +56,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
             return ToMovementResult(existingLedger);
         }
+
+        await using var _ = await _costingLock.AcquireAsync(dto.ProductId).ConfigureAwait(false);
 
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
@@ -116,7 +121,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             LedgerEntryId = ledgerEntry.Id,
             UnitCost = dto.UnitCost ?? averageCost,
             TotalCost = dto.UnitCost.HasValue ? inboundValue : 0m,
-            Status = status
+            Status = status,
+            AverageCostAfter = averageCost
         };
     }
 
@@ -131,6 +137,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             await EnsureOutboundAllocationExistsAsync(existingLedger, null).ConfigureAwait(false);
             return ToMovementResult(existingLedger);
         }
+
+        await using var _ = await _costingLock.AcquireAsync(dto.ProductId).ConfigureAwait(false);
 
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
@@ -199,7 +207,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             LedgerEntryId = ledgerEntry.Id,
             UnitCost = unitCost,
             TotalCost = totalCost,
-            Status = status
+            Status = status,
+            AverageCostAfter = averageCost
         };
     }
 
@@ -225,6 +234,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
             return ToMovementResult(existingLedger);
         }
+
+        await using var _ = await _costingLock.AcquireAsync(dto.ProductId).ConfigureAwait(false);
 
         var layer = _layerReader.DataSource
             .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
@@ -309,7 +320,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             LedgerEntryId = ledgerEntry.Id,
             UnitCost = unitCost,
             TotalCost = totalCost,
-            Status = status
+            Status = status,
+            AverageCostAfter = averageCost
         };
     }
 
@@ -328,6 +340,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
             return ToMovementResult(existingLedger);
         }
+
+        await using var _ = await _costingLock.AcquireAsync(dto.ProductId).ConfigureAwait(false);
 
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
@@ -388,7 +402,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             LedgerEntryId = ledgerEntry.Id,
             UnitCost = dto.UnitCost,
             TotalCost = inboundValue,
-            Status = dto.SourceStatus
+            Status = dto.SourceStatus,
+            AverageCostAfter = averageCost
         };
     }
 
@@ -782,7 +797,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             LedgerEntryId = ledgerEntry.Id,
             UnitCost = ledgerEntry.UnitCost ?? ledgerEntry.AverageCostAfter,
             TotalCost = ledgerEntry.TotalCost ?? 0m,
-            Status = ledgerEntry.CostingStatus
+            Status = ledgerEntry.CostingStatus,
+            AverageCostAfter = ledgerEntry.AverageCostAfter
         };
 
     private long GetNextSequenceNumber()

@@ -26,7 +26,8 @@ public sealed class StockTransferNoteManager(
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager,
     ICurrentUserAccessor currentUserAccessor,
-    EntityCodeGenerator entityCodeGenerator) : IStockTransferNoteManager
+    EntityCodeGenerator entityCodeGenerator,
+    IDbContext dbContext) : IStockTransferNoteManager
 {
     private string GenerateCode()
     {
@@ -76,29 +77,21 @@ public sealed class StockTransferNoteManager(
         var note = await noteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (note is null) throw new StockTransferNoteNotFoundException(id);
 
+        if (note.Status != StockTransferStatus.Draft)
+            throw new StockTransferNoteCannotChangeStatusException(note.Status.ToString(), nameof(StockTransferStatus.Approved));
+
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var userId = currentUser?.Id ?? Guid.Empty;
 
+        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
+
+        var occurredAtUtc = DateTime.UtcNow;
         foreach (var item in note.Items)
         {
-            var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(item.ProductId).ConfigureAwait(false);
-            var unitCost = costSummary.AverageCost;
-
             var fromStock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, note.FromWarehouseId).ConfigureAwait(false);
             if (fromStock is null || fromStock.QuantityAvailable < item.Quantity)
                 throw new StockTransferInsufficientStockException(item.ProductName, fromStock?.QuantityAvailable ?? 0, item.Quantity);
 
-            await stockManager.TransferStockAsync(
-                item.ProductId,
-                note.FromWarehouseId,
-                note.ToWarehouseId,
-                item.Quantity,
-                unitCost,
-                note.Id,
-                userId,
-                $"Phiếu chuyển kho {note.Code}").ConfigureAwait(false);
-
-            var occurredAtUtc = DateTime.UtcNow;
             var transferOutCost = await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
@@ -110,6 +103,16 @@ public sealed class StockTransferNoteManager(
                 ReferenceItemId = item.Id,
                 OccurredAtUtc = occurredAtUtc
             }).ConfigureAwait(false);
+
+            await stockManager.TransferStockUpToAsync(
+                item.ProductId,
+                note.FromWarehouseId,
+                note.ToWarehouseId,
+                item.Quantity,
+                transferOutCost.UnitCost,
+                note.Id,
+                userId,
+                $"Phiếu chuyển kho {note.Code}").ConfigureAwait(false);
 
             await inventoryCostingManager.RegisterTransferInAsync(new RegisterInventoryTransferInCostDto
             {
@@ -129,6 +132,7 @@ public sealed class StockTransferNoteManager(
 
         note.Approve();
         await noteRepository.UpdateAsync(note).ConfigureAwait(false);
+        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)

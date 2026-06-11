@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 /// có WarehouseId, đồng thời thử sinh công nợ NCC nếu phiếu được tạo với đủ vendor + UnitCost
 /// ngay từ đầu.
 /// </summary>
-public sealed record GoodsReceiptCreated(Guid GoodsReceiptId) : DomainEvent;
+public sealed record GoodsReceiptCreated(Guid GoodsReceiptId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Thông tin chung của phiếu nhập (note, truck info, ảnh đính kèm, vendor inline...) được cập nhật
@@ -22,20 +22,20 @@ public sealed record GoodsReceiptUpdated(Guid GoodsReceiptId) : DomainEvent;
 ///     đã gắn vendor) — idempotent qua <c>VendorDebtManager.CreateDebtFromGoodsReceiptAsync</c>.</description></item>
 /// </list>
 /// </summary>
-public sealed record GoodsReceiptItemUnitCostSet(Guid GoodsReceiptId, Guid GoodsReceiptItemId) : DomainEvent;
+public sealed record GoodsReceiptItemUnitCostSet(Guid GoodsReceiptId, Guid GoodsReceiptItemId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Vendor của phiếu nhập vừa được gắn / đổi / bỏ qua <c>SetGoodsReceiptVendorAsync</c>. Handler
 /// subscribe event này để thử sinh công nợ NCC khi đã đủ điều kiện (idempotent).
 /// </summary>
-public sealed record GoodsReceiptVendorChanged(Guid GoodsReceiptId) : DomainEvent;
+public sealed record GoodsReceiptVendorChanged(Guid GoodsReceiptId) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu nhập bị xoá (chỉ xảy ra khi chưa có stock movements bị block). Handler subscribe để hoàn
 /// nguyên tồn kho (theo logic hiện tại — `AdjustStock`) và xoá các <see cref="Domain.Entities.Media.Picture"/>
 /// đính kèm.
 /// </summary>
-public sealed record GoodsReceiptDeleted(Guid GoodsReceiptId, IReadOnlyCollection<Guid> PictureIds) : DomainEvent;
+public sealed record GoodsReceiptDeleted(Guid GoodsReceiptId, IReadOnlyCollection<Guid> PictureIds) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu nhập vừa được link với một PurchaseOrder qua <c>SetGoodsReceiptToPurchaseOrder</c>.

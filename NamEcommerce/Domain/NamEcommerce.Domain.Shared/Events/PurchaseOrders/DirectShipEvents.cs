@@ -8,7 +8,7 @@ public sealed record AllocationMarkedAsDirectShip(
     Guid PurchaseOrderItemId,
     string Address,
     string? ContactName,
-    string? ContactPhone) : DomainEvent;
+    string? ContactPhone) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// GoodsReceipt phân bổ hàng cho direct-ship → tạo DN PendingConfirmation.
@@ -46,4 +46,4 @@ public sealed record VendorOversupplyAccepted(
     Guid PurchaseOrderItemId,
     Guid WarehouseId,
     decimal OversupplyQuantity,
-    decimal UnitCost) : DomainEvent;
+    decimal UnitCost) : DomainEvent, IReliableDomainEvent;

@@ -5,10 +5,13 @@ using NamEcommerce.Domain.Entities.StockAdjustment;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
 using NamEcommerce.Domain.Shared.Exceptions.StockAdjustment;
 using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -21,7 +24,10 @@ public sealed class StockAdjustmentNoteManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<InventoryStock> stockDataReader,
     ICurrentUserAccessor currentUserAccessor,
-    EntityCodeGenerator entityCodeGenerator) : IStockAdjustmentNoteManager
+    EntityCodeGenerator entityCodeGenerator,
+    IDbContext dbContext,
+    IInventoryStockManager stockManager,
+    IInventoryCostingManager inventoryCostingManager) : IStockAdjustmentNoteManager
 {
     private string GenerateCode()
     {
@@ -60,8 +66,52 @@ public sealed class StockAdjustmentNoteManager(
         var note = await noteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (note is null) throw new StockAdjustmentNoteNotFoundException(id);
 
+        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
+
+        var occurredAtUtc = DateTime.UtcNow;
+        foreach (var item in note.Items.Where(i => i.Delta != 0))
+        {
+            await stockManager.ApplyAdjustmentAsync(
+                item.ProductId,
+                note.WarehouseId,
+                item.Delta,
+                note.Id,
+                note.CreatedByUserId).ConfigureAwait(false);
+
+            if (item.Delta > 0)
+            {
+                await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = note.WarehouseId,
+                    Quantity = item.Delta,
+                    UnitCost = null,
+                    MovementType = InventoryCostMovementType.PositiveAdjustment,
+                    ReferenceType = InventoryCostReferenceType.Adjustment,
+                    ReferenceId = note.Id,
+                    ReferenceItemId = item.Id,
+                    OccurredAtUtc = occurredAtUtc
+                }).ConfigureAwait(false);
+            }
+            else
+            {
+                await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = note.WarehouseId,
+                    Quantity = Math.Abs(item.Delta),
+                    MovementType = InventoryCostMovementType.NegativeAdjustment,
+                    ReferenceType = InventoryCostReferenceType.Adjustment,
+                    ReferenceId = note.Id,
+                    ReferenceItemId = item.Id,
+                    OccurredAtUtc = occurredAtUtc
+                }).ConfigureAwait(false);
+            }
+        }
+
         note.Approve();
         await noteRepository.UpdateAsync(note).ConfigureAwait(false);
+        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)

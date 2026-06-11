@@ -324,7 +324,8 @@ class FastSale {
             this.setPaymentTiming('payNow');
             return;
         }
-        if (this.fromCommand === 'add-available' && this.cart.length == 1 && this.fulfillmentMode == 'notDelivered') {
+        if (this.fromCommand === 'add-available' && this.cart.length == 1 && this.cart[0].quantity <= this.cart[0].quantityAvailable && this.fulfillmentMode == 'notDelivered') {
+            this.fromCommand = '';
             this.setFulfillmentMode('deliverNow');
             return;
         }
@@ -511,7 +512,6 @@ class FastSale {
         if (this.saleInputVersion !== saleInputVersion) return;
 
         if (!response.success) {
-            this.showAlert('error', response.message);
             return;
         }
 
@@ -534,7 +534,6 @@ class FastSale {
         if (!this.paymentIntent || this.paymentIntent.id !== intentId || this.saleInputVersion !== saleInputVersion) return;
 
         if (!response.success) {
-            this.showAlert('error', response.message);
             return;
         }
         if (response.intent?.id !== intentId) return;
@@ -641,7 +640,6 @@ class FastSale {
         this.complete.disabled = false;
 
         if (!response.success) {
-            this.showAlert('error', response.message);
             return;
         }
 
@@ -705,8 +703,7 @@ class FastSale {
 
     async postJson(url, payload) {
         const result = await apiPost(url, payload);
-        if (result.success)
-            return data;
+        return result;
     }
 
     calculateSubtotal() {

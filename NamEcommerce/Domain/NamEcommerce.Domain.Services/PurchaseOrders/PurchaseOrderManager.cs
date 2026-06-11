@@ -1022,7 +1022,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(id);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(id);
         if (purchaseOrder is null)
             return null;
 
