@@ -178,7 +178,7 @@
 
                 @if (Model.ShowPrice || Model.Surcharge > 0 || Model.AmountToCollect > 0)
                 {
-                    <div class="financial-summary-sidebar mb-4 p-3 rounded-3" style="background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #edf2f9;">
+                    <div class="financial-summary-sidebar deliverynote-financial-summary mb-4 p-3">
                         <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
 
                         @if (Model.ShowPrice)
@@ -304,7 +304,7 @@
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Bằng chứng giao hàng</label>
                             <div>
                                 <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; " alt="Bằng chứng" />
+                                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded border shadow-sm ui-max-h-120-cover" alt="Bằng chứng" />
                                 </a>
                             </div>
                         </div>
@@ -325,30 +325,30 @@
                     Có @compensatedReturnQuantity.DisplayQuantity() hàng khách trả đang được bù vào lần giao sau. Hàng chỉ nhập kho khi xác nhận phiếu trả.
                 </div>
             }
-            @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
-            {
-                <div class="action-toolbar justify-content-end">
-                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
-                    {
-                        <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
-                            <i class="bi bi-check me-1"></i>Xác nhận
-                        </button>
-                    }
-                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
-                    {
-                        <button type="button" class="btn btn-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@canLeaveWarehouse">
-                            <i class="bi bi-truck me-1"></i>Đang giao
-                        </button>
-                    }
-                    @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
-                    {
-                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)" data-has-delivery-user="@isDeliveryUserAssigned.ToString().ToLower()">
-                            <i class="bi bi-check-circle-fill me-1"></i>Đã giao
-                        </button>
-                    }
+                @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
+                {
+            <div class="action-toolbar justify-content-end">
+                @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
+                {
+                    <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
+                        <i class="bi bi-check me-1"></i>Xác nhận
+                    </button>
+                }
+                @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                {
+                    <button type="button" class="btn btn-outline-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@canLeaveWarehouse">
+                        <i class="bi bi-truck me-1"></i>Đang giao
+                    </button>
+                }
+                @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                {
+                    <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@canOpenDeliveredWorkflow">
+                        <i class="bi bi-check-circle-fill me-1"></i>Đã giao
+                    </button>
+                }
                     @if (isDirectShip)
                     {
-                        <button type="button" class="btn btn-danger btn-sm btn-customer-reject" data-id="@Model.Id" data-code="@Model.Code">
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-customer-reject" data-id="@Model.Id" data-code="@Model.Code">
                             <i class="bi bi-person-fill-x me-1"></i>Từ chối
                         </button>
                     }
@@ -367,7 +367,7 @@
                                 <th class="text-end">Số lượng</th>
                                 @if (hasReturned)
                                 {
-                                    <th class="text-end" style="width: 110px;" data-bs-toggle="tooltip" title="Số lượng đã được khách trả (Confirmed)">Đã trả</th>
+                                    <th class="text-end ui-w-110" data-bs-toggle="tooltip" title="Số lượng đã được khách trả (Confirmed)">Đã trả</th>
                                 }
                                 <th class="text-end">Đơn giá</th>
                                 <th class="text-end pe-4">Thành tiền</th>
@@ -456,7 +456,7 @@
                 </div>
             </div>
             <div class="content-card-footer d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
                     <i class="bi bi-arrow-left"></i>
                     Trở về
                 </a>
@@ -524,7 +524,7 @@
 {
     <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
+            <div class="modal-content deliverynote-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Bằng chứng giao hàng</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -545,7 +545,7 @@
 
 <div class="modal fade" id="shortageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content deliverynote-modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Thiếu hàng để xuất kho</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -570,7 +570,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
                 <a class="btn shortage-action-btn" id="shortageAggregationLink" href="/PurchaseOrder/ShortageAggregation?deliveryNoteId=@Model.Id">
                     <i class="bi bi-truck"></i>Nhập hàng thiếu
                 </a>
@@ -578,6 +578,10 @@
         </div>
     </div>
 </div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/deliverynote-details.css" asp-append-version="true" />
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

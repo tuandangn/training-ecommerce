@@ -28,7 +28,7 @@
             <div class="content-card-header">
                 <h5 class="mb-0">
                     Danh sách hàng hóa
-                    <span class="badge bg-light text-muted border ms-1" style="font-size:.72rem;font-weight:500;">
+                    <span class="badge bg-light text-muted border ms-1 ui-fs-072-fw-500">
                         @Model.Items.Count mặt hàng
                     </span>
                 </h5>
@@ -53,13 +53,13 @@
                     <thead>
                         <tr>
                             <th class="ps-4">Sản phẩm</th>
-                            <th style="width:130px">Kho</th>
-                            <th class="text-end" style="width:100px">SL nhập</th>
+                            <th class="ui-w-130">Kho</th>
+                            <th class="text-end ui-w-100">SL nhập</th>
                             @if (hasReturnedItems)
                             {
-                                <th class="text-end" style="width:110px" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
+                                <th class="text-end ui-w-110" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
                             }
-                            <th class="text-end pe-4" style="width:160px">Đơn giá nhập</th>
+                            <th class="text-end pe-4 ui-w-160">Đơn giá nhập</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,7 +129,7 @@
                                     else
                                     {
                                         <div class="fw-semibold">@item.UnitCost!.Value.DisplayCurrency()</div>
-                                        <div class="text-muted" style="font-size:.75rem;">
+                                        <div class="text-muted ui-fs-075">
                                             = @((item.Quantity * item.UnitCost.Value).DisplayCurrency())
                                         </div>
                                     }
@@ -149,7 +149,7 @@
                 </table>
             </div>
             <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-link text-decoration-none text-muted">
+                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted">
                     <i class="bi bi-arrow-left me-1"></i>Trở về
                 </a>
                 <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
@@ -219,7 +219,7 @@
         <div class="content-card mb-3">
             <div class="content-card-header">
                 <h5 class="mb-0">Thông tin phiếu</h5>
-                <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editInfoModal">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editInfoModal">
                     <i class="bi bi-pencil me-1"></i>Sửa
                 </button>
             </div>
@@ -273,7 +273,7 @@
         <div class="content-card mb-3">
             <div class="content-card-header">
                 <h5 class="mb-0">Nhà cung cấp</h5>
-                <button type="button" class="btn btn-sm btn-light" id="btnEditVendor"
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnEditVendor"
                         data-bs-toggle="modal" data-bs-target="#editVendorModal">
                     <i class="bi bi-pencil me-1"></i>@(Model.VendorId.HasValue ? "Thay đổi" : "Gắn NCC")
                 </button>
@@ -350,7 +350,7 @@
                 @if (!Model.PurchaseOrderId.HasValue)
                 {
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-light" id="btnSearchPoByCode">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSearchPoByCode">
                             <i class="bi bi-search me-1"></i>Tìm theo mã
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickCreatePo"
@@ -408,7 +408,7 @@
 
 <div class="modal fade" id="searchPoByCodeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Tìm theo mã phiếu</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -419,7 +419,7 @@
                 <div id="searchPoByCodeError" class="alert alert-danger d-none mt-2 py-2 mb-0 small"></div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnConfirmPoByCode" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Xác nhận
                 </button>
@@ -433,7 +433,7 @@
      data-vendor-id="@(Model.VendorId?.ToString() ?? "")"
      tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Tạo đơn nhập hàng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -444,7 +444,7 @@
                 {
                     <div class="mb-3">
                         <label class="form-label small fw-medium text-muted">Nhà cung cấp</label>
-                        <div class="form-control bg-light d-flex align-items-center" style="cursor:not-allowed;">
+                        <div class="form-control bg-light d-flex align-items-center ui-cursor-not-allowed">
                             <i class="bi bi-building-fill me-2 text-primary"></i>
                             <span class="fw-semibold">@Model.VendorName</span>
                             @if (!string.IsNullOrEmpty(Model.VendorPhone))
@@ -472,7 +472,7 @@
                                 <tr>
                                     <th class="ps-3">Sản phẩm</th>
                                     <th class="text-end pe-3">Số lượng</th>
-                                    <th class="text-end pe-3" style="width:180px">Đơn giá nhập <span class="text-danger">*</span></th>
+                                    <th class="text-end pe-3 ui-w-180">Đơn giá nhập <span class="text-danger">*</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -480,7 +480,7 @@
                                 {
                                     var lineTotal = item.IsPendingCosting ? 0m : item.Quantity * (item.UnitCost ?? 0m);
                                     <tr class="quick-po-row" data-line-total="@lineTotal">
-                                        <td class="ps-3 text-truncate" style="max-width:220px">@item.ProductName</td>
+                                        <td class="ps-3 text-truncate ui-max-w-220">@item.ProductName</td>
                                         <td class="text-end pe-3">@item.Quantity.DisplayQuantity()</td>
                                         <td class="text-end pe-3">
                                             @if (item.IsPendingCosting)
@@ -565,7 +565,7 @@
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnConfirmQuickCreatePo" class="btn btn-primary">
                     <span class="spinner-border spinner-border-sm d-none me-1" id="quickPoSpinner"></span>
                     <i class="bi bi-check-lg me-1" id="quickPoIcon"></i> Tạo đơn nhập
@@ -578,7 +578,7 @@
 <!-- ── Modal: Sửa thông tin ── -->
 <div class="modal fade" id="editInfoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Cập nhật thông tin</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -610,7 +610,7 @@
                 <div id="editInfoError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnSaveInfo" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
                 </button>
@@ -622,7 +622,7 @@
 <!-- ── Modal: Gắn / đổi nhà cung cấp ── -->
 <div class="modal fade" id="editVendorModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">@(Model.VendorId.HasValue ? "Thay đổi nhà cung cấp" : "Gắn nhà cung cấp")</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -640,7 +640,7 @@
                 <div id="editVendorError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnSaveVendor" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Lưu
                 </button>
@@ -652,7 +652,7 @@
 <!-- ── Modal: Định giá nhập ── -->
 <div class="modal fade" id="setUnitCostModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Định giá nhập</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -669,8 +669,8 @@
                 <div id="setUnitCostError" class="alert alert-danger d-none mt-2 py-2 mb-0"></div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" id="btnSaveUnitCost" class="btn btn-warning">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveUnitCost" class="btn btn-outline-warning">
                     <i class="bi bi-check-lg me-1"></i>Xác nhận
                 </button>
             </div>
@@ -679,163 +679,7 @@
 </div>
 
 @section Styles {
-    <style>
-        /* ── Receipt info DL ── */
-        .receipt-info-list {
-            margin: 0;
-        }
-
-        .receipt-info-row {
-            display: flex;
-            align-items: baseline;
-            padding: .6rem 1.25rem;
-            border-bottom: 1px solid var(--bs-border-color-translucent);
-            gap: .75rem;
-        }
-
-            .receipt-info-row:last-child {
-                border-bottom: none;
-            }
-
-            .receipt-info-row dt {
-                font-size: .75rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: .03em;
-                color: var(--bs-secondary);
-                width: 72px;
-                flex-shrink: 0;
-            }
-
-            .receipt-info-row dd {
-                margin: 0;
-                font-size: .875rem;
-            }
-
-        /* ── Product links ── */
-        .details-product-link:hover {
-            color: var(--bs-primary) !important;
-            text-decoration: underline !important;
-        }
-
-        /* ── PO Suggestion rows ── */
-        .po-suggestion-row {
-            display: flex;
-            align-items: center;
-            gap: .6rem;
-            padding: .6rem 1rem;
-            border-bottom: 1px solid var(--bs-border-color-translucent);
-        }
-
-            .po-suggestion-row:last-child {
-                border-bottom: none;
-            }
-
-        .po-score-bar {
-            height: 5px;
-            flex: 1;
-            border-radius: 3px;
-            background: var(--bs-border-color);
-            overflow: hidden;
-            min-width: 40px;
-        }
-
-        .po-score-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width .3s;
-        }
-
-        .po-score-full {
-            background: var(--bs-success);
-        }
-
-        .po-score-partial {
-            background: var(--bs-warning);
-        }
-
-        /* ── Picture picker ── */
-        .picture-upload-slot {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            border-radius: 10px;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-
-        .picture-upload-label {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100px;
-            height: 100px;
-            border: 2px dashed var(--bs-border-color);
-            border-radius: 10px;
-            cursor: pointer;
-            background: #f8f9fa;
-            transition: border-color .15s, background .15s;
-            font-size: .7rem;
-            color: var(--bs-secondary);
-            gap: 3px;
-        }
-
-            .picture-upload-label:hover, .picture-upload-label.drag-over {
-                border-color: var(--bs-primary);
-                background: #eef3ff;
-                color: var(--bs-primary);
-            }
-
-        .picture-upload-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-            pointer-events: none;
-        }
-
-        .picture-thumbnail-wrapper {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            margin-right: .5rem;
-            flex-shrink: 0;
-        }
-
-        .picture-thumbnail-img {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 10px;
-            border: 1px solid var(--bs-border-color);
-            display: block;
-        }
-
-        .btn-remove-picture {
-            position: absolute;
-            top: 3px;
-            right: 3px;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(0,0,0,.55);
-            color: #fff;
-            font-size: .6rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            padding: 0;
-            transition: background .15s;
-        }
-
-            .btn-remove-picture:hover {
-                background: var(--bs-danger);
-            }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/goodsreceipt-details.css" asp-append-version="true" />
 }
 
 @section Scripts {
@@ -1066,16 +910,16 @@
                 const row = document.createElement('div');
                 row.className = 'po-suggestion-row';
                 row.innerHTML = `
-                    <div style="flex:1;min-width:0;">
+                    <div class="ui-flex-min">
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                            <span class="badge border ${badgeClass} py-1" style="font-size:.7rem;">
+                            <span class="badge border ${badgeClass} py-1 ui-fs-075">
                                 <i class="bi ${badgeIcon} me-1"></i>${badgeLabel}
                             </span>
-                            <span class="fw-semibold text-truncate" style="font-size:.875rem;">${po.purchaseOrderCode}</span>
+                            <span class="fw-semibold text-truncate ui-fs-0875">${po.purchaseOrderCode}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted" style="font-size:.75rem;">${placedDate}</span>
-                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}" style="width:${po.matchScore}%"></div></div>
+                            <span class="text-muted ui-fs-075">${placedDate}</span>
+                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}"></div></div>
                         </div>
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btnSelectPo"
@@ -1083,6 +927,7 @@
                         Chọn
                     </button>`;
 
+                row.querySelector('.po-score-fill').style.width = `${po.matchScore}%`;
                 row.querySelector('.btnSelectPo').addEventListener('click', () => {
                     linkToPurchaseOrder(po.purchaseOrderId, po.purchaseOrderCode);
                 });
@@ -1348,8 +1193,10 @@
                     if (note) fd.append('note', note);
                     fd.append('taxAmount', String(taxAmount));
                     fd.append('shippingAmount', String(shippingAmount));
-                    Object.entries(itemCosts).forEach(([itemId, cost]) => {
-                        fd.append(`itemUnitCosts[${itemId}]`, String(cost));
+                    Object.entries(itemCosts).forEach(function(entry) {
+                        const itemId = entry.shift();
+                        const cost = entry.shift();
+                        fd.append('itemUnitCosts' + String.fromCharCode(91) + itemId + String.fromCharCode(93), String(cost));
                     });
                     fd.append('__RequestVerificationToken', antiForgeryToken);
 

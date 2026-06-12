@@ -1,0 +1,13 @@
+@model NumberDisplayModel
+
+@{
+    var suffix = string.IsNullOrWhiteSpace(Model.Suffix) ? ViewConstants.DefaultCurrencySymbol : Model.Suffix;
+}
+<span class="ui-number-display @Model.CssClass">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <span class="ui-number-display__label">@Model.Label</span>
+    }
+    <span>@Model.Value.ToString(ViewConstants.NumberCustomFormat)</span>
+    <span>@suffix</span>
+</span>

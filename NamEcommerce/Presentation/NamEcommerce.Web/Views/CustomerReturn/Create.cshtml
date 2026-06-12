@@ -28,10 +28,10 @@
                     <div class="content-card-header">
                         <h5>Danh sách hàng trả</h5>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none @(Model.DeliveryNoteId.HasValue ? "" : "d-none")" id="btnLoadFromNote">
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none @(Model.DeliveryNoteId.HasValue ? "" : "d-none")" id="btnLoadFromNote">
                                 <i class="bi bi-arrow-repeat me-1"></i>Tải lại
                             </button>
-                            <button type="button" class="btn btn-sm bg-light" id="btnAddFreeItem">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAddFreeItem">
                                 <i class="bi bi-plus-lg me-1"></i>Thêm hàng trả
                             </button>
                         </div>
@@ -46,14 +46,14 @@
                                         <th class="text-end">Trả lại</th>
                                         <th class="text-end">Đơn giá</th>
                                         <th class="text-end">Thành tiền</th>
-                                        <th style="width:36px"></th>
+                                        <th class="ui-w-36"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr style="cursor:pointer">
+                                        <tr class="ui-cursor-pointer">
                                             <td class="ps-3">
                                                 <div class="fw-medium">@item.ProductDisplayName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
@@ -85,7 +85,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                        <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
                             Chưa có hàng hóa nào được chọn.
                         </div>
                     </div>
@@ -104,7 +104,7 @@
                         </div>
                     </div>
                     <div class="content-card-footer d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
                             <i class="bi bi-arrow-left"></i>
                             Trở về
                         </a>
@@ -307,7 +307,7 @@
         }
 
         function updateEmptyState() {
-            noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
+            noMsg.classList.toggle('d-none', tbody.rows.length > 0);
         }
 
         function fmtCurrency(val, symbol) {

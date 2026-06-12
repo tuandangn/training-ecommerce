@@ -49,7 +49,7 @@
         @if (!Model.Items.Any())
         {
             <div class="text-center py-5 text-muted">
-                <i class="bi bi-check2-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                <i class="bi bi-check2-circle ui-icon-hero-muted"></i>
                 <p class="mt-2">Không có phiếu nào đang chờ xác nhận.</p>
             </div>
         }
@@ -65,7 +65,7 @@
                             <th><i class="bi bi-geo-alt me-1"></i>Địa chỉ</th>
                             <th>Hàng hóa</th>
                             <th><i class="bi bi-calendar me-1"></i>Ngày tạo</th>
-                            <th style="width: 180px;" class="text-end pe-4">Thao tác</th>
+                            <th class="text-end pe-4 ui-w-180">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,7 +97,7 @@
                                     }
                                 </td>
                                 <td>
-                                    <span class="text-truncate d-inline-block" style="max-width: 200px;" title="@item.ShippingAddress">
+                                    <span class="text-truncate d-inline-block ui-max-w-200" title="@item.ShippingAddress">
                                         @item.ShippingAddress
                                     </span>
                                 </td>

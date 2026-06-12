@@ -6,6 +6,10 @@
     var query = Model.Keywords;
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/debt.css" asp-append-version="true" />
+}
+
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Công nợ nhà cung cấp</h1>
@@ -26,7 +30,7 @@
                         <th class="ps-4">Nhà cung cấp</th>
                         <th class="text-end">Số dư công nợ</th>
                         <th class="text-end">Giao dịch cuối</th>
-                        <th style="width: 80px;"></th>
+                        <th class="ui-w-80"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,6 +114,82 @@
             </table>
         </div>
     </div>
+
+    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+        @if (Model.Data?.Pagination.TotalCount > 0)
+        {
+            @foreach (var item in Model.Data)
+            {
+                var isDebt = item.Balance > 0;
+                var isCredit = item.Balance < 0;
+                <article class="list-card">
+                    <div class="list-card-header">
+                        <div class="list-card-title-group">
+                            <a asp-action="Details" asp-route-vendorId="@item.VendorId" class="list-card-title">
+                                @HighlighHelper.Highlight(item.VendorName, Model.Keywords)
+                            </a>
+                            @if (!string.IsNullOrEmpty(item.VendorPhone))
+                            {
+                                <a href="tel:@item.VendorPhone" class="list-card-meta text-decoration-none">
+                                    <i class="bi bi-telephone me-1"></i>@HighlighHelper.Highlight(item.VendorPhone, Model.Keywords)
+                                </a>
+                            }
+                        </div>
+                        @if (isDebt)
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal">Phải trả</span>
+                        }
+                        else if (isCredit)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">Trả thừa</span>
+                        }
+                    </div>
+                    <div class="list-card-fields">
+                        <div class="list-card-field">
+                            <span class="list-card-label">Số dư</span>
+                            <span class="list-card-value @(isDebt ? "text-danger" : isCredit ? "text-success" : "text-muted")">
+                                @(isCredit ? "-" : "")@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </span>
+                        </div>
+                        <div class="list-card-field">
+                            <span class="list-card-label">Giao dịch cuối</span>
+                            <span class="list-card-value">
+                                @(item.LastEntryOnUtc.HasValue ? item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="list-card-actions">
+                        <a class="btn-table-action" asp-action="Details" asp-route-vendorId="@item.VendorId" title="Xem sao kê">
+                            <i class="bi bi-chevron-right"></i>
+                            <span class="visually-hidden">Sao kê</span>
+                        </a>
+                    </div>
+                </article>
+            }
+        }
+        else
+        {
+            <div class="empty-state py-5">
+                <div class="empty-icon">
+                    <i class="bi @(!string.IsNullOrWhiteSpace(Model.Keywords) ? "bi-search" : "bi-building")"></i>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Keywords))
+                {
+                    <h5>Không tìm thấy nhà cung cấp</h5>
+                    <p class="text-muted">Không có NCC nào khớp với từ khoá "<strong>@Model.Keywords</strong>".</p>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-4 mt-2">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Xoá bộ lọc
+                    </a>
+                }
+                else
+                {
+                    <h5>Chưa có công nợ NCC</h5>
+                    <p class="text-muted">Công nợ phát sinh khi hàng nhập kho được xác nhận.</p>
+                }
+            </div>
+        }
+    </div>
+
     @if (Model.Data?.Pagination.TotalCount > 0)
     {
         <partial name="_Pager" model="Model.Data.Pagination" />

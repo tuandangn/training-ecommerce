@@ -194,8 +194,8 @@
                         </span>
                         <span class="small text-muted">@Model.DeliveredItemCount/@Model.Items.Count phiếu đã giao</span>
                     </div>
-                    <div class="progress mb-3" style="height: 8px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: @deliveryProgressPercent%;" aria-valuenow="@deliveryProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress mb-3 ui-h-8">
+                        <div class="progress-bar bg-success" role="progressbar" data-progress-width="@deliveryProgressPercent" aria-valuenow="@deliveryProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Người giao đã xem</span>

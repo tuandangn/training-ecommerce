@@ -1,0 +1,17 @@
+@model FormSectionModel
+
+<section class="ui-form-section">
+    <div class="ui-form-section__header">
+        <h2 class="ui-form-section__title">@Model.Title</h2>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p class="ui-form-section__description">@Model.Description</p>
+        }
+    </div>
+    <div class="ui-form-section__body">
+        @foreach (var row in Model.Rows)
+        {
+            <partial name="~/Views/Shared/Components/_FormRow.cshtml" model="row" />
+        }
+    </div>
+</section>

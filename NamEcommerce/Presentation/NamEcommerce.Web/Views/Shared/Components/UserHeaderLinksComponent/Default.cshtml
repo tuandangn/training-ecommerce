@@ -19,7 +19,7 @@
                         <div class="system-notification-title">Thông báo</div>
                         <div class="system-notification-subtitle">Sự kiện cần theo dõi</div>
                     </div>
-                    <a asp-controller="SystemNotification" asp-action="List" class="btn btn-sm btn-link">Xem tất cả</a>
+                    <a asp-controller="SystemNotification" asp-action="List" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
                 </div>
                 <div class="system-notification-list" data-system-notification-list>
                     <div class="system-notification-empty">Đang tải...</div>
@@ -27,8 +27,8 @@
             </div>
         </div>
         <div class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit; text-decoration: none;">
-                <div class="user-avatar bg-primary text-white" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 ui-link-inherit" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="user-avatar bg-primary text-white ui-avatar-32">
                     @(string.IsNullOrEmpty(Model.FullName) ? Model.Username?.Substring(0, 2).ToUpper() : string.Join("", Model.FullName.Split(' ').Select(n => n[0])).ToUpper().Substring(0, Math.Min(2, Model.FullName.Split(' ').Length)))
                 </div>
             </a>
@@ -41,6 +41,6 @@
     }
     else
     {
-        <a class="btn btn-link text-decoration-none" asp-controller="User" asp-action="Login">Đăng nhập</a>
+        <a class="btn btn-outline-secondary text-decoration-none" asp-controller="User" asp-action="Login">Đăng nhập</a>
     }
 </div>

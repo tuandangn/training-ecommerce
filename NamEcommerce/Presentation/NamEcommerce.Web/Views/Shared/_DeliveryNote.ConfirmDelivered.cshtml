@@ -4,7 +4,7 @@
             <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="" />
             <input type="hidden" id="acceptanceItemsJson" name="acceptanceItemsJson" />
 
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" id="markDeliveredModalLabel">Xác nhận giao hàng thành công</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -18,9 +18,9 @@
                             <thead>
                                 <tr>
                                     <th>Hàng hóa</th>
-                                    <th class="text-end pe-3" style="width: 110px;">Số lượng giao</th>
-                                    <th class="text-end pe-3" style="width: 150px;">Nhận thực tế</th>
-                                    <th class="text-end pe-3" style="width: 110px;">Trả lại</th>
+                                    <th class="text-end pe-3 ui-w-110">Số lượng giao</th>
+                                    <th class="text-end pe-3 ui-w-150">Nhận thực tế</th>
+                                    <th class="text-end pe-3 ui-w-110">Trả lại</th>
                                 </tr>
                             </thead>
                             <tbody id="acceptanceTableBody"></tbody>
@@ -71,7 +71,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-outline-secondary px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
                     <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery" data-testid="delivery-mark-delivered">
                         <i class="bi bi-check-lg me-1"></i> Xác nhận
                     </button>

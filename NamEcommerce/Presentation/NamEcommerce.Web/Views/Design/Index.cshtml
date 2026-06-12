@@ -1,0 +1,190 @@
+@{
+    Layout = "_Layout.Anonymous";
+    ViewData[ViewConstants.PageTitle] = "Design System";
+
+    var designUrl = Url.Action("Index", "Design") ?? "#";
+    var pageHeader = new PageHeaderModel(
+        "Design System",
+        "Bootstrap-first component baseline cho NamEcommerce.",
+        new List<DesignBreadcrumbModel>
+        {
+            new("NamEcommerce", "#"),
+            new("Design System")
+        },
+        new List<DesignActionModel>
+        {
+            new("Tạo mới", "#", "bi-plus-lg", "primary", "Tạo mới"),
+            new("Xuất dữ liệu", "#", "bi-download", "outline-secondary", "Xuất dữ liệu")
+        });
+
+    var toolbar = new FilterToolbarModel(
+        designUrl,
+        "q",
+        "Tìm mã đơn, khách hàng, số điện thoại",
+        "",
+        "get",
+        new List<FilterSelectModel>
+        {
+            new("status", "Trạng thái", "", new List<SelectOptionModel>
+            {
+                new("Tất cả", ""),
+                new("Đang xử lý", "processing"),
+                new("Hoàn tất", "completed")
+            }),
+            new("warehouse", "Kho", "main", new List<SelectOptionModel>
+            {
+                new("Kho chính", "main"),
+                new("Kho phụ", "secondary")
+            })
+        },
+        new List<DesignActionModel>
+        {
+            new("Xoá lọc", designUrl, "bi-x-lg", "outline-secondary", "Xoá lọc")
+        });
+
+    var table = new DataTableModel(
+        new List<DataTableColumnModel>
+        {
+            new("Mã đơn"),
+            new("Khách hàng"),
+            new("Trạng thái"),
+            new("Tổng tiền", "text-end")
+        },
+        new List<IReadOnlyList<string>>
+        {
+            new List<string> { "SO-1024", "Công ty Minh Long", "Đã xác nhận", "12.450.000 đ" },
+            new List<string> { "SO-1025", "Cửa hàng An Phát", "Đang giao", "8.120.000 đ" },
+            new List<string> { "SO-1026", "Khách lẻ", "Chờ xử lý", "1.560.000 đ" }
+        },
+        new EmptyStateModel(
+            "Chưa có dữ liệu",
+            "Không tìm thấy bản ghi phù hợp.",
+            "bi-inbox",
+            new DesignActionModel("Tạo bản ghi", "#", "bi-plus-lg", "primary", "Tạo bản ghi")));
+
+    var formSection = new FormSectionModel(
+        "Thông tin đơn hàng",
+        "Các field liên quan được gom trong một section rõ ràng.",
+        new List<FormRowModel>
+        {
+            new("Khách hàng", "<input class=\"form-control\" value=\"Công ty Minh Long\" />", "Chọn khách hàng trước khi thêm sản phẩm.", true),
+            new("Ngày giao", "<input class=\"form-control\" value=\"12/06/2026\" />"),
+            new("Ghi chú", "<textarea class=\"form-control\" rows=\"3\">Giao trong giờ hành chính.</textarea>")
+        });
+
+    var emptyState = new EmptyStateModel(
+        "Danh sách đang trống",
+        "Bắt đầu bằng một bản ghi mới hoặc điều chỉnh bộ lọc.",
+        "bi-inbox",
+        new DesignActionModel("Tạo mới", "#", "bi-plus-lg", "primary", "Tạo mới"));
+
+    var confirmModal = new ConfirmModalModel(
+        "designConfirmModal",
+        "Xác nhận huỷ đơn",
+        "Thao tác này sẽ đưa đơn hàng về trạng thái đã huỷ và không tự động hoàn kho.",
+        "Huỷ đơn");
+
+    var successBadge = new StatusBadgeModel("Hoàn tất", "success", "bi-check-circle");
+    var processingBadge = new StatusBadgeModel("Đang xử lý", "info", "bi-arrow-repeat");
+    var warningBadge = new StatusBadgeModel("Cần chú ý", "warning", "bi-exclamation-triangle");
+    var dangerBadge = new StatusBadgeModel("Đã huỷ", "danger", "bi-x-circle");
+    var moneyDisplay = new NumberDisplayModel(12450000m);
+    var quantityDisplay = new NumberDisplayModel(24.5m, "bao");
+}
+
+<partial name="~/Views/Shared/Components/_PageHeader.cshtml" model="pageHeader" />
+
+<div class="vstack gap-4">
+    <section>
+        <h2 class="h5 mb-3">Tokens</h2>
+        <div class="row g-3">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="ui-design-swatch">
+                    <div class="ui-design-swatch__color ui-design-swatch__color--primary"></div>
+                    <div class="fw-semibold">Primary</div>
+                    <div class="text-secondary">#4F46E5</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="ui-design-swatch">
+                    <div class="ui-design-swatch__color ui-design-swatch__color--info"></div>
+                    <div class="fw-semibold">Info</div>
+                    <div class="text-secondary">#0EA5E9</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="ui-design-swatch">
+                    <div class="ui-design-swatch__color ui-design-swatch__color--success"></div>
+                    <div class="fw-semibold">Success</div>
+                    <div class="text-secondary">#10B981</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="ui-design-swatch">
+                    <div class="ui-design-swatch__color ui-design-swatch__color--danger"></div>
+                    <div class="fw-semibold">Danger</div>
+                    <div class="text-secondary">#EF4444</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Controls</h2>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Tạo mới</button>
+            <button class="btn btn-outline-secondary" type="button"><i class="bi bi-download" aria-hidden="true"></i> Xuất dữ liệu</button>
+            <button class="btn btn-outline-danger" type="button"><i class="bi bi-trash" aria-hidden="true"></i> Xoá</button>
+            <button class="btn btn-outline-secondary" type="button" title="Làm mới" aria-label="Làm mới"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Status</h2>
+        <div class="d-flex flex-wrap gap-2">
+            <partial name="~/Views/Shared/Components/_StatusBadge.cshtml" model="successBadge" />
+            <partial name="~/Views/Shared/Components/_StatusBadge.cshtml" model="processingBadge" />
+            <partial name="~/Views/Shared/Components/_StatusBadge.cshtml" model="warningBadge" />
+            <partial name="~/Views/Shared/Components/_StatusBadge.cshtml" model="dangerBadge" />
+        </div>
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Filter Toolbar</h2>
+        <partial name="~/Views/Shared/Components/_FilterToolbar.cshtml" model="toolbar" />
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Data Table</h2>
+        <partial name="~/Views/Shared/Components/_DataTable.cshtml" model="table" />
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Form Section</h2>
+        <partial name="~/Views/Shared/Components/_FormSection.cshtml" model="formSection" />
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Money / Quantity</h2>
+        <div class="d-flex flex-wrap gap-4">
+            <partial name="~/Views/Shared/Components/_MoneyDisplay.cshtml" model="moneyDisplay" />
+            <partial name="~/Views/Shared/Components/_QuantityDisplay.cshtml" model="quantityDisplay" />
+        </div>
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Empty State</h2>
+        <div class="ui-data-table">
+            <partial name="~/Views/Shared/Components/_EmptyState.cshtml" model="emptyState" />
+        </div>
+    </section>
+
+    <section>
+        <h2 class="h5 mb-3">Confirm Modal</h2>
+        <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#designConfirmModal">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span>Mở xác nhận</span>
+        </button>
+        <partial name="~/Views/Shared/Components/_ConfirmModal.cshtml" model="confirmModal" />
+    </section>
+</div>

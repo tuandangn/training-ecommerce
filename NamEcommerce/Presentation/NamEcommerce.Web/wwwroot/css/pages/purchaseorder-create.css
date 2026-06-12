@@ -1,0 +1,5 @@
+.purchaseorder-create-modal-content {
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--ui-shadow-lg);
+}

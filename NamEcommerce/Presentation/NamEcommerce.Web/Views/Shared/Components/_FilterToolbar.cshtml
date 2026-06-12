@@ -1,0 +1,54 @@
+@model FilterToolbarModel
+
+<form class="ui-filter-toolbar" method="@Model.Method" action="@Model.Action">
+    <div class="ui-filter-toolbar__search">
+        <label class="form-label" for="@Model.SearchName">Tìm kiếm</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+            <input class="form-control" id="@Model.SearchName" name="@Model.SearchName" value="@Model.SearchValue" placeholder="@Model.SearchPlaceholder" />
+        </div>
+    </div>
+
+    @if (Model.Filters?.Count > 0)
+    {
+        foreach (var filter in Model.Filters)
+        {
+            <div class="ui-filter-toolbar__filter">
+                <label class="form-label" for="@filter.Name">@filter.Label</label>
+                <select class="form-select" id="@filter.Name" name="@filter.Name">
+                    @foreach (var option in filter.Options)
+                    {
+                        if (option.Value == filter.Value)
+                        {
+                            <option value="@option.Value" selected>@option.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+        }
+    }
+
+    <div class="ui-filter-toolbar__actions">
+        <button class="btn btn-outline-secondary" type="submit">
+            <i class="bi bi-funnel" aria-hidden="true"></i>
+            <span>Lọc</span>
+        </button>
+        @if (Model.Actions?.Count > 0)
+        {
+            foreach (var action in Model.Actions)
+            {
+                <a class="btn btn-@action.Variant" href="@action.Url" title="@action.Title">
+                    @if (!string.IsNullOrWhiteSpace(action.Icon))
+                    {
+                        <i class="bi @action.Icon" aria-hidden="true"></i>
+                    }
+                    <span>@action.Text</span>
+                </a>
+            }
+        }
+    </div>
+</form>

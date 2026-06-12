@@ -154,7 +154,7 @@ export default class OrderController {
         getEl('grandTotalHint').textContent = window.SoBangChu.docSoTien(this.#state.total);
 
         const hasItems = this.#state.items.length > 0;
-        getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
+        getEl('noItemsMessage').classList.toggle('d-none', hasItems);
         //getEl('tableFooter').classList.toggle('d-none', !hasItems);
     }
 
@@ -214,12 +214,12 @@ export default class OrderController {
         const { productInfo: p, quantity, unitPrice } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
-        row.style.cursor = 'pointer';
+        row.classList.add('order-item-row');
         row.innerHTML = `
             <td class="ps-4 align-middle">
                 <div class="d-flex align-items-center gap-3">
                     ${p.picture
-                        ? `<img src="${p.picture}" class="rounded object-fit-cover product-picture d-none d-lg-block" style="width:40px;height:40px;" alt="" />`
+                        ? `<img src="${p.picture}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />`
                         : ''
                     }
                     <div>
@@ -255,7 +255,7 @@ export default class OrderController {
                 ${DecimalFields.formatCurrency(item.lineTotal)} đ
             </td>
             <td class="text-end pe-4 w-auto align-middle">
-                <button type="button" class="btn btn-link link-danger p-0 border-0 orderItemRemove"
+                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none orderItemRemove"
                     aria-label="Xóa hàng hóa">
                     <i class="bi bi-trash"></i>
                 </button>
@@ -635,14 +635,14 @@ export class AddItemController {
 
             data.items.forEach(item => {
                 const row = document.createElement('tr');
-                row.style.cursor = 'pointer';
+                row.classList.add('order-price-history-row');
                 row.title = 'Nhấn để chọn giá bán này';
                 const date = item.orderDateText || new Date(item.orderDate).toLocaleDateString('vi-VN');
                 row.innerHTML = `
                     <td class="ps-3 py-2 text-nowrap">${escapeHtml(date)}</td>
                     <td class="py-2">
                         <span class="fw-medium">${escapeHtml(item.orderCode)}</span>
-                        <div class="text-muted" style="font-size:0.72rem">${escapeHtml(item.sourceText)}</div>
+                        <div class="text-muted order-price-history-source">${escapeHtml(item.sourceText)}</div>
                     </td>
                     <td class="text-end fw-bold text-success pe-3 py-2 text-nowrap">${DecimalFields.formatCurrency(item.unitPrice)}</td>
                 `;

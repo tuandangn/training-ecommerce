@@ -27,12 +27,12 @@
                 <table class="table data-table">
                     <thead>
                         <tr>
-                            <th class="ps-4" style="width:130px">Mã phiếu</th>
+                            <th class="ps-4 ui-w-130">Mã phiếu</th>
                             <th>Nhà cung cấp</th>
                             <th>Kho xuất</th>
                             <th class="text-end">Giá trị trả</th>
-                            <th class="text-center" style="width:130px">Trạng thái</th>
-                            <th class="text-center" style="width:110px">Ngày trả</th>
+                            <th class="text-center ui-w-130">Trạng thái</th>
+                            <th class="text-center ui-w-110">Ngày trả</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -66,7 +66,7 @@
                                     </td>
                                     <td class="text-center text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
                                     <td class="text-end pe-3">
-                                        <a class="btn btn-sm btn-light text-primary"
+                                        <a class="btn btn-sm btn-outline-secondary text-primary"
                                            asp-action="Details" asp-route-id="@item.Id">Xem</a>
                                     </td>
                                 </tr>
@@ -124,7 +124,7 @@
                             </div>
                         </div>
                         <div class="list-card-actions">
-                            <a class="btn btn-sm btn-light text-primary"
+                            <a class="btn btn-sm btn-outline-secondary text-primary"
                                asp-action="Details" asp-route-id="@item.Id">Xem</a>
                         </div>
                     </article>

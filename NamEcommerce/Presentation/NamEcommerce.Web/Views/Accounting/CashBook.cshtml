@@ -23,20 +23,20 @@
 
 @* Period picker *@
 <form method="get" class="d-flex align-items-center gap-2 mb-3 no-print flex-wrap">
-    <select name="year" class="form-select form-select-sm" style="width:100px">
+    <select name="year" class="form-select form-select-sm ui-w-100">
         @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
         {
             <option value="@y" selected="@(y == year)">@y</option>
         }
     </select>
-    <select name="month" class="form-select form-select-sm" style="width:110px">
+    <select name="month" class="form-select form-select-sm ui-w-110">
         <option value="">Cả năm</option>
         @for (int m = 1; m <= 12; m++)
         {
             <option value="@m" selected="@(m == month)">Tháng @m</option>
         }
     </select>
-    <select name="bankAccountId" class="form-select form-select-sm" style="width:180px">
+    <select name="bankAccountId" class="form-select form-select-sm ui-w-180">
         <option value="" selected="@(selectedBankId == null)">Tất cả</option>
         <option value="00000000-0000-0000-0000-000000000000" selected="@(selectedBankId == Guid.Empty)">Tiền mặt (TK 111)</option>
         @foreach (var acct in bankAccounts)

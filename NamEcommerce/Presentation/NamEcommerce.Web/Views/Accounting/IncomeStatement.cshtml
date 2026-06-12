@@ -23,13 +23,13 @@
 }
 
 <form method="get" class="d-flex align-items-center gap-2 mb-3 no-print flex-wrap">
-    <select name="year" class="form-select form-select-sm" style="width:100px">
+    <select name="year" class="form-select form-select-sm ui-w-100">
         @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
         {
             <option value="@y" selected="@(y == year)">@y</option>
         }
     </select>
-    <select name="month" class="form-select form-select-sm" style="width:110px">
+    <select name="month" class="form-select form-select-sm ui-w-110">
         <option value="">Cả năm</option>
         @for (int m = 1; m <= 12; m++)
         {
@@ -48,7 +48,7 @@
     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>In</button>
 </form>
 
-<div class="content-card p-4" style="max-width:@(prior != null ? "900px" : "700px")">
+<div class="content-card p-4 @(prior != null ? "ui-max-w-900" : "ui-max-w-700")">
     <h5 class="text-center mb-1">BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH</h5>
     <p class="text-center text-muted small mb-4">@Model.Period — Từ @Model.PeriodStart.ToString("dd/MM/yyyy") đến @Model.PeriodEnd.ToString("dd/MM/yyyy")</p>
 

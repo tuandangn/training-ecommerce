@@ -1,0 +1,35 @@
+/* Bootstrap lg breakpoint file. Keep shared >= 992px rules here. */
+@media (min-width: 992px) {
+}
+
+@media (max-width: 991.98px) {
+    .order-workflow-layout,
+    .order-workflow-info-grid,
+    .workflow-metric-grid,
+    .order-delivery-note-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .order-workflow-timeline {
+        position: static;
+    }
+
+    .order-workflow-steps {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .workflow-step {
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .po-allocation-row {
+        grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .po-allocation-meta,
+    .po-allocation-actions {
+        grid-column: 2;
+        justify-items: start;
+        justify-content: flex-start;
+    }
+}

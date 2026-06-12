@@ -26,7 +26,7 @@
                 <div class="content-card mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
-                        <button type="button" class="btn btn-sm bg-light text-primary"
+                        <button type="button" class="btn btn-sm btn-outline-primary"
                                 data-bs-toggle="modal" data-bs-target="#addItemModal">
                             <i class="bi bi-plus-lg me-1"></i>
                             <span class="d-none d-lg-inline">Thêm hàng hóa</span>
@@ -49,18 +49,18 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i" style="cursor:pointer">
+                                        <tr class="ui-cursor-pointer" id="item-row-@i">
                                             <td class="ps-3 align-middle">
                                                 <div class="d-flex align-items-center">
                                                     @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                     {
-                                                        <img src="@item.ProductDisplayPicture" class="rounded me-2 product-picture"
-                                                             style="width:36px;height:36px;object-fit:cover;flex-shrink:0;" alt="" />
+                                                        <img src="@item.ProductDisplayPicture" class="rounded me-2 product-picture ui-size-36 object-fit-cover flex-shrink-0"
+                                                             alt="" />
                                                     }
                                                     else
                                                     {
-                                                        <div class="d-flex align-items-center justify-content-center rounded bg-light me-2"
-                                                             style="width:36px;height:36px;flex-shrink:0;">
+                                                        <div class="d-flex align-items-center justify-content-center rounded bg-light me-2 ui-size-36 flex-shrink-0"
+                                                            >
                                                             <i class="bi bi-image text-muted small"></i>
                                                         </div>
                                                     }
@@ -121,7 +121,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                        <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
                             Chưa có hàng hóa nào được chọn.
                             <div class="mt-1">
                                 <span asp-validation-for="Items" class="text-danger small"></span>
@@ -129,7 +129,7 @@
                         </div>
                     </div>
                     <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-link text-decoration-none">
+                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none">
                             <span class="text-muted small">Trở về</span>
                         </a>
                         <button type="submit" class="btn btn-primary btnSubmit d-lg-none" id="btnSubmitMobile">
@@ -232,7 +232,7 @@
 <!-- Add Item Modal (thêm thủ công qua search) -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content goodsreceipt-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Thêm hàng hóa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -273,8 +273,8 @@
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" id="btnAddItemConfirm" class="btn btn-success d-none">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnAddItemConfirm" class="btn btn-primary d-none">
                     <i class="bi bi-plus-lg me-1"></i>Thêm vào
                 </button>
             </div>
@@ -282,6 +282,10 @@
     </div>
 </div>
 
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/goodsreceipt-create.css" asp-append-version="true" />
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

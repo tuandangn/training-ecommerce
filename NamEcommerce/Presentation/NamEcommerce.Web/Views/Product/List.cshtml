@@ -48,14 +48,14 @@
             <table class="table data-table">
                 <thead>
                     <tr>
-                        <th class="ps-4" style="width: 80px;">Ảnh</th>
+                        <th class="ps-4 ui-w-80">Ảnh</th>
                         <th>Tên hàng hóa</th>
                         <th class="text-end">Giá bán</th>
                         <th class="d-none d-lg-table-cell">Danh mục</th>
                         <th class="text-end">Tồn kho</th>
                         <th class="d-none d-md-table-cell">Đơn vị</th>
                         <th>Nhà cung cấp</th>
-                        <th style="width: 100px;"></th>
+                        <th class="ui-w-100"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -67,8 +67,8 @@
                                 <td class="ps-4">
                                     @if (string.IsNullOrEmpty(product.PictureUrl))
                                     {
-                                        <div class="d-flex align-items-center justify-content-center rounded"
-                                             style="width: 44px; height: 44px; background: var(--gray-100);">
+                                        <div class="d-flex align-items-center justify-content-center rounded ui-size-44 bg-body-secondary"
+                                            >
                                             <i class="bi bi-image text-muted"></i>
                                         </div>
                                     }
@@ -76,7 +76,7 @@
                                     {
                                         <a class="text-decoration-none" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
                                             <img src="@product.PictureUrl" alt="@product.Name"
-                                                 class="rounded" style="width: 44px; height: 44px; object-fit: cover;" />
+                                                 class="rounded ui-size-44 object-fit-cover" />
                                         </a>
                                     }
                                 </td>
@@ -117,7 +117,7 @@
                                 <td>
                                     @foreach (var vendor in product.VendorNames)
                                     {
-                                        <span class="badge bg-light text-muted fw-normal text-truncate d-inline-block me-2" style="font-size: 0.9rem; max-width: 120px;">
+                                        <span class="badge bg-light text-muted fw-normal text-truncate d-inline-block me-2 ui-product-label-limit">
                                             @HighlighHelper.Highlight(vendor, query)
                                         </span>
                                     }
@@ -245,52 +245,7 @@
 }
 
 @section Styles {
-    <style>
-        .product-category-filter {
-            max-width: 100%;
-            overflow: hidden;
-            background: #fff;
-            border-bottom: 1px solid var(--gray-100);
-        }
-
-        .product-category-tabs {
-            border-bottom: 0;
-            padding: 0 1.25rem 0.25rem;
-            scrollbar-width: thin;
-            scrollbar-color: var(--gray-300) transparent;
-        }
-
-            .product-category-tabs::-webkit-scrollbar {
-                display: block;
-                height: 0.375rem;
-            }
-
-            .product-category-tabs::-webkit-scrollbar-track {
-                background: transparent;
-            }
-
-            .product-category-tabs::-webkit-scrollbar-thumb {
-                background: var(--gray-300);
-                border-radius: 999px;
-            }
-
-            .product-category-tabs .nav-link {
-                max-width: 18rem;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-        @@media (max-width: 575.98px) {
-            .product-category-tabs {
-                padding-right: 0.875rem;
-                padding-left: 0.875rem;
-            }
-
-                .product-category-tabs .nav-link {
-                    max-width: 13rem;
-                }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/product-list.css" asp-append-version="true" />
 }
 
 @section Scripts {

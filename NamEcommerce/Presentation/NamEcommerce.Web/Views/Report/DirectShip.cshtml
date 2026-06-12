@@ -6,33 +6,7 @@
 }
 
 @section Styles {
-    <style>
-        .ds-header {
-            background: linear-gradient(135deg, #0f4c75 0%, #1b6ca8 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .table-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 1.5rem;
-        }
-        .nav-tabs .nav-link { color: #6c757d; font-weight: 500; }
-        .nav-tabs .nav-link.active { color: #0f4c75; border-bottom: 3px solid #0f4c75; font-weight: 700; }
-        .alert-pending { animation: pulse 2s infinite; }
-        @@keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.7; } }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/report-directship.css" asp-append-version="true" />
 }
 
 <div class="container-fluid py-4">
@@ -45,7 +19,7 @@
             <input type="date" name="fromDate" id="fromDate" class="form-control form-control-sm border-0" value="@ViewData["FromDate"]" />
             <span class="text-white align-self-center">-</span>
             <input type="date" name="toDate" id="toDate" class="form-control form-control-sm border-0" value="@ViewData["ToDate"]" />
-            <button type="submit" class="btn btn-light btn-sm fw-bold"><i class="bi bi-funnel"></i> Lọc</button>
+            <button type="submit" class="btn btn-outline-secondary btn-sm fw-bold"><i class="bi bi-funnel"></i> Lọc</button>
         </form>
     </div>
 
@@ -53,25 +27,25 @@
     <div class="row g-4 mb-4">
         <div class="col-md-3">
             <div class="stat-card border-top border-4 border-primary">
-                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Tổng phiếu giao</p>
+                <p class="text-muted mb-1 fw-semibold text-uppercase ui-fs-075">Tổng phiếu giao</p>
                 <h4 class="fw-bold mb-0">@Model.RejectRate.TotalDeliveries</h4>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-top border-4 border-success">
-                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Đã xác nhận</p>
+                <p class="text-muted mb-1 fw-semibold text-uppercase ui-fs-075">Đã xác nhận</p>
                 <h4 class="fw-bold mb-0 text-success">@Model.RejectRate.TotalConfirmed</h4>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-top border-4 border-warning">
-                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Đang chờ xác nhận</p>
+                <p class="text-muted mb-1 fw-semibold text-uppercase ui-fs-075">Đang chờ xác nhận</p>
                 <h4 class="fw-bold mb-0 text-warning">@Model.RejectRate.TotalPending</h4>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-top border-4 border-danger">
-                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Tỷ lệ Reject</p>
+                <p class="text-muted mb-1 fw-semibold text-uppercase ui-fs-075">Tỷ lệ Reject</p>
                 <h4 class="fw-bold mb-0 text-danger">@Model.RejectRate.RejectRatePercent%</h4>
             </div>
         </div>
@@ -269,7 +243,7 @@
                 else
                 {
                     <div class="text-center text-muted py-5">
-                        <i class="bi bi-check-circle text-success" style="font-size:2rem;"></i>
+                        <i class="bi bi-check-circle text-success ui-report-icon"></i>
                         <p class="mt-2 mb-0">Không có phiếu nào chờ quá 7 ngày.</p>
                     </div>
                 }

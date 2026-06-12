@@ -56,7 +56,7 @@
         </div>
     </div>
     <div class="mobile-progress" role="progressbar" aria-label="Tiến độ giao hàng" aria-valuenow="@progressPercent" aria-valuemin="0" aria-valuemax="100">
-        <div class="mobile-progress-value" style="width: @progressPercent%"></div>
+        <div class="mobile-progress-value" data-progress-width="@progressPercent"></div>
     </div>
 </div>
 
@@ -204,6 +204,13 @@
 @section Scripts {
     <script type="module">
         import { installDeliveryRunCache, installDeliveryCompletionForms, installDeliveryManualSync } from '/modules/DeliveryMobileCache.js';
+
+        document.querySelectorAll('[data-progress-width]').forEach(function (el) {
+            const width = el.dataset.progressWidth;
+            if (!width)
+                return;
+            el.style.width = width.endsWith('%') ? width : `${width}%`;
+        });
 
         installDeliveryRunCache({
             runId: '@Model.Run.Id',
