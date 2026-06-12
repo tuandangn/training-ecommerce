@@ -3,8 +3,11 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -23,6 +26,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IPurchaseOrderAuditAppService _purchaseOrderAuditAppService;
     private readonly IVendorDebtAppService _vendorDebtAppService;
+    private readonly IVendorLedgerManager _vendorLedgerManager;
 
     public PurchaseOrderModelFactory(
         IMediator mediator,
@@ -30,7 +34,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         IDirectShipAppService directShipAppService,
         IPurchaseOrderAppService purchaseOrderAppService,
         IPurchaseOrderAuditAppService purchaseOrderAuditAppService,
-        IVendorDebtAppService vendorDebtAppService)
+        IVendorDebtAppService vendorDebtAppService,
+        IVendorLedgerManager vendorLedgerManager)
     {
         _mediator = mediator;
         _appConfig = appConfig;
@@ -38,6 +43,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         _purchaseOrderAppService = purchaseOrderAppService;
         _purchaseOrderAuditAppService = purchaseOrderAuditAppService;
         _vendorDebtAppService = vendorDebtAppService;
+        _vendorLedgerManager = vendorLedgerManager;
     }
 
     public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
@@ -128,13 +134,17 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
         var auditsTask = _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id);
         var vendorDebtsTask = _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId);
-        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask, auditsTask, vendorDebtsTask).ConfigureAwait(false);
+        var vendorPaymentsTask = _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100);
+        var vendorBalanceTask = _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId);
+        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask, auditsTask, vendorDebtsTask, vendorPaymentsTask, vendorBalanceTask).ConfigureAwait(false);
 
         var availableWarehouses = await warehouseTask;
         var relatedReceipts = await receiptsTask;
         var relatedReturns = await returnsTask;
         var itemChangeAudits = await auditsTask;
         var vendorDebts = await vendorDebtsTask;
+        var vendorPayments = await vendorPaymentsTask;
+        var vendorBalance = await vendorBalanceTask;
 
         var model = new PurchaseOrderDetailsModel
         {
@@ -254,7 +264,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             }
         }
 
-        PrepareWorkflow(model, itemChangeAudits, vendorDebts);
+        PrepareWorkflow(model, itemChangeAudits, vendorDebts, vendorPayments.Items, vendorBalance);
 
         return model;
     }
@@ -262,7 +272,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     private static void PrepareWorkflow(
         PurchaseOrderDetailsModel model,
         IReadOnlyList<PurchaseOrderItemChangeAuditAppDto> itemChangeAudits,
-        VendorDebtsByVendorAppDto? vendorDebts)
+        VendorDebtsByVendorAppDto? vendorDebts,
+        IEnumerable<VendorPaymentAppDto> vendorPayments,
+        decimal vendorBalance)
     {
         var status = (PurchaseOrderStatus)model.Info.Status;
         var activeStage = CalculateActiveStage(model, status);
@@ -271,9 +283,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         model.Ordering = BuildOrdering(model);
         model.Receiving = BuildReceiving(model);
         model.Returns = BuildReturns(model);
-        model.Settlement = BuildSettlement(model, vendorDebts);
+        model.Settlement = BuildSettlement(model, vendorDebts, vendorPayments, vendorBalance);
         model.Workflow = BuildWorkflow(model, status, receivingStatus, activeStage);
-        model.Timeline = BuildTimeline(model, itemChangeAudits, vendorDebts);
+        model.Timeline = BuildTimeline(model, itemChangeAudits, vendorDebts, vendorPayments);
     }
 
     private static PurchaseOrderDetailsModel.WorkflowStage CalculateActiveStage(
@@ -332,10 +344,12 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     private static PurchaseOrderDetailsModel.SettlementModel BuildSettlement(
         PurchaseOrderDetailsModel model,
-        VendorDebtsByVendorAppDto? vendorDebts)
+        VendorDebtsByVendorAppDto? vendorDebts,
+        IEnumerable<VendorPaymentAppDto> vendorPayments,
+        decimal vendorBalance)
     {
         var debts = GetVendorDebtsForPurchaseOrder(model, vendorDebts);
-        var payments = debts.SelectMany(debt => debt.Payments).ToList();
+        var payments = GetVendorPaymentsForPurchaseOrder(model, vendorDebts, vendorPayments);
         var purchaseTotal = model.Info.TotalAmount;
         var returnTotal = model.RelatedVendorReturns.Sum(item => item.TotalAmount);
 
@@ -348,7 +362,21 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             PaidTotal = debts.Sum(debt => debt.PaidAmount),
             RemainingDebt = debts.Sum(debt => debt.RemainingAmount),
             DebtCount = debts.Count,
-            PaymentCount = payments.Count
+            PaymentCount = payments.Count,
+            VendorAccountBalance = vendorBalance,
+            Payments = payments
+                .OrderByDescending(payment => payment.PaidOnUtc)
+                .Select(payment => new PurchaseOrderDetailsModel.SettlementPaymentModel
+                {
+                    Id = payment.Id,
+                    Code = payment.Code,
+                    Amount = payment.Amount,
+                    PaymentMethodText = ((PaymentMethod)payment.PaymentMethod).GetDisplayText(),
+                    PaymentTypeText = ((PaymentType)payment.PaymentType).GetDisplayText(),
+                    Note = payment.Note,
+                    PaidOn = payment.PaidOnUtc.ToLocalTime()
+                })
+                .ToList()
         };
     }
 
@@ -434,7 +462,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     private static IList<PurchaseOrderDetailsModel.TimelineEventModel> BuildTimeline(
         PurchaseOrderDetailsModel model,
         IEnumerable<PurchaseOrderItemChangeAuditAppDto> itemChangeAudits,
-        VendorDebtsByVendorAppDto? vendorDebts)
+        VendorDebtsByVendorAppDto? vendorDebts,
+        IEnumerable<VendorPaymentAppDto> vendorPayments)
     {
         var timeline = new List<PurchaseOrderDetailsModel.TimelineEventModel>
         {
@@ -501,18 +530,22 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 Stage = PurchaseOrderDetailsModel.WorkflowStage.Settlement
             });
 
-            foreach (var payment in debt.Payments)
+        }
+
+        foreach (var payment in GetVendorPaymentsForPurchaseOrder(model, vendorDebts, vendorPayments))
+        {
+            var paymentMethod = (PaymentMethod)payment.PaymentMethod;
+            timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
-                {
-                    OccurredOn = payment.PaidOnUtc.ToLocalTime(),
-                    Title = "Thanh toán NCC",
-                    Description = $"{payment.Code} - {payment.Amount.DisplayCurrency()}",
-                    Icon = "bi-cash-coin",
-                    Tone = "success",
-                    Stage = PurchaseOrderDetailsModel.WorkflowStage.Settlement
-                });
-            }
+                OccurredOn = payment.PaidOnUtc.ToLocalTime(),
+                Title = "Thanh toán NCC",
+                Description = string.IsNullOrWhiteSpace(payment.Note)
+                    ? $"{payment.Code} - {payment.Amount.DisplayCurrency()} - {paymentMethod.GetDisplayText()}"
+                    : $"{payment.Code} - {payment.Amount.DisplayCurrency()} - {paymentMethod.GetDisplayText()} - {payment.Note}",
+                Icon = paymentMethod == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-coin",
+                Tone = "success",
+                Stage = PurchaseOrderDetailsModel.WorkflowStage.Settlement
+            });
         }
 
         return timeline
@@ -536,6 +569,26 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 debt.PurchaseOrderId == model.Info.Id ||
                 (debt.GoodsReceiptId.HasValue && receiptIds.Contains(debt.GoodsReceiptId.Value)))
             .GroupBy(debt => debt.Id)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private static IList<VendorPaymentAppDto> GetVendorPaymentsForPurchaseOrder(
+        PurchaseOrderDetailsModel model,
+        VendorDebtsByVendorAppDto? vendorDebts,
+        IEnumerable<VendorPaymentAppDto> vendorPayments)
+    {
+        IEnumerable<VendorPaymentAppDto> debtPayments = vendorDebts is null
+            ? []
+            : GetVendorDebtsForPurchaseOrder(model, vendorDebts)
+                .SelectMany(debt => debt.Payments);
+
+        var directPayments = vendorPayments
+            .Where(payment => payment.PurchaseOrderId == model.Info.Id);
+
+        return debtPayments
+            .Concat(directPayments)
+            .GroupBy(payment => payment.Id)
             .Select(group => group.First())
             .ToList();
     }

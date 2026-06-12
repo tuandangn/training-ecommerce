@@ -99,6 +99,31 @@ public sealed class BankTransferPaymentIntentAppService(
         }
     }
 
+    public async Task<BankTransferPaymentIntentResultAppDto> ConsumeAsync(ConsumeBankTransferPaymentIntentAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (dto.IntentId == Guid.Empty)
+            return BankTransferPaymentIntentResultAppDto.CreateError("Error.PaymentIntentIsNotFound");
+        if (dto.OrderId == Guid.Empty)
+            return BankTransferPaymentIntentResultAppDto.CreateError("Error.OrderIsNotFound");
+        if (dto.CustomerPaymentId == Guid.Empty)
+            return BankTransferPaymentIntentResultAppDto.CreateError("Error.CustomerPaymentIsNotFound");
+
+        try
+        {
+            var intent = await paymentIntentManager
+                .ConsumeAsync(dto.IntentId, dto.OrderId, dto.DeliveryNoteId, dto.CustomerDebtId, dto.CustomerPaymentId)
+                .ConfigureAwait(false);
+
+            return BankTransferPaymentIntentResultAppDto.CreateSuccess(MapToDto(intent));
+        }
+        catch (Exception ex)
+        {
+            return BankTransferPaymentIntentResultAppDto.CreateError(ex.Message);
+        }
+    }
+
     public async Task<BankTransferPaymentIntentResultAppDto> ConfirmFromProviderAsync(ProviderConfirmBankTransferPaymentIntentAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

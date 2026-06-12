@@ -1,5 +1,5 @@
 import { confirm, toast } from "/modules/modals.js";
-import { apiPost } from "/modules/ajax-helper.js";
+import { apiGet, apiPost } from "/modules/ajax-helper.js";
 import DeliveryNoteController from "/modules/DeliveryNoteController.js";
 import PromiseModal from "/modules/PromiseModal.js";
 import ProductPicker from "/modules/ProductPicker.js";
@@ -14,6 +14,11 @@ async function submitFormAsync(form) {
     }
 
     return apiPost(form.action, formData);
+}
+
+function parseDecimalInput(input) {
+    if (!input) return 0;
+    return DecimalFields.getValue(input);
 }
 
 (function () {
@@ -251,6 +256,222 @@ async function submitFormAsync(form) {
             toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
         }
     });
+
+    const orderSettlementPaymentForm = document.getElementById('orderSettlementPaymentForm');
+    if (orderSettlementPaymentForm) {
+        const settlementModal = new PromiseModal('#orderSettlementPaymentModal');
+        const amountInput = document.getElementById('orderSettlementPaymentAmount');
+        const paidOnInput = document.getElementById('orderSettlementPaymentPaidOn');
+        const noteInput = document.getElementById('orderSettlementPaymentNote');
+        const submitButton = document.getElementById('orderSettlementPaymentSubmit');
+        const qrPanel = document.getElementById('orderSettlementQrPanel');
+        const qrImage = document.getElementById('orderSettlementQrImage');
+        const qrReference = document.getElementById('orderSettlementQrReference');
+        const qrStatus = document.getElementById('orderSettlementQrStatus');
+        const qrExpires = document.getElementById('orderSettlementQrExpires');
+        const qrManualConfirm = document.getElementById('orderSettlementQrManualConfirm');
+        const qrRecord = document.getElementById('orderSettlementQrRecord');
+        let paymentIntent = null;
+        let statusTimer = null;
+
+        const orderId = orderSettlementPaymentForm.querySelector('[name="OrderId"]')?.value;
+        const customerId = orderSettlementPaymentForm.querySelector('[name="CustomerId"]')?.value;
+        const isQrMode = () => orderSettlementPaymentForm.querySelector('[name="PaymentMode"]:checked')?.value === 'qr';
+        const isIntentPending = (intent) => intent?.status === 10;
+        const isIntentConfirmed = (intent) => intent?.status === 20 || intent?.status === 30;
+        const getStatusText = (status) => ({
+            10: 'Đang chờ chuyển khoản',
+            20: 'Đã xác nhận',
+            30: 'Đã xác nhận thủ công',
+            40: 'Đã hết hạn',
+            50: 'Đã hủy',
+            60: 'Đã ghi nhận'
+        })[status] || 'Không xác định';
+
+        const stopPolling = () => {
+            if (!statusTimer) return;
+
+            window.clearInterval(statusTimer);
+            statusTimer = null;
+        };
+
+        const renderQrIntent = () => {
+            if (!qrPanel) return;
+
+            qrPanel.classList.toggle('d-none', !paymentIntent);
+            if (!paymentIntent) {
+                if (qrImage) qrImage.removeAttribute('src');
+                if (qrReference) qrReference.textContent = '';
+                if (qrStatus) qrStatus.textContent = '';
+                if (qrExpires) qrExpires.textContent = '';
+                if (qrManualConfirm) qrManualConfirm.disabled = true;
+                if (qrRecord) qrRecord.disabled = true;
+                return;
+            }
+
+            if (qrImage) qrImage.src = paymentIntent.qrImageUrl || '';
+            if (qrReference) qrReference.textContent = paymentIntent.referenceCode || '';
+            if (qrStatus) qrStatus.textContent = `Trạng thái: ${getStatusText(paymentIntent.status)}`;
+            if (qrExpires) {
+                qrExpires.textContent = paymentIntent.expiresAtUtc
+                    ? `Hết hạn: ${new Date(paymentIntent.expiresAtUtc).toLocaleString('vi-VN')}`
+                    : '';
+            }
+            if (qrManualConfirm) qrManualConfirm.disabled = !isIntentPending(paymentIntent);
+            if (qrRecord) qrRecord.disabled = !isIntentConfirmed(paymentIntent);
+        };
+
+        const resetQrIntent = () => {
+            paymentIntent = null;
+            stopPolling();
+            renderQrIntent();
+        };
+
+        const refreshIntentStatus = async () => {
+            if (!paymentIntent) {
+                stopPolling();
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({ intentId: paymentIntent.id });
+                const result = await apiGet(`${orderSettlementPaymentForm.dataset.statusUrl}?${params.toString()}`);
+                if (!result.success || result.intent?.id !== paymentIntent.id) {
+                    stopPolling();
+                    return;
+                }
+
+                paymentIntent = result.intent;
+                renderQrIntent();
+                if (!isIntentPending(paymentIntent)) stopPolling();
+            } catch {
+                stopPolling();
+                toast('Lỗi', 'Không thể cập nhật trạng thái QR.', 'error');
+            }
+        };
+
+        const startPolling = () => {
+            stopPolling();
+            if (!isIntentPending(paymentIntent)) return;
+
+            statusTimer = window.setInterval(refreshIntentStatus, 4000);
+            refreshIntentStatus();
+        };
+
+        document.getElementById('orderSettlementPaymentModal')?.addEventListener('hidden.bs.modal', resetQrIntent);
+        orderSettlementPaymentForm.querySelectorAll('[name="PaymentMode"]').forEach((input) => {
+            input.addEventListener('change', () => {
+                resetQrIntent();
+                if (submitButton) {
+                    submitButton.innerHTML = isQrMode()
+                        ? '<i class="bi bi-qr-code me-1"></i>Tạo QR'
+                        : '<i class="bi bi-floppy me-1"></i>Ghi nhận';
+                }
+            });
+        });
+
+        orderSettlementPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const amount = parseDecimalInput(amountInput);
+            if (!amount || amount <= 0) {
+                toast('Lỗi', 'Số tiền thanh toán phải lớn hơn 0.', 'error');
+                return;
+            }
+
+            if (isQrMode()) {
+                if (amount !== Math.trunc(amount)) {
+                    toast('Lỗi', 'Số tiền QR phải là VND nguyên.', 'error');
+                    return;
+                }
+
+                if (submitButton) submitButton.disabled = true;
+                try {
+                    const result = await apiPost(orderSettlementPaymentForm.dataset.createIntentUrl, {
+                        customerId,
+                        amount,
+                        note: noteInput?.value || null
+                    });
+                    if (!result.success)
+                        return;
+
+                    paymentIntent = result.intent;
+                    renderQrIntent();
+                    startPolling();
+                    toast('Thành công', 'Đã tạo QR chuyển khoản.', 'success');
+                } catch {
+                    toast('Lỗi', 'Không thể tạo QR chuyển khoản.', 'error');
+                } finally {
+                    if (submitButton) submitButton.disabled = false;
+                }
+                return;
+            }
+
+            showPageLoading();
+            settlementModal.hide();
+            try {
+                const result = await apiPost(orderSettlementPaymentForm.dataset.cashUrl, {
+                    orderId,
+                    amount,
+                    paymentMethod: 0,
+                    note: noteInput?.value || null,
+                    paidOn: paidOnInput?.value
+                });
+
+                if (result.success) {
+                    location.reload();
+                } else {
+                    hidePageLoading();
+                    toast('Lỗi', result.message || 'Không thể ghi nhận thanh toán.', 'error');
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+            }
+        });
+
+        qrManualConfirm?.addEventListener('click', async () => {
+            if (!paymentIntent) return;
+
+            try {
+                const result = await apiPost(orderSettlementPaymentForm.dataset.confirmUrl, {
+                    intentId: paymentIntent.id,
+                    note: noteInput?.value || null
+                });
+                if (!result.success)
+                    return;
+
+                paymentIntent = result.intent;
+                renderQrIntent();
+                stopPolling();
+                toast('Thành công', 'Đã xác nhận tiền vào tài khoản.', 'success');
+            } catch {
+                toast('Lỗi', 'Không thể xác nhận QR.', 'error');
+            }
+        });
+
+        qrRecord?.addEventListener('click', async () => {
+            if (!paymentIntent || !isIntentConfirmed(paymentIntent)) return;
+
+            showPageLoading();
+            settlementModal.hide();
+            try {
+                const result = await apiPost(orderSettlementPaymentForm.dataset.qrRecordUrl, {
+                    orderId,
+                    paymentIntentId: paymentIntent.id,
+                    note: noteInput?.value || null
+                });
+                if (result.success) {
+                    location.reload();
+                } else {
+                    hidePageLoading();
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+            }
+        });
+    }
 
     const orderExpenseForm = document.getElementById('orderExpenseForm');
     if (orderExpenseForm) {

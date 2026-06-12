@@ -149,6 +149,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
             Amount = dto.Amount,
             PaymentMethod = (PaymentMethod)dto.PaymentMethod,
             PaymentType = (PaymentType)dto.PaymentType,
+            BankAccountId = dto.BankAccountId,
             Note = dto.Note,
             PaidOnUtc = dto.PaidOnUtc,
             RecordedByUserId = dto.RecordedByUserId

@@ -21,6 +21,10 @@ public sealed class BankTransferReceivingAccountResolver(
         }
 
         var accounts = await bankAccountManager.GetAllAsync(includeInactive: true).ConfigureAwait(false);
+        var activeAccount = accounts.FirstOrDefault(account => account.IsActive);
+        if (activeAccount is not null)
+            return ToReceivingAccount(activeAccount);
+
         if (accounts.Count == 0 && HasConfiguredSettings())
         {
             var result = await bankAccountManager.CreateAsync(new CreateBankAccountDto
@@ -57,6 +61,7 @@ public sealed class BankTransferReceivingAccountResolver(
     private static BankTransferReceivingAccountAppDto ToReceivingAccount(BankAccountDto account)
         => new()
         {
+            BankAccountId = account.Id,
             BankId = account.BankCode,
             AccountNo = account.AccountNumber,
             AccountName = account.AccountHolderName

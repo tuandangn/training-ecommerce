@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -196,7 +197,8 @@ public sealed class VendorDebtManager(
         )
         {
             VendorDebtId = dto.VendorDebtId,
-            PurchaseOrderId = dto.PurchaseOrderId
+            PurchaseOrderId = dto.PurchaseOrderId,
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
         };
 
         payment.MarkCreated();
@@ -241,7 +243,10 @@ public sealed class VendorDebtManager(
             paidOnUtc: dto.PaidOnUtc,
             recordedByUserId: dto.RecordedByUserId,
             note: dto.Note
-        );
+        )
+        {
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
+        };
 
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);

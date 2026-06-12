@@ -119,6 +119,7 @@ public sealed record VendorPaymentAppDto
     public decimal Amount { get; init; }
     public int PaymentMethod { get; init; }
     public int PaymentType { get; init; }
+    public Guid? BankAccountId { get; init; }
     public string? Note { get; init; }
 
     public DateTime PaidOnUtc { get; init; }
@@ -158,6 +159,7 @@ public sealed record CreateVendorPaymentAppDto
     public decimal Amount { get; init; }
     public int PaymentMethod { get; init; }
     public int PaymentType { get; init; }
+    public Guid? BankAccountId { get; init; }
     public string? Note { get; init; }
 
     public DateTime PaidOnUtc { get; init; }

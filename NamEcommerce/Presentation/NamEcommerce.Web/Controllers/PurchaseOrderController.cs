@@ -215,6 +215,20 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
+    public async Task<IActionResult> RecordSettlementPayment(RecordPurchaseOrderSettlementPaymentCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (result.Success)
+            NotifySuccess("Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.InvalidRequest");
+
+        return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Copy(Guid id)
     {

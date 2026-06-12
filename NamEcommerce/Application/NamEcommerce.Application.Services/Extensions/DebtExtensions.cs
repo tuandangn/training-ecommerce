@@ -44,6 +44,7 @@ public static class DebtExtensions
             Amount = payment.Amount,
             PaymentMethod = (int)payment.PaymentMethod,
             PaymentType = (int)payment.PaymentType,
+            BankAccountId = payment.BankAccountId,
             Note = payment.Note,
             PaidOnUtc = payment.PaidOnUtc,
             RecordedByUserId = payment.RecordedByUserId,

@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
@@ -140,7 +141,8 @@ public sealed class CustomerDebtManager(
         {
             OrderId = dto.OrderId,
             DeliveryNoteId = dto.DeliveryNoteId,
-            CustomerDebtId = dto.CustomerDebtId
+            CustomerDebtId = dto.CustomerDebtId,
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
         };
 
         payment.MarkCreated();
@@ -482,6 +484,7 @@ public sealed class CustomerDebtManager(
             Amount = payment.Amount,
             PaymentMethod = payment.PaymentMethod,
             PaymentType = payment.PaymentType,
+            BankAccountId = payment.BankAccountId,
             Note = payment.Note,
             PaidOnUtc = payment.PaidOnUtc,
             RecordedByUserId = payment.RecordedByUserId,
