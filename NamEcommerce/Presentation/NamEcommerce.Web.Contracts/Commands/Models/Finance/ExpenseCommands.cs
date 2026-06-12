@@ -1,9 +1,8 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Finance;
 
-public sealed class CreateExpenseCommand : IRequest<CommonActionResultModel>
+public sealed class CreateExpenseCommand : ICommand<CommonActionResultModel>
 {
     public required string Title { get; init; }
     public string? Description { get; init; }
@@ -13,7 +12,7 @@ public sealed class CreateExpenseCommand : IRequest<CommonActionResultModel>
     public Guid? SourceOrderId { get; init; }
 }
 
-public sealed class UpdateExpenseCommand : IRequest<CommonActionResultModel>
+public sealed class UpdateExpenseCommand : ICommand<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
     public required string Title { get; init; }
@@ -23,9 +22,9 @@ public sealed class UpdateExpenseCommand : IRequest<CommonActionResultModel>
     public required DateTime IncurredDate { get; init; }
 }
 
-public sealed record DeleteExpenseCommand(Guid Id) : IRequest<CommonActionResultModel>;
+public sealed record DeleteExpenseCommand(Guid Id) : ICommand<CommonActionResultModel>;
 
-public sealed class UpsertExpenseBudgetCommand : IRequest<CommonActionResultModel>
+public sealed class UpsertExpenseBudgetCommand : ICommand<CommonActionResultModel>
 {
     public required int ExpenseType { get; init; }
     public required int Year { get; init; }

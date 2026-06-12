@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Catalog;
+﻿using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 
 [Serializable]
-public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
+public sealed class CreateProductCommand : ICommand<CreateProductResultModel>
 {
     public required string Name { get; init; }
     public string? ShortDesc { get; set; }

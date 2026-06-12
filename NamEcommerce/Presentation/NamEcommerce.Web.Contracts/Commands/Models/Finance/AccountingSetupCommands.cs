@@ -1,9 +1,8 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Finance;
 
-public sealed class SaveAccountingSetupCommand : IRequest<CommonActionResultModel>
+public sealed class SaveAccountingSetupCommand : ICommand<CommonActionResultModel>
 {
     public int FiscalYearStartMonth { get; init; }
     public int FiscalYearStartDay { get; init; }
@@ -13,9 +12,9 @@ public sealed class SaveAccountingSetupCommand : IRequest<CommonActionResultMode
     public decimal DefaultTaxRate { get; init; }
 }
 
-public sealed class FinalizeAccountingSetupCommand : IRequest<CommonActionResultModel>;
+public sealed class FinalizeAccountingSetupCommand : ICommand<CommonActionResultModel>;
 
-public sealed class UpdateCorporateTaxProvisionCommand : IRequest<CommonActionResultModel>
+public sealed class UpdateCorporateTaxProvisionCommand : ICommand<CommonActionResultModel>
 {
     public decimal? Amount { get; init; }
 }

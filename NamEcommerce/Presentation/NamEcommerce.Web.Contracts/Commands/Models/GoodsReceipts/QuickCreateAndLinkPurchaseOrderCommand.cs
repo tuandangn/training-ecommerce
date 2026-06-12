@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
+﻿using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 
 [Serializable]
-public sealed class QuickCreateAndLinkPurchaseOrderCommand : IRequest<QuickCreateAndLinkPurchaseOrderResultModel>
+public sealed class QuickCreateAndLinkPurchaseOrderCommand : ICommand<QuickCreateAndLinkPurchaseOrderResultModel>
 {
     public required Guid GoodsReceiptId { get; init; }
 

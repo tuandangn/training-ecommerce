@@ -1,9 +1,8 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 
-public sealed class SplitPurchaseOrderCommand : IRequest<CreatePurchaseOrderResultModel>
+public sealed class SplitPurchaseOrderCommand : ICommand<CreatePurchaseOrderResultModel>
 {
     public required Guid PurchaseOrderId { get; init; }
     public required IList<SplitItemCommand> Items { get; init; }

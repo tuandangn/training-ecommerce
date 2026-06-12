@@ -28,11 +28,6 @@ public sealed record InventoryStock : AppAggregateEntity
 
     public decimal QuantityAvailable => QuantityOnHand - QuantityReserved;
 
-    /// <summary>
-    /// Legacy snapshot. InventoryCostLedger/Allocation là nguồn giá vốn authoritative.
-    /// </summary>
-    public decimal AverageCost { get; internal set; }
-
     public decimal ReorderLevel { get; internal set; }
     public decimal MaxStockLevel { get; internal set; }
     

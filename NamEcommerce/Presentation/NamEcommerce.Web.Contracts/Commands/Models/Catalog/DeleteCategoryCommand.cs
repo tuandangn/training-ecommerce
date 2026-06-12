@@ -1,8 +1,7 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Catalog;
+﻿using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog
 {
     [Serializable]
-    public sealed record DeleteCategoryCommand(Guid Id) : IRequest<DeleteCategoryResultModel>;
+    public sealed record DeleteCategoryCommand(Guid Id) : ICommand<DeleteCategoryResultModel>;
 }

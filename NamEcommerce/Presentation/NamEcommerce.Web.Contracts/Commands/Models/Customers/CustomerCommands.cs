@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Customers;
+﻿using NamEcommerce.Web.Contracts.Models.Customers;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Customers;
 
 [Serializable]
-public sealed class CreateCustomerCommand : IRequest<CreateCustomerResultModel>
+public sealed class CreateCustomerCommand : ICommand<CreateCustomerResultModel>
 {
     public required string FullName { get; init; }
     public required string PhoneNumber { get; init; }
@@ -16,7 +15,7 @@ public sealed class CreateCustomerCommand : IRequest<CreateCustomerResultModel>
 }
 
 [Serializable]
-public sealed class UpdateCustomerCommand : IRequest<UpdateCustomerResultModel>
+public sealed class UpdateCustomerCommand : ICommand<UpdateCustomerResultModel>
 {
     public required Guid Id { get; init; }
     public required string FullName { get; init; }
@@ -27,7 +26,7 @@ public sealed class UpdateCustomerCommand : IRequest<UpdateCustomerResultModel>
 }
 
 [Serializable]
-public sealed class DeleteCustomerCommand : IRequest<DeleteCustomerResultModel>
+public sealed class DeleteCustomerCommand : ICommand<DeleteCustomerResultModel>
 {
     public required Guid Id { get; init; }
 }

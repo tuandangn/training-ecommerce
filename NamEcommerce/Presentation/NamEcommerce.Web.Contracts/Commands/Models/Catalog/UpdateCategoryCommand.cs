@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Catalog;
+﻿using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 
 [Serializable]
-public sealed class UpdateCategoryCommand : IRequest<UpdateCategoryResultModel>
+public sealed class UpdateCategoryCommand : ICommand<UpdateCategoryResultModel>
 {
     public required Guid Id { get; init; }
     public required string Name { get; init; }

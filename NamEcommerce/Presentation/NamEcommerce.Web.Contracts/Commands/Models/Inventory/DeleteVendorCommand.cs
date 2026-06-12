@@ -1,7 +1,6 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Inventory;
+﻿using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 
 [Serializable]
-public sealed record DeleteWarehouseCommand(Guid Id) : IRequest<DeleteWarehouseResultModel>;
+public sealed record DeleteWarehouseCommand(Guid Id) : ICommand<DeleteWarehouseResultModel>;

@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Users;
+﻿using NamEcommerce.Web.Contracts.Models.Users;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Users;
 
 [Serializable]
-public record class RegisterUserCommand : IRequest<RegisterUserResult>
+public record class RegisterUserCommand : ICommand<RegisterUserResult>
 {
     public RegisterUserCommand(string username, string password, string fullname)
         => (Username, Password, FullName) = (username, password, fullname);

@@ -533,8 +533,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         fromStock.UpdatedOnUtc = DateTime.UtcNow;
 
         toStock.QuantityOnHand += quantity;
-        if (toStock.QuantityOnHand > 0)
-            toStock.AverageCost = ((toBefore * toStock.AverageCost) + (quantity * unitCost)) / toStock.QuantityOnHand;
+
         toStock.UpdatedOnUtc = DateTime.UtcNow;
 
         await _inventoryStockRepository.UpdateAsync(fromStock).ConfigureAwait(false);
@@ -641,12 +640,6 @@ public sealed class InventoryStockManager : IInventoryStockManager
             return (false, stock.MaxStockLevel); // No max level set
 
         return (stock.QuantityOnHand > stock.MaxStockLevel, stock.MaxStockLevel);
-    }
-
-    public async Task<decimal> GetAverageCostAsync(Guid productId, Guid warehouseId)
-    {
-        var stock = await TryGetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
-        return stock?.AverageCost ?? 0m;
     }
 
     public Task ApplyAdjustmentAsync(Guid productId, Guid warehouseId, decimal delta, Guid adjustmentNoteId, Guid? userId)

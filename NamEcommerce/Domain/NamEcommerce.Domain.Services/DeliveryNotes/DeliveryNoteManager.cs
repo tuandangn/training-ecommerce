@@ -81,17 +81,6 @@ public sealed class DeliveryNoteManager(
                 throw new AmountToCollectExceedsOrderRemainingException(dto.AmountToCollect, remaining);
         }
 
-        var itemsByProduct = dto.Items
-            .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
-            .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
-            .ToList();
-        foreach (var item in itemsByProduct)
-        {
-            var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, order.Id).ConfigureAwait(false);
-            if (reservedQuantity < item.Quantity)
-                throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
-        }
-
         var itemsByProductWarehouse = dto.Items
             .GroupBy(item => new { orderItemsById[item.OrderItemId].ProductId, item.WarehouseId })
             .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })

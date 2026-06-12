@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 [Serializable]
-public sealed class CompleteMobileDeliveryNoteCommand : IRequest<CommonActionResultModel>
+public sealed class CompleteMobileDeliveryNoteCommand : ICommand<CommonActionResultModel>
 {
     public Guid DeliveryRunId { get; init; }
     public Guid DeliveryNoteId { get; init; }

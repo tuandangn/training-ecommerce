@@ -39,13 +39,6 @@ public interface IInventoryStockManager
     Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId);
     Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null);
     Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
-    
-    /// <summary>
-    /// Legacy compatibility: lấy AverageCost snapshot hiện tại của (productId, warehouseId).
-    /// Trả về 0 nếu chưa có stock hoặc chưa nhập hàng.
-    /// Không dùng làm nguồn authoritative cho COGS.
-    /// </summary>
-    Task<decimal> GetAverageCostAsync(Guid productId, Guid warehouseId);
 
     /// <summary>
     /// Áp dụng điều chỉnh tồn kho dựa trên delta từ StockAdjustmentNote.

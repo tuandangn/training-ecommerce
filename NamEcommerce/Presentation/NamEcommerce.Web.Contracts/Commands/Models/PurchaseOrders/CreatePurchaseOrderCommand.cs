@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 
 [Serializable]
-public sealed class CreatePurchaseOrderCommand : IRequest<CreatePurchaseOrderResultModel>
+public sealed class CreatePurchaseOrderCommand : ICommand<CreatePurchaseOrderResultModel>
 {
     public required DateTime PlacedOn { get; init; }
     public required Guid VendorId { get; init; }

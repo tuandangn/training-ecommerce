@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Debts;
 
 [Serializable]
-public sealed class CompleteVendorRefundCommand : IRequest<CommonActionResultModel>
+public sealed class CompleteVendorRefundCommand : ICommand<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
     public int PaymentMethod { get; init; }
@@ -13,7 +12,7 @@ public sealed class CompleteVendorRefundCommand : IRequest<CommonActionResultMod
 }
 
 [Serializable]
-public sealed class CancelVendorRefundCommand : IRequest<CommonActionResultModel>
+public sealed class CancelVendorRefundCommand : ICommand<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
 }

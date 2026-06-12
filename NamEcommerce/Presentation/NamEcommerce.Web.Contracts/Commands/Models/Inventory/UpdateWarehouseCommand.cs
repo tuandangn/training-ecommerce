@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Inventory;
+﻿using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 
 [Serializable]
-public sealed class UpdateWarehouseCommand : IRequest<UpdateWarehouseResultModel>
+public sealed class UpdateWarehouseCommand : ICommand<UpdateWarehouseResultModel>
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }

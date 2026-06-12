@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Users;
+﻿using NamEcommerce.Web.Contracts.Models.Users;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Users;
 
 [Serializable]
-public sealed record AuthenticateUserCommand : IRequest<AuthenticateUserResult>
+public sealed record AuthenticateUserCommand : ICommand<AuthenticateUserResult>
 {
     public AuthenticateUserCommand(string username, string password)
         => (Username, Password) = (username, password);

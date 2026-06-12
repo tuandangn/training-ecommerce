@@ -205,17 +205,7 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        var activeDeliveryNotes = deliveryNoteDataReader.DataSource
-            .Where(deliveryNote => deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled)
-            .ToList();
-        var allItemsDelivered = order.OrderItems.Count() > 0
-            && order.OrderItems.All(orderItem =>
-                activeDeliveryNotes
-                    .Where(deliveryNote => deliveryNote.Status == DeliveryNoteStatus.Delivered)
-                    .SelectMany(deliveryNote => deliveryNote.Items)
-                    .Where(item => item.OrderItemId == orderItem.Id)
-                    .Sum(item => item.Quantity) >= orderItem.Quantity);
-        if (!allItemsDelivered)
+        if (!order.OrderItems.Any() || !order.OrderItems.All(i => i.IsDelivered))
             throw new OrderCannotChangeStatusException();
 
         order.Complete();
