@@ -21,9 +21,8 @@ public sealed class AccountingReportService : IAccountingReportService
     private readonly IEntityDataReader<InventoryCostLedgerEntry> _costLedger;
     private readonly IEntityDataReader<Expense> _expenses;
     private readonly IEntityDataReader<FixedAsset> _fixedAssets;
-    private readonly IEntityDataReader<CustomerDebt> _customerDebts;
-    private readonly IEntityDataReader<VendorDebt> _vendorDebts;
-    private readonly IEntityDataReader<VendorCreditNote> _vendorCreditNotes;
+    private readonly IEntityDataReader<CustomerLedgerEntry> _customerLedgerEntries;
+    private readonly IEntityDataReader<VendorLedgerEntry> _vendorLedgerEntries;
     private readonly IEntityDataReader<InventoryStock> _inventoryStocks;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceipts;
     private readonly IEntityDataReader<CustomerRefund> _refunds;
@@ -38,9 +37,8 @@ public sealed class AccountingReportService : IAccountingReportService
         IEntityDataReader<InventoryCostLedgerEntry> costLedger,
         IEntityDataReader<Expense> expenses,
         IEntityDataReader<FixedAsset> fixedAssets,
-        IEntityDataReader<CustomerDebt> customerDebts,
-        IEntityDataReader<VendorDebt> vendorDebts,
-        IEntityDataReader<VendorCreditNote> vendorCreditNotes,
+        IEntityDataReader<CustomerLedgerEntry> customerLedgerEntries,
+        IEntityDataReader<VendorLedgerEntry> vendorLedgerEntries,
         IEntityDataReader<InventoryStock> inventoryStocks,
         IEntityDataReader<GoodsReceipt> goodsReceipts,
         IEntityDataReader<CustomerRefund> refunds,
@@ -54,9 +52,8 @@ public sealed class AccountingReportService : IAccountingReportService
         _costLedger = costLedger;
         _expenses = expenses;
         _fixedAssets = fixedAssets;
-        _customerDebts = customerDebts;
-        _vendorDebts = vendorDebts;
-        _vendorCreditNotes = vendorCreditNotes;
+        _customerLedgerEntries = customerLedgerEntries;
+        _vendorLedgerEntries = vendorLedgerEntries;
         _inventoryStocks = inventoryStocks;
         _goodsReceipts = goodsReceipts;
         _refunds = refunds;
@@ -326,35 +323,21 @@ public sealed class AccountingReportService : IAccountingReportService
     private decimal GetNetAccountsReceivable(DateTime asOf)
     {
         var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
-
-        var gross = _customerDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= cutoff
-                     && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
-            .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
-
-        var creditNoteOffset = _creditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= cutoff
-                      && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
-            .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
-
-        return gross - creditNoteOffset;
+        return _customerLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff)
+            .GroupBy(e => e.CustomerId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
     }
 
     private decimal GetNetAccountsPayable(DateTime asOf)
     {
         var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
-
-        var gross = _vendorDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= cutoff
-                     && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
-            .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
-
-        var creditNoteOffset = _vendorCreditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= cutoff
-                      && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
-            .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
-
-        return gross - creditNoteOffset;
+        return _vendorLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff)
+            .GroupBy(e => e.VendorId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
     }
 
     private decimal GetVatPayable(DateTime asOf)

@@ -20,6 +20,7 @@
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var canLeaveWarehouse = isDirectShip || isCounterPickup;
     var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
+    var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
@@ -139,6 +140,30 @@
                         <div class="text-dark">Chưa phân công</div>
                     }
                 </div>
+                @if (Model.DeliveryRunInfo != null)
+                {
+                    var runBadgeClass = Model.DeliveryRunInfo.Status switch
+                    {
+                        10 => "bg-secondary text-white",
+                        20 => "bg-info text-white",
+                        30 => "bg-warning text-white",
+                        40 => "bg-success text-white",
+                        _ => "bg-secondary text-white"
+                    };
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chuyến giao</label>
+                        <div class="fw-bold">
+                            <a asp-controller="DeliveryRun" asp-action="Details" asp-route-id="@Model.DeliveryRunInfo.Id" class="text-decoration-none">@Model.DeliveryRunInfo.Code</a>
+                        </div>
+                        <div class="small mt-1">
+                            <span class="status-badge @runBadgeClass">@Model.DeliveryRunInfo.StatusName</span>
+                        </div>
+                        @if (Model.DeliveryRunInfo.HandedOverOnUtc.HasValue)
+                        {
+                            <div class="text-muted small mt-1">Bàn giao: @Model.DeliveryRunInfo.HandedOverOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                        }
+                    </div>
+                }
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Địa chỉ giao hàng</label>
                     <div class="text-dark">@Model.ShippingAddress</div>
@@ -312,7 +337,7 @@
                 }
                 @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
                 {
-                    <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@canOpenDeliveredWorkflow">
+                    <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)" data-has-delivery-user="@isDeliveryUserAssigned.ToString().ToLower()">
                         <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                     </button>
                 }
@@ -595,6 +620,12 @@
             // Mark Delivered Flow
             $('.btn-delivered').click(function(e) {
                 e.preventDefault();
+                var hasDeliveryUser = $(this).data('has-delivery-user') === 'true';
+                if (hasDeliveryUser) {
+                    if (!confirm('Phiếu đã được phân công người giao hàng. Bạn có chắc chắn muốn xác nhận đã giao không?')) {
+                        return;
+                    }
+                }
                 deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId('@Model.Id');
             });
 

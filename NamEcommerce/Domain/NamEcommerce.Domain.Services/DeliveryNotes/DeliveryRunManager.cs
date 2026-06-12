@@ -203,6 +203,14 @@ public sealed class DeliveryRunManager(
         return run?.ToDto();
     }
 
+    public Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId)
+    {
+        var run = runReader.DataSource
+            .Where(r => r.Status != DeliveryRunStatus.Cancelled)
+            .FirstOrDefault(r => r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+        return Task.FromResult(run?.ToDto());
+    }
+
     public Task<IPagedDataDto<DeliveryRunDto>> GetListAsync(int pageIndex, int pageSize, string? keywords,
         Guid? assignedDeliveryUserId, DeliveryRunStatus? status)
     {

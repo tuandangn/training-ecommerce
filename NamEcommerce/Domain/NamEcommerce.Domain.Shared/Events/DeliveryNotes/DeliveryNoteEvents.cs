@@ -21,12 +21,15 @@ public sealed record DeliveryNoteDelivering(Guid DeliveryNoteId) : DomainEvent, 
 
 /// <summary>
 /// Phiếu giao hàng đã giao thành công — stock đã trừ, đơn hàng đã đánh dấu item delivered, sẵn sàng sinh công nợ.
+/// <para><c>AmountToCollect</c> = tiền thu tại chỗ (chỉ phần khách nhận). <c>DebtAmount</c> = công nợ ghi sổ
+/// (gồm cả phần khách trả lại lúc giao — phần này sẽ được credit khi CustomerReturn tự sinh được Confirm).</para>
 /// </summary>
 public sealed record DeliveryNoteDelivered(
     Guid DeliveryNoteId,
     Guid OrderId,
     Guid CustomerId,
-    decimal AmountToCollect) : DomainEvent, IReliableDomainEvent;
+    decimal AmountToCollect,
+    decimal DebtAmount) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng bị huỷ.

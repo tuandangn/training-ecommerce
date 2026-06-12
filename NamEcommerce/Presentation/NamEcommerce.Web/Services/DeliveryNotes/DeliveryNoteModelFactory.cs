@@ -29,6 +29,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     private readonly IPictureAppService _pictureAppService;
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IUserAppService _userAppService;
+    private readonly IDeliveryRunAppService _deliveryRunAppService;
     private readonly IWebHelper _webHelper;
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
@@ -40,6 +41,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         IPictureAppService pictureAppService,
         IWarehouseAppService warehouseAppService,
         IUserAppService userAppService,
+        IDeliveryRunAppService deliveryRunAppService,
         IWebHelper webHelper,
         IMediator mediator,
         AppConfig appConfig)
@@ -50,6 +52,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         _pictureAppService = pictureAppService;
         _warehouseAppService = warehouseAppService;
         _userAppService = userAppService;
+        _deliveryRunAppService = deliveryRunAppService;
         _webHelper = webHelper;
         _mediator = mediator;
         _appConfig = appConfig;
@@ -333,8 +336,32 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             DeliveryNoteId = id
         }).ConfigureAwait(false);
 
+        var deliveryRun = await _deliveryRunAppService.GetByDeliveryNoteIdAsync(id).ConfigureAwait(false);
+        if (deliveryRun != null)
+        {
+            model.DeliveryRunInfo = new DeliveryRunInfoModel
+            {
+                Id = deliveryRun.Id,
+                Code = deliveryRun.Code,
+                Status = deliveryRun.Status,
+                StatusName = GetDeliveryRunStatusName(deliveryRun.Status),
+                AssignedDeliveryFullName = deliveryRun.AssignedDeliveryFullName,
+                HandedOverOnUtc = deliveryRun.HandedOverOnUtc,
+                CreatedOnUtc = deliveryRun.CreatedOnUtc
+            };
+        }
+
         return model;
     }
+
+    private static string GetDeliveryRunStatusName(int status) => status switch
+    {
+        10 => "Chuẩn bị",
+        20 => "Sẵn sàng bàn giao",
+        30 => "Đã bàn giao",
+        40 => "Đã đóng",
+        _ => "Không rõ"
+    };
 
     private static string? ResolveWarehouseName(Guid warehouseId, IReadOnlyDictionary<Guid, string> warehouseNamesById)
         => warehouseId == Guid.Empty ? null : warehouseNamesById.GetValueOrDefault(warehouseId);

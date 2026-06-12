@@ -29,14 +29,16 @@ public sealed class DeliveryNoteDeliveredHandler(
         if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn)
             return;
 
-        if (notification.AmountToCollect <= 0)
+        // Fallback cho event cũ trong Outbox được serialize trước khi có DebtAmount.
+        var debtAmount = notification.DebtAmount > 0 ? notification.DebtAmount : notification.AmountToCollect;
+        if (debtAmount <= 0)
             return;
 
         var createDebtDto = new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
-            TotalAmount = notification.AmountToCollect,
+            TotalAmount = debtAmount,
             DueDateUtc = null
         };
 
@@ -45,7 +47,7 @@ public sealed class DeliveryNoteDeliveredHandler(
         await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
         {
             CustomerId = notification.CustomerId,
-            Amount = notification.AmountToCollect,
+            Amount = debtAmount,
             ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
             ReferenceId = notification.DeliveryNoteId,
             ReferenceCode = deliveryNote.Code,

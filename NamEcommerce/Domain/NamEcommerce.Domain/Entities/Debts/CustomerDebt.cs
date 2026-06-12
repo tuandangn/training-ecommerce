@@ -103,67 +103,6 @@ public sealed record CustomerDebt : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    internal decimal ApplyPayment(decimal amount)
-    {
-        if (amount <= 0) return 0m;
-
-        var applied = Math.Min(amount, RemainingAmount);
-        PaidAmount += applied;
-        RemainingAmount -= applied;
-
-        Status = RemainingAmount <= 0
-            ? DebtStatus.FullyPaid
-            : DebtStatus.PartiallyPaid;
-
-        UpdatedOnUtc = DateTime.UtcNow;
-        return applied;
-    }
-
-    internal void ApplyCreditNote(decimal amount)
-    {
-        if (amount <= 0) return;
-
-        RemainingAmount -= amount;
-        if (RemainingAmount < 0)
-            RemainingAmount = 0;
-
-        Status = RemainingAmount <= 0
-            ? DebtStatus.FullyPaid
-            : PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
-
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Giảm công nợ do khách trả hàng — <c>RemainingAmount</c> có thể xuống âm (hoàn tiền mặt xử lý Phase C).
-    /// Idempotent: caller kiểm tra <c>returnId</c> trước khi gọi để tránh áp dụng 2 lần.
-    /// </summary>
-    internal void ApplyReturn(decimal amount, Guid returnId)
-    {
-        if (amount <= 0) return;
-
-        RemainingAmount -= amount;
-        UpdatedOnUtc = DateTime.UtcNow;
-
-        // Nếu về 0 hoặc âm → đánh dấu FullyPaid; số âm xử lý hoàn tiền ở Phase C
-        if (RemainingAmount <= 0)
-            Status = DebtStatus.FullyPaid;
-    }
-
-    /// <summary>
-    /// Đánh dấu phiếu công nợ vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// </summary>
     internal void MarkCreated()
         => RaiseDomainEvent(new CustomerDebtCreated(Id, CustomerId, TotalAmount, DeliveryNoteId, OrderId));
-
-    /// <summary>
-    /// Đánh dấu phiếu công nợ vừa được cập nhật — raise <see cref="CustomerDebtUpdated"/>.
-    /// Nếu sau update <c>Status == FullyPaid</c> thì raise thêm <see cref="CustomerDebtFullyPaid"/>.
-    /// </summary>
-    internal void MarkUpdated()
-    {
-        RaiseDomainEvent(new CustomerDebtUpdated(Id));
-        if (Status == DebtStatus.FullyPaid)
-            RaiseDomainEvent(new CustomerDebtFullyPaid(Id, CustomerId));
-    }
 }
