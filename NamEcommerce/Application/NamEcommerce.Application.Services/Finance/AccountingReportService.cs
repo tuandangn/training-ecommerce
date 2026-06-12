@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 
@@ -182,22 +183,32 @@ public sealed class AccountingReportService : IAccountingReportService
 
         // Credit notes consumed by cash refunds should still count as AR/AP timing
         // differences because their cash impact is tracked separately in refundsOut/vendorRefundsIn.
-        var arEnd = GetNetAccountsReceivable(end) + refundsOut;
-        var arBegin = GetNetAccountsReceivable(start.AddDays(-1));
+        // Opening-balance entries are excluded: they are not period cash flows.
+        var arEnd = GetOperationalAccountsReceivable(end) + refundsOut;
+        var arBegin = GetOperationalAccountsReceivable(start.AddDays(-1));
         var arChange = -(arEnd - arBegin);
 
-        var apEnd = GetNetAccountsPayable(end) - vendorRefundsIn;
-        var apBegin = GetNetAccountsPayable(start.AddDays(-1));
+        var apEnd = GetOperationalAccountsPayable(end) - vendorRefundsIn;
+        var apBegin = GetOperationalAccountsPayable(start.AddDays(-1));
         var apChange = apEnd - apBegin;
 
-        var inventoryIncrease = _costLedger.DataSource
+        var openingReceiptIds = GetOpeningReceiptIds();
+        var openingInventoryInPeriod = openingReceiptIds.Count > 0
+            ? (_costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.GoodsReceipt
+                         && openingReceiptIds.Contains(e.ReferenceId)
+                         && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+                .Sum(e => (decimal?)e.TotalCost) ?? 0)
+            : 0m;
+
+        var inventoryIncrease = (_costLedger.DataSource
             .Where(e => (e.MovementType == InventoryCostMovementType.GoodsReceipt
                       || e.MovementType == InventoryCostMovementType.CustomerReturn
                       || e.MovementType == InventoryCostMovementType.VendorReturnReversal
                       || e.MovementType == InventoryCostMovementType.PositiveAdjustment
                       || e.MovementType == InventoryCostMovementType.TransferIn)
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+            .Sum(e => (decimal?)e.TotalCost) ?? 0) - openingInventoryInPeriod;
 
         var inventoryDecrease = _costLedger.DataSource
             .Where(e => (e.MovementType == InventoryCostMovementType.SaleDispatch
@@ -291,7 +302,26 @@ public sealed class AccountingReportService : IAccountingReportService
         var ap = GetNetAccountsPayable(asOf);
         var vatPayable = GetVatPayable(asOf);
         var citPayable = setup.IsConfigured ? (setup.CorporateTaxProvision ?? 0) : 0;
-        var paidInCapital = setup.IsConfigured ? setup.OpeningEquity : 0;
+
+        // Auto-adjust opening equity for opening-balance items entered separately
+        // (opening inventory, opening customer AR, opening vendor AP) so BalanceSheet stays balanced.
+        var openingReceiptIds = GetOpeningReceiptIds();
+        var openingInventoryCost = openingReceiptIds.Count > 0
+            ? (_costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.GoodsReceipt
+                         && openingReceiptIds.Contains(e.ReferenceId))
+                .Sum(e => (decimal?)e.TotalCost) ?? 0)
+            : 0m;
+        var openingCustomerAR = _customerLedgerEntries.DataSource
+            .Where(e => e.EntryType == CustomerLedgerEntryType.OpeningBalance)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+        var openingVendorAP = _vendorLedgerEntries.DataSource
+            .Where(e => e.EntryType == VendorLedgerEntryType.OpeningBalance)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+
+        var paidInCapital = setup.IsConfigured
+            ? setup.OpeningEquity + openingInventoryCost + openingCustomerAR - openingVendorAP
+            : 0;
         var retainedEarnings = setup.IsConfigured
             ? await ComputeCumulativeNetProfitAsync(setup.AccountingStartDate, asOf).ConfigureAwait(false)
             : 0;
@@ -314,6 +344,32 @@ public sealed class AccountingReportService : IAccountingReportService
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private HashSet<Guid> GetOpeningReceiptIds()
+        => _goodsReceipts.DataSource
+            .Where(gr => gr.SourceType == GoodsReceiptSourceType.OpeningBalance)
+            .Select(gr => gr.Id)
+            .ToHashSet();
+
+    private decimal GetOperationalAccountsPayable(DateTime asOf)
+    {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+        return _vendorLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff && e.EntryType != VendorLedgerEntryType.OpeningBalance)
+            .GroupBy(e => e.VendorId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
+    }
+
+    private decimal GetOperationalAccountsReceivable(DateTime asOf)
+    {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+        return _customerLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff && e.EntryType != CustomerLedgerEntryType.OpeningBalance)
+            .GroupBy(e => e.CustomerId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
+    }
 
     private static decimal SumDepreciationInPeriod(FixedAsset asset, DateTime start, DateTime end)
     {

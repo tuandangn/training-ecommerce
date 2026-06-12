@@ -21,7 +21,7 @@ public sealed class CustomerDebtManager(
     IEntityDataReader<CustomerPayment> paymentReader,
     IRepository<CustomerCreditNote> creditNoteRepository,
     IEntityDataReader<CustomerCreditNote> creditNoteReader,
-    IEntityDataReader<Customer> customerReader,
+    IRepository<Customer> customerRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     ICustomerLedgerManager customerLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
@@ -48,7 +48,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
@@ -87,7 +87,7 @@ public sealed class CustomerDebtManager(
         if (existing != null)
             return MapToDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId, default).ConfigureAwait(false);
         
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
@@ -121,7 +121,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
@@ -229,7 +229,7 @@ public sealed class CustomerDebtManager(
         if (existing is not null)
             return MapToCreditNoteDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(customerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(customerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(customerId);
 
         var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);

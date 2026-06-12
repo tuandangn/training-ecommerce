@@ -22,7 +22,6 @@ public sealed class PreparationAppService(
         var orders = await orderManager.GetOrdersAsync(0, int.MaxValue, null, status).ConfigureAwait(false);
 
         var orderItems = orders.OrderBy(o => o.ExpectedShippingDateUtc).SelectMany(order => order.Items.Select(item => (order, item)));
-        var totalCount = orderItems.Count();
 
         var selectedItems = orderItems.Skip(pageIndex * pageSize).Take(pageSize).ToList();
         var orderItemIds = selectedItems.Select(x => x.item.Id).ToList();
@@ -30,9 +29,13 @@ public sealed class PreparationAppService(
         var deliveryNoteLinks = await deliveryNoteManager.GetDeliveryNoteLinksAsync(orderItemIds).ConfigureAwait(false);
 
         var preparationItems = new List<PreparationItemAppDto>();
+        var totalCount = preparationItems.Count;
 
         foreach (var (order, item) in selectedItems)
         {
+            if (item.IsDelivered)
+                continue;
+
             var links = deliveryNoteLinks.TryGetValue(item.Id, out var dnLinks)
                 ? dnLinks.Select(l => new DeliveryNoteLinkAppDto(l.Id, l.Code, (int)l.Status, l.CreatedOnUtc)).ToList()
                 : [];

@@ -218,6 +218,92 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (!valid)
             return QuickCreatePurchaseOrderResultAppDto.CreateError(errorMessage!);
 
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        if (vendor is null)
+        {
+            return new QuickCreatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.VendorIsNotFound"
+            };
+        }
+
+        var products = await _productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
+        var candidateVendorIds = products.SelectMany(p => p.ProductVendors).Select(v => v.VendorId).Distinct().ToList();
+        var validVendorIds = candidateVendorIds.Where(vendorId => products.All(p => p.ProductVendors.Any(v => v.VendorId == vendorId))).ToList();
+        if (validVendorIds.Count == 0)
+        {
+            return new QuickCreatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrder.NoVendorsAppropriate"
+            };
+        }
+
+        if (!validVendorIds.Contains(dto.VendorId))
+        {
+            return new QuickCreatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrder.VendorIsNotAppropriate"
+            };
+        }
+
+        if (dto.DefaultWarehouseId != Guid.Empty)
+        {
+            var defaultWarehouse = await _warehouseDataReader.GetByIdAsync(dto.DefaultWarehouseId, default).ConfigureAwait(false);
+            if (defaultWarehouse is null)
+            {
+                return new QuickCreatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.WarehouseIsNotFound"
+                };
+            }
+        }
+
+        foreach (var item in dto.Items)
+        {
+            if (item.WarehouseId.HasValue)
+            {
+                var warehouse = await _warehouseDataReader.GetByIdAsync(item.WarehouseId.Value, default).ConfigureAwait(false);
+                if (warehouse is null)
+                {
+                    return new QuickCreatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.WarehouseIsNotFound"
+                    };
+                }
+            }
+
+            var product = products.FirstOrDefault(product => product.Id == item.ProductId);
+            if (product is null)
+            {
+                return new QuickCreatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new QuickCreatePurchaseOrderResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
+        }
+
         var result = await _purchaseOrderManager.QuickCreateAndReceiveAsync(new QuickCreatePurchaseOrderDto
         {
             VendorId = dto.VendorId,

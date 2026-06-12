@@ -19,7 +19,7 @@
         && Model.Status != (int)DeliveryNoteStatus.Delivered
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var canLeaveWarehouse = isDirectShip || isCounterPickup;
-    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
+    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering && canLeaveWarehouse;
     var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null

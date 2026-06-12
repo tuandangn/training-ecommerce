@@ -20,7 +20,7 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IRepository<VendorCreditNote> creditNoteRepository,
     IEntityDataReader<VendorCreditNote> creditNoteReader,
-    IEntityDataReader<Vendor> vendorReader,
+    IRepository<Vendor> vendorRepository,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptReader,
     IVendorLedgerManager vendorLedgerManager,
@@ -48,7 +48,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -88,7 +88,7 @@ public sealed class VendorDebtManager(
         if (existing != null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -135,7 +135,7 @@ public sealed class VendorDebtManager(
         if (existing != null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -177,7 +177,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -225,7 +225,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -331,7 +331,7 @@ public sealed class VendorDebtManager(
         if (existing is not null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(vendorId, default).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(vendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{vendorId}' is not found");
 

@@ -1344,7 +1344,7 @@ body {
 .list-card-meta,
 .list-card-label {
     color: var(--gray-500);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
 }
 
 .list-card-value {

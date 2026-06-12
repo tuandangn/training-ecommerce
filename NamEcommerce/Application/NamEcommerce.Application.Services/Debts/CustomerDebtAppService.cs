@@ -124,20 +124,13 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         if (!valid)
             return new CreateInitialCustomerDebtResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
+        return new CreateInitialCustomerDebtResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
-            return new CreateInitialCustomerDebtResultAppDto
-            {
-                Success = true,
-                Debt = result.ToDto()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new CreateInitialCustomerDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            Debt = result.ToDto()
+        };
     }
     private static CreateInitialCustomerDebtDto MapToDomainDto(CreateInitialCustomerDebtAppDto dto)
         => new()
