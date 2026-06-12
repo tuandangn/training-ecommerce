@@ -9,7 +9,7 @@
         </button>
         <div class="d-flex align-items-center gap-2">
             <div class="btn-group" role="group">
-                <a asp-action="List" asp-route-grouped="false" class="btn btn-light active">
+                <a asp-action="List" asp-route-grouped="false" class="btn btn-outline-secondary active">
                     Theo khách hàng
                 </a>
                 <a asp-action="List" asp-route-grouped="true" class="btn border">
@@ -30,7 +30,7 @@
                         <tr>
                             @if (hasRemainingQuantities)
                             {
-                                <th style="width:40px;" class="text-center">
+                                <th class="text-center ui-w-40">
                                     <input type="checkbox" class="select-all-customers" />
                                 </th>
                             }
@@ -53,7 +53,7 @@
                                 var rowClass = item.IsDelivered ? "table-success opacity-75" : "";
                                 var isOverdue = item.ExpectedShippingDate.HasValue && item.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !item.IsDelivered;
                                 <tr class="@rowClass" id="row-@item.OrderItemId">
-                                    <td class="align-middle text-center" style="width:40px;">
+                                    <td class="align-middle text-center ui-w-40">
                                         @if (item.RemainingQuantity > 0)
                                         {
                                             <input type="checkbox" class="select-prep-item"
@@ -114,10 +114,10 @@
                                             @if (item.DeliveryNoteLinks.Any())
                                             {
                                                 <div class="dropdown">
-                                                    <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
+                                                    <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small ui-fs-075" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                         <i class="bi bi-file-earmark-text me-1"></i>PXK (@item.DeliveryNoteLinks.Count)
                                                     </button>
-                                                    <ul class="dropdown-menu shadow-sm border-0 py-1" style="min-width: 180px;">
+                                                    <ul class="dropdown-menu shadow-sm border-0 py-1 ui-min-w-180">
                                                         @foreach (var link in item.DeliveryNoteLinks)
                                                         {
                                                             var statusTuple = (DeliveryNoteStatus)link.Status switch
@@ -132,7 +132,7 @@
                                                             <li>
                                                                 <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-1 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
                                                                     <span class="small fw-medium">@link.Code</span>
-                                                                    <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                                    <span class="badge bg-@statusTuple.Item1 ui-fs-065">@statusTuple.Item2</span>
                                                                 </a>
                                                             </li>
                                                         }
@@ -292,7 +292,7 @@
                                             <li>
                                                 <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-1 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
                                                     <span class="small fw-medium">@link.Code</span>
-                                                    <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                    <span class="badge bg-@statusTuple.Item1 ui-fs-065">@statusTuple.Item2</span>
                                                 </a>
                                             </li>
                                         }

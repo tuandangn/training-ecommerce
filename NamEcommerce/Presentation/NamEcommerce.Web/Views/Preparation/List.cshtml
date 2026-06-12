@@ -34,7 +34,7 @@
 <!-- Quick Create Purchase Order Modal -->
 <div class="modal fade" id="quickCreatePurchaseOrderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold"><i class="bi bi-cart-plus me-2 text-warning"></i>Tạo đơn nhập hàng nhanh</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -93,7 +93,7 @@
                 </div>
             </div>
             <div class="modal-footer border-top-0 pb-4 px-4">
-                <button type="button" class="btn btn-light px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-warning px-4 rounded-3 shadow-sm fw-bold" id="btnSubmitQuickPO">
                     <i class="bi bi-cart-plus me-2"></i>Tạo đơn nhập
                 </button>
@@ -105,7 +105,7 @@
 <!-- Create Delivery Notes Modal -->
 <div class="modal fade" id="createDeliveryNotesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Tạo phiếu xuất kho</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -155,10 +155,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="background: linear-gradient(145deg, #ffffff 0%, #f1f4f8 100%);">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden preparation-payment-summary-card">
                                 <div class="card-body p-4">
                                     <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
-                                    
+
                                     <div class="payment-breakdown mb-4 p-3 bg-white rounded-3 border border-light shadow-sm">
                                         <div class="d-flex justify-content-between mb-2">
                                             <span class="text-muted small">Tiền hàng:</span>
@@ -189,7 +189,7 @@
                                             <input type="number" class="form-control text-end fw-bold text-primary fs-5 bg-transparent border-0" id="modalAmountToCollect" name="amountToCollect" step="1000" />
                                             <span class="input-group-text bg-transparent border-0 text-primary fw-bold fs-5">đ</span>
                                         </div>
-                                        <div class="small text-primary opacity-75" id="modalCalculationInfo" style="font-size: 0.75rem;">
+                                        <div class="small text-primary opacity-75 ui-fs-075" id="modalCalculationInfo">
                                             <i class="bi bi-info-circle me-1"></i> Tự động tính theo phụ phí
                                         </div>
                                     </div>
@@ -199,7 +199,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top p-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-outline-secondary px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Đóng</button>
                     <button type="submit" class="btn btn-primary px-4 rounded-3 shadow-sm fw-bold" id="btnSubmitDeliveryNotes">
                         <i class="bi bi-check2-circle me-2"></i>Tạo phiếu xuất
                     </button>
@@ -371,7 +371,7 @@
 
                 // Build items table with quantity inputs
                 let itemsHtml = '<div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">';
-                itemsHtml += '<thead><tr><th class="ps-3">Mã đơn</th><th>Sản phẩm</th><th class="text-end">Đã giao/Tổng</th><th class="text-end" style="width: 120px;">Số lượng xuất</th><th class="text-end pe-3">Tồn kho</th></tr></thead><tbody class="border-top-0">';
+                itemsHtml += '<thead><tr><th class="ps-3">Mã đơn</th><th>Sản phẩm</th><th class="text-end">Đã giao/Tổng</th><th class="text-end ui-w-120">Số lượng xuất</th><th class="text-end pe-3">Tồn kho</th></tr></thead><tbody class="border-top-0">';
 
                 Object.keys(orderGroups).forEach(orderId => {
                     itemDetails[orderId].forEach((item, index) => {
@@ -383,7 +383,7 @@
                                     <span class="text-success">${item.deliveredQuantity}</span> / <span class="fw-bold text-dark">${item.quantity}</span>
                                 </td>
                                 <td class="pe-0">
-                                    <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm" 
+                                    <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm"
                                            data-order-id="${orderId}" data-item-id="${item.orderItemId}"
                                            value="${item.remainingQuantity}" min="0" max="${item.remainingQuantity}" step="0.01" />
                                 </td>
@@ -398,7 +398,7 @@
 
                 btnCreate.data('orderGroups', orderGroups);
                 btnCreate.data('itemDetails', itemDetails);
-                
+
                 // Reset financial fields
                 $modalSurcharge.val('');
                 $('#modalSurchargeReason').val('');
@@ -437,12 +437,12 @@
                     const orderIds = Object.keys(orderGroups);
                     let successCount = 0;
                     let errorCount = 0;
-                    
+
                     // We need to divide surcharge among orders if multiple orders are selected (simple division for now)
                     const surchargePerOrder = surchargeTotal / orderIds.length;
-                    
+
                     // Same for Amount To Collect logic? Actually, we should calculate it per order.
-                    // If we have multiple orders, it's safer to just let the user know this modal works best for single order or 
+                    // If we have multiple orders, it's safer to just let the user know this modal works best for single order or
                     // distribute surcharge. For now, we distribute.
 
                     for (const orderId of orderIds) {
@@ -454,12 +454,12 @@
                                 const itemId = $(this).data('item-id');
                                 const itemDetails = btnCreate.data('itemDetails');
                                 const item = itemDetails[orderId].find(i => i.orderItemId === itemId);
-                                
+
                                 selectedItems.push({
                                     orderItemId: itemId,
                                     quantity: qty
                                 });
-                                
+
                                 if (item && item.unitPrice) {
                                     orderItemsTotal += qty * item.unitPrice;
                                 }
@@ -635,4 +635,3 @@
         })();
     </script>
 }
-

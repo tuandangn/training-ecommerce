@@ -16,9 +16,9 @@
         </div>
     </div>
     <div class="d-flex align-items-center gap-1">
-        <input type="date" asp-for="FromDate" class="form-control form-control-sm" style="width:150px;" title="Từ ngày" placeholder="Từ ngày" />
+        <input type="date" asp-for="FromDate" class="form-control form-control-sm ui-w-150" title="Từ ngày" placeholder="Từ ngày" />
         <span class="text-muted small px-1">—</span>
-        <input type="date" asp-for="ToDate" class="form-control form-control-sm" style="width:150px;" title="Đến ngày" placeholder="Đến ngày" />
+        <input type="date" asp-for="ToDate" class="form-control form-control-sm ui-w-150" title="Đến ngày" placeholder="Đến ngày" />
         @if (Model.FromDate.HasValue || Model.ToDate.HasValue)
         {
             <a asp-action="List" asp-route-keywords="@Model.Keywords" class="btn btn-sm btn-outline-secondary" title="Xóa lọc ngày">

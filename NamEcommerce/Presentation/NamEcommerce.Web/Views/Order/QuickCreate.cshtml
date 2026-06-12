@@ -20,97 +20,7 @@
 }
 
 @section Styles {
-    <style>
-        .fast-sale-grid {
-            display: grid;
-            grid-template-columns: minmax(280px, .85fr) minmax(420px, 1.35fr) minmax(300px, .9fr);
-            gap: 1rem;
-            align-items: start;
-        }
-
-        .fast-sale-total {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: .3rem 0;
-            border-top: 1px solid var(--gray-200);
-        }
-
-            .fast-sale-total strong {
-                font-size: 1.35rem;
-                color: var(--gray-900);
-            }
-
-        .fast-sale-payment-methods {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .5rem;
-        }
-
-        .fast-sale-option-group {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .5rem;
-        }
-
-            .fast-sale-option-group .btn {
-                min-height: 2.75rem;
-            }
-
-            .fast-sale-option-group .btn-primary.active {
-                background: var(--primary);
-                color: #fff;
-                border-color: var(--primary);
-            }
-
-        .fast-sale-payment-methods .btn {
-            min-height: 2.75rem;
-        }
-
-        .fast-sale-payment-methods .btn-primary.active {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-        }
-
-        .fast-sale-qr {
-            /*display: none;
-                                                                 border: 1px solid var(--gray-200);
-                                                                                            border-radius: .5rem;
-                                                                                 */ padding: .75rem;
-            background: var(--gray-50);
-        }
-
-            .fast-sale-qr.visible {
-                display: block;
-            }
-
-            .fast-sale-qr img {
-                width: min(100%, 260px);
-                aspect-ratio: 1;
-                object-fit: contain;
-                display: block;
-                margin: 0 auto .75rem;
-                background: #fff;
-                border: 1px solid var(--gray-200);
-                border-radius: .5rem;
-            }
-
-        .fast-sale-alert {
-            display: none;
-        }
-
-            .fast-sale-alert.visible {
-                display: block;
-            }
-
-        @@media (max-width: 1200px) {
-            .fast-sale-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
 }
 
 <div id="fastSaleApp"
@@ -170,7 +80,7 @@
                         </div>
                         <div class="content-card-header">
                             <h5>Danh sách hàng hóa</h5>
-                            <button type="button" class="btn btn-sm btn-light d-none" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
+                            <button type="button" class="btn btn-sm btn-outline-danger d-none" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
                                 Xóa danh sách
                             </button>
                         </div>
@@ -325,7 +235,7 @@
 
 <div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Thêm khách hàng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -362,7 +272,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> Thêm khách hàng
                     </button>

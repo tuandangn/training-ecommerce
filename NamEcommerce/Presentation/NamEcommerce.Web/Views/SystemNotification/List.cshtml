@@ -141,7 +141,7 @@
                         <th class="text-center">Mức độ</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="d-none d-lg-table-cell">Thời gian</th>
-                        <th style="width: 150px;"></th>
+                        <th class="ui-w-150"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -184,7 +184,7 @@
                                     <div class="d-flex justify-content-end gap-2">
                                         @if (!string.IsNullOrWhiteSpace(item.ActionUrl))
                                         {
-                                            <a asp-action="Open" asp-route-id="@item.Id" asp-route-actionUrl="@item.ActionUrl" class="btn btn-sm btn-light" title="Mở">
+                                            <a asp-action="Open" asp-route-id="@item.Id" asp-route-actionUrl="@item.ActionUrl" class="btn btn-sm btn-outline-secondary" title="Mở">
                                                 <i class="bi bi-box-arrow-up-right text-primary"></i>
                                             </a>
                                         }
@@ -192,7 +192,7 @@
                                         {
                                             <form asp-action="MarkRead" method="post">
                                                 <input type="hidden" name="id" value="@item.Id" />
-                                                <button type="submit" class="btn btn-sm btn-light" title="Đánh dấu đã đọc">
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Đánh dấu đã đọc">
                                                     <i class="bi bi-check2 text-success"></i>
                                                 </button>
                                             </form>

@@ -1,0 +1,162 @@
+/* Extracted from Views/GoodsReceipt\Details.cshtml during UI design-system cleanup. */
+.goodsreceipt-modal-content {
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--ui-shadow-lg);
+}
+
+/* ── Receipt info DL ── */
+        .receipt-info-list {
+            margin: 0;
+        }
+
+        .receipt-info-row {
+            display: flex;
+            align-items: baseline;
+            padding: .6rem 1.25rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            gap: .75rem;
+        }
+
+            .receipt-info-row:last-child {
+                border-bottom: none;
+            }
+
+            .receipt-info-row dt {
+                font-size: .75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+                color: var(--bs-secondary);
+                width: 72px;
+                flex-shrink: 0;
+            }
+
+            .receipt-info-row dd {
+                margin: 0;
+                font-size: .875rem;
+            }
+
+        /* ── Product links ── */
+        .details-product-link:hover {
+            color: var(--bs-primary) !important;
+            text-decoration: underline !important;
+        }
+
+        /* ── PO Suggestion rows ── */
+        .po-suggestion-row {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .6rem 1rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+        }
+
+            .po-suggestion-row:last-child {
+                border-bottom: none;
+            }
+
+        .po-score-bar {
+            height: 5px;
+            flex: 1;
+            border-radius: 3px;
+            background: var(--bs-border-color);
+            overflow: hidden;
+            min-width: 40px;
+        }
+
+        .po-score-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .3s;
+        }
+
+        .po-score-full {
+            background: var(--bs-success);
+        }
+
+        .po-score-partial {
+            background: var(--bs-warning);
+        }
+
+        /* ── Picture picker ── */
+        .picture-upload-slot {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .picture-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 100px;
+            border: 2px dashed var(--bs-border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            background: #f8f9fa;
+            transition: border-color .15s, background .15s;
+            font-size: .7rem;
+            color: var(--bs-secondary);
+            gap: 3px;
+        }
+
+            .picture-upload-label:hover, .picture-upload-label.drag-over {
+                border-color: var(--bs-primary);
+                background: #eef3ff;
+                color: var(--bs-primary);
+            }
+
+        .picture-upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            pointer-events: none;
+        }
+
+        .picture-thumbnail-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-right: .5rem;
+            flex-shrink: 0;
+        }
+
+        .picture-thumbnail-img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--bs-border-color);
+            display: block;
+        }
+
+        .btn-remove-picture {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,.55);
+            color: #fff;
+            font-size: .6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            transition: background .15s;
+        }
+
+            .btn-remove-picture:hover {
+                background: var(--bs-danger);
+            }

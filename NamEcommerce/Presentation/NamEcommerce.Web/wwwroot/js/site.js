@@ -26,6 +26,13 @@ $(function () {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
+
+    document.querySelectorAll('[data-progress-width]').forEach(function (el) {
+        const width = el.dataset.progressWidth;
+        if (!width)
+            return;
+        el.style.width = width.endsWith('%') ? width : `${width}%`;
+    });
 })
 
 function showPageLoading() {

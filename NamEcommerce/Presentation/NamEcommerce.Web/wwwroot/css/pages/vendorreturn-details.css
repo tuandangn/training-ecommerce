@@ -1,0 +1,26 @@
+/* Extracted from Views/VendorReturn\Details.cshtml during UI design-system cleanup. */
+.vendorreturn-modal-content {
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--ui-shadow-lg);
+}
+
+.receipt-info-list { margin: 0; }
+    .receipt-info-row {
+        display: flex;
+        align-items: baseline;
+        padding: .6rem 1.25rem;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+        gap: .75rem;
+    }
+    .receipt-info-row:last-child { border-bottom: none; }
+    .receipt-info-row dt {
+        font-size: .75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--bs-secondary);
+        width: 72px;
+        flex-shrink: 0;
+    }
+    .receipt-info-row dd { margin: 0; font-size: .875rem; }

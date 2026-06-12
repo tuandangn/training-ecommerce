@@ -12,7 +12,7 @@
                 <div class="text-muted small">Chi phí phát sinh, công nợ, giá vốn, trả hàng và lãi lỗ</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
                     <i class="bi bi-plus-lg me-1"></i>Thêm chi phí
                 </button>
                 @if (Model.CanCompleteOrder)
@@ -254,7 +254,7 @@
 
     <div class="modal fade" id="orderExpenseModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Thêm chi phí phát sinh</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -294,7 +294,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>Lưu lại
                         </button>

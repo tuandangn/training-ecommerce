@@ -193,7 +193,7 @@ export default class GoodsReceiptCreateController {
         const tbody = document.getElementById('itemsTableBody');
         const msg = document.getElementById('noItemsMessage');
         if (!tbody || !msg) return;
-        msg.style.display = tbody.querySelectorAll('tr').length > 0 ? 'none' : 'block';
+        msg.classList.toggle('d-none', tbody.querySelectorAll('tr').length > 0);
     }
 
     #reindexTableRows() {

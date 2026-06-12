@@ -19,7 +19,7 @@
 }
 
 <form method="get" class="d-flex align-items-center gap-2 mb-3 no-print">
-    <input type="date" name="asOf" class="form-control form-control-sm" style="width:160px"
+    <input type="date" name="asOf" class="form-control form-control-sm ui-w-160"
            value="@asOf.ToString("yyyy-MM-dd")" />
     <button type="submit" class="btn btn-sm btn-primary">Xem</button>
     <a asp-action="ExportBalanceSheetExcel" asp-route-asOf="@asOf.ToString("yyyy-MM-dd")"

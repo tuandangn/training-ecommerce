@@ -8,7 +8,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="Index" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">Yêu cầu đặt hàng từ portal</h1>
             <p class="page-header-subtitle">Khách chỉ tạo yêu cầu; admin duyệt trước khi xử lý thành đơn nội bộ</p>
@@ -47,7 +47,7 @@
                     <td class="text-center"><span class="badge @requestStatus.GetDisplayColor()">@requestStatus.GetDisplayText()</span></td>
                     <td class="text-center text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
                     <td class="text-end pe-3">
-                        <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                        <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
                     </td>
                 </tr>
             }

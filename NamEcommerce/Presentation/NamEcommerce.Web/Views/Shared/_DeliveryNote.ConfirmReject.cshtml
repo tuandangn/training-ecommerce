@@ -1,4 +1,4 @@
-﻿@model EntityOptionListModel
+@model EntityOptionListModel
 <div class="modal fade" id="rejectDeliveryNoteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -26,7 +26,7 @@
                             <thead>
                                 <tr>
                                     <th>Hàng hóa</th>
-                                    <th class="text-end pe-3" style="width: 110px;">Số lượng</th>
+                                    <th class="text-end pe-3 ui-w-110">Số lượng</th>
                                 </tr>
                             </thead>
                             <tbody id="rejectTableBody"></tbody>
@@ -51,7 +51,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-danger" id="btnRejectSubmit">
                         <i class="bi bi-x-lg me-1"></i>Xác nhận từ chối
                     </button>

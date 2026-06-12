@@ -1,0 +1,50 @@
+/* Extracted from Views/PurchaseOrder\Details.cshtml during UI design-system cleanup. */
+.purchaseorder-modal-content {
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--ui-shadow-lg);
+}
+
+.po-items-popover-content .popover-body {
+                    padding: 0.5rem 0.75rem;
+                }
+
+                .po-items-list {
+                    min-width: 240px;
+                }
+
+                .po-items-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.25rem 0;
+                    font-size: 0.85rem;
+                }
+
+                    .po-items-row + .po-items-row {
+                        border-top: 1px dashed var(--bs-border-color, #dee2e6);
+                    }
+
+                .po-items-name {
+                    flex: 1;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 280px;
+                }
+
+                .po-items-qty {
+                    font-variant-numeric: tabular-nums;
+                    font-weight: 500;
+                }
+
+                /* Tinh chỉnh cards related documents */
+                .content-card.h-100 {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                    .content-card.h-100 > .table-responsive {
+                        flex: 1;
+                    }

@@ -125,9 +125,9 @@
                                                 <table class="table data-table mb-0">
                                                     <thead>
                                                         <tr>
-                                                            <th class="ps-3" style="width:40%">Kho hàng</th>
-                                                            <th class="text-end" style="width:25%">Số lượng ban đầu</th>
-                                                            <th class="text-end pe-3" style="width:35%">Giá vốn đơn vị (đ) <span class="text-danger">*</span></th>
+                                                            <th class="ps-3 ui-w-40p">Kho hàng</th>
+                                                            <th class="text-end ui-w-25p">Số lượng ban đầu</th>
+                                                            <th class="text-end pe-3 ui-w-35">Giá vốn đơn vị (đ) <span class="text-danger">*</span></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -140,7 +140,7 @@
                                                                     <span class="fw-medium">@stock.WarehouseName</span>
                                                                     <span asp-validation-for="ProductInventory.ProductStocks[@i].WarehouseId" class="text-danger small"></span>
                                                                 </td>
-                                                                <td class="text-end" style="max-width:150px;">
+                                                                <td class="text-end ui-max-w-150">
                                                                     @{ var initDp = Model.UnitMeasurementId.HasValue && Model.UnitMeasurementDecimalPlacesMap.TryGetValue(Model.UnitMeasurementId.Value.ToString(), out var initDpVal) ? initDpVal : 0; }
                                                                     <input name="ProductInventory.ProductStocks[@i].Quantity"
                                                                            value="@stock.Quantity.DisplayQuantity()" data-decimal="quantity" data-decimals="@initDp"
@@ -150,7 +150,7 @@
                                                                            data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                                                     <span asp-validation-for="ProductInventory.ProductStocks[@i].Quantity" class="text-danger small"></span>
                                                                 </td>
-                                                                <td class="text-end pe-3" style="max-width:180px;">
+                                                                <td class="text-end pe-3 ui-max-w-180">
                                                                     <input name="ProductInventory.ProductStocks[@i].UnitCost"
                                                                            value="@(stock.UnitCost > 0 ? stock.UnitCost.DisplayCurrency() : "0")"
                                                                            data-decimal="currency"
@@ -209,7 +209,7 @@
                 </div>
             </div>
             <div class="content-card-footer d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
                     <i class="bi bi-arrow-left"></i>
                     Trở về
                 </a>
@@ -311,7 +311,7 @@
 <!-- Modal xác nhận tồn kho đầu kỳ -->
 <div class="modal fade" id="confirmOpeningModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Xác nhận tồn kho đầu kỳ</h5>
             </div>

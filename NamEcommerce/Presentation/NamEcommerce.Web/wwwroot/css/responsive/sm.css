@@ -1,0 +1,180 @@
+/* Bootstrap sm boundary: rules for viewports below 576px. */
+@media (max-width: 575.98px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .page-header .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .page-header-title {
+        font-size: 1.5rem;
+    }
+
+    .page-header-subtitle {
+        font-size: 0.925rem;
+    }
+
+    .content-card {
+        border-radius: 0.875rem;
+    }
+
+    .action-toolbar {
+        align-items: stretch;
+        gap: 0.625rem;
+        padding: 0.875rem;
+    }
+
+    .action-toolbar .search-group {
+        width: 100%;
+        flex-basis: 100%;
+    }
+
+    .action-toolbar .search-input-group {
+        max-width: 100%;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .action-toolbar .search-group form,
+    .action-toolbar .search-group .input-group {
+        width: 100%;
+    }
+
+    .action-toolbar > .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .responsive-list-toolbar {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .responsive-list-toggle {
+        flex: 1;
+        height: 2.35rem;
+    }
+
+    .responsive-list-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .list-card {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        box-shadow: none;
+    }
+
+    .list-card:hover {
+        transform: none;
+    }
+
+    .list-card-value {
+        max-width: 58%;
+    }
+
+    .list-card-actions,
+    .list-card-action-menu {
+        justify-content: stretch;
+    }
+
+    .list-card-actions .btn,
+    .list-card-actions .btn-table-action {
+        flex: 1 1 auto;
+    }
+
+    .list-card-actions .dropdown,
+    .list-card-actions .dropdown > .btn {
+        width: 100%;
+    }
+
+    .pager-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .form-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-card-title {
+        line-height: 1.35;
+    }
+
+    .form-card-breadcrumb {
+        font-size: 0.86rem;
+    }
+
+    .form-card .tab-content {
+        padding-right: 0.25rem !important;
+        padding-left: 0.25rem !important;
+    }
+
+    .form-card-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 0.625rem;
+        padding: 0.875rem;
+    }
+
+    .form-card-footer .btn {
+        width: 100%;
+    }
+
+    .product-vendor-option {
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+
+    .order-summary-row {
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .order-summary-row .label {
+        text-align: center;
+    }
+
+    .ui-page-header {
+        flex-direction: column;
+    }
+
+    .ui-page-header__actions,
+    .ui-filter-toolbar__actions {
+        width: 100%;
+    }
+
+    .ui-page-header__actions .btn,
+    .ui-filter-toolbar__actions .btn,
+    .ui-filter-toolbar__actions a {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .order-detail-actions {
+        justify-content: stretch;
+    }
+
+    .order-detail-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .order-workflow-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-step {
+        min-height: 4rem;
+        border-right: 0;
+    }
+}

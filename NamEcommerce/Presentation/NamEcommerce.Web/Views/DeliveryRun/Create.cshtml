@@ -46,7 +46,7 @@
                             <table class="table data-table align-middle">
                                 <thead>
                                     <tr>
-                                        <th class="ps-4" style="width: 48px;"></th>
+                                        <th class="ps-4 ui-w-48"></th>
                                         <th>Mã phiếu</th>
                                         <th>Khách hàng</th>
                                         <th>Hàng giao</th>
@@ -75,11 +75,11 @@
                                             </td>
                                             <td class="fw-medium">@note.CustomerName</td>
                                             <td>
-                                                <div class="fw-medium text-truncate" style="max-width: 220px;" title="@note.ProductSummary">@note.ProductSummary</div>
+                                                <div class="fw-medium text-truncate ui-max-w-220" title="@note.ProductSummary">@note.ProductSummary</div>
                                                 <div class="text-muted small">Tổng SL: @note.TotalQuantity.ToString("#,##0.##")</div>
                                             </td>
                                             <td>
-                                                <span class="d-inline-block text-truncate" style="max-width: 260px;" title="@note.ShippingAddress">@note.ShippingAddress</span>
+                                                <span class="d-inline-block text-truncate ui-max-w-260" title="@note.ShippingAddress">@note.ShippingAddress</span>
                                             </td>
                                             <td>
                                                 @if (string.IsNullOrWhiteSpace(note.AssignedDeliveryFullName))

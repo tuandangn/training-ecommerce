@@ -57,6 +57,12 @@ try/catch is acceptable only for external I/O (HTTP, file system, DB) or when ca
 ## Design
 Khi làm việc với UI/UX hãy áp dụng Hệ màu/Font từ DESIGN.md kết hợp với Tư duy bố cục và Kỷ luật chống slop của SKILL.md.
 
+UI workflow:
+- Prefer shared partials in `NamEcommerce.Web/Views/Shared/Components/` for page headers, filters, tables, status, forms, empty states, and confirm modals.
+- Do not add new Razor `<style>` blocks or inline `style=""`; move reusable CSS to `theme.css`, `components.css`, `site.css`, `responsive/{breakpoint}.css`, or a page CSS file.
+- Run `dotnet build NamEcommerce/Presentation/NamEcommerce.Web/NamEcommerce.Web.csproj` and `powershell -ExecutionPolicy Bypass -File tools/ui-lint.ps1` for UI changes.
+- When Playwright CLI is installed, capture UI proof with `powershell -ExecutionPolicy Bypass -File tools/ui-screenshot.ps1 -Urls /design`.
+
 ---
 
 ## Quick rules (ONLY for simple tash)

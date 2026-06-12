@@ -6,6 +6,10 @@
     var query = Model.Keywords;
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/debt.css" asp-append-version="true" />
+}
+
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Công nợ khách hàng</h1>
@@ -25,7 +29,7 @@
                     <th class="ps-4">Khách hàng</th>
                     <th class="text-end">Số dư công nợ</th>
                     <th class="text-end">Giao dịch cuối</th>
-                    <th style="width: 80px;"></th>
+                    <th class="ui-w-80"></th>
                 </tr>
             </thead>
             <tbody>

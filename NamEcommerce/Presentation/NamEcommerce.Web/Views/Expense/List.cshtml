@@ -87,8 +87,8 @@
                                 }
                             </small>
                         </div>
-                        <div class="progress" style="height:5px;">
-                            <div class="progress-bar @barClass" style="width:@pct%"></div>
+                        <div class="progress ui-h-5">
+                            <div class="progress-bar @barClass" data-progress-width="@pct"></div>
                         </div>
                     </div>
                 }
@@ -151,7 +151,7 @@
             <table class="table data-table">
                 <thead>
                     <tr>
-                        <th class="ps-4" style="width:120px;">
+                        <th class="ps-4 ui-w-120">
                             <a href="@SortLink("date")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
                                 Ngày <i class="@SortIcon("date")"></i>
                             </a>
@@ -171,7 +171,7 @@
                                 Số tiền <i class="@SortIcon("amount")"></i>
                             </a>
                         </th>
-                        <th style="width: 100px;"></th>
+                        <th class="ui-w-100"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -186,7 +186,7 @@
                                         @item.Title
                                         @if (item.IsSystemGenerated)
                                         {
-                                            <span class="badge bg-light text-secondary border ms-1" style="font-size:0.65rem;">Hệ thống</span>
+                                            <span class="badge bg-light text-secondary border ms-1 ui-fs-065">Hệ thống</span>
                                         }
                                     </div>
                                     @if (!string.IsNullOrEmpty(item.Description))
@@ -262,7 +262,7 @@
                                 @item.Title
                                 @if (item.IsSystemGenerated)
                                 {
-                                    <span class="badge bg-light text-secondary border ms-1" style="font-size:0.65rem;">Hệ thống</span>
+                                    <span class="badge bg-light text-secondary border ms-1 ui-fs-065">Hệ thống</span>
                                 }
                             </div>
                             <div class="list-card-meta">@item.IncurredDate.ToString("dd/MM/yyyy")</div>

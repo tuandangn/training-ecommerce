@@ -133,7 +133,7 @@
         {
             <div class="content-card p-4 mt-4">
                 <h6 class="fw-bold mb-3">Ước tính thuế TNDN kỳ này (TK 821)</h6>
-                <div class="input-group" style="max-width:300px">
+                <div class="input-group ui-max-w-300">
                     <input type="number" id="provisionInput" class="form-control"
                            value="@Model.CorporateTaxProvision" placeholder="0" min="0" step="1000" />
                     <button class="btn btn-outline-primary" id="btnUpdateProvision">Cập nhật</button>
@@ -146,7 +146,7 @@
 
 @if (Model.IsConfigured && !Model.IsFinalized)
 {
-    <form id="finalizeForm" asp-action="Finalize" method="post" style="display:none">
+    <form class="d-none" id="finalizeForm" asp-action="Finalize" method="post">
     </form>
 
     @section Scripts {

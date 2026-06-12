@@ -60,14 +60,16 @@ Cách map: 1 file `theme.css` override Bootstrap tokens:
 ## Phase 0 — Theme nền (1-2 ngày, hiệu ứng toàn cục ngay)
 
 - `wwwroot/css/theme.css`: map token DESIGN.md → Bootstrap variables (mẫu ở mục 2) + font Inter (self-host woff2, không CDN) + shadow/border-radius 2 cấp.
+- Tách responsive CSS thành các file riêng theo Bootstrap breakpoint boundaries trong `wwwroot/css/responsive/`: `sm.css` (`576px`), `md.css` (`768px`), `lg.css` (`992px`), `xl.css` (`1200px`), `xxl.css` (`1400px`). Mỗi file có thể chứa rule `min-width` hoặc `max-width` quanh boundary đó khi cần. Chỉ đặt responsive rule dùng chung ở đây; responsive riêng của module vẫn đi theo `pages/{module}.css` nếu không tái sử dụng.
 - Load sau bootstrap.min.css trong `_Styles.cshtml`.
 - Viết lại `DESIGN.md` → phiên bản Bootstrap: hệ màu (giữ nguyên hex), quy tắc nút (xem Phase 1), spacing theo Bootstrap utilities (`p-2/3/4`, `gap-2/3`), cấm hex màu mới ngoài token.
 - Chụp 6 màn chính trước/sau làm baseline.
 
 ### TodoList 0
-- [ ] theme.css + font + load order
-- [ ] DESIGN.md viết lại cho Bootstrap
-- [ ] Screenshot baseline 6 màn (FastSale, Order list/details, CustomerDebt, DeliveryNote details, Inventory list)
+- [x] theme.css + font + load order
+- [x] Responsive CSS tách theo Bootstrap breakpoints (`sm/md/lg/xl/xxl`)
+- [x] DESIGN.md viết lại cho Bootstrap
+- [x] Screenshot baseline 6 màn (FastSale, Order list/details, CustomerDebt, DeliveryNote details, Inventory list)
 
 ## Phase 1 — Bộ component nội bộ + trang /design
 
@@ -88,9 +90,9 @@ Partials/ViewComponents mới trong `Views/Shared/Components/` (tận dụng pat
 - Trang `/design` (controller DesignController, env Development only): render mọi component + bảng màu + typography — vừa là tài liệu sống, vừa là nơi agent đối chiếu.
 
 ### TodoList 1
-- [ ] 8 components + CSS module riêng (`components.css`)
-- [ ] Trang /design
-- [ ] Quy tắc nút + component vào DESIGN.md
+- [x] 8 components + CSS module riêng (`components.css`)
+- [x] Trang /design
+- [x] Quy tắc nút + component vào DESIGN.md
 
 ## Phase 2 — Migrate màn hình ưu tiên (cuốn chiếu, mỗi đợt 1 PR)
 
@@ -100,11 +102,19 @@ Partials/ViewComponents mới trong `Views/Shared/Components/` (tận dụng pat
 Đợt 4: **Inventory + PurchaseOrder + Returns**.
 Đợt 5: phần còn lại (Catalog, Users, Settings...).
 
-Mỗi màn khi migrate: thay layout tự chế bằng components; gỡ `<style>` block (CSS thực sự cần giữ → chuyển vào `components.css` hoặc `pages/{module}.css`); gỡ inline style; rà bố cục controls theo checklist Phase 3; chụp trước/sau đính vào PR.
+Mỗi màn khi migrate: thay layout tự chế bằng components; gỡ `<style>` block (CSS thực sự cần giữ → chuyển vào `components.css`, `pages/{module}.css`, hoặc `wwwroot/css/responsive/{breakpoint}.css` nếu là responsive rule dùng chung theo Bootstrap breakpoint); gỡ inline style; rà bố cục controls theo checklist Phase 3; chụp trước/sau đính vào PR.
 
 ### TodoList 2
-- [ ] Đợt 1 → 5 (mỗi đợt: migrate + screenshot + smoke test tay)
-- [ ] Đếm lại metric: `<style>` views còn 0, inline style còn < 35
+- [x] Slice 1: Order List CSS/action cleanup, giảm baseline `<style>`/`style=""`
+- [x] Slice 2: Order QuickCreate CSS/action cleanup, giảm baseline `<style>`
+- [x] Slice 3: Order Create CSS/action cleanup, giảm baseline `style=""`
+- [x] Slice 4: Order Details/workflow/offcanvas CSS/action cleanup, giảm baseline `style=""`
+- [x] Đợt 1: FastSale + Order list/details/create (migrate + screenshot + smoke test tay)
+- [x] Đợt 2: CustomerDebt/VendorDebt list/details (migrate + screenshot + smoke test tay)
+- [x] Đợt 3: DeliveryNote/GoodsReceipt list/details/create (migrate + screenshot + smoke test tay)
+- [x] Đợt 4: Inventory/PurchaseOrder/Returns (migrate + screenshot + smoke test tay)
+- [x] Đợt 5: phần còn lại (static cleanup + screenshot + smoke test tay)
+- [x] Đếm lại metric: `<style>` views còn 0, inline style còn 0
 
 ## Phase 3 — Checklist UX bố cục controls (áp khi migrate từng màn)
 
@@ -126,9 +136,10 @@ Checklist nghiệm thu per màn (đưa vào DESIGN.md, reviewer + agent đối c
 - **CLAUDE.md cập nhật:** mục Design trỏ tới DESIGN.md mới + quy tắc "chỉ dùng components Shared, cấm <style> trong view, cấm hex ngoài token, cấm inline style".
 
 ### TodoList 4
-- [ ] Playwright screenshot script + hướng dẫn 1 lệnh
-- [ ] ui-lint + baseline + gắn vào quy trình build
-- [ ] CLAUDE.md + DESIGN.md chốt quy trình
+- [x] Playwright screenshot script + hướng dẫn 1 lệnh (requires local Playwright CLI)
+- [x] ui-lint + baseline
+- [x] Gắn ui-lint vào quy trình build/CI
+- [x] AGENTS.md + DESIGN.md chốt quy trình
 
 ---
 
@@ -146,6 +157,6 @@ Phase 0 (1-2 ngày, thấy ngay khác biệt toàn hệ thống)
 ## Verification Plan
 
 - Build Web project sau mỗi đợt: `dotnet build NamEcommerce/Presentation/NamEcommerce.Web/NamEcommerce.Web.csproj`
-- Metric kiểm đếm sau mỗi đợt (grep count: `<style`, `style="`, biến thể btn) — ghi vào implement doc
+- Metric kiểm đếm sau mỗi đợt (grep count: `<style`, `style="`, biến thể btn, responsive rule còn nằm sai chỗ) — ghi vào implement doc
 - So screenshot trước/sau từng đợt; anh duyệt trên ảnh, không duyệt trên mô tả
 - Trang /design review tổng thể sau Phase 1

@@ -7,7 +7,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="Index" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">Sự kiện bảo mật</h1>
             <p class="page-header-subtitle">Theo dõi OTP, đăng nhập, khóa tài khoản và các thao tác bị chặn</p>
@@ -40,7 +40,7 @@
                     <td class="fw-medium">@item.EventType</td>
                     <td class="text-center"><span class="badge @outcome.GetDisplayColor()">@outcome.GetDisplayText()</span></td>
                     <td class="text-muted small">@item.IpAddress</td>
-                    <td class="text-muted small text-truncate" style="max-width:260px">@item.MetadataJson</td>
+                    <td class="text-muted small text-truncate ui-max-w-260">@item.MetadataJson</td>
                 </tr>
             }
             @if (!Model.Any())

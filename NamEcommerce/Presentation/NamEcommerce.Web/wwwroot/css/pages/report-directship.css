@@ -1,0 +1,26 @@
+/* Extracted from Views/Report\DirectShip.cshtml during UI design-system cleanup. */
+.ds-header {
+            background: linear-gradient(135deg, #0f4c75 0%, #1b6ca8 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+        .nav-tabs .nav-link { color: #6c757d; font-weight: 500; }
+        .nav-tabs .nav-link.active { color: #0f4c75; border-bottom: 3px solid #0f4c75; font-weight: 700; }
+        .alert-pending { animation: pulse 2s infinite; }
+        @@keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.7; } }

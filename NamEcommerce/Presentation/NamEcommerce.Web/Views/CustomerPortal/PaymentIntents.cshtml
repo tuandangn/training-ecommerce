@@ -8,7 +8,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="Index" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">Thanh toán online từ portal</h1>
             <p class="page-header-subtitle">Mock payment thành công chỉ ghi nhận sau khi admin đối soát</p>
@@ -49,7 +49,7 @@
                     <td class="text-center"><span class="badge @paymentStatus.GetDisplayColor()">@paymentStatus.GetDisplayText()</span></td>
                     <td class="text-center text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
                     <td class="text-end pe-3">
-                        <a asp-action="PaymentIntentDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                        <a asp-action="PaymentIntentDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
                     </td>
                 </tr>
             }

@@ -18,39 +18,6 @@
      data-search-url="@Url.Action("Search", "Vendor")"
      data-item-url="@Url.Action("PickItem", "Vendor")"
      data-placeholder="@(ViewData["placeholder"]?.ToString() ?? "Tìm nhà cung cấp theo tên, SĐT...")"></div>
-
-<style>
-    #@pickerId {
-        position: relative;
-    }
-
-    #@pickerId .vendor-picker-menu {
-        z-index: 1050;
-        max-height: 320px;
-        overflow-y: auto;
-    }
-
-    #@pickerId .vendor-picker-selected {
-        min-height: 58px;
-    }
-
-    #@pickerId .vendor-picker-icon {
-        width: 42px;
-        height: 42px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        background: var(--bs-success-bg-subtle, #d1e7dd);
-        color: var(--bs-success, #198754);
-        flex: 0 0 auto;
-    }
-
-    .vendor-picker-source.input-validation-error + #@pickerId .vendor-picker-control {
-        border-color: var(--bs-danger, #dc3545);
-    }
-</style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const source = document.getElementById(@Html.Raw(JsonSerializer.Serialize(fieldId)));
@@ -69,7 +36,7 @@
                 <div class="d-flex align-items-center gap-3">
                     <span class="vendor-picker-icon"><i class="bi bi-building"></i></span>
                     <div class="flex-grow-1 overflow-hidden vendor-picker-selected-text"></div>
-                    <button type="button" class="btn btn-light btn-sm vendor-picker-clear" title="Xóa nhà cung cấp">
+                    <button type="button" class="btn btn-outline-secondary btn-sm vendor-picker-clear" title="Xóa nhà cung cấp">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>

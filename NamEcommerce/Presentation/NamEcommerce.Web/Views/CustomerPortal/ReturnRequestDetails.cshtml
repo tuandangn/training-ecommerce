@@ -13,7 +13,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="ReturnRequests" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="ReturnRequests" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">Yêu cầu trả hàng</h1>
             <p class="page-header-subtitle">@Model.CustomerName · Phiếu giao @Model.DeliveryNoteCode</p>
@@ -54,7 +54,7 @@
                                             if (!string.IsNullOrWhiteSpace(picture.PictureUrl))
                                             {
                                                 <a href="@picture.PictureUrl" target="_blank" rel="noopener" class="d-inline-block border rounded overflow-hidden" title="@picture.FileName">
-                                                    <img src="@picture.PictureUrl" alt="Ảnh hiện trạng @item.ProductName" style="width: 88px; height: 88px; object-fit: cover;" />
+                                                    <img class="ui-size-88 object-fit-cover" src="@picture.PictureUrl" alt="Ảnh hiện trạng @item.ProductName" />
                                                 </a>
                                             }
                                         }
@@ -128,9 +128,9 @@
                             <thead>
                                 <tr>
                                     <th>Hàng hóa</th>
-                                    <th class="text-end" style="width:92px">Khách yêu cầu</th>
-                                    <th class="text-end" style="width:120px">Thực nhận</th>
-                                    <th class="text-end" style="width:120px">Đơn giá hoàn</th>
+                                    <th class="text-end ui-w-92">Khách yêu cầu</th>
+                                    <th class="text-end ui-w-120">Thực nhận</th>
+                                    <th class="text-end ui-w-120">Đơn giá hoàn</th>
                                 </tr>
                             </thead>
                             <tbody>

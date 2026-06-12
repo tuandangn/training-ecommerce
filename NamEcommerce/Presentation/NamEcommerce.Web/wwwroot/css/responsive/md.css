@@ -1,0 +1,161 @@
+/* Bootstrap md boundary: shared layout changes around 768px. */
+@media (min-width: 768px) {
+    html {
+        font-size: 15px;
+    }
+
+    .cowork-offcanvas {
+        --cowork-offcanvas-width: 480px;
+    }
+
+    .cowork-offcanvas.cowork-offcanvas-sm {
+        --cowork-offcanvas-width: 360px;
+    }
+
+    .cowork-offcanvas.cowork-offcanvas-md {
+        --cowork-offcanvas-width: 480px;
+    }
+
+    .cowork-offcanvas.cowork-offcanvas-lg {
+        --cowork-offcanvas-width: 640px;
+    }
+
+    .cowork-offcanvas.cowork-offcanvas-xl {
+        --cowork-offcanvas-width: 880px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    :root {
+        --topbar-height: 60px;
+        --page-gutter: 1rem;
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        transform: translateX(-100%);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .topbar-toggle {
+        display: block;
+        flex: 0 0 auto;
+        margin-right: 0;
+    }
+
+    .topbar {
+        padding-inline: 0.875rem;
+    }
+
+    .topbar-page-title {
+        font-size: 1.05rem;
+    }
+
+    .topbar-page-subtitle .breadcrumb-item:last-child {
+        display: none;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .shortage-alert-panel,
+    .shortage-row-main {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .shortage-action-btn {
+        width: 100%;
+    }
+
+    .shortage-detail-summary,
+    .shortage-po-status {
+        max-width: none;
+        text-align: left;
+    }
+
+    .shortage-detail-footer {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .shortage-detail-footer .btn {
+        width: 100%;
+    }
+
+    .shortage-po-status {
+        justify-content: flex-start;
+    }
+
+    .shortage-po-link,
+    .shortage-no-po {
+        white-space: normal;
+    }
+
+    .shortage-order-page {
+        padding-bottom: 8rem;
+    }
+
+    .shortage-workspace-header,
+    .shortage-order-card-header,
+    .shortage-item-topline,
+    .shortage-create-bar {
+        flex-direction: column;
+    }
+
+    .shortage-group-money,
+    .shortage-item-total {
+        width: 100%;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .shortage-order-card-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .shortage-inline-field {
+        grid-template-columns: 1fr;
+    }
+
+    .shortage-create-actions,
+    .shortage-create-actions .btn {
+        width: 100%;
+    }
+
+    .shortage-create-actions {
+        flex-direction: column-reverse;
+    }
+
+    .related-line-heading,
+    .related-action-row {
+        grid-template-columns: 1fr;
+    }
+
+    .related-line-heading {
+        display: grid;
+    }
+
+    .related-line-balance {
+        white-space: normal;
+    }
+
+    .related-action-row {
+        align-items: start;
+    }
+
+    .related-action-qty {
+        width: 100%;
+    }
+}

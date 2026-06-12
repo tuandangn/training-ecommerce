@@ -46,7 +46,7 @@
 <div class="content-card" data-responsive-list data-list-key="order-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
-        <a asp-action="QuickCreate" class="btn btn-success">
+        <a asp-action="QuickCreate" class="btn btn-outline-secondary">
             <i class="bi bi-lightning-fill me-1"></i> Bán nhanh
         </a>
         <a asp-action="Create" class="btn btn-primary">
@@ -78,7 +78,7 @@
                         <th>Khách hàng</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
-                        <th class="text-center" style="width: 120px;">
+                        <th class="text-center order-status-column">
                             Trạng thái
                         </th>
                         <th></th>
@@ -108,7 +108,7 @@
                                         var isDelivered = ordered > 0 && delivered >= ordered;
                                         var hasDelivered = delivered > 0;
                                         var hasIssued = issued > 0;
-                                        var progressClass = isDelivered ? "bg-success" : (hasIssued ? "bg-warning" : "bg-secondary");
+                                        var progressClass = isDelivered ? "order-items-progress--success" : (hasIssued ? "order-items-progress--warning" : "");
                                         var statusText = isDelivered
                                             ? "Đã giao đủ"
                                             : hasDelivered
@@ -123,7 +123,7 @@
                                     }
                                     else
                                     {
-                                        <a asp-action="Details" asp-route-id="@order.Id" type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start order-items-popover"
+                                        <a asp-action="Details" asp-route-id="@order.Id" class="order-items-popover text-decoration-none text-start"
                                                 data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
                                                 data-bs-custom-class="order-items-popover-content"
                                                 data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
@@ -134,9 +134,7 @@
                                                 </span>
                                                 <span class="small text-muted">@statusText</span>
                                             </div>
-                                            <div class="progress mt-1" style="height: 4px; width: 220px;" role="progressbar" aria-valuenow="@issuedPct" aria-valuemin="0" aria-valuemax="100">
-                                                <div class="progress-bar @progressClass" style="width: @(issuedPct)%"></div>
-                                            </div>
+                                            <progress class="order-items-progress @progressClass mt-1" value="@issuedPct" max="100" aria-label="Tiến độ lập phiếu"></progress>
                                             <div class="small text-muted mt-1">
                                                 Đã lập phiếu @issued.DisplayQuantity() / @ordered.DisplayQuantity()
                                                 @if (isDelivered)
@@ -177,7 +175,7 @@
                                     </span>
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                    <a class="btn btn-sm btn-outline-secondary text-decoration-none" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         <span>Xem</span>
                                     </a>
                                 </td>
@@ -212,7 +210,7 @@
                     var isDelivered = ordered > 0 && delivered >= ordered;
                     var hasDelivered = delivered > 0;
                     var hasIssued = issued > 0;
-                    var progressClass = isDelivered ? "bg-success" : (hasIssued ? "bg-warning" : "bg-secondary");
+                    var progressClass = isDelivered ? "order-items-progress--success" : (hasIssued ? "order-items-progress--warning" : "");
                     var statusText = isDelivered
                         ? "Đã giao đủ"
                         : hasDelivered
@@ -268,9 +266,7 @@
                                         </span>
                                         <span class="small text-muted">@statusText</span>
                                     </div>
-                                    <div class="progress" style="height: 4px;" role="progressbar" aria-valuenow="@issuedPct" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="progress-bar @progressClass" style="width: @(issuedPct)%"></div>
-                                    </div>
+                                    <progress class="order-items-progress order-items-progress--fluid @progressClass" value="@issuedPct" max="100" aria-label="Tiến độ lập phiếu"></progress>
                                     <div class="small text-muted">
                                         Đã lập phiếu @issued.DisplayQuantity() / @ordered.DisplayQuantity()
                                     </div>
@@ -278,7 +274,7 @@
                             </div>
                         </div>
                         <div class="list-card-actions">
-                            <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
+                            <a class="btn btn-sm btn-outline-secondary text-decoration-none" asp-action="Details" asp-route-id="@order.Id">
                                 Xem
                             </a>
                         </div>
@@ -302,51 +298,7 @@
     </div>
 </div>
 @section Styles {
-    <style>
-        .order-items-popover {
-            line-height: 1.2;
-        }
-
-            .order-items-popover:hover .badge {
-                background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important;
-            }
-
-        .order-items-popover-content .popover-body {
-            padding: 0.5rem 0.75rem;
-        }
-
-        .order-items-list {
-            min-width: 240px;
-        }
-
-        .order-items-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.25rem 0;
-            font-size: 0.85rem;
-        }
-
-            .order-items-row + .order-items-row {
-                border-top: 1px dashed var(--bs-border-color, #dee2e6);
-            }
-
-        .order-items-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 240px;
-        }
-
-        .order-items-qty {
-            min-width: 86px;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-            font-weight: 500;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
 }
 @section Scripts {
     <script type="module">

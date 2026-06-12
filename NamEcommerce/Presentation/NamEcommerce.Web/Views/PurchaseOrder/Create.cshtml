@@ -65,7 +65,7 @@
                             <h5>
                                 Danh sách hàng hóa
                             </h5>
-                            <button type="button" class="btn btn-sm btn-light" data-testid="po-add-product-open" data-bs-toggle="modal"
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="po-add-product-open" data-bs-toggle="modal"
                                     data-bs-target="#addProductModal">
                                 <i class="bi bi-plus-lg me-1"></i>
                                 <span class="d-none d-lg-inline">Thêm hàng hóa</span>
@@ -92,13 +92,13 @@
                                         @for (var i = 0; i < Model.Items.Count; i++)
                                         {
                                             var item = Model.Items[i];
-                                            <tr id="row-@i" class="align-middle" style="cursor:pointer">
+                                            <tr id="row-@i" class="align-middle ui-cursor-pointer">
                                                 <td class="ps-3">
                                                     <div class="d-flex align-items-center gap-2">
                                                         @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                         {
-                                                            <img src="@item.ProductDisplayPicture" class="rounded product-picture d-none d-lg-block"
-                                                                 style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName" />
+                                                            <img src="@item.ProductDisplayPicture" class="rounded product-picture d-none d-lg-block ui-size-40 object-fit-cover"
+                                                                 alt="@item.ProductDisplayName" />
                                                         }
                                                         <div>
                                                             <div class="fw-medium product-name">@item.ProductDisplayName</div>
@@ -143,7 +143,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
                                 Chưa có hàng hóa nào
                                 <div class="mt-1">
                                     <span asp-validation-for="Items" class="text-danger small"></span>
@@ -172,7 +172,7 @@
                         </div>
                     </div>
                     <div class="content-card-footer d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
                             <i class="bi bi-arrow-left"></i>
                             Trở về
                         </a>
@@ -199,7 +199,7 @@
 <partial name="_ItemEditModal" />
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content purchaseorder-create-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -263,8 +263,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="addItemToTable" class="btn btn-success d-none" data-testid="po-add-item-submit">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="addItemToTable" class="btn btn-primary d-none" data-testid="po-add-item-submit">
                         <i class="bi bi-plus-lg me-1"></i> Thêm vào
                     </button>
                 </div>
@@ -272,6 +272,10 @@
         </div>
     </div>
 </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/purchaseorder-create.css" asp-append-version="true" />
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">

@@ -12,7 +12,7 @@
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.ShortageInfo.HasShortage && Model.CanUpdateInfo)
                 {
-                    <a class="btn btn-sm btn-light" href="/PurchaseOrder/ShortageAggregation?orderId=@Model.Id">
+                    <a class="btn btn-sm btn-outline-secondary" href="/PurchaseOrder/ShortageAggregation?orderId=@Model.Id">
                         <i class="bi bi-box-arrow-in-down"></i> Nhập hàng
                     </a>
                 }

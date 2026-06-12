@@ -31,47 +31,6 @@
      data-vendor-selector="@vendorSelector"
      data-category-selector="@categorySelector"
      data-warehouse-selector="@warehouseSelector"></div>
-
-<style>
-    #@pickerId {
-        position: relative;
-    }
-
-    #@pickerId .product-picker-menu {
-        z-index: 1050;
-        max-height: 360px;
-        overflow-y: auto;
-    }
-
-    #@pickerId .product-picker-selected {
-        min-height: 68px;
-    }
-
-    #@pickerId .product-picker-thumb,
-    #@pickerId .product-picker-thumb-placeholder {
-        width: 56px;
-        height: 56px;
-        border-radius: 6px;
-        flex: 0 0 auto;
-    }
-
-    #@pickerId .product-picker-thumb {
-        object-fit: cover;
-    }
-
-    #@pickerId .product-picker-thumb-placeholder {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--bs-light, #f8f9fa);
-        color: var(--bs-secondary-color, #6c757d);
-    }
-
-    .product-picker-source.input-validation-error + #@pickerId .product-picker-control {
-        border-color: var(--bs-danger, #dc3545);
-    }
-</style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const source = document.getElementById(@Html.Raw(JsonSerializer.Serialize(fieldId)));
@@ -90,7 +49,7 @@
                 <div class="d-flex align-items-center gap-3">
                     <div class="product-picker-selected-media"></div>
                     <div class="flex-grow-1 overflow-hidden product-picker-selected-text"></div>
-                    <button type="button" class="btn btn-light btn-sm product-picker-clear" title="Xóa hàng hóa">
+                    <button type="button" class="btn btn-outline-secondary btn-sm product-picker-clear" title="Xóa hàng hóa">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>

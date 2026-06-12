@@ -1,0 +1,16 @@
+@model FormRowModel
+
+<div class="ui-form-row">
+    <label class="ui-form-row__label">
+        <span>@Model.Label</span>
+        @if (Model.Required)
+        {
+            <span class="ui-form-row__required">*</span>
+        }
+    </label>
+    @Html.Raw(Model.ControlHtml)
+    @if (!string.IsNullOrWhiteSpace(Model.HelpText))
+    {
+        <p class="ui-form-row__help">@Model.HelpText</p>
+    }
+</div>

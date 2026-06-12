@@ -62,10 +62,10 @@
                         <thead class="d-none d-md-table-header-group">
                             <tr>
                                 <th class="ps-3">Sản phẩm</th>
-                                <th style="width:110px">Số lượng</th>
-                                <th style="width:140px">Đơn giá nhập</th>
-                                <th class="text-end" style="width:130px">Thành tiền</th>
-                                <th style="width:40px"></th>
+                                <th class="ui-w-110">Số lượng</th>
+                                <th class="ui-w-140">Đơn giá nhập</th>
+                                <th class="text-end ui-w-130">Thành tiền</th>
+                                <th class="ui-w-40"></th>
                             </tr>
                         </thead>
                         <tbody id="itemsBody"></tbody>
@@ -122,7 +122,7 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
                             <i class="bi bi-arrow-left"></i>
                             Trở về
                         </a>
@@ -144,8 +144,8 @@
     </div>
 </div>
 
-<div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="productBrowserOffcanvas"
-     style="height:85vh; border-radius: 16px 16px 0 0">
+<div class="offcanvas offcanvas-bottom d-lg-none ui-top-sheet" tabindex="-1" id="productBrowserOffcanvas"
+    >
     <div class="offcanvas-header border-bottom">
         <h5 class="offcanvas-title">Chọn hàng hóa</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
