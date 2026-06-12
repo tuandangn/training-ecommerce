@@ -116,7 +116,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        var product = await productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.ProductId, default).ConfigureAwait(false);
         if (product is null)
         {
             return new AddOrderItemResultAppDto
@@ -128,7 +128,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         if (product.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
             if (unitMeasurement is not null)
             {
                 if (!NumberHelper.IsValidDecimalPlace(dto.Quantity, unitMeasurement.DecimalPlaces))
@@ -223,7 +223,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
         }
 
 
-        var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(orderItem.ProductId, default).ConfigureAwait(false);
         if (product is null)
         {
             return new UpdateOrderItemResultAppDto
@@ -235,7 +235,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         if (product.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
             if (unitMeasurement is not null)
             {
                 if (!NumberHelper.IsValidDecimalPlace(dto.Quantity, unitMeasurement.DecimalPlaces))
@@ -514,7 +514,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
         {
             return new CreateOrderResultAppDto
@@ -526,7 +526,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
-            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateOrderResultAppDto
@@ -538,7 +538,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     foreach (var item in itemGroup)

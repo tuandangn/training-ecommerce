@@ -35,6 +35,7 @@ public sealed class GoodsReceiptManager(
     IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IEntityDataReader<Product> productDataReader,
+    IRepository<Product> productRepository,
     WarehouseSettings warehouseSettings,
     IEntityDataReader<Warehouse> warehouseDataReader,
     ICurrentUserAccessor currentUserAccessor,
@@ -74,7 +75,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -108,7 +109,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -144,7 +145,7 @@ public sealed class GoodsReceiptManager(
 
     public async Task<GoodsReceiptDto?> GetGoodsReceiptByIdAsync(Guid id)
     {
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
 
         if (goodsReceipt is null)
             return null;
@@ -213,7 +214,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
             if (vendor is null)
                 throw new VendorIsNotFoundException(dto.VendorId.Value);
 
@@ -246,7 +247,7 @@ public sealed class GoodsReceiptManager(
 
         await goodsReceipt.AddItemAsync(
             dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
-            productDataReader, warehouseSettings, warehouseDataReader
+            productRepository, warehouseSettings, warehouseDataReader
         ).ConfigureAwait(false);
 
         goodsReceipt.MarkCreated();
@@ -333,7 +334,7 @@ public sealed class GoodsReceiptManager(
         // Gắn vendor từ PO (nếu có)
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -364,7 +365,7 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId, default).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
@@ -376,7 +377,7 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.Note = $"Nhap du tu don nhap {dto.PurchaseOrderCode}";
 
-        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false)
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false)
             ?? throw new VendorIsNotFoundException(dto.VendorId);
         goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
 
@@ -397,7 +398,7 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId, default).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
@@ -413,7 +414,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -446,7 +447,7 @@ public sealed class GoodsReceiptManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
+        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId, default).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
         var createdByUser = customerReturn.CreatedByUserId.HasValue
@@ -503,7 +504,7 @@ public sealed class GoodsReceiptManager(
 
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
     {
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(goodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(goodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(goodsReceiptId);
 

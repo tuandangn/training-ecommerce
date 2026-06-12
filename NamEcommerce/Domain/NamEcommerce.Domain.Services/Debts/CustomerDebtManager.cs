@@ -48,7 +48,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
@@ -87,8 +87,8 @@ public sealed class CustomerDebtManager(
         if (existing != null)
             return MapToDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId, default).ConfigureAwait(false);
         
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
         if (deliveryNote == null) throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
@@ -121,7 +121,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
@@ -161,7 +161,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto?> GetDebtByIdAsync(Guid id)
     {
-        var debt = await debtReader.GetByIdAsync(id).ConfigureAwait(false);
+        var debt = await debtReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (debt == null) return null;
 
         // Load tất cả payments liên quan đến debt này
@@ -182,7 +182,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
-        var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
+        var payment = await paymentReader.GetByIdAsync(paymentId, default).ConfigureAwait(false);
         return payment == null ? null : MapToPaymentDto(payment);
     }
 
@@ -229,7 +229,7 @@ public sealed class CustomerDebtManager(
         if (existing is not null)
             return MapToCreditNoteDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(customerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(customerId);
 
         var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);

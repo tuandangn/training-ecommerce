@@ -30,7 +30,7 @@ public sealed class PurchaseOrderStatusChangedNotificationHandler(
         if (notification is null || !ProcurementSystemNotificationComposer.ShouldNotifyPurchaseOrderStatus(notification.NewStatus))
             return;
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(notification.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(notification.PurchaseOrderId, default).ConfigureAwait(false);
         if (purchaseOrder is null)
             return;
 

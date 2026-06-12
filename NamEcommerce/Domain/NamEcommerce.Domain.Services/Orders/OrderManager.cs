@@ -50,7 +50,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             throw new CustomerIsNotFoundException(dto.CustomerId);
 
@@ -119,7 +119,7 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(orderId);
 
-        var product = await productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
@@ -396,7 +396,7 @@ public sealed class OrderManager(
     {
         foreach (var itemGroup in items.GroupBy(item => item.ProductId))
         {
-            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
             if (product is null)
                 throw new ProductIsNotFoundException(itemGroup.Key);
 

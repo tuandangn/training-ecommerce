@@ -356,9 +356,9 @@ class FastSale {
             this.totalHint.textContent = window.SoBangChu?.docSoTien(total) ?? '';
 
         this.customer.value = this.selectedCustomer?.id ?? '';
-        this.shippingAddress.value = this.selectedCustomer?.address ?? '';
-        this.shippingAddress.disabled = this.selectedCustomer?.id == this.defaultCustomer;
-        this.shippingAddress.closest('div').classList.toggle('d-none', this.selectedCustomer?.id == this.defaultCustomer);
+        this.shippingAddress.value = (this.selectedCustomer?.id != this.defaultCustomer ?  this.selectedCustomer?.address : '') ?? '';
+        this.shippingAddress.disabled = this.cart.length == 0;
+        this.shippingAddress.closest('.ship-info').classList.toggle('d-none', this.cart.length == 0);
 
         this.discount.disabled = this.cart.length === 0;
 
@@ -669,6 +669,7 @@ class FastSale {
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
             })),
+            shippingAddress: this.shippingAddress.value,
             orderDiscount: this.getDiscount(),
             note: this.note.value,
             fulfillmentMode: this.fulfillmentMode === 'deliverNow' ? FulfillmentMode.DeliverNow : FulfillmentMode.NotDelivered,

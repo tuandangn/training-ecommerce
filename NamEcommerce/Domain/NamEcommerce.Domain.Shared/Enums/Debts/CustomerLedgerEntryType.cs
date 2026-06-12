@@ -7,7 +7,8 @@ public enum CustomerLedgerEntryType
     Payment = 30,
     ReturnCredit = 40,
     RefundPayout = 50,
-    Correction = 60
+    Correction = 60,
+    Surcharge = 70
 }
 
 public enum CustomerLedgerReferenceType

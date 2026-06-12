@@ -40,7 +40,7 @@ public sealed class StockAdjustmentNoteManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
+        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new Shared.Exceptions.NamEcommerceDomainException("Error.StockAdjustment.WarehouseNotFound");
 
@@ -50,7 +50,7 @@ public sealed class StockAdjustmentNoteManager(
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
             if (product is null)
                 throw new Shared.Exceptions.NamEcommerceDomainException($"Error.StockAdjustment.ProductNotFound");
 
@@ -125,7 +125,7 @@ public sealed class StockAdjustmentNoteManager(
 
     public async Task<StockAdjustmentNoteDto?> GetByIdAsync(Guid id)
     {
-        var note = await noteDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var note = await noteDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return note?.ToDto();
     }
 

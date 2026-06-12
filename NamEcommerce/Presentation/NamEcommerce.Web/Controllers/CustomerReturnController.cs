@@ -48,17 +48,17 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             DeliveryNote? deliveryNote = null;
             Customer? customer = null;
             if (deliveryNoteId.HasValue)
-                deliveryNote = await _deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value);
+                deliveryNote = await _deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value, default);
             if (deliveryNote is not null)
             {
                 prefilledModel.DeliveryNoteId = deliveryNote.Id;
                 prefilledModel.DeliveryNoteDisplayCode = deliveryNote.Code;
 
-                customer = await _customerDataReader.GetByIdAsync(deliveryNote.CustomerId);
+                customer = await _customerDataReader.GetByIdAsync(deliveryNote.CustomerId, default);
             }
             else if (customerId.HasValue)
             {
-                customer = await _customerDataReader.GetByIdAsync(customerId.Value);
+                customer = await _customerDataReader.GetByIdAsync(customerId.Value, default);
             }
             prefilledModel.CustomerId = customer?.Id;
             prefilledModel.CustomerDisplayName = customer?.FullName;

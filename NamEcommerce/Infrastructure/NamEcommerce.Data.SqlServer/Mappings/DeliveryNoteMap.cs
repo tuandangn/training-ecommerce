@@ -114,6 +114,10 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.InvoiceSeries).HasMaxLength(10).IsRequired(false);
         builder.Property(d => d.InvoiceDate).IsRequired(false);
 
+        builder.Property(d => d.Surcharge).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
+        builder.Property(d => d.SurchargeReason).HasMaxLength(500).IsRequired(false);
+        builder.Property(d => d.AmountToCollect).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
+
         // Computed từ items — không persist
         builder.Ignore(d => d.TotalAmount);
         builder.Ignore(d => d.TotalDiscountAmount);

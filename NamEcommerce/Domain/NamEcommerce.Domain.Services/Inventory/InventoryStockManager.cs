@@ -63,11 +63,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (receivedQuantity <= 0)
             throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -139,11 +139,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (quantity <= 0)
             throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -392,11 +392,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         if (quantity <= 0) return null;
 
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -504,15 +504,15 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (fromWarehouseId == toWarehouseId)
             return (null, null);
 
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var fromWarehouse = await _warehouseDataReader.GetByIdAsync(fromWarehouseId).ConfigureAwait(false);
+        var fromWarehouse = await _warehouseDataReader.GetByIdAsync(fromWarehouseId, default).ConfigureAwait(false);
         if (fromWarehouse is null)
             throw new WarehouseIsNotFoundException(fromWarehouseId);
 
-        var toWarehouse = await _warehouseDataReader.GetByIdAsync(toWarehouseId).ConfigureAwait(false);
+        var toWarehouse = await _warehouseDataReader.GetByIdAsync(toWarehouseId, default).ConfigureAwait(false);
         if (toWarehouse is null)
             throw new WarehouseIsNotFoundException(toWarehouseId);
 
@@ -649,10 +649,10 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         if (delta == 0) return;
 
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null) throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
         if (warehouse is null) throw new WarehouseIsNotFoundException(warehouseId);
 
         var stock = await TryGetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);

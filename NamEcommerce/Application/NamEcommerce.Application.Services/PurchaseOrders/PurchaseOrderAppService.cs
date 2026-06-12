@@ -107,7 +107,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (dto.ExpectedDeliveryDateUtc < DateTime.UtcNow)
             throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateCannotBeInPast");
 
-        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor is null)
         {
             return new CreatePurchaseOrderResultAppDto
@@ -140,7 +140,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         if (dto.WarehouseId.HasValue)
         {
-            var warehouse = await _warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
             {
                 return new CreatePurchaseOrderResultAppDto
@@ -165,7 +165,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
@@ -321,7 +321,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
             else
             {
-                var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+                var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
                 if (vendor is null)
                 {
                     return new UpdatePurchaseOrderResultAppDto
@@ -377,7 +377,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         if (dto.WarehouseId.HasValue)
         {
-            var warehouse = await _warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
             {
                 return new UpdatePurchaseOrderResultAppDto
@@ -423,13 +423,13 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (!await _purchaseOrderManager.CanAddPurchaseOrderItemsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotAddItems");
 
-        var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(dto.ProductId, default).ConfigureAwait(false);
         if (product is null)
             return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
 
         if (product.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
             if (unitMeasurement is not null)
             {
                 if (!NumberHelper.IsValidDecimalPlace(dto.QuantityOrdered, unitMeasurement.DecimalPlaces))
@@ -532,13 +532,13 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId, default).ConfigureAwait(false);
         if (product is null)
             return ReceiveItemResultAppDto.CreateError("Error.ProductIsNotFound");
 
         if (dto.ReceivedByUserId.HasValue)
         {
-            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
+            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value, default).ConfigureAwait(false);
             if (user is null)
                 return ReceiveItemResultAppDto.CreateError("Error.UserIsNotFound");
         }
@@ -552,7 +552,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return ReceiveItemResultAppDto.CreateError("Error.WarehouseRequired");
         if (warehouseId.HasValue)
         {
-            var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 return ReceiveItemResultAppDto.CreateError("Error.WarehouseIsNotFound");
             if (physicalWarehouseRequired && warehouse.WarehouseType != WarehouseType.Physical)
@@ -630,7 +630,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         if (dto.ReceivedByUserId.HasValue)
         {
-            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
+            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value, default).ConfigureAwait(false);
             if (user is null)
                 return BulkReceiveGoodsResultAppDto.CreateError("Error.UserIsNotFound");
         }
@@ -662,7 +662,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
             if (!warehouseCache.TryGetValue(warehouseId.Value, out var warehouse))
             {
-                warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
                 warehouseCache[warehouseId.Value] = warehouse;
             }
             if (warehouse is null)
@@ -1048,7 +1048,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)
     {
-        var order = await _orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
+        var order = await _orderDataReader.GetByIdAsync(orderId, default).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(orderId);
 

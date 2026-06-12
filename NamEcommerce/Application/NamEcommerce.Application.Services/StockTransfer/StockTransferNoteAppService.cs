@@ -23,7 +23,7 @@ public sealed class StockTransferNoteAppService(IStockTransferNoteManager manage
         foreach (var item in dto.Items)
         {
 
-            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(item.ProductId, default).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateStockTransferNoteResultAppDto
@@ -35,7 +35,7 @@ public sealed class StockTransferNoteAppService(IStockTransferNoteManager manage
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))

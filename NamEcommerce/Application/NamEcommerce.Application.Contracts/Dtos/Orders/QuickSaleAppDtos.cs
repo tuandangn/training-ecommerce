@@ -47,6 +47,7 @@ public sealed record CreateQuickSaleAppDto
     public int PaymentTiming { get; init; } = (int)QuickSalePaymentTiming.PayNow;
     public int PaymentMethod { get; init; }
     public decimal PaidAmount { get; init; }
+    public string? ShippingAddress { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {

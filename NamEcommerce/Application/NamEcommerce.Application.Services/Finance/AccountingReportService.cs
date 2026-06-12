@@ -83,6 +83,13 @@ public sealed class AccountingReportService : IAccountingReportService
             .SelectMany(dn => dn.Items)
             .Sum(i => (decimal?)i.SubTotal) ?? 0;
 
+        var surchargeRevenue = _customerLedgerEntries.DataSource
+            .Where(e => e.EntryType == CustomerLedgerEntryType.Surcharge
+                     && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+
+        grossRevenue += surchargeRevenue;
+
         var tradeDiscounts = allDeliveryNotes
             .Where(dn => deliveredNoteIds.Contains(dn.Id))
             .SelectMany(dn => dn.Items)

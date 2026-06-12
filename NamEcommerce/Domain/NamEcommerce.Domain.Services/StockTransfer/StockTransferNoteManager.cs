@@ -40,14 +40,14 @@ public sealed class StockTransferNoteManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var fromWarehouse = await warehouseDataReader.GetByIdAsync(dto.FromWarehouseId).ConfigureAwait(false);
+        var fromWarehouse = await warehouseDataReader.GetByIdAsync(dto.FromWarehouseId, default).ConfigureAwait(false);
         if (fromWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.FromWarehouseNotFound");
 
         if (fromWarehouse.WarehouseType == WarehouseType.DirectTransit)
             throw new NamEcommerceDomainException("Error.StockTransfer.CannotTransferFromDirectShipTransit");
 
-        var toWarehouse = await warehouseDataReader.GetByIdAsync(dto.ToWarehouseId).ConfigureAwait(false);
+        var toWarehouse = await warehouseDataReader.GetByIdAsync(dto.ToWarehouseId, default).ConfigureAwait(false);
         if (toWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.ToWarehouseNotFound");
 
@@ -61,7 +61,7 @@ public sealed class StockTransferNoteManager(
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
             if (product is null)
                 throw new NamEcommerceDomainException("Error.StockTransfer.ProductNotFound");
 
@@ -146,7 +146,7 @@ public sealed class StockTransferNoteManager(
 
     public async Task<StockTransferNoteDto?> GetByIdAsync(Guid id)
     {
-        var note = await noteDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var note = await noteDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return note?.ToDto();
     }
 

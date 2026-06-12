@@ -105,7 +105,12 @@
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Khách hàng</label>
                     <div class="fw-bold text-dark fs-6">@Model.CustomerName</div>
-                    <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@Model.CustomerPhone</div>
+                    @if (!string.IsNullOrEmpty(Model.CustomerPhone))
+                    {
+                        <div class="text-muted small">
+                            <i class="bi bi-telephone me-1"></i>@Model.CustomerPhone
+                        </div>
+                    }
                 </div>
 
                 <div class="mb-4">
@@ -124,7 +129,7 @@
                 </div>
 
                 <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người giao hàng</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người giao hàng</label>
                     @if (!string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName))
                     {
                         <div class="text-dark fw-bold">
@@ -320,35 +325,35 @@
                     Có @compensatedReturnQuantity.DisplayQuantity() hàng khách trả đang được bù vào lần giao sau. Hàng chỉ nhập kho khi xác nhận phiếu trả.
                 </div>
             }
-                @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
-                {
-            <div class="action-toolbar justify-content-end">
-                @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
-                {
-                    <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
-                        <i class="bi bi-check me-1"></i>Xác nhận
-                    </button>
-                }
-                @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
-                {
-                    <button type="button" class="btn btn-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@canLeaveWarehouse">
-                        <i class="bi bi-truck me-1"></i>Đang giao
-                    </button>
-                }
-                @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
-                {
-                    <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)" data-has-delivery-user="@isDeliveryUserAssigned.ToString().ToLower()">
-                        <i class="bi bi-check-circle-fill me-1"></i>Đã giao
-                    </button>
-                }
+            @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
+            {
+                <div class="action-toolbar justify-content-end">
+                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
+                    {
+                        <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
+                            <i class="bi bi-check me-1"></i>Xác nhận
+                        </button>
+                    }
+                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                    {
+                        <button type="button" class="btn btn-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@canLeaveWarehouse">
+                            <i class="bi bi-truck me-1"></i>Đang giao
+                        </button>
+                    }
+                    @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                    {
+                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)" data-has-delivery-user="@isDeliveryUserAssigned.ToString().ToLower()">
+                            <i class="bi bi-check-circle-fill me-1"></i>Đã giao
+                        </button>
+                    }
                     @if (isDirectShip)
                     {
                         <button type="button" class="btn btn-danger btn-sm btn-customer-reject" data-id="@Model.Id" data-code="@Model.Code">
                             <i class="bi bi-person-fill-x me-1"></i>Từ chối
                         </button>
                     }
-            </div>
-                }
+                </div>
+            }
             <div class="content-card-header">
                 <h5>Danh sách hàng hóa</h5>
             </div>
@@ -471,16 +476,17 @@
                             </button>
                         }
                     }
-                    @if (Model.Status != (int)DeliveryNoteStatus.Cancelled && Model.Status != (int)DeliveryNoteStatus.Draft) {
+                    @if (Model.Status != (int)DeliveryNoteStatus.Cancelled && Model.Status != (int)DeliveryNoteStatus.Draft)
+                    {
                         <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-printer me-2"></i> In phiếu
                         </a>
                     }
-                <div>
+                    <div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
         @if (Model.Status == (int)DeliveryNoteStatus.Delivered)
         {
             <div class="content-card mt-3" id="customerReturnsCard" data-delivery-note-id="@Model.Id">

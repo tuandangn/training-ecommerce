@@ -88,7 +88,7 @@ public sealed class WarehouseManager : IWarehouseManager
 
     public async Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id)
     {
-        var warehouse = await _warehouseDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(id);
 

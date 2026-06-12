@@ -12,7 +12,7 @@ public sealed class ProductReservationLederCreatedEventHandler(IEntityDataReader
 {
     public async Task Handle(ProductReservationLedgerCreated notification, CancellationToken cancellationToken)
     {
-        var productReservationLedger = await productReservationLedgerDataReader.GetByIdAsync(notification.ProductReservationLedgerId).ConfigureAwait(false);
+        var productReservationLedger = await productReservationLedgerDataReader.GetByIdAsync(notification.ProductReservationLedgerId, default).ConfigureAwait(false);
         if (productReservationLedger is null)
             return;
 

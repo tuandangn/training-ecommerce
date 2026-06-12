@@ -146,7 +146,7 @@ public sealed class DeliveryNoteManager(
 
         if (deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && deliveryNote.OrderId != Guid.Empty)
         {
-            var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            var order = await orderReader.GetByIdAsync(deliveryNote.OrderId, default).ConfigureAwait(false);
             if (order is { OrderStatus: OrderStatus.Completed or OrderStatus.Cancelled })
                 throw new DeliveryNoteOrderAlreadyClosedException(deliveryNote.OrderId, order.OrderStatus);
         }
@@ -230,7 +230,7 @@ public sealed class DeliveryNoteManager(
         await CreateCustomerReturnFromRejectedAcceptanceAsync(deliveryNote, acceptance).ConfigureAwait(false);
 
         // 2. Mark related OrderItems as Delivered only when the full ordered quantity has been delivered.
-        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId, default).ConfigureAwait(false);
         if (order is not null)
         {
             var deliveredQuantitiesByOrderItem = GetNetDeliveredQuantitiesByOrderItem(order.Id, deliveryNote);
@@ -289,7 +289,7 @@ public sealed class DeliveryNoteManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId).ConfigureAwait(false)
+        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId, default).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
@@ -800,7 +800,7 @@ public sealed class DeliveryNoteManager(
 
     private async Task MarkRelatedOrderItemsReceivedByCustomerAsync(DeliveryNote deliveryNote)
     {
-        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId, default).ConfigureAwait(false);
         if (order is null)
             return;
 

@@ -2313,7 +2313,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("AmountToCollect")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("AssignedDeliveryFullName")
                         .HasMaxLength(200)
@@ -2443,10 +2445,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Surcharge")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("SurchargeReason")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");

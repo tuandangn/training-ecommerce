@@ -49,7 +49,7 @@ public sealed class CustomerReturnManager(
         Warehouse? warehouse = null;
         if (dto.WarehouseId.HasValue)
         {
-            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", dto.WarehouseId.Value);
         }
@@ -143,7 +143,7 @@ public sealed class CustomerReturnManager(
 
         foreach (var itemDto in normalizedItems)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
             if (product is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.ProductNotFound", itemDto.ProductId);
 
@@ -197,7 +197,7 @@ public sealed class CustomerReturnManager(
             if (warehouseId.Value == Guid.Empty)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
 
-            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", warehouseId.Value);
 
@@ -367,7 +367,7 @@ public sealed class CustomerReturnManager(
 
     public async Task<CustomerReturnDto?> GetByIdAsync(Guid id)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var customerReturn = await customerReturnDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return customerReturn?.ToDto();
     }
 
@@ -513,7 +513,7 @@ public sealed class CustomerReturnManager(
 
         if (deliveryNoteId.HasValue)
         {
-            var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value).ConfigureAwait(false);
+            var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value, default).ConfigureAwait(false);
             if (deliveryNote is null)
                 throw new DeliveryNoteNotFoundException(deliveryNoteId.Value);
             if (deliveryNote.CustomerId != customerId)

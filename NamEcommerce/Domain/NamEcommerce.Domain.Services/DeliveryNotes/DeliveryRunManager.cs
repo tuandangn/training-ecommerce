@@ -199,7 +199,7 @@ public sealed class DeliveryRunManager(
 
     public async Task<DeliveryRunDto?> GetByIdAsync(Guid id)
     {
-        var run = await runReader.GetByIdAsync(id).ConfigureAwait(false);
+        var run = await runReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return run?.ToDto();
     }
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDb : Migration
+    public partial class ReCreateDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -199,6 +199,25 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomerAccountBalance",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    LastEntryOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerAccountBalance", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CustomerCreditNote",
                 schema: "tbl",
                 columns: table => new
@@ -282,6 +301,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomerLedgerEntry",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EntryType = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ReferenceType = table.Column<int>(type: "int", nullable: false),
+                    ReferenceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReferenceCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    OccurredAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerLedgerEntry", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CustomerOrderRequest",
                 schema: "tbl",
                 columns: table => new
@@ -356,6 +399,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsApplied = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    AppliedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
                     AppliedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -874,12 +918,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     WarehouseZoneId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     QuantityOnHand = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     QuantityReserved = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    AverageCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ReorderLevel = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     MaxStockLevel = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     LastStocktakeDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ReservedUntilUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1109,6 +1153,26 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "StockReservationEntry",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    WarehouseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuantityDelta = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ReferenceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StockReservationEntry", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "StockTransferNote",
                 schema: "tbl",
                 columns: table => new
@@ -1131,6 +1195,45 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_StockTransferNote", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SystemNotification",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Severity = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    RequiredPermission = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    RelatedEntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RelatedEntityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ActionUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SystemNotification", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SystemNotificationRead",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    NotificationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReadOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SystemNotificationRead", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1191,6 +1294,25 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Vendor", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VendorAccountBalance",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    LastEntryOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VendorAccountBalance", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1256,6 +1378,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "VendorLedgerEntry",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EntryType = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ReferenceType = table.Column<int>(type: "int", nullable: false),
+                    ReferenceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReferenceCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    OccurredAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VendorLedgerEntry", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "VendorPayment",
                 schema: "tbl",
                 columns: table => new
@@ -1284,6 +1430,36 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_VendorPayment", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VendorRefund",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VendorName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    VendorReturnId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VendorReturnCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    VendorDebtId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    PaymentMethod = table.Column<int>(type: "int", nullable: true),
+                    BankAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    RefundedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VendorRefund", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1565,7 +1741,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     TaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: true),
                     TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    UnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
+                    UnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    SourceDeliveryNoteItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -2334,6 +2511,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 filter: "[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountBalance_CustomerId",
+                schema: "tbl",
+                table: "CustomerAccountBalance",
+                column: "CustomerId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomerCreditNote_Code",
                 schema: "tbl",
                 table: "CustomerCreditNote",
@@ -2388,6 +2572,25 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "CustomerDeliveryFeedback",
                 columns: new[] { "CustomerId", "DeliveryNoteId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerLedgerEntry_CustomerId",
+                schema: "tbl",
+                table: "CustomerLedgerEntry",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerLedgerEntry_CustomerId_EntryType_ReferenceId",
+                schema: "tbl",
+                table: "CustomerLedgerEntry",
+                columns: new[] { "CustomerId", "EntryType", "ReferenceId" },
+                filter: "[ReferenceId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerLedgerEntry_CustomerId_OccurredAtUtc",
+                schema: "tbl",
+                table: "CustomerLedgerEntry",
+                columns: new[] { "CustomerId", "OccurredAtUtc" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_CustomerOrderRequest_Code",
@@ -3056,6 +3259,18 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 columns: new[] { "NoteId", "ProductId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_StockReservationEntry_ProductId_WarehouseId",
+                schema: "tbl",
+                table: "StockReservationEntry",
+                columns: new[] { "ProductId", "WarehouseId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockReservationEntry_ReferenceId",
+                schema: "tbl",
+                table: "StockReservationEntry",
+                column: "ReferenceId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StockTransferNote_Code",
                 schema: "tbl",
                 table: "StockTransferNote",
@@ -3081,10 +3296,48 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 columns: new[] { "NoteId", "ProductId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_SystemNotification_RelatedEntityId",
+                schema: "tbl",
+                table: "SystemNotification",
+                column: "RelatedEntityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SystemNotification_RequiredPermission_CreatedOnUtc",
+                schema: "tbl",
+                table: "SystemNotification",
+                columns: new[] { "RequiredPermission", "CreatedOnUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SystemNotification_Type_CreatedOnUtc",
+                schema: "tbl",
+                table: "SystemNotification",
+                columns: new[] { "Type", "CreatedOnUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SystemNotificationRead_NotificationId_UserId",
+                schema: "tbl",
+                table: "SystemNotificationRead",
+                columns: new[] { "NotificationId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SystemNotificationRead_UserId_ReadOnUtc",
+                schema: "tbl",
+                table: "SystemNotificationRead",
+                columns: new[] { "UserId", "ReadOnUtc" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserRole_RoleId",
                 schema: "tbl",
                 table: "UserRole",
                 column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorAccountBalance_VendorId",
+                schema: "tbl",
+                table: "VendorAccountBalance",
+                column: "VendorId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_VendorCreditNote_Code",
@@ -3161,6 +3414,25 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "VendorId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VendorLedgerEntry_VendorId",
+                schema: "tbl",
+                table: "VendorLedgerEntry",
+                column: "VendorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorLedgerEntry_VendorId_EntryType_ReferenceId",
+                schema: "tbl",
+                table: "VendorLedgerEntry",
+                columns: new[] { "VendorId", "EntryType", "ReferenceId" },
+                filter: "[ReferenceId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorLedgerEntry_VendorId_OccurredAtUtc",
+                schema: "tbl",
+                table: "VendorLedgerEntry",
+                columns: new[] { "VendorId", "OccurredAtUtc" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VendorPayment_Code",
                 schema: "tbl",
                 table: "VendorPayment",
@@ -3184,6 +3456,25 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "VendorPayment",
                 column: "VendorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorRefund_Code",
+                schema: "tbl",
+                table: "VendorRefund",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorRefund_VendorId_Status",
+                schema: "tbl",
+                table: "VendorRefund",
+                columns: new[] { "VendorId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorRefund_VendorReturnId",
+                schema: "tbl",
+                table: "VendorRefund",
+                column: "VendorReturnId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VendorReturn_Code",
@@ -3241,6 +3532,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "CustomerAccountBalance",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "CustomerCreditNoteAllocation",
                 schema: "tbl");
 
@@ -3250,6 +3545,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "CustomerDeliveryFeedback",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "CustomerLedgerEntry",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -3405,7 +3704,19 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "StockReservationEntry",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "StockTransferNoteItem",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "SystemNotification",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "SystemNotificationRead",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -3421,6 +3732,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "VendorAccountBalance",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "VendorCreditNoteAllocation",
                 schema: "tbl");
 
@@ -3429,7 +3744,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "VendorLedgerEntry",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "VendorPayment",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "VendorRefund",
                 schema: "tbl");
 
             migrationBuilder.DropTable(

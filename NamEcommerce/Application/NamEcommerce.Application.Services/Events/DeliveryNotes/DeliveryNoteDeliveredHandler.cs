@@ -44,15 +44,34 @@ public sealed class DeliveryNoteDeliveredHandler(
 
         await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);
 
-        await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+        var surcharge = deliveryNote.Surcharge;
+        var chargeAmount = debtAmount - surcharge;
+
+        if (chargeAmount > 0)
         {
-            CustomerId = notification.CustomerId,
-            Amount = debtAmount,
-            ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
-            ReferenceId = notification.DeliveryNoteId,
-            ReferenceCode = deliveryNote.Code,
-            OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
-        }).ConfigureAwait(false);
+            await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+            {
+                CustomerId = notification.CustomerId,
+                Amount = chargeAmount,
+                ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
+                ReferenceId = notification.DeliveryNoteId,
+                ReferenceCode = deliveryNote.Code,
+                OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
+
+        if (surcharge > 0)
+        {
+            await _customerLedgerManager.RecordSurchargeAsync(new RecordCustomerLedgerChargeDto
+            {
+                CustomerId = notification.CustomerId,
+                Amount = surcharge,
+                ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
+                ReferenceId = notification.DeliveryNoteId,
+                ReferenceCode = deliveryNote.Code,
+                OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
     }
 }
 

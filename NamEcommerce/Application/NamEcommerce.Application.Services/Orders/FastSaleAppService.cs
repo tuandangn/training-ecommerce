@@ -100,14 +100,14 @@ public sealed class FastSaleAppService(
         if (expectedPaymentMethod.HasValue && (PaymentMethod)dto.PaymentMethod != expectedPaymentMethod.Value)
             return QuickSaleResultAppDto.CreateError("Error.PaymentMethodInvalid");
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             return QuickSaleResultAppDto.CreateError("Error.CustomerIsNotFound");
 
         var warehouseIds = GetWarehouseIdsToValidate(dto, fulfillmentMode);
         foreach (var warehouseId in warehouseIds)
         {
-            var warehouse = await warehouseReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+            var warehouse = await warehouseReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
             if (warehouse is null)
                 return QuickSaleResultAppDto.CreateError("Error.WarehouseIsNotFound");
         }
@@ -122,7 +122,7 @@ public sealed class FastSaleAppService(
 
         foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
-            var product = await productReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            var product = await productReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
             if (product is null)
                 return QuickSaleResultAppDto.CreateError("Error.ProductIsNotFound");
         }
@@ -247,7 +247,7 @@ public sealed class FastSaleAppService(
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date,
-            ShippingAddress = string.Empty,
+            ShippingAddress = dto.ShippingAddress,
             RequireAvailableStock = (QuickSaleFulfillmentMode)dto.FulfillmentMode == QuickSaleFulfillmentMode.DeliverNow
         };
 
@@ -279,7 +279,7 @@ public sealed class FastSaleAppService(
         {
             OrderId = orderId,
             WarehouseId = ResolveHeaderWarehouseId(dto),
-            ShippingAddress = "Tai quay",
+            ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS : dto.ShippingAddress,
             ShowPrice = true,
             CompensateReturnedQuantityInNextDelivery = false,
             Surcharge = 0,

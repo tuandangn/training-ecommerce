@@ -58,7 +58,7 @@ public sealed class CustomerPortalManager(
 
     public async Task<CustomerPortalNotificationDto?> GetNotificationByIdAsync(Guid id)
     {
-        var notification = await notificationReader.GetByIdAsync(id).ConfigureAwait(false);
+        var notification = await notificationReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return notification is null ? null : MapToDto(notification);
     }
 
@@ -111,7 +111,7 @@ public sealed class CustomerPortalManager(
 
     public async Task<CustomerOrderRequestDto?> GetOrderRequestByIdAsync(Guid id)
     {
-        var request = await orderRequestReader.GetByIdAsync(id).ConfigureAwait(false);
+        var request = await orderRequestReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return request is null ? null : MapToDto(request);
     }
 
@@ -191,7 +191,7 @@ public sealed class CustomerPortalManager(
 
     public async Task<CustomerReturnRequestDto?> GetReturnRequestByIdAsync(Guid id)
     {
-        var request = await returnRequestReader.GetByIdAsync(id).ConfigureAwait(false);
+        var request = await returnRequestReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return request is null ? null : MapToDto(request);
     }
 
@@ -266,7 +266,7 @@ public sealed class CustomerPortalManager(
 
     public async Task<CustomerPaymentIntentDto?> GetPaymentIntentByIdAsync(Guid id)
     {
-        var intent = await paymentIntentReader.GetByIdAsync(id).ConfigureAwait(false);
+        var intent = await paymentIntentReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return intent is null ? null : MapToDto(intent);
     }
 

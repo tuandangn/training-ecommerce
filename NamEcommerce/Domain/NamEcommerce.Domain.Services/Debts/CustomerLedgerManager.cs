@@ -49,6 +49,34 @@ public sealed class CustomerLedgerManager(
         return await PersistEntryAsync(entry).ConfigureAwait(false);
     }
 
+    public async Task<CustomerLedgerEntryDto> RecordSurchargeAsync(RecordCustomerLedgerChargeDto dto)
+    {
+        dto.Verify();
+
+        if (dto.ReferenceId.HasValue)
+        {
+            var existing = entryReader.DataSource
+                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+                    && e.EntryType == CustomerLedgerEntryType.Surcharge
+                    && e.ReferenceId == dto.ReferenceId.Value);
+            if (existing is not null) return MapToDto(existing);
+        }
+
+        var entry = new CustomerLedgerEntry(
+            customerId: dto.CustomerId,
+            entryType: CustomerLedgerEntryType.Surcharge,
+            amount: dto.Amount,
+            referenceType: dto.ReferenceType,
+            referenceId: dto.ReferenceId,
+            referenceCode: dto.ReferenceCode,
+            note: dto.Note,
+            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
+            createdByUserId: dto.CreatedByUserId);
+
+        entry.MarkRecorded();
+        return await PersistEntryAsync(entry).ConfigureAwait(false);
+    }
+
     public async Task<CustomerLedgerEntryDto> RecordPaymentAsync(RecordCustomerLedgerPaymentDto dto)
     {
         dto.Verify();

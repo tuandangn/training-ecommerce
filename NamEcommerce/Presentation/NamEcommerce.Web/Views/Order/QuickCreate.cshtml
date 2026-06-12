@@ -76,9 +76,9 @@
 
         .fast-sale-qr {
             /*display: none;
-                                                                 border: 1px solid var(--gray-200);
-                                                                                            border-radius: .5rem;
-                                                                                 */ padding: .75rem;
+                                                                         border: 1px solid var(--gray-200);
+                                                                                                    border-radius: .5rem;
+                                                                                         */ padding: .75rem;
             background: var(--gray-50);
         }
 
@@ -246,10 +246,12 @@
                             </button>
                         </div>
                     </div>
-                    <div class="mb-3 @(Model.CustomerId == Model.DefaultCustomerId ? "d-none" : "")">
-                        <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                        <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
-                        <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                    <div class="ship-info mb-3 d-none">
+                        <div class="">
+                            <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
+                            <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                        </div>
                     </div>
                     <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
                     <div class="mb-3">

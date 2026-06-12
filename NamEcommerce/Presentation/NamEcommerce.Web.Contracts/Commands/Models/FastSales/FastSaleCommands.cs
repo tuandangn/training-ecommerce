@@ -22,6 +22,7 @@ public sealed class CreateCashQuickSaleCommand : ICommand<QuickSaleResultModel>
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 10;
     public decimal PaidAmount { get; init; }
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]
@@ -36,6 +37,7 @@ public sealed class CreateBankTransferQuickSaleCommand : ICommand<QuickSaleResul
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 10;
     public decimal PaidAmount { get; init; }
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]
@@ -48,6 +50,7 @@ public sealed class CreateUnpaidQuickSaleCommand : ICommand<QuickSaleResultModel
     public string? Note { get; init; }
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 20;
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]

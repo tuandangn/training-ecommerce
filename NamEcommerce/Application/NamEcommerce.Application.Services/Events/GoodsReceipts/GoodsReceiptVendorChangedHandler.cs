@@ -34,7 +34,7 @@ public sealed class GoodsReceiptVendorChangedHandler : INotificationHandler<Good
         if (notification is null)
             return;
 
-        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 
         // Còn item chưa có giá → tổng tiền chưa xác định.

@@ -737,7 +737,7 @@ public sealed class CustomerPortalAppService(
         if (request is null || request.CustomerId != customerId)
             return null;
 
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId, default).ConfigureAwait(false);
         return await MapReturnRequestDetailsAsync(request, deliveryNote).ConfigureAwait(false);
     }
 

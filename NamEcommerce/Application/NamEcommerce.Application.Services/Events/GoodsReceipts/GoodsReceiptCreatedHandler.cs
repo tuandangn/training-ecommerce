@@ -55,7 +55,7 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
 
         // Re-fetch entity từ DB — event chỉ mang theo Id để tránh truyền entity reference qua event boundary.
         // Tại thời điểm handler chạy, SaveChanges đã commit nên entity chắc chắn tồn tại.
-        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 
         // Guard: phiếu trả hàng khách và đầu kỳ — vẫn cộng tồn, nhưng KHÔNG sinh VendorDebt.

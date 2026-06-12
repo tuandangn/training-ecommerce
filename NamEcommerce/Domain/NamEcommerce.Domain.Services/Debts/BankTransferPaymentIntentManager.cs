@@ -38,7 +38,7 @@ public sealed class BankTransferPaymentIntentManager(
 
     public async Task<BankTransferPaymentIntentDto?> GetByIdAsync(Guid id)
     {
-        var intent = await intentReader.GetByIdAsync(id).ConfigureAwait(false);
+        var intent = await intentReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return intent is null ? null : MapToDto(intent);
     }
 

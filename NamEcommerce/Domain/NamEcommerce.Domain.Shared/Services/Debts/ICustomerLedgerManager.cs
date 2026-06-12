@@ -7,6 +7,8 @@ public interface ICustomerLedgerManager
 {
     Task<CustomerLedgerEntryDto> RecordChargeAsync(RecordCustomerLedgerChargeDto dto);
 
+    Task<CustomerLedgerEntryDto> RecordSurchargeAsync(RecordCustomerLedgerChargeDto dto);
+
     Task<CustomerLedgerEntryDto> RecordPaymentAsync(RecordCustomerLedgerPaymentDto dto);
 
     Task<CustomerLedgerEntryDto> RecordReturnCreditAsync(RecordCustomerLedgerReturnCreditDto dto);

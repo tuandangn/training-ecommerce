@@ -106,7 +106,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var vendor = await byIdGetter.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await byIdGetter.GetByIdAsync(vendorId, default).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
@@ -126,7 +126,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var warehouse = await byIdGetter.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+        var warehouse = await byIdGetter.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId.Value);
 
@@ -141,7 +141,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var product = await byIdGetter.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+        var product = await byIdGetter.GetByIdAsync(item.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(item.ProductId);
 
@@ -370,20 +370,20 @@ public sealed record PurchaseOrder : AppAggregateEntity
             if (warehouseId.HasValue)
                 ArgumentNullException.ThrowIfNull(warehouseByIdGetter);
 
-            var purchaseOrder = await purchaseOrderByIdGetter.GetByIdAsync(id.Value).ConfigureAwait(false);
+            var purchaseOrder = await purchaseOrderByIdGetter.GetByIdAsync(id.Value, default).ConfigureAwait(false);
             if (purchaseOrder is not null)
                 throw new PurchaseOrdersIdIsExistingException(id.Value);
 
             if (await purchaseOrderCodeChecker.DoesCodeExistAsync(code!).ConfigureAwait(false))
                 throw new PurchaseOrderCodeExistsException(code!);
 
-            var vendor = await vendorByIdGetter.GetByIdAsync(vendorId.Value).ConfigureAwait(false);
+            var vendor = await vendorByIdGetter.GetByIdAsync(vendorId.Value, default).ConfigureAwait(false);
             if (vendor is null)
                 throw new VendorIsNotFoundException(vendorId.Value);
 
             if (warehouseId.HasValue)
             {
-                var warehouse = await warehouseByIdGetter!.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                var warehouse = await warehouseByIdGetter!.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
                 if (warehouse is null)
                     throw new WarehouseIsNotFoundException(warehouseId.Value);
             }

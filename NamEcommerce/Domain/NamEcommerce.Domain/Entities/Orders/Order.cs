@@ -92,7 +92,7 @@ public sealed record Order : AppAggregateEntity
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var customer = await byIdGetter.GetByIdAsync(customerId).ConfigureAwait(false);
+        var customer = await byIdGetter.GetByIdAsync(customerId, default).ConfigureAwait(false);
         if (customer is null)
             throw new CustomerIsNotFoundException(customerId);
 
@@ -109,7 +109,7 @@ public sealed record Order : AppAggregateEntity
         if (!CanUpdateOrderItems())
             throw new OrderCannotUpdateOrderItemsException();
 
-        var product = await byIdGetter.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await byIdGetter.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
