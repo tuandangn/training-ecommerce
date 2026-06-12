@@ -1,7 +1,7 @@
 ﻿namespace NamEcommerce.Web.Contracts.Models.Common;
 
 [Serializable]
-public sealed record CommonActionResultModel
+public sealed record CommonActionResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

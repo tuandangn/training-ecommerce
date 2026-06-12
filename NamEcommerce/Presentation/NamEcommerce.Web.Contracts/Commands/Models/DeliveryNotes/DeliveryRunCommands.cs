@@ -11,7 +11,7 @@ public sealed class CreateDeliveryRunCommand : ICommand<CreateDeliveryRunResultM
 }
 
 [Serializable]
-public sealed class CreateDeliveryRunResultModel
+public sealed class CreateDeliveryRunResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

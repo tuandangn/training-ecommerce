@@ -3,7 +3,7 @@ using NamEcommerce.Web.Contracts.Models.Inventory;
 namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 
 [Serializable]
-public sealed class ConfirmDeliveryNoteResultModel
+public sealed class ConfirmDeliveryNoteResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

@@ -14,7 +14,8 @@ public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWo
         CancellationToken cancellationToken)
     {
         var response = await next().ConfigureAwait(false);
-        await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
+        if (response is not ICommandResult { Success: false })
+            await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
         return response;
     }
 }

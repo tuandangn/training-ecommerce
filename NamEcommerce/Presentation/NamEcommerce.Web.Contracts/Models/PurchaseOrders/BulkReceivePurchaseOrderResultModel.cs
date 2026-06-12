@@ -1,7 +1,7 @@
 namespace NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 [Serializable]
-public sealed record BulkReceivePurchaseOrderResultModel
+public sealed record BulkReceivePurchaseOrderResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }

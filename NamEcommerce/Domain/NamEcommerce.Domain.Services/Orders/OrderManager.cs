@@ -16,7 +16,6 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
-using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Orders;

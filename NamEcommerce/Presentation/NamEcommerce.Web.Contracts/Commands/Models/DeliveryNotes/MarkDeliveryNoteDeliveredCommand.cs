@@ -1,7 +1,7 @@
 ﻿
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
-public sealed record MarkDeliveryNoteDeliveredResult(bool Success, string? ErrorMessage = null);
+public sealed record MarkDeliveryNoteDeliveredResult(bool Success, string? ErrorMessage = null) : ICommandResult;
 
 public sealed class MarkDeliveryNoteDeliveredCommand : ICommand<MarkDeliveryNoteDeliveredResult>
 {

@@ -121,7 +121,7 @@ public sealed record InventoryCostingPolicySettingsModel
 }
 
 [Serializable]
-public sealed record UpdateInventoryCostingPolicyResultModel
+public sealed record UpdateInventoryCostingPolicyResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -129,7 +129,7 @@ public sealed record UpdateInventoryCostingPolicyResultModel
 }
 
 [Serializable]
-public sealed record RebuildInventoryCostingResultModel
+public sealed record RebuildInventoryCostingResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }

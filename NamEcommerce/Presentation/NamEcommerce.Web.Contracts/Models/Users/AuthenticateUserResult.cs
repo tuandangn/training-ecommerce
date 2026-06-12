@@ -1,7 +1,7 @@
 ﻿namespace NamEcommerce.Web.Contracts.Models.Users;
 
 [Serializable]
-public sealed record AuthenticateUserResult
+public sealed record AuthenticateUserResult : ICommandResult
 {
     public bool Success { get; init; }
 

@@ -50,14 +50,14 @@ public sealed class StockAdjustmentNoteItemInputModel
     public int QuantityDecimalPlaces { get; set; }
 }
 
-public sealed class CreateStockAdjustmentNoteResultModel
+public sealed class CreateStockAdjustmentNoteResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public Guid? CreatedId { get; set; }
 }
 
-public sealed class StockAdjustmentNoteActionResultModel
+public sealed class StockAdjustmentNoteActionResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

@@ -1,7 +1,7 @@
 namespace NamEcommerce.Web.Contracts.Models.Orders;
 
 [Serializable]
-public sealed record CreateOrderResultModel
+public sealed record CreateOrderResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public Guid? CreatedId { get; init; }

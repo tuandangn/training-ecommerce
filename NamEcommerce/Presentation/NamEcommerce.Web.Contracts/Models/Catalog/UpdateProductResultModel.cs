@@ -1,7 +1,7 @@
 ﻿namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
 [Serializable]
-public sealed record UpdateProductResultModel
+public sealed record UpdateProductResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public required string? ErrorMessage { get; init; }

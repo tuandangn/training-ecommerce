@@ -11,7 +11,7 @@ public sealed class UploadPictureCommand : ICommand<UploadPictureResultModel>
 }
 
 [Serializable]
-public sealed class UploadPictureResultModel
+public sealed class UploadPictureResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public Guid? PictureId { get; init; }

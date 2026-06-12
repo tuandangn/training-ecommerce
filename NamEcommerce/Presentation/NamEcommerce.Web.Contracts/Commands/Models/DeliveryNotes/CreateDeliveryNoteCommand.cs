@@ -27,7 +27,7 @@ public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResul
 }
 
 [Serializable]
-public sealed class CreateDeliveryNoteResultModel
+public sealed class CreateDeliveryNoteResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
