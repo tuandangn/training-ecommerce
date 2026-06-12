@@ -40,7 +40,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
 
         foreach (var item in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(item.ProductId, default).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateVendorReturnResultAppDto
@@ -52,7 +52,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (new[] { item.AcceptedQuantity, item.RequestedQuantity }.Any(quantity => !NumberHelper.IsValidDecimalPlace(quantity, unitMeasurement.DecimalPlaces)))

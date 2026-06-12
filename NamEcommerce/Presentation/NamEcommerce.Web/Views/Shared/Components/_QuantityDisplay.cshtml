@@ -1,0 +1,13 @@
+@model NumberDisplayModel
+
+<span class="ui-number-display @Model.CssClass">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <span class="ui-number-display__label">@Model.Label</span>
+    }
+    <span>@Model.Value.ToString(ViewConstants.NumberCustomFormat)</span>
+    @if (!string.IsNullOrWhiteSpace(Model.Suffix))
+    {
+        <span>@Model.Suffix</span>
+    }
+</span>

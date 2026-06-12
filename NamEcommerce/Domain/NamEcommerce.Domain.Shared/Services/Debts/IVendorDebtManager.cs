@@ -58,8 +58,6 @@ public interface IVendorDebtManager
 
     Task ReverseCreditNoteFromVendorReturnAsync(Guid returnId, string reason);
 
-    Task ConsumeCreditNoteByRefundAsync(Guid vendorReturnId, decimal refundAmount);
-
     Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId);
 
     Task<VendorDebtSummaryDto?> GetVendorDebtSummaryAsync(Guid vendorId);

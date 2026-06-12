@@ -1,7 +1,7 @@
 namespace NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 
 [Serializable]
-public sealed record SetGoodsReceiptVendorResultModel
+public sealed record SetGoodsReceiptVendorResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public Guid? UpdatedId { get; init; }

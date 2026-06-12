@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -20,7 +21,7 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IRepository<VendorCreditNote> creditNoteRepository,
     IEntityDataReader<VendorCreditNote> creditNoteReader,
-    IEntityDataReader<Vendor> vendorReader,
+    IRepository<Vendor> vendorRepository,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptReader,
     IVendorLedgerManager vendorLedgerManager,
@@ -48,7 +49,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -88,11 +89,11 @@ public sealed class VendorDebtManager(
         if (existing != null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
-        var purchaseOrder = await purchaseOrderReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await purchaseOrderReader.GetByIdAsync(dto.PurchaseOrderId, default).ConfigureAwait(false);
         if (purchaseOrder == null)
             throw new ArgumentException($"PurchaseOrder with id '{dto.PurchaseOrderId}' is not found");
 
@@ -135,11 +136,11 @@ public sealed class VendorDebtManager(
         if (existing != null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
-        var goodsReceipt = await goodsReceiptReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptReader.GetByIdAsync(dto.GoodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt == null)
             throw new ArgumentException($"GoodsReceipt with id '{dto.GoodsReceiptId}' is not found");
 
@@ -177,7 +178,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -196,7 +197,8 @@ public sealed class VendorDebtManager(
         )
         {
             VendorDebtId = dto.VendorDebtId,
-            PurchaseOrderId = dto.PurchaseOrderId
+            PurchaseOrderId = dto.PurchaseOrderId,
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
         };
 
         payment.MarkCreated();
@@ -225,7 +227,7 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
 
@@ -241,7 +243,10 @@ public sealed class VendorDebtManager(
             paidOnUtc: dto.PaidOnUtc,
             recordedByUserId: dto.RecordedByUserId,
             note: dto.Note
-        );
+        )
+        {
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
+        };
 
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
@@ -261,7 +266,7 @@ public sealed class VendorDebtManager(
 
     public async Task<VendorDebtDto?> GetDebtByIdAsync(Guid id)
     {
-        var debt = await debtReader.GetByIdAsync(id).ConfigureAwait(false);
+        var debt = await debtReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (debt == null) return null;
 
         var payments = paymentReader.DataSource
@@ -331,7 +336,7 @@ public sealed class VendorDebtManager(
         if (existing is not null)
             return existing.ToDto();
 
-        var vendor = await vendorReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await vendorRepository.GetByIdAsync(vendorId, default).ConfigureAwait(false);
         if (vendor == null)
             throw new ArgumentException($"Vendor with id '{vendorId}' is not found");
 
@@ -360,21 +365,6 @@ public sealed class VendorDebtManager(
         return inserted.ToDto();
     }
 
-    public async Task ConsumeCreditNoteByRefundAsync(Guid vendorReturnId, decimal refundAmount)
-    {
-        var creditNote = creditNoteReader.DataSource
-            .FirstOrDefault(c => c.SourceReturnId == vendorReturnId
-                              && c.Status != CreditNoteStatus.Cancelled
-                              && c.RemainingAmount > 0);
-        if (creditNote is null) return;
-
-        var tracked = await creditNoteRepository.GetByIdAsync(creditNote.Id).ConfigureAwait(false);
-        if (tracked is null) return;
-
-        tracked.ConsumeByRefund(refundAmount);
-        await creditNoteRepository.UpdateAsync(tracked).ConfigureAwait(false);
-    }
-
     public async Task ReverseCreditNoteFromVendorReturnAsync(Guid returnId, string reason)
     {
         var creditNoteId = creditNoteReader.DataSource
@@ -400,7 +390,7 @@ public sealed class VendorDebtManager(
 
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
-        var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
+        var payment = await paymentReader.GetByIdAsync(paymentId, default).ConfigureAwait(false);
         return payment == null ? null : payment.ToDto();
     }
 

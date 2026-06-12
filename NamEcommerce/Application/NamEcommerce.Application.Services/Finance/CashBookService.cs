@@ -139,29 +139,38 @@ public sealed class CashBookService : ICashBookService
     private decimal GetBankAccountBalance(Guid accountId, decimal openingBalance, DateTime asOf)
     {
         var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+        var fallbackBankAccountId = GetFallbackBankAccountId();
 
         var cashIn = _customerPayments.DataSource
-            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= cutoff)
+            .Where(p => (p.BankAccountId == accountId
+                     || (p.BankAccountId == null && p.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == accountId))
+                     && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var refundsOut = _refunds.DataSource
-            .Where(r => r.BankAccountId == accountId
+            .Where(r => (r.BankAccountId == accountId
+                     || (r.BankAccountId == null && r.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == accountId))
                      && r.Status == CustomerRefundStatus.Completed
                      && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorRefundsIn = _vendorRefunds.DataSource
-            .Where(r => r.BankAccountId == accountId
+            .Where(r => (r.BankAccountId == accountId
+                     || (r.BankAccountId == null && r.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == accountId))
                      && r.Status == VendorRefundStatus.Completed
                      && r.RefundedOnUtc <= cutoff)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
         var vendorOut = _vendorPayments.DataSource
-            .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= cutoff)
+            .Where(p => (p.BankAccountId == accountId
+                     || (p.BankAccountId == null && p.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == accountId))
+                     && p.PaidOnUtc <= cutoff)
             .Sum(p => (decimal?)p.Amount) ?? 0;
 
         var expensesOut = _expenses.DataSource
-            .Where(e => e.BankAccountId == accountId && e.IncurredDate <= cutoff)
+            .Where(e => (e.BankAccountId == accountId
+                     || (e.BankAccountId == null && e.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == accountId))
+                     && e.IncurredDate <= cutoff)
             .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
@@ -173,12 +182,14 @@ public sealed class CashBookService : ICashBookService
         var lines = new List<CashBookLineDto>();
         bool isCash = bankAccountId == Guid.Empty;
         bool isAll = bankAccountId == null;
+        var fallbackBankAccountId = GetFallbackBankAccountId();
 
         // CustomerPayment (tiền vào)
         var cpQuery = _customerPayments.DataSource
             .Where(p => p.PaidOnUtc >= start && p.PaidOnUtc <= end);
         if (isCash) cpQuery = cpQuery.Where(p => p.PaymentMethod == PaymentMethod.Cash);
-        else if (!isAll) cpQuery = cpQuery.Where(p => p.BankAccountId == bankAccountId);
+        else if (!isAll) cpQuery = cpQuery.Where(p => p.BankAccountId == bankAccountId!.Value
+            || (p.BankAccountId == null && p.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var p in cpQuery.ToList())
             lines.Add(new CashBookLineDto { Date = p.PaidOnUtc, Description = $"Thu KH: {p.CustomerName}", SourceType = "CustomerPayment", SourceId = p.Id, AmountIn = p.Amount });
 
@@ -187,7 +198,8 @@ public sealed class CashBookService : ICashBookService
             .Where(r => r.Status == CustomerRefundStatus.Completed
                      && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end);
         if (isCash) refQuery = refQuery.Where(r => r.PaymentMethod == PaymentMethod.Cash);
-        else if (!isAll) refQuery = refQuery.Where(r => r.BankAccountId == bankAccountId);
+        else if (!isAll) refQuery = refQuery.Where(r => r.BankAccountId == bankAccountId!.Value
+            || (r.BankAccountId == null && r.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var r in refQuery.ToList())
             lines.Add(new CashBookLineDto { Date = r.RefundedOnUtc!.Value, Description = $"Hoàn tiền KH: {r.CustomerName}", SourceType = "CustomerRefund", SourceId = r.Id, AmountOut = r.Amount });
 
@@ -196,7 +208,8 @@ public sealed class CashBookService : ICashBookService
             .Where(r => r.Status == VendorRefundStatus.Completed
                      && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end);
         if (isCash) vrQuery = vrQuery.Where(r => r.PaymentMethod == PaymentMethod.Cash);
-        else if (!isAll) vrQuery = vrQuery.Where(r => r.BankAccountId == bankAccountId);
+        else if (!isAll) vrQuery = vrQuery.Where(r => r.BankAccountId == bankAccountId!.Value
+            || (r.BankAccountId == null && r.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var r in vrQuery.ToList())
             lines.Add(new CashBookLineDto { Date = r.RefundedOnUtc!.Value, Description = $"NCC hoàn tiền: {r.VendorName}", SourceType = "VendorRefund", SourceId = r.Id, AmountIn = r.Amount });
 
@@ -204,7 +217,8 @@ public sealed class CashBookService : ICashBookService
         var vpQuery = _vendorPayments.DataSource
             .Where(p => p.PaidOnUtc >= start && p.PaidOnUtc <= end);
         if (isCash) vpQuery = vpQuery.Where(p => p.PaymentMethod == PaymentMethod.Cash);
-        else if (!isAll) vpQuery = vpQuery.Where(p => p.BankAccountId == bankAccountId);
+        else if (!isAll) vpQuery = vpQuery.Where(p => p.BankAccountId == bankAccountId!.Value
+            || (p.BankAccountId == null && p.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var p in vpQuery.ToList())
             lines.Add(new CashBookLineDto { Date = p.PaidOnUtc, Description = $"Trả NCC: {p.VendorName}", SourceType = "VendorPayment", SourceId = p.Id, AmountOut = p.Amount });
 
@@ -212,10 +226,20 @@ public sealed class CashBookService : ICashBookService
         var expQuery = _expenses.DataSource
             .Where(e => e.IncurredDate >= start && e.IncurredDate <= end);
         if (isCash) expQuery = expQuery.Where(e => e.PaymentMethod == null || e.PaymentMethod == PaymentMethod.Cash);
-        else if (!isAll) expQuery = expQuery.Where(e => e.BankAccountId == bankAccountId);
+        else if (!isAll) expQuery = expQuery.Where(e => e.BankAccountId == bankAccountId!.Value
+            || (e.BankAccountId == null && e.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var e in expQuery.ToList())
             lines.Add(new CashBookLineDto { Date = e.IncurredDate, Description = $"Chi phí: {e.Title}", SourceType = "Expense", SourceId = e.Id, AmountOut = e.AmountExcludingTax });
 
         return lines;
     }
+
+    private Guid? GetFallbackBankAccountId()
+        => _bankAccounts.DataSource
+            .Where(a => a.IsActive)
+            .OrderByDescending(a => a.IsDefault)
+            .ThenBy(a => a.DisplayName)
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefault();
+
 }

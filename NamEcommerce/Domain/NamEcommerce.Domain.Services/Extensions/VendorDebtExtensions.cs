@@ -38,6 +38,7 @@ public static class VendorDebtExtensions
             Amount = payment.Amount,
             PaymentMethod = payment.PaymentMethod,
             PaymentType = payment.PaymentType,
+            BankAccountId = payment.BankAccountId,
             Note = payment.Note,
             PaidOnUtc = payment.PaidOnUtc,
             RecordedByUserId = payment.RecordedByUserId,

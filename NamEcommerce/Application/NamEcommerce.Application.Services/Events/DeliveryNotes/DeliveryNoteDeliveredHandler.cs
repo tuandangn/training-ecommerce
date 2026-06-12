@@ -29,28 +29,49 @@ public sealed class DeliveryNoteDeliveredHandler(
         if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn)
             return;
 
-        if (notification.AmountToCollect <= 0)
+        // Fallback cho event cũ trong Outbox được serialize trước khi có DebtAmount.
+        var debtAmount = notification.DebtAmount > 0 ? notification.DebtAmount : notification.AmountToCollect;
+        if (debtAmount <= 0)
             return;
 
         var createDebtDto = new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
-            TotalAmount = notification.AmountToCollect,
+            TotalAmount = debtAmount,
             DueDateUtc = null
         };
 
         await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);
 
-        await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+        var surcharge = deliveryNote.Surcharge;
+        var chargeAmount = debtAmount - surcharge;
+
+        if (chargeAmount > 0)
         {
-            CustomerId = notification.CustomerId,
-            Amount = notification.AmountToCollect,
-            ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
-            ReferenceId = notification.DeliveryNoteId,
-            ReferenceCode = deliveryNote.Code,
-            OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
-        }).ConfigureAwait(false);
+            await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+            {
+                CustomerId = notification.CustomerId,
+                Amount = chargeAmount,
+                ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
+                ReferenceId = notification.DeliveryNoteId,
+                ReferenceCode = deliveryNote.Code,
+                OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
+
+        if (surcharge > 0)
+        {
+            await _customerLedgerManager.RecordSurchargeAsync(new RecordCustomerLedgerChargeDto
+            {
+                CustomerId = notification.CustomerId,
+                Amount = surcharge,
+                ReferenceType = CustomerLedgerReferenceType.DeliveryNote,
+                ReferenceId = notification.DeliveryNoteId,
+                ReferenceCode = deliveryNote.Code,
+                OccurredAtUtc = deliveryNote.DeliveredOnUtc ?? DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
     }
 }
 

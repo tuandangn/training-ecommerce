@@ -11,7 +11,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="OrderRequests" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="OrderRequests" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">@Model.Code</h1>
             <p class="page-header-subtitle">@Model.CustomerName · @Model.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</p>

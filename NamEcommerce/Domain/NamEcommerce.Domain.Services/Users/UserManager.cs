@@ -77,7 +77,7 @@ public sealed class UserManager : IUserManager
         if (id == Guid.Empty)
             throw new ArgumentException("User id is required", nameof(id));
 
-        var user = await _userEntityDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var user = await _userEntityDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (user is null)
             return null;
 
@@ -229,7 +229,7 @@ public sealed class UserManager : IUserManager
 
         dto.Verify();
 
-        var user = await _userEntityDataReader.GetByIdAsync(dto.UserId).ConfigureAwait(false);
+        var user = await _userEntityDataReader.GetByIdAsync(dto.UserId, default).ConfigureAwait(false);
         if (user is null)
             throw new UserIsNotFoundException(dto.UserId);
 

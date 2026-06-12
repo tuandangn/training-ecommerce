@@ -22,6 +22,7 @@ public sealed class PurchaseOrderAllocationManager(
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
+    IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<Product> productReader) : IPurchaseOrderAllocationManager
@@ -31,7 +32,7 @@ public sealed class PurchaseOrderAllocationManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var (purchaseOrder, purchaseOrderItem) = EnsurePurchaseOrderItemExists(dto.PurchaseOrderItemId);
+        var (purchaseOrder, purchaseOrderItem) = await EnsurePurchaseOrderItemExists(dto.PurchaseOrderItemId);
         var isValidPurchaseOrderStatus = purchaseOrder.Status
             is PurchaseOrderStatus.Draft
             or PurchaseOrderStatus.Submitted
@@ -40,7 +41,7 @@ public sealed class PurchaseOrderAllocationManager(
         if (!isValidPurchaseOrderStatus)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemCannotAllocate");
 
-        var (order, orderItem) = EnsureOrderItemExists(dto.OrderItemId);
+        var (order, orderItem) = await EnsureOrderItemExists(dto.OrderItemId);
         EnsureOrderItemCanAllocate(orderItem, purchaseOrderItem.ProductId, dto.AllocationQuantity);
 
         var allocatedQuantity = (await GetAllocationsOfPurchaseOrderItem(dto.PurchaseOrderItemId, true).ConfigureAwait(false))
@@ -400,11 +401,9 @@ public sealed class PurchaseOrderAllocationManager(
         return Task.FromResult<IList<NonDirectShipAllocationDto>>(result);
     }
 
-    private (PurchaseOrder, PurchaseOrderItem) EnsurePurchaseOrderItemExists(SecondaryItemId purchaseOrderItemId)
+    private async Task<(PurchaseOrder, PurchaseOrderItem)> EnsurePurchaseOrderItemExists(SecondaryItemId purchaseOrderItemId)
     {
-        var purchaseOrder = purchaseOrderReader.DataSource
-            .Where(po => po.Id == purchaseOrderItemId.PrimaryId)
-            .FirstOrDefault();
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(purchaseOrderItemId.PrimaryId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
@@ -415,9 +414,9 @@ public sealed class PurchaseOrderAllocationManager(
         return (purchaseOrder, purchaseOrderItem);
     }
 
-    private (Order, OrderItem) EnsureOrderItemExists(SecondaryItemId orderItemId)
+    private async Task<(Order, OrderItem)> EnsureOrderItemExists(SecondaryItemId orderItemId)
     {
-        var order = orderReader.DataSource.Where(order => order.Id == orderItemId.PrimaryId).FirstOrDefault();
+        var order = await orderReader.GetByIdAsync(orderItemId.PrimaryId).ConfigureAwait(false);
         if (order is null)
             throw new OrderItemIsNotFoundException();
 

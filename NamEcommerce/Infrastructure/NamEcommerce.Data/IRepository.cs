@@ -1,8 +1,9 @@
 ﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Data.Contracts;
 
-public interface IRepository<TEntity> where TEntity : AppEntity
+public interface IRepository<TEntity> : IGetByIdService<TEntity> where TEntity : AppEntity
 {
     Task<IEnumerable<TEntity>> GetAllAsync();
 

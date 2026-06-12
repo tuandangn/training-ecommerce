@@ -14,6 +14,7 @@ public interface IDeliveryRunManager
     Task ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverDto dto);
     Task CancelAsync(Guid id);
     Task<DeliveryRunDto?> GetByIdAsync(Guid id);
+    Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId);
     Task<IPagedDataDto<DeliveryRunDto>> GetListAsync(int pageIndex, int pageSize, string? keywords,
         Guid? assignedDeliveryUserId, DeliveryRunStatus? status);
 }

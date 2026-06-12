@@ -409,7 +409,7 @@
 
 <div class="modal fade" id="existingDraftModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Đơn nhập liên quan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -419,7 +419,7 @@
                 <div id="existingDraftList" class="related-po-list"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-dark" id="btnConfirmCreateFromShortage">Xác nhận</button>
             </div>
         </div>
@@ -428,7 +428,7 @@
 
 <div class="modal fade" id="createdPurchaseOrdersModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Tạo phiếu nhập thành công</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -916,7 +916,7 @@
                             ${statusBadge ? ` <span class="ms-2">${statusBadge}</span>` : ''}
                         </td>
                         <td class="align-middle">
-                            <div class="input-group input-group-sm" style="width: 140px; float: right;">
+                            <div class="input-group input-group-sm ui-float-end-w-140">
                                 <input class="form-control text-end related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
                                        ${maxAttr} data-decimal="quantity" value="1" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
@@ -1006,10 +1006,10 @@
                             <table class="table table-hover align-middle mb-0 border-top">
                                 <thead class="table-light text-muted small">
                                     <tr>
-                                        <th style="width: 50px" class="text-center border-bottom-0">Chọn</th>
-                                        <th style="width: 25%" class="border-bottom-0">Giải pháp xử lý</th>
+                                        <th class="text-center border-bottom-0 ui-w-50">Chọn</th>
+                                        <th class="border-bottom-0 ui-w-25p">Giải pháp xử lý</th>
                                         <th class="border-bottom-0">Thông tin chi tiết</th>
-                                        <th style="width: 150px" class="text-end border-bottom-0 pe-4">Số lượng</th>
+                                        <th class="text-end border-bottom-0 pe-4 ui-w-150">Số lượng</th>
                                     </tr>
                                 </thead>
                                 <tbody>

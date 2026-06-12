@@ -197,7 +197,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<CreatePurchaseOrderResultDto> CopyPurchaseOrderAsync(Guid sourceId)
     {
-        var source = await _purchaseOrderDataReader.GetByIdAsync(sourceId).ConfigureAwait(false);
+        var source = await _purchaseOrderDataReader.GetByIdAsync(sourceId, default).ConfigureAwait(false);
         if (source is null)
             throw new PurchaseOrderIsNotFoundException(sourceId);
 
@@ -318,7 +318,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (vendorId == Guid.Empty)
             throw new VendorIsNotFoundException(vendorId);
 
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId, default).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
@@ -477,7 +477,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.Id);
 
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(dto.VendorId);
 
@@ -486,7 +486,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         if (dto.WarehouseId.HasValue)
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(dto.WarehouseId.Value);
         }
@@ -524,7 +524,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(dto.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
@@ -565,7 +565,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -624,7 +624,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId, default).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -633,7 +633,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<bool> CanAddPurchaseOrderItemsAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId, default).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -674,7 +674,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -683,7 +683,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new ArgumentException("Warehouse is required", nameof(dto));
         else
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }
@@ -774,7 +774,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         {
             if (!warehouseCache.TryGetValue(line.WarehouseId, out var warehouse))
             {
-                warehouse = await _warehouseOrderDataReader.GetByIdAsync(line.WarehouseId).ConfigureAwait(false);
+                warehouse = await _warehouseOrderDataReader.GetByIdAsync(line.WarehouseId, default).ConfigureAwait(false);
                 warehouseCache[line.WarehouseId] = warehouse;
             }
             if (warehouse is null)
@@ -1022,7 +1022,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(id);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(id);
         if (purchaseOrder is null)
             return null;
 
@@ -1031,7 +1031,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<bool> CanReceiveGoodsAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId, default).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1051,7 +1051,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -1218,13 +1218,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         Guid vendorId, Guid? warehouseId, DateTime placedOnUtc,
         DateTime? expectedDeliveryDateUtc, string? note, decimal taxAmount, decimal shippingAmount)
     {
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId, default).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
         if (warehouseId.HasValue)
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }

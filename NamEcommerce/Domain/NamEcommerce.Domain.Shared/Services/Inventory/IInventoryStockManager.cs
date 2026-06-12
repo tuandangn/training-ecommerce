@@ -6,8 +6,8 @@ public interface IInventoryStockManager
 {
     Task InitializeStockAsync(Guid productId, Guid warehouseId, Guid? unitMeasurementId = null);
 
-    Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
-    Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
+    Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId, bool enforceCapacity = true);
+    Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId, bool enforceCapacity = true);
 
     /// <summary>
     /// Hoàn tác nhập hàng — trừ lại <paramref name="quantity"/> đơn vị đã nhập trước đó từ GoodsReceipt bị xóa.
@@ -19,6 +19,7 @@ public interface IInventoryStockManager
     Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId);
 
     Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null);
+    Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockUpToAsync(Guid productId, Guid fromWarehouseId, Guid toWarehouseId, decimal targetQuantity, decimal unitCost, Guid? referenceId, Guid userId, string? note = null);
     Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null);
     Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = 2);
     Task<StockMovementLogDto?> DispatchStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = 2);
@@ -38,13 +39,6 @@ public interface IInventoryStockManager
     Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId);
     Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null);
     Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
-    
-    /// <summary>
-    /// Legacy compatibility: lấy AverageCost snapshot hiện tại của (productId, warehouseId).
-    /// Trả về 0 nếu chưa có stock hoặc chưa nhập hàng.
-    /// Không dùng làm nguồn authoritative cho COGS.
-    /// </summary>
-    Task<decimal> GetAverageCostAsync(Guid productId, Guid warehouseId);
 
     /// <summary>
     /// Áp dụng điều chỉnh tồn kho dựa trên delta từ StockAdjustmentNote.
@@ -55,11 +49,7 @@ public interface IInventoryStockManager
     /// </summary>
     Task ApplyAdjustmentAsync(Guid productId, Guid warehouseId, decimal delta, Guid adjustmentNoteId, Guid? userId);
 
-    /// <summary>
-    /// Release all expired reservations across all stocks.
-    /// Called periodically by background jobs or triggered on-demand.
-    /// Default expiration: 7 days if reservationDaysValid not set.
-    /// </summary>
+    [Obsolete("Expiry-based reservation release is replaced by per-reference ledger (StockReservationEntry). This method is a no-op.")]
     Task<int> ReleaseExpiredReservationsAsync();
 
     /// <summary>

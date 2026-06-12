@@ -1,0 +1,5 @@
+/* Extracted from Views/GoodsReceipt\List.cshtml during UI design-system cleanup. */
+.receipt-item-link:hover {
+            color: var(--bs-primary) !important;
+            text-decoration: underline !important;
+        }

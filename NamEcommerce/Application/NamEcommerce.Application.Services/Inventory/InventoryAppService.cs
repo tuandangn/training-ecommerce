@@ -178,7 +178,7 @@ public sealed class InventoryAppService : IInventoryAppService
 
     public async Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize)
     {
-        var product = await _productReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await _productReader.GetByIdAsync(productId, default).ConfigureAwait(false);
         var query = _reservationLedgerReader.DataSource
             .Where(x => x.ProductId == productId)
             .OrderByDescending(x => x.CreatedOnUtc);

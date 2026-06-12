@@ -70,7 +70,7 @@
                     <th class="text-center">Offline</th>
                     <th class="text-center">Trạng thái</th>
                     <th class="d-none d-md-table-cell">Ngày tạo</th>
-                    <th style="width: 220px;"></th>
+                    <th class="ui-w-220"></th>
                 </tr>
             </thead>
             <tbody>
@@ -131,12 +131,12 @@
                             <td class="d-none d-md-table-cell text-muted">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
                                 <div class="d-flex justify-content-end gap-2">
-                                    <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-light" title="Chi tiết">
+                                    <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-outline-secondary" title="Chi tiết">
                                         <i class="bi bi-info-circle text-primary"></i>
                                     </a>
                                     @if (canManageDeliveryRun && run.PaperManifestIssued)
                                     {
-                                        <a asp-action="Print" asp-route-id="@run.Id" target="_blank" class="btn btn-sm btn-light" title="In phiếu giấy">
+                                        <a asp-action="Print" asp-route-id="@run.Id" target="_blank" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy">
                                             <i class="bi bi-printer text-secondary"></i>
                                         </a>
                                     }
@@ -144,7 +144,7 @@
                                     {
                                         <form asp-action="IssuePaperManifest" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />
-                                            <button type="submit" class="btn btn-sm btn-light" title="In phiếu giấy dự phòng">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy dự phòng">
                                                 <i class="bi bi-printer text-secondary"></i>
                                             </button>
                                         </form>

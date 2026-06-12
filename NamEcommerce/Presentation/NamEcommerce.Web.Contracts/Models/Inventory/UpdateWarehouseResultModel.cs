@@ -1,7 +1,7 @@
 ﻿namespace NamEcommerce.Web.Contracts.Models.Inventory;
 
 [Serializable]
-public sealed record UpdateWarehouseResultModel
+public sealed record UpdateWarehouseResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public required string? ErrorMessage { get; init; }

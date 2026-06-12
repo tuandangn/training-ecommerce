@@ -1,9 +1,8 @@
-using MediatR;
-
+﻿
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 [Serializable]
-public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResultModel>
+public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResultModel>
 {
     public Guid OrderId { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
@@ -28,7 +27,7 @@ public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResul
 }
 
 [Serializable]
-public sealed class CreateDeliveryNoteResultModel
+public sealed class CreateDeliveryNoteResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

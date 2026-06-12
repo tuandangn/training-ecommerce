@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
@@ -21,7 +22,7 @@ public sealed class CustomerDebtManager(
     IEntityDataReader<CustomerPayment> paymentReader,
     IRepository<CustomerCreditNote> creditNoteRepository,
     IEntityDataReader<CustomerCreditNote> creditNoteReader,
-    IEntityDataReader<Customer> customerReader,
+    IRepository<Customer> customerRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     ICustomerLedgerManager customerLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
@@ -48,7 +49,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
@@ -87,8 +88,8 @@ public sealed class CustomerDebtManager(
         if (existing != null)
             return MapToDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId, default).ConfigureAwait(false);
         
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
         if (deliveryNote == null) throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
@@ -113,6 +114,7 @@ public sealed class CustomerDebtManager(
 
         debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+
         return MapToDto(inserted);
     }
 
@@ -120,7 +122,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
@@ -139,7 +141,8 @@ public sealed class CustomerDebtManager(
         {
             OrderId = dto.OrderId,
             DeliveryNoteId = dto.DeliveryNoteId,
-            CustomerDebtId = dto.CustomerDebtId
+            CustomerDebtId = dto.CustomerDebtId,
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
         };
 
         payment.MarkCreated();
@@ -160,7 +163,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto?> GetDebtByIdAsync(Guid id)
     {
-        var debt = await debtReader.GetByIdAsync(id).ConfigureAwait(false);
+        var debt = await debtReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (debt == null) return null;
 
         // Load tất cả payments liên quan đến debt này
@@ -181,7 +184,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
-        var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
+        var payment = await paymentReader.GetByIdAsync(paymentId, default).ConfigureAwait(false);
         return payment == null ? null : MapToPaymentDto(payment);
     }
 
@@ -228,7 +231,7 @@ public sealed class CustomerDebtManager(
         if (existing is not null)
             return MapToCreditNoteDto(existing);
 
-        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(customerId, default).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(customerId);
 
         var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);
@@ -244,21 +247,6 @@ public sealed class CustomerDebtManager(
 
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
         return MapToCreditNoteDto(inserted);
-    }
-
-    public async Task ConsumeCreditNoteByRefundAsync(Guid customerReturnId, decimal refundAmount)
-    {
-        var creditNote = creditNoteReader.DataSource
-            .FirstOrDefault(c => c.SourceReturnId == customerReturnId
-                              && c.Status != CreditNoteStatus.Cancelled
-                              && c.RemainingAmount > 0);
-        if (creditNote is null) return;
-
-        var tracked = await creditNoteRepository.GetByIdAsync(creditNote.Id).ConfigureAwait(false);
-        if (tracked is null) return;
-
-        tracked.ConsumeByRefund(refundAmount);
-        await creditNoteRepository.UpdateAsync(tracked).ConfigureAwait(false);
     }
 
     public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
@@ -496,6 +484,7 @@ public sealed class CustomerDebtManager(
             Amount = payment.Amount,
             PaymentMethod = payment.PaymentMethod,
             PaymentType = payment.PaymentType,
+            BankAccountId = payment.BankAccountId,
             Note = payment.Note,
             PaidOnUtc = payment.PaidOnUtc,
             RecordedByUserId = payment.RecordedByUserId,

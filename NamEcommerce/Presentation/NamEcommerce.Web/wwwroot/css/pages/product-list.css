@@ -1,0 +1,45 @@
+/* Extracted from Views/Product\List.cshtml during UI design-system cleanup. */
+.product-category-filter {
+            max-width: 100%;
+            overflow: hidden;
+            background: #fff;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .product-category-tabs {
+            border-bottom: 0;
+            padding: 0 1.25rem 0.25rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-300) transparent;
+        }
+
+            .product-category-tabs::-webkit-scrollbar {
+                display: block;
+                height: 0.375rem;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-thumb {
+                background: var(--gray-300);
+                border-radius: 999px;
+            }
+
+            .product-category-tabs .nav-link {
+                max-width: 18rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+        @@media (max-width: 575.98px) {
+            .product-category-tabs {
+                padding-right: 0.875rem;
+                padding-left: 0.875rem;
+            }
+
+                .product-category-tabs .nav-link {
+                    max-width: 13rem;
+                }
+        }

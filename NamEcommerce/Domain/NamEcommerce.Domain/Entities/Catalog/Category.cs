@@ -60,7 +60,7 @@ public sealed record Category : AppAggregateEntity
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var parent = await byIdGetter.GetByIdAsync(parentId.Value).ConfigureAwait(false);
+        var parent = await byIdGetter.GetByIdAsync(parentId.Value, default).ConfigureAwait(false);
         if (parent is null)
             throw new CategoryIsNotFoundException(parentId.Value);
 

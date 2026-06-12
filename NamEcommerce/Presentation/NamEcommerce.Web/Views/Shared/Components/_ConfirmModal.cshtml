@@ -1,0 +1,19 @@
+@model ConfirmModalModel
+
+<div class="modal fade" id="@Model.Id" tabindex="-1" aria-labelledby="@($"{Model.Id}Label")" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="@($"{Model.Id}Label")">@Model.Title</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                @Model.Message
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">@Model.CancelText</button>
+                <button class="btn btn-@Model.Tone" type="button">@Model.ConfirmText</button>
+            </div>
+        </div>
+    </div>
+</div>

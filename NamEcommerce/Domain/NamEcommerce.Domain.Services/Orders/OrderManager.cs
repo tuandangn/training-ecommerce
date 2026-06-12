@@ -16,11 +16,13 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
-using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Specifications.Customers;
+using NamEcommerce.Domain.Specifications.Orders;
+using NamEcommerce.Domain.Shared.Specifications;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -48,7 +50,7 @@ public sealed class OrderManager(
 
         dto.Verify();
 
-        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             throw new CustomerIsNotFoundException(dto.CustomerId);
 
@@ -117,7 +119,7 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(orderId);
 
-        var product = await productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.ProductId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
@@ -202,17 +204,7 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        var activeDeliveryNotes = deliveryNoteDataReader.DataSource
-            .Where(deliveryNote => deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled)
-            .ToList();
-        var allItemsDelivered = order.OrderItems.Count() > 0
-            && order.OrderItems.All(orderItem =>
-                activeDeliveryNotes
-                    .Where(deliveryNote => deliveryNote.Status == DeliveryNoteStatus.Delivered)
-                    .SelectMany(deliveryNote => deliveryNote.Items)
-                    .Where(item => item.OrderItemId == orderItem.Id)
-                    .Sum(item => item.Quantity) >= orderItem.Quantity);
-        if (!allItemsDelivered)
+        if (!order.OrderItems.Any() || !order.OrderItems.All(i => i.IsDelivered))
             throw new OrderCannotChangeStatusException();
 
         order.Complete();
@@ -242,35 +234,22 @@ public sealed class OrderManager(
         if (status != null && status.Any())
             query = query.Where(order => status.Contains(order.OrderStatus));
 
+        var specification = new CompositeSpecification<Order>();
         if (!string.IsNullOrEmpty(keywords))
         {
-            var normalizedKeywords = TextHelper.Normalize(keywords);
-            var uppercaseKeywords = keywords.Trim().ToUpper();
-            var customerIds = customerDataReader.DataSource
-                .Where(c => c.FullName.Value.ToUpper().Contains(uppercaseKeywords) || c.FullName.Value.ToUpper().Contains(normalizedKeywords) || c.FullName.NormalizedValue.Contains(normalizedKeywords)
-                    || c.Address.Value.ToUpper().Contains(uppercaseKeywords) || c.Address.Value.ToUpper().Contains(normalizedKeywords) || c.Address.NormalizedValue.Contains(normalizedKeywords)
-                    || c.PhoneNumber.Contains(keywords))
-                .Select(v => v.Id)
-                .ToList()
-                .OfType<Guid?>()
-                .ToList();
-            IList<Guid?> userIds = [];
+            specification.Or(new OrderKeywordSearchSpec(keywords));
 
-            query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
-                || (order.ShippingAddress.Value != null && (order.ShippingAddress.Value.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.Value.ToUpper().Contains(normalizedKeywords) || order.ShippingAddress.NormalizedValue.Contains(normalizedKeywords)))
-                || customerIds.Contains(order.CustomerId)
-                || userIds.Contains(order.CreatedByUserId));
+            var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
+            var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
+            specification.Or(new OrdersOfBuyersSpec(customerIds));
         }
 
-        var total = query.Count();
-        var data = query
-            .OrderByDescending(o => o.CreatedOnUtc)
-            .ThenByDescending(o => o.ExpectedShippingDateUtc)
-            .Skip(pageIndex * pageSize).Take(pageSize)
-            .ToList();
+        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
 
-        var pagedData = PagedDataDto.Create(data.Select(order => order.ToDto()), pageIndex, pageSize, total);
-        return pagedData;
+        var total = await orderDataReader.CountAsync(specification).ConfigureAwait(false);
+        var pagedData = await orderDataReader.GetPagedListAsync(specification, pageIndex, pageSize).ConfigureAwait(false);
+
+        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, total);
     }
 
     public Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
@@ -403,11 +382,21 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
+    public async Task RequestQuickSaleDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        order.RequestQuickSaleDelivery(deliveryNoteId, requestedAtUtc);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
     private async Task EnsureAvailableForProductsWithoutVendorAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
     {
         foreach (var itemGroup in items.GroupBy(item => item.ProductId))
         {
-            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
             if (product is null)
                 throw new ProductIsNotFoundException(itemGroup.Key);
 

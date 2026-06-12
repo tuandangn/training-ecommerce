@@ -25,3 +25,4 @@ public abstract class BaseSpecification<T> : ISpecification<T>
     protected void ApplyOrderByDescending(Expression<Func<T, object>> orderByDesc)
         => OrderByDescending = orderByDesc;
 }
+

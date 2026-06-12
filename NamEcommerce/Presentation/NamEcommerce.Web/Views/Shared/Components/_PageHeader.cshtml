@@ -1,0 +1,45 @@
+@model PageHeaderModel
+
+<div class="ui-page-header">
+    <div>
+        @if (Model.Breadcrumbs?.Count > 0)
+        {
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    @foreach (var item in Model.Breadcrumbs)
+                    {
+                        if (string.IsNullOrWhiteSpace(item.Url))
+                        {
+                            <li class="breadcrumb-item active" aria-current="page">@item.Text</li>
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item"><a href="@item.Url">@item.Text</a></li>
+                        }
+                    }
+                </ol>
+            </nav>
+        }
+        <h1 class="ui-page-header__title">@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <p class="ui-page-header__subtitle">@Model.Subtitle</p>
+        }
+    </div>
+
+    @if (Model.Actions?.Count > 0)
+    {
+        <div class="ui-page-header__actions">
+            @foreach (var action in Model.Actions)
+            {
+                <a class="btn btn-@action.Variant" href="@action.Url" title="@action.Title">
+                    @if (!string.IsNullOrWhiteSpace(action.Icon))
+                    {
+                        <i class="bi @action.Icon" aria-hidden="true"></i>
+                    }
+                    <span>@action.Text</span>
+                </a>
+            }
+        </div>
+    }
+</div>

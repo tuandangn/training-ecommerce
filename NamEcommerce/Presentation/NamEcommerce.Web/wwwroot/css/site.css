@@ -5,39 +5,26 @@
 
 /* -- Cowork offcanvas (reusable side panel) -- */
 .cowork-offcanvas {
-    --cowork-offcanvas-width: 480px;
+    --cowork-offcanvas-width: 100vw;
     width: var(--cowork-offcanvas-width);
 }
 
-.cowork-offcanvas.cowork-offcanvas-sm { --cowork-offcanvas-width: 360px; }
-.cowork-offcanvas.cowork-offcanvas-md { --cowork-offcanvas-width: 480px; }
-.cowork-offcanvas.cowork-offcanvas-lg { --cowork-offcanvas-width: 640px; }
-.cowork-offcanvas.cowork-offcanvas-xl { --cowork-offcanvas-width: 880px; }
-
-@media (max-width: 768px) {
-    .cowork-offcanvas { --cowork-offcanvas-width: 100vw; }
-}
-
-
-/* -- Google Fonts -- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 /* -- CSS Variables -- */
 :root {
-    --primary: #4F46E5;
+    --primary: var(--bs-primary);
     --primary-light: #EEF2FF;
     --primary-dark: #4338CA;
-    --success: #10B981;
+    --success: var(--bs-success);
     --success-light: #D1FAE5;
-    --warning: #d97706;
+    --warning: var(--bs-warning);
     --warning-light: #fef3c7;
-    --danger: #EF4444;
+    --danger: var(--bs-danger);
     --danger-light: #FEE2E2;
-    --info: #0EA5E9;
+    --info: var(--bs-info);
     --info-light: #E0F2FE;
-    --gray-50: #F8FAFC;
+    --gray-50: var(--bs-light);
     --gray-100: #F1F5F9;
-    --gray-200: #E2E8F0;
+    --gray-200: var(--bs-border-color);
     --gray-300: #CBD5E1;
     --gray-400: #94A3B8;
     --gray-500: #64748B;
@@ -63,14 +50,8 @@ html {
     scroll-behavior: smooth;
 }
 
-@media (min-width: 768px) {
-    html {
-        font-size: 15px;
-    }
-}
-
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--bs-body-font-family);
     background-color: var(--body-bg);
     color: var(--gray-700);
     line-height: 1.6;
@@ -511,42 +492,6 @@ body {
 
 .shortage-modal-item:last-child {
     border-bottom: 0;
-}
-
-@media (max-width: 767.98px) {
-    .shortage-alert-panel,
-    .shortage-row-main {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .shortage-action-btn {
-        width: 100%;
-    }
-
-    .shortage-detail-summary,
-    .shortage-po-status {
-        max-width: none;
-        text-align: left;
-    }
-
-    .shortage-detail-footer {
-        align-items: stretch;
-        flex-direction: column-reverse;
-    }
-
-    .shortage-detail-footer .btn {
-        width: 100%;
-    }
-
-    .shortage-po-status {
-        justify-content: flex-start;
-    }
-
-    .shortage-po-link,
-    .shortage-no-po {
-        white-space: normal;
-    }
 }
 
 .shortage-order-page {
@@ -1168,64 +1113,6 @@ body {
     font-weight: 600;
 }
 
-@media (max-width: 767.98px) {
-    .shortage-order-page {
-        padding-bottom: 8rem;
-    }
-
-    .shortage-workspace-header,
-    .shortage-order-card-header,
-    .shortage-item-topline,
-    .shortage-create-bar {
-        flex-direction: column;
-    }
-
-    .shortage-group-money,
-    .shortage-item-total {
-        width: 100%;
-        min-width: 0;
-        text-align: left;
-    }
-
-    .shortage-order-card-controls {
-        grid-template-columns: 1fr;
-    }
-
-    .shortage-inline-field {
-        grid-template-columns: 1fr;
-    }
-
-    .shortage-create-actions,
-    .shortage-create-actions .btn {
-        width: 100%;
-    }
-
-    .shortage-create-actions {
-        flex-direction: column-reverse;
-    }
-
-    .related-line-heading,
-    .related-action-row {
-        grid-template-columns: 1fr;
-    }
-
-    .related-line-heading {
-        display: grid;
-    }
-
-    .related-line-balance {
-        white-space: normal;
-    }
-
-    .related-action-row {
-        align-items: start;
-    }
-
-    .related-action-qty {
-        width: 100%;
-    }
-}
-
 /* ============================================================
    Action Toolbar (search + filters inside card)
    ============================================================ */
@@ -1457,7 +1344,7 @@ body {
 .list-card-meta,
 .list-card-label {
     color: var(--gray-500);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
 }
 
 .list-card-value {
@@ -2495,59 +2382,6 @@ body {
     overflow-wrap: anywhere;
 }
 
-@media (max-width: 991.98px) {
-    .order-workflow-layout,
-    .order-workflow-info-grid,
-    .workflow-metric-grid,
-    .order-delivery-note-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .order-workflow-timeline {
-        position: static;
-    }
-
-    .order-workflow-steps {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .workflow-step {
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .po-allocation-row {
-        grid-template-columns: 2rem minmax(0, 1fr);
-    }
-
-    .po-allocation-meta,
-    .po-allocation-actions {
-        grid-column: 2;
-        justify-items: start;
-        justify-content: flex-start;
-    }
-}
-
-@media (max-width: 575.98px) {
-    .order-detail-actions {
-        justify-content: stretch;
-    }
-
-    .order-detail-actions .btn {
-        flex: 1 1 auto;
-    }
-
-    .order-workflow-steps {
-        grid-template-columns: 1fr;
-    }
-
-    .workflow-step {
-        min-height: 4rem;
-        border-right: 0;
-    }
-}
-
-
-
 /* ============================================================
    Nav tabs
    ============================================================ */
@@ -2674,160 +2508,6 @@ body {
     padding: 0.875rem 0;
     font-size: 0.78rem;
     color: var(--gray-400);
-}
-
-/* ============================================================
-   Responsive
-   ============================================================ */
-@media (max-width: 576px) {
-    .page-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.875rem;
-        margin-bottom: 1rem;
-    }
-
-        .page-header .btn {
-            width: 100%;
-            text-align: center;
-        }
-
-    .page-header-title {
-        font-size: 1.5rem;
-    }
-
-    .page-header-subtitle {
-        font-size: 0.925rem;
-    }
-
-    .content-card {
-        border-radius: 0.875rem;
-    }
-
-    .action-toolbar {
-        align-items: stretch;
-        gap: 0.625rem;
-        padding: 0.875rem;
-    }
-
-        .action-toolbar .search-group {
-            width: 100%;
-            flex-basis: 100%;
-        }
-
-        .action-toolbar .search-input-group {
-            max-width: 100%;
-            width: 100%;
-            min-width: 0;
-        }
-
-        .action-toolbar .search-group form,
-        .action-toolbar .search-group .input-group {
-            width: 100%;
-        }
-
-        .action-toolbar > .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-    .responsive-list-toolbar {
-        width: 100%;
-        justify-content: center;
-        margin-left: 0;
-    }
-
-    .responsive-list-toggle {
-        flex: 1;
-        height: 2.35rem;
-    }
-
-    .responsive-list-grid {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-        padding: 0.75rem;
-    }
-
-    .list-card {
-        gap: 0.75rem;
-        padding: 0.875rem;
-        box-shadow: none;
-    }
-
-        .list-card:hover {
-            transform: none;
-        }
-
-    .list-card-value {
-        max-width: 58%;
-    }
-
-    .list-card-actions,
-    .list-card-action-menu {
-        justify-content: stretch;
-    }
-
-        .list-card-actions .btn,
-        .list-card-actions .btn-table-action {
-            flex: 1 1 auto;
-        }
-
-        .list-card-actions .dropdown,
-        .list-card-actions .dropdown > .btn {
-            width: 100%;
-        }
-
-    .pager-wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .content-card-header {
-        /*flex-direction: column;*/
-        /*align-items: stretch;*/
-    }
-
-    .form-card-header {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .form-card-title {
-        line-height: 1.35;
-    }
-
-    .form-card-breadcrumb {
-        font-size: 0.86rem;
-    }
-
-    .form-card .tab-content {
-        padding-right: 0.25rem !important;
-        padding-left: 0.25rem !important;
-    }
-
-    .form-card-footer {
-        flex-direction: column-reverse;
-        align-items: stretch;
-        gap: 0.625rem;
-        padding: 0.875rem;
-    }
-
-        .form-card-footer .btn {
-            width: 100%;
-        }
-
-    .product-vendor-option {
-        flex: 1 1 calc(50% - 0.5rem);
-    }
-
-    .order-summary-row {
-        gap: 1rem;
-        justify-content: center;
-    }
-        .order-summary-row .label{
-            text-align:center;
-        }
 }
 
 /* ============================================================
@@ -3233,51 +2913,6 @@ body {
     height: 100%;
     background-color: rgba(0,0,0,0.5);
     z-index: 1035;
-}
-
-@media (max-width: 767.98px) {
-    :root {
-        --topbar-height: 60px;
-        --page-gutter: 1rem;
-    }
-
-    body.sidebar-open {
-        overflow: hidden;
-    }
-
-    .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100%;
-        transform: translateX(-100%);
-    }
-
-        .sidebar.open {
-            transform: translateX(0);
-        }
-
-    .topbar-toggle {
-        display: block;
-        flex: 0 0 auto;
-        margin-right: 0;
-    }
-
-    .topbar {
-        padding-inline: 0.875rem;
-    }
-
-    .topbar-page-title {
-        font-size: 1.05rem;
-    }
-
-    .topbar-page-subtitle .breadcrumb-item:last-child {
-        display: none;
-    }
-
-    .sidebar-overlay.active {
-        display: block;
-    }
 }
 
 /* ── Product Browser ─────────────────────────────── */

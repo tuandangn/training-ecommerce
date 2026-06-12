@@ -135,7 +135,7 @@ public sealed class DirectShipManager(
 
     public async Task RejectDeliveryAsync(Guid deliveryNoteId, Guid returnWarehouseId, string reason, CancellationToken ct = default)
     {
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId, default)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
         EnsureCanRejectDirectShipDelivery(deliveryNote);
@@ -160,7 +160,7 @@ public sealed class DirectShipManager(
 
         foreach (var deliveryNoteId in deliveryNoteIds)
         {
-            var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
+            var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId, default)
                 ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
             var note = string.IsNullOrWhiteSpace(reason)
@@ -352,7 +352,7 @@ public sealed class DirectShipManager(
 
     private async Task<Warehouse> ResolveReturnWarehouseAsync(Guid returnWarehouseId)
     {
-        var warehouse = await warehouseReader.GetByIdAsync(returnWarehouseId)
+        var warehouse = await warehouseReader.GetByIdAsync(returnWarehouseId, default)
             ?? throw new WarehouseIsNotFoundException(returnWarehouseId);
 
         if (!warehouse.IsActive || warehouse.WarehouseType != WarehouseType.Physical)

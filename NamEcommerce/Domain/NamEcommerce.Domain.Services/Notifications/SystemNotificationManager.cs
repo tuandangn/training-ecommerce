@@ -95,7 +95,7 @@ public sealed class SystemNotificationManager(
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
 
-        var notification = await notificationReader.GetByIdAsync(notificationId).ConfigureAwait(false);
+        var notification = await notificationReader.GetByIdAsync(notificationId, default).ConfigureAwait(false);
         if (notification is null)
             throw new ArgumentException("Notification is not found.", nameof(notificationId));
 

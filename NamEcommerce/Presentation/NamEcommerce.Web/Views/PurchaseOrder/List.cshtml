@@ -59,7 +59,7 @@
             <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status=""
                class="nav-link @(Model.Status.HasValue ? "" : "active")">Tất cả</a>
         </li>
-        @foreach (var statusOption in PurchaseOrderStatus.GetOptions())
+        @foreach (var statusOption in Enum.GetValues<PurchaseOrderStatus>().Select(status => (value: (int)status, text: status.GetDisplayText())))
         {
             <li class="nav-item">
                 <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status="@statusOption.value"
@@ -81,13 +81,13 @@
                             Nhà cung cấp
                         </th>
                         <th class="text-end">Tổng tiền</th>
-                        <th class="text-center" style="width: 120px;">
+                        <th class="text-center ui-w-120">
                             Trạng thái
                         </th>
                         <th class="d-none d-xl-table-cell text-center">
                             Ngày tạo
                         </th>
-                        <th style="width: 80px;"></th>
+                        <th class="ui-w-80"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,7 +121,7 @@
                                     else
                                     {
                                         <div>
-                                            <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="btn btn-link btn-sm p-0 text-decoration-none text-start po-items-popover"
+                                            <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none text-start po-items-popover"
                                                     data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
                                                     data-bs-custom-class="po-items-popover-content"
                                                     data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
@@ -131,8 +131,8 @@
                                                         <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
                                                     </span>
                                                 </div>
-                                                <div class="progress mt-1" style="height: 4px; width: 200px;" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
-                                                    <div class="progress-bar @progressClass" style="width: @(receivedPct)%"></div>
+                                                <div class="progress mt-1 ui-progress-fixed" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar @progressClass" data-progress-width="@receivedPct"></div>
                                                 </div>
                                                 <div class="small text-muted mt-1">
                                                     Đã nhận @received.DisplayQuantity() / @ordered.DisplayQuantity()
@@ -175,7 +175,7 @@
                                     @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@purchaseOrder.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                    <a class="btn btn-sm btn-outline-secondary text-decoration-none text-primary" asp-action="Details" asp-route-id="@purchaseOrder.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         <span>Xem</span>
                                     </a>
                                 </td>
@@ -256,8 +256,8 @@
                                     <span class="badge rounded-pill bg-light text-dark border align-self-start">
                                         <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
                                     </span>
-                                    <div class="progress" style="height: 4px;" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="progress-bar @progressClass" style="width: @(receivedPct)%"></div>
+                                    <div class="progress ui-h-4" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar @progressClass" data-progress-width="@receivedPct"></div>
                                     </div>
                                     <div class="small text-muted">
                                         Đã nhận @received.DisplayQuantity() / @ordered.DisplayQuantity()
@@ -266,7 +266,7 @@
                             </div>
                         </div>
                         <div class="list-card-actions">
-                            <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@purchaseOrder.Id">
+                            <a class="btn btn-sm btn-outline-secondary text-decoration-none text-primary" asp-action="Details" asp-route-id="@purchaseOrder.Id">
                                 Xem
                             </a>
                         </div>
@@ -289,49 +289,7 @@
     </div>
 </div>
 @section Styles {
-    <style>
-        .po-items-popover {
-            line-height: 1.2;
-        }
-
-            .po-items-popover:hover .badge {
-                background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important;
-            }
-
-        .po-items-popover-content .popover-body {
-            padding: 0.5rem 0.75rem;
-        }
-
-        .po-items-list {
-            min-width: 220px;
-        }
-
-        .po-items-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.25rem 0;
-            font-size: 0.85rem;
-        }
-
-            .po-items-row + .po-items-row {
-                border-top: 1px dashed var(--bs-border-color, #dee2e6);
-            }
-
-        .po-items-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 240px;
-        }
-
-        .po-items-qty {
-            font-variant-numeric: tabular-nums;
-            font-weight: 500;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/purchaseorder-list.css" asp-append-version="true" />
 }
 
 @section Scripts {

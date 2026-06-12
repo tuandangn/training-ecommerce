@@ -19,6 +19,8 @@ using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Settings;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -47,6 +49,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly IPictureAppService _pictureAppService;
     private readonly IFinancialReportAppService _financialReportAppService;
     private readonly IInventoryAppService _inventoryAppService;
+    private readonly IBankTransferReceivingAccountResolver _bankTransferReceivingAccountResolver;
+    private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
+    private readonly ICustomerLedgerManager _customerLedgerManager;
 
     public OrderModelFactory(
         AppConfig appConfig,
@@ -60,7 +65,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
         ICustomerReturnAppService customerReturnAppService,
         IPictureAppService pictureAppService,
         IFinancialReportAppService financialReportAppService,
-        IInventoryAppService inventoryAppService)
+        IInventoryAppService inventoryAppService,
+        IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
+        BankTransferPaymentSettings bankTransferPaymentSettings,
+        ICustomerLedgerManager customerLedgerManager)
     {
         _appConfig = appConfig;
         _mediator = mediator;
@@ -74,6 +82,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
         _orderAuditAppService = orderAuditAppService;
         _financialReportAppService = financialReportAppService;
         _inventoryAppService = inventoryAppService;
+        _bankTransferReceivingAccountResolver = bankTransferReceivingAccountResolver;
+        _bankTransferPaymentSettings = bankTransferPaymentSettings;
+        _customerLedgerManager = customerLedgerManager;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -374,15 +385,31 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var relatedReceipts = await GetRelatedGoodsReceiptsAsync(model).ConfigureAwait(false);
         var customerDebts = await _customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
         var orderDebts = customerDebts?.Debts.Where(debt => debt.OrderId == model.Id).ToList() ?? [];
+        var customerPayments = await _customerDebtAppService.GetPaymentsAsync(model.CustomerId, 0, 100).ConfigureAwait(false);
+        var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
         var expenses = await _expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
         var itemChangeAudits = await _orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
+        var receivingAccount = await _bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
+        var customerBalance = await _customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
+        var bankTransferEnabled = _bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
+        var bankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
+            ? null
+            : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
 
         model.CanCompleteOrder = model.CanCompleteOrder && deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered;
         model.Workflow = BuildWorkflow(model, deliveryStatus, activeStage);
         model.Preparation = BuildPreparation(model);
         model.DeliveryWorkflow = BuildDeliveryWorkflow(model, deliveryStatus);
-        model.Settlement = BuildSettlement(model, orderDebts, expenses);
-        model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts, itemChangeAudits);
+        model.Settlement = BuildSettlement(
+            model,
+            orderDebts,
+            expenses,
+            customerBalance,
+            orderPayments,
+            bankTransferEnabled,
+            _bankTransferPaymentSettings.Verification.AllowManualConfirm,
+            bankAccountLabel);
+        model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts, orderPayments, itemChangeAudits);
     }
 
     private async Task<IDictionary<Guid, IList<GoodsReceiptAppDto>>> GetRelatedGoodsReceiptsAsync(OrderDetailsModel model)
@@ -661,8 +688,15 @@ public sealed class OrderModelFactory : IOrderModelFactory
         };
     }
 
-    private static OrderDetailsModel.SettlementModel BuildSettlement(OrderDetailsModel model, 
-        IEnumerable<CustomerDebtAppDto> debts, IEnumerable<ExpenseAppDto> expenses)
+    private static OrderDetailsModel.SettlementModel BuildSettlement(
+        OrderDetailsModel model,
+        IEnumerable<CustomerDebtAppDto> debts,
+        IEnumerable<ExpenseAppDto> expenses,
+        decimal customerBalance,
+        IEnumerable<CustomerPaymentAppDto> payments,
+        bool bankTransferEnabled,
+        bool manualBankTransferConfirmEnabled,
+        string? bankAccountLabel)
     {
         var debtRows = debts
             .OrderBy(debt => debt.CreatedOnUtc)
@@ -690,6 +724,20 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 ExpenseTypeText = GetExpenseTypeText((ExpenseType)expense.ExpenseType),
                 Amount = expense.Amount,
                 IncurredDate = expense.IncurredDate.ToLocalTime()
+            })
+            .ToList();
+
+        var paymentRows = payments
+            .OrderByDescending(payment => payment.PaidOnUtc)
+            .Select(payment => new OrderDetailsModel.SettlementPaymentModel
+            {
+                Id = payment.Id,
+                Code = payment.Code,
+                Amount = payment.Amount,
+                PaymentMethodText = ((PaymentMethod)payment.PaymentMethod).GetDisplayText(),
+                PaymentTypeText = ((PaymentType)payment.PaymentType).GetDisplayText(),
+                Note = payment.Note,
+                PaidOn = payment.PaidOnUtc.ToLocalTime()
             })
             .ToList();
 
@@ -752,7 +800,12 @@ public sealed class OrderModelFactory : IOrderModelFactory
             Debts = debtRows,
             Expenses = expenseRows,
             Costs = costRows,
-            Returns = returnRows
+            Returns = returnRows,
+            Payments = paymentRows,
+            CustomerAccountBalance = customerBalance,
+            BankTransferEnabled = bankTransferEnabled,
+            ManualBankTransferConfirmEnabled = manualBankTransferConfirmEnabled,
+            BankAccountLabel = bankAccountLabel
         };
     }
 
@@ -760,6 +813,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         OrderDetailsModel model,
         IDictionary<Guid, IList<GoodsReceiptAppDto>> relatedReceipts,
         IEnumerable<CustomerDebtAppDto> debts,
+        IEnumerable<CustomerPaymentAppDto> payments,
         IEnumerable<OrderItemChangeAuditAppDto> itemChangeAudits)
     {
         var timeline = new List<OrderDetailsModel.TimelineEventModel>
@@ -949,6 +1003,21 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 Description = $"{debt.Code} - {debt.RemainingAmount.DisplayCurrencyWithSymbol()} còn lại",
                 Icon = "bi-cash-coin",
                 Tone = debt.RemainingAmount > 0 ? "warning" : "success",
+                Stage = OrderDetailsModel.WorkflowStage.Settlement
+            });
+        }
+
+        foreach (var payment in payments)
+        {
+            var paymentMethod = (PaymentMethod)payment.PaymentMethod;
+            var description = $"{payment.Code} - {payment.Amount.DisplayCurrencyWithSymbol()} - {paymentMethod.GetDisplayText()}";
+            timeline.Add(new OrderDetailsModel.TimelineEventModel
+            {
+                OccurredOn = payment.PaidOnUtc.ToLocalTime(),
+                Title = paymentMethod == PaymentMethod.BankTransfer ? "Khách chuyển khoản" : "Thu tiền khách",
+                Description = string.IsNullOrWhiteSpace(payment.Note) ? description : $"{description} - {payment.Note}",
+                Icon = paymentMethod == PaymentMethod.BankTransfer ? "bi-qr-code" : "bi-cash-coin",
+                Tone = "success",
                 Stage = OrderDetailsModel.WorkflowStage.Settlement
             });
         }

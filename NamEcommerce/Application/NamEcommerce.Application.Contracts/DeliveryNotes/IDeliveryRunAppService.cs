@@ -13,6 +13,7 @@ public interface IDeliveryRunAppService
     Task<CommonActionResultDto> ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverAppDto dto);
     Task<CommonActionResultDto> CancelAsync(Guid id);
     Task<DeliveryRunAppDto?> GetByIdAsync(Guid id);
+    Task<DeliveryRunAppDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId);
     Task<IPagedDataAppDto<DeliveryRunListAppDto>> GetListAsync(int pageIndex, int pageSize,
         string? keywords, Guid? assignedDeliveryUserId, int? status);
 }

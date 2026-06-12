@@ -173,7 +173,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
     internal void ClearPictures() => _pictureIds.Clear();
     internal async Task AddPictureAsync(Guid pictureId, IGetByIdService<Picture> pictureByIdGetter)
     {
-        var picture = await pictureByIdGetter.GetByIdAsync(pictureId).ConfigureAwait(false);
+        var picture = await pictureByIdGetter.GetByIdAsync(pictureId, default).ConfigureAwait(false);
         if (picture is null)
             throw new PictureIsNotFoundException(pictureId);
 
@@ -185,7 +185,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
         ArgumentNullException.ThrowIfNull(byIdGetter);
         ArgumentNullException.ThrowIfNull(currentUserAccessor);
 
-        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id).ConfigureAwait(false);
+        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id, default).ConfigureAwait(false);
         if (sameIdGoodsReceipt is not null)
             throw new GoodsReceiptIdIsExistingException(id);
 
@@ -196,7 +196,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id).ConfigureAwait(false);
+        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id, default).ConfigureAwait(false);
         if (sameIdGoodsReceipt is not null)
             throw new GoodsReceiptIdIsExistingException(id);
 

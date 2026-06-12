@@ -19,21 +19,14 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         if (!valid)
             return new CreateVendorDebtResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var result = await _debtManager.CreateDebtFromPurchaseOrderAsync(domainDto).ConfigureAwait(false);
+        return new CreateVendorDebtResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var result = await _debtManager.CreateDebtFromPurchaseOrderAsync(domainDto).ConfigureAwait(false);
-            return new CreateVendorDebtResultAppDto
-            {
-                Success = true,
-                CreatedId = result.Id,
-                Debt = result.ToDto()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new CreateVendorDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            CreatedId = result.Id,
+            Debt = result.ToDto()
+        };
     }
 
     public async Task<CreateInitialVendorDebtResultAppDto> CreateInitialDebtAsync(CreateInitialVendorDebtAppDto dto)
@@ -44,20 +37,13 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         if (!valid)
             return new CreateInitialVendorDebtResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
+        return new CreateInitialVendorDebtResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
-            return new CreateInitialVendorDebtResultAppDto
-            {
-                Success = true,
-                Debt = result.ToDto()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new CreateInitialVendorDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            Debt = result.ToDto()
+        };
     }
 
     public async Task<RecordVendorPaymentResultAppDto> RecordPaymentAsync(CreateVendorPaymentAppDto dto)
@@ -66,21 +52,14 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         if (!valid)
             return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var result = await _debtManager.RecordPaymentAsync(domainDto).ConfigureAwait(false);
+        return new RecordVendorPaymentResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var result = await _debtManager.RecordPaymentAsync(domainDto).ConfigureAwait(false);
-            return new RecordVendorPaymentResultAppDto
-            {
-                Success = true,
-                CreatedId = result.Id,
-                Payment = result.ToDto()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            CreatedId = result.Id,
+            Payment = result.ToDto()
+        };
     }
 
     public async Task<RecordVendorPaymentResultAppDto> RecordFlexiblePaymentForVendorAsync(CreateVendorPaymentAppDto dto)
@@ -89,20 +68,13 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         if (!valid)
             return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var results = await _debtManager.RecordFlexiblePaymentForVendorAsync(domainDto).ConfigureAwait(false);
+        return new RecordVendorPaymentResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var results = await _debtManager.RecordFlexiblePaymentForVendorAsync(domainDto).ConfigureAwait(false);
-            return new RecordVendorPaymentResultAppDto
-            {
-                Success = true,
-                Payments = results.Select(p => p.ToDto()).ToList()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            Payments = results.Select(p => p.ToDto()).ToList()
+        };
     }
 
     public async Task<RecordVendorPaymentResultAppDto> RecordAdvancePaymentAsync(CreateVendorPaymentAppDto dto)
@@ -111,21 +83,14 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         if (!valid)
             return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var domainDto = MapToDomainDto(dto);
+        var result = await _debtManager.RecordAdvancePaymentAsync(domainDto).ConfigureAwait(false);
+        return new RecordVendorPaymentResultAppDto
         {
-            var domainDto = MapToDomainDto(dto);
-            var result = await _debtManager.RecordAdvancePaymentAsync(domainDto).ConfigureAwait(false);
-            return new RecordVendorPaymentResultAppDto
-            {
-                Success = true,
-                CreatedId = result.Id,
-                Payment = result.ToDto()
-            };
-        }
-        catch (Exception ex)
-        {
-            return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            CreatedId = result.Id,
+            Payment = result.ToDto()
+        };
     }
 
     public async Task<VendorDebtAppDto?> GetDebtByIdAsync(Guid id)
@@ -246,7 +211,7 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             TotalAmount = dto.TotalAmount,
             DueDateUtc = dto.DueDateUtc
         };
-    
+
     private static CreateInitialVendorDebtDto MapToDomainDto(CreateInitialVendorDebtAppDto dto)
         => new()
         {
@@ -263,6 +228,7 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             Amount = dto.Amount,
             PaymentMethod = (PaymentMethod)dto.PaymentMethod,
             PaymentType = (PaymentType)dto.PaymentType,
+            BankAccountId = dto.BankAccountId,
             Note = dto.Note,
             PaidOnUtc = dto.PaidOnUtc,
             RecordedByUserId = dto.RecordedByUserId

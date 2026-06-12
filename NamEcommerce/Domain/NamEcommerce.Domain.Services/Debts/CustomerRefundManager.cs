@@ -38,7 +38,7 @@ public sealed class CustomerRefundManager(
             return MapToDto(existing);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
+        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId, default).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
         var refund = new CustomerRefund(
@@ -89,7 +89,7 @@ public sealed class CustomerRefundManager(
 
     public async Task<CustomerRefundDto?> GetByIdAsync(Guid id)
     {
-        var refund = await refundReader.GetByIdAsync(id).ConfigureAwait(false);
+        var refund = await refundReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return refund == null ? null : MapToDto(refund);
     }
 

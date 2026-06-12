@@ -2313,7 +2313,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("AmountToCollect")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("AssignedDeliveryFullName")
                         .HasMaxLength(200)
@@ -2443,10 +2445,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Surcharge")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("SurchargeReason")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
@@ -3543,9 +3548,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("AverageCost")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("DeletedOnUtc")
                         .HasColumnType("datetime2");
 
@@ -3572,6 +3574,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("ReservedUntilUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<Guid?>("UnitMeasurementId")
                         .HasColumnType("uniqueidentifier");
@@ -3744,6 +3752,46 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("StockMovementLog", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.StockReservationEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("QuantityDelta")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenceId");
+
+                    b.HasIndex("ProductId", "WarehouseId");
+
+                    b.ToTable("StockReservationEntry", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.Warehouse", b =>

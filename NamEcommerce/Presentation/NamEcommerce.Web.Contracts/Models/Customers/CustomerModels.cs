@@ -30,7 +30,7 @@ public sealed class CustomerListModel
 }
 
 [Serializable]
-public sealed record CreateCustomerResultModel
+public sealed record CreateCustomerResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -38,7 +38,7 @@ public sealed record CreateCustomerResultModel
 }
 
 [Serializable]
-public sealed record UpdateCustomerResultModel
+public sealed record UpdateCustomerResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }
@@ -46,7 +46,7 @@ public sealed record UpdateCustomerResultModel
 }
 
 [Serializable]
-public sealed record DeleteCustomerResultModel
+public sealed record DeleteCustomerResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }

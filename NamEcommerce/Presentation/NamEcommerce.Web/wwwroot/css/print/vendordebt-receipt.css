@@ -1,0 +1,27 @@
+/* Extracted from Views/VendorDebt\Receipt.cshtml during UI design-system cleanup. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #eee; }
+.page { width: 110mm; padding: 10mm 12mm 12mm; margin: 8mm auto; background: #fff; }
+.shop { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+.shop-name { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+.shop-sub { font-size: 10px; color: #555; margin-top: 2px; }
+.title { text-align: center; font-size: 15px; font-weight: bold; text-transform: uppercase;
+         letter-spacing: 1px; margin: 10px 0 2px; }
+.type-badge { text-align: center; margin-bottom: 4px; }
+.type-badge span { background: #f5f5f5; border: 1px solid #ddd; font-size: 10px;
+                   padding: 2px 8px; border-radius: 99px; color: #555; }
+.code-line { text-align: center; font-size: 10.5px; color: #555; margin-bottom: 12px; }
+table.info { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+table.info td { padding: 4px 5px; font-size: 11.5px; vertical-align: top; }
+table.info td:first-child { color: #555; white-space: nowrap; width: 38%; }
+table.info td:last-child { font-weight: bold; }
+.divider { border: none; border-top: 1px dashed #ccc; margin: 8px 0; }
+.amt-box { border: 2px solid #222; padding: 8px 12px; text-align: center; margin: 12px 0; border-radius: 4px; }
+.amt-lbl { font-size: 9.5px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
+.amt-val { font-size: 24px; font-weight: bold; margin-top: 3px; }
+.sig-row { display: flex; justify-content: space-around; margin-top: 20px; }
+.sig-box { text-align: center; width: 44%; font-size: 10.5px; }
+.sig-box strong { display: block; font-size: 11px; }
+.sig-box em { font-size: 9.5px; color: #666; }
+.sig-space { height: 34px; }
+@@media print { body { background: #fff; } .page { margin: 0; } }

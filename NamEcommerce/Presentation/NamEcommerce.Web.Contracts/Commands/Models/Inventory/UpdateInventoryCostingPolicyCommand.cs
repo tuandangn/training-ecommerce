@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Inventory;
+﻿using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 
 [Serializable]
-public sealed class UpdateInventoryCostingPolicyCommand : IRequest<UpdateInventoryCostingPolicyResultModel>
+public sealed class UpdateInventoryCostingPolicyCommand : ICommand<UpdateInventoryCostingPolicyResultModel>
 {
     public required int CostingMethod { get; init; }
     public required int ValuationScope { get; init; }

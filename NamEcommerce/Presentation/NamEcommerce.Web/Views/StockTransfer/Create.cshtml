@@ -26,7 +26,7 @@
                 <div class="content-card mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa chuyển kho</h5>
-                        <button type="button" class="btn btn-sm bg-light text-primary"
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
                                 data-bs-toggle="modal" data-bs-target="#addItemModal">
                             <i class="bi bi-plus-lg me-1"></i> Thêm hàng hóa
                         </button>
@@ -37,15 +37,15 @@
                                 <thead>
                                     <tr>
                                         <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end" style="width:160px">Số lượng chuyển</th>
-                                        <th style="width:40px"></th>
+                                        <th class="text-end ui-w-160">Số lượng chuyển</th>
+                                        <th class="ui-w-40"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr style="cursor:pointer">
+                                        <tr class="ui-cursor-pointer">
                                             <td class="ps-3 align-middle">
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
@@ -67,13 +67,12 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted"
-                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                        <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
                             Chưa có hàng hóa nào được thêm vào phiếu chuyển kho.
                         </div>
                     </div>
                     <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-link text-decoration-none">
+                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none">
                             <span class="text-muted small">Trở về</span>
                         </a>
                         <button type="submit" class="btn btn-primary d-lg-none">Tạo phiếu</button>
@@ -145,7 +144,7 @@
 <!-- Modal outside form — ModalProductId is not submitted with the main form -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content ui-modal-content">
             <div class="modal-header border-0">
                 <h5 class="modal-title fw-bold">Thêm hàng hóa chuyển kho</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -167,7 +166,7 @@
                 <div id="addItemError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
             </div>
             <div class="modal-footer border-0 pb-3">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnConfirmAddItem" class="btn btn-primary rounded-pill px-4" disabled>
                     <i class="bi bi-plus-lg me-1"></i>Thêm vào phiếu
                 </button>
@@ -192,7 +191,7 @@
         const pickerSource = document.getElementById('ModalProductId');
 
         function updateEmptyState() {
-            noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
+            noMsg.classList.toggle('d-none', tbody.rows.length > 0);
         }
 
         function addRow(productId, productName, qty, decimalPlaces) {

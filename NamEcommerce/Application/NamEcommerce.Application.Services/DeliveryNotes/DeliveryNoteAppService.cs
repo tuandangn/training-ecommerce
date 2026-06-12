@@ -35,7 +35,7 @@ public sealed class DeliveryNoteAppService(
 {
     public async Task<CreateDeliveryNoteResultAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
     {
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId, default).ConfigureAwait(false);
         if (order is null)
         {
             return new CreateDeliveryNoteResultAppDto
@@ -84,7 +84,7 @@ public sealed class DeliveryNoteAppService(
                     ErrorMessage = "Error.OrderItemIsNotFound"
                 };
             }
-            var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(orderItem.ProductId, default).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateDeliveryNoteResultAppDto
@@ -95,7 +95,7 @@ public sealed class DeliveryNoteAppService(
             }
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
@@ -117,7 +117,7 @@ public sealed class DeliveryNoteAppService(
             .ToList();
         foreach (var item in itemsByProduct)
         {
-            var reservedQuantity = (await productReservationDataReader.GetListAsync(new ProductReservationLedgersOfOrderSpecification(item.ProductId, order.Id)).ConfigureAwait(false))
+            var reservedQuantity = (await productReservationDataReader.GetListAsync(new ProductReservationsOfOrderSpec(item.ProductId, order.Id)).ConfigureAwait(false))
                 .Sum(reservation => reservation.QuantityDelta);
             if (reservedQuantity < item.Quantity)
             {
@@ -135,7 +135,7 @@ public sealed class DeliveryNoteAppService(
             .ToList();
         foreach (var item in itemsByProductWarehouse)
         {
-            var stock = await inventoryStockDataReader.FirstOrDefaultAsync(new InventoryStockSpecification(item.ProductId, item.WarehouseId)).ConfigureAwait(false);
+            var stock = await inventoryStockDataReader.FirstOrDefaultAsync(new ProductInventoryStockSpec(item.ProductId, item.WarehouseId)).ConfigureAwait(false);
             if (stock is null)
             {
                 return new CreateDeliveryNoteResultAppDto

@@ -134,6 +134,10 @@ public sealed class OutboxProcessor : BackgroundService
         }
         catch (Exception ex)
         {
+            // Handler fail giữa chừng: bỏ mọi thay đổi đã stage để không commit dữ liệu dở dang
+            // (ví dụ cộng tồn kho mà thiếu ledger giá vốn) — chỉ lưu trạng thái failed của message.
+            db.ChangeTracker.Clear();
+            db.Attach(message);
             message.MarkAsFailed(ex.Message);
             _logger.LogWarning(ex, "Outbox: dispatch message {Id} (type={Type}) failed (retry={Retry}).",
                 message.Id, message.Type, message.RetryCount);

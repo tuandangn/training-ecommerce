@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Returns;
+﻿using NamEcommerce.Web.Contracts.Models.Returns;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Returns;
 
 [Serializable]
-public sealed class CreateVendorReturnCommand : IRequest<CreateVendorReturnResultModel>
+public sealed class CreateVendorReturnCommand : ICommand<CreateVendorReturnResultModel>
 {
     public required Guid VendorId { get; init; }
     public Guid? GoodsReceiptId { get; init; }

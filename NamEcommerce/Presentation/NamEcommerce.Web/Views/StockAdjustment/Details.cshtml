@@ -16,7 +16,7 @@
 @section TitleSection {
     <h1 class="topbar-page-title">
         @Model.Code
-        <span class="badge @badgeClass ms-2" style="font-size:.75rem;vertical-align:middle;">@badgeText</span>
+        <span class="badge @badgeClass ms-2 ui-fs-075-align-middle">@badgeText</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
@@ -36,7 +36,7 @@
             <div class="content-card-header">
                 <h5 class="mb-0">
                     Danh sách hàng hóa kiểm kê
-                    <span class="badge bg-light text-muted border ms-1" style="font-size:.72rem;font-weight:500;">
+                    <span class="badge bg-light text-muted border ms-1 ui-fs-072-fw-500">
                         @Model.Items.Count mặt hàng
                     </span>
                 </h5>
@@ -53,9 +53,9 @@
                         <thead>
                             <tr>
                                 <th class="ps-4">Hàng hóa</th>
-                                <th class="text-end" style="width:140px">SL hệ thống</th>
-                                <th class="text-end" style="width:140px">SL thực tế</th>
-                                <th class="text-end pe-4" style="width:120px">Chênh lệch</th>
+                                <th class="text-end ui-w-140">SL hệ thống</th>
+                                <th class="text-end ui-w-140">SL thực tế</th>
+                                <th class="text-end pe-4 ui-w-120">Chênh lệch</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,7 +87,7 @@
                 }
             </div>
             <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-link text-decoration-none text-muted small">
+                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted small">
                     <i class="bi bi-arrow-left me-1"></i>Trở về
                 </a>
                 <div class="d-flex gap-2">
@@ -155,7 +155,7 @@
                         <i class="bi bi-check-circle-fill text-success fs-5"></i>
                         <div>
                             <div class="fw-semibold small">Phiếu đã được duyệt</div>
-                            <div class="text-muted" style="font-size:.75rem;">
+                            <div class="text-muted ui-fs-075">
                                 Tồn kho đã được điều chỉnh theo số liệu thực tế.
                             </div>
                         </div>
@@ -167,27 +167,7 @@
 </div>
 
 @section Styles {
-<style>
-    .receipt-info-list { margin: 0; }
-    .receipt-info-row {
-        display: flex;
-        align-items: baseline;
-        padding: .6rem 1.25rem;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
-        gap: .75rem;
-    }
-    .receipt-info-row:last-child { border-bottom: none; }
-    .receipt-info-row dt {
-        font-size: .75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-        color: var(--bs-secondary);
-        width: 72px;
-        flex-shrink: 0;
-    }
-    .receipt-info-row dd { margin: 0; font-size: .875rem; }
-</style>
+    <link rel="stylesheet" href="~/css/pages/stockadjustment-details.css" asp-append-version="true" />
 }
 
 @section Scripts {

@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.Inventory;
+﻿using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 
 [Serializable]
-public sealed class CreateWarehouseCommand : IRequest<CreateWarehouseResultModel>
+public sealed class CreateWarehouseCommand : ICommand<CreateWarehouseResultModel>
 {
     public required string Code { get; init; }
     public required string Name { get; init; }

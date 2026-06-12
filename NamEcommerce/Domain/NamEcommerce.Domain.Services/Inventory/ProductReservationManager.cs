@@ -29,7 +29,7 @@ public sealed class ProductReservationManager : IProductReservationManager
 
     public async Task<decimal> GetReservedForOrderAsync(Guid productId, Guid orderId)
     {
-        return _dataReader.ApplySpecification(new ProductReservationLedgersOfOrderSpecification(productId, orderId))
+        return _dataReader.ApplySpecification(new ProductReservationsOfOrderSpec(productId, orderId))
                 .Sum(entry => entry.QuantityDelta);
     }
 

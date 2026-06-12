@@ -389,6 +389,11 @@ public sealed record OrderDetailsModel
         public IList<SettlementExpenseModel> Expenses { get; set; } = [];
         public IList<SettlementCostModel> Costs { get; set; } = [];
         public IList<SettlementReturnModel> Returns { get; set; } = [];
+        public IList<SettlementPaymentModel> Payments { get; set; } = [];
+        public decimal CustomerAccountBalance { get; set; }
+        public bool BankTransferEnabled { get; set; }
+        public bool ManualBankTransferConfirmEnabled { get; set; }
+        public string? BankAccountLabel { get; set; }
         public decimal TotalDebtAmount => Debts.Sum(item => item.TotalAmount);
         public decimal TotalPaidAmount => Debts.Sum(item => item.PaidAmount);
         public decimal TotalRemainingAmount => Debts.Sum(item => item.RemainingAmount);
@@ -445,6 +450,18 @@ public sealed record OrderDetailsModel
         public decimal NetRefundAmount { get; init; }
         public decimal CompensatedQuantity { get; init; }
         public DateTime ReturnDate { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementPaymentModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public decimal Amount { get; init; }
+        public string PaymentMethodText { get; init; } = string.Empty;
+        public string PaymentTypeText { get; init; } = string.Empty;
+        public string? Note { get; init; }
+        public DateTime PaidOn { get; init; }
     }
 
     [Serializable]

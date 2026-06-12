@@ -25,6 +25,10 @@
     </div>
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
+}
+
 @await Html.PartialAsync("_OrderWorkflowBar", Model)
 
 <div class="order-workflow-layout">
@@ -43,7 +47,7 @@
 {
     <div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Chỉnh sửa hàng hóa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -51,7 +55,7 @@
                 <form id="editItemForm" method="post" asp-action="UpdateOrderItem">
                     <div class="modal-body py-3">
                         <div id="modalProductDisplay" class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-center gap-3 selectedProductInfo">
-                            <img class="img-fluid img-thumbnail d-none picture-field" style="width: 70px;" id="editProductHasPicture" alt="" />
+                            <img class="img-fluid img-thumbnail d-none picture-field order-edit-item-picture" id="editProductHasPicture" alt="" />
                             <i class="bi bi-box-seam-fill text-primary fs-5 picture-field-icon" id="editProductNoPicture"></i>
                             <div class="flex-grow-1 overflow-hidden">
                                 <div class="fw-bold text-truncate name-field" id="editProductName"></div>
@@ -87,7 +91,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" id="submitEditItem" class="btn btn-primary">
                             <i class="bi bi-floppy"></i>
                             Lưu lại
@@ -100,7 +104,7 @@
 
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Thêm hàng hóa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -142,7 +146,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="addItemToTable" class="btn btn-success d-none noDisabled">
                             <i class="bi bi-plus-lg me-1"></i>Thêm vào
                         </button>
@@ -157,7 +161,7 @@
 {
     <div class="modal fade" id="changeNoteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold text-secondary">Ghi chú đơn hàng</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -175,7 +179,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy"></i>
                             Lưu lại
@@ -188,7 +192,7 @@
 
     <div class="modal fade" id="editDiscountModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Giảm giá đơn hàng</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -209,7 +213,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy"></i>
                             Lưu lại
@@ -222,7 +226,7 @@
 
     <div class="modal fade" id="shippingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold text-warning">Cập nhật vận chuyển</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -253,7 +257,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy"></i>
                             Lưu lại
@@ -271,7 +275,7 @@
     {
         <div class="modal fade" id="cancelOrderWarningModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-content ui-modal-content">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold text-danger">Cảnh báo - Hủy đơn hàng</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -295,7 +299,7 @@
                         <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>?</p>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Giữ nguyên</button>
                         <button type="button" class="btn btn-danger" id="btnConfirmCancelWithDs">
                             <i class="bi bi-x-circle me-1"></i>Hủy đơn và chuyển kho
                         </button>
@@ -308,7 +312,7 @@
     {
         <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-content ui-modal-content">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -317,7 +321,7 @@
                         <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>? Thao tác này không thể hoàn tác.</p>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Giữ nguyên</button>
                         <button type="button" class="btn btn-danger" id="btnConfirmCancel">
                             <i class="bi bi-x-circle me-1"></i>Xác nhận hủy
                         </button>
@@ -332,7 +336,7 @@
 {
     <div class="modal fade" id="deleteOrderModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content ui-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold text-danger">Xác nhận xóa đơn hàng</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -342,7 +346,7 @@
                 </div>
                 <form method="post" asp-action="Delete" asp-route-id="@Model.Id">
                     <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Giữ nguyên</button>
                         <button type="submit" class="btn btn-danger">
                             <i class="bi bi-trash me-1"></i>Xóa đơn
                         </button>

@@ -86,7 +86,7 @@ public sealed class CustomerPortalAuthAppService(
             return GenericOtpFailure;
         }
 
-        var customer = await customerReader.GetByIdAsync(deliveryNote.CustomerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(deliveryNote.CustomerId, default).ConfigureAwait(false);
         var otp = CustomerPortalHashing.GenerateOtp();
         var sent = await TrySendOtpAsync(deliveryNote.CustomerPhone, customer?.Email, otp).ConfigureAwait(false);
         if (sent.Channel is null)
@@ -279,7 +279,7 @@ public sealed class CustomerPortalAuthAppService(
 
     private async Task<CustomerSessionAppDto?> MapSessionAsync(CustomerPortalSessionDto session, CustomerPortalAccountDto? account)
     {
-        var customer = await customerReader.GetByIdAsync(session.CustomerId).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(session.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             return null;
 

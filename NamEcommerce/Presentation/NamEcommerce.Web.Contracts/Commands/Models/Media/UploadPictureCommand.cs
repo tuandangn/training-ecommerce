@@ -1,9 +1,8 @@
-using MediatR;
-
+﻿
 namespace NamEcommerce.Web.Contracts.Commands.Models.Media;
 
 [Serializable]
-public sealed class UploadPictureCommand : IRequest<UploadPictureResultModel>
+public sealed class UploadPictureCommand : ICommand<UploadPictureResultModel>
 {
     public required byte[] Data { get; init; }
     public required string MimeType { get; init; }
@@ -12,7 +11,7 @@ public sealed class UploadPictureCommand : IRequest<UploadPictureResultModel>
 }
 
 [Serializable]
-public sealed class UploadPictureResultModel
+public sealed class UploadPictureResultModel : ICommandResult
 {
     public required bool Success { get; init; }
     public Guid? PictureId { get; init; }

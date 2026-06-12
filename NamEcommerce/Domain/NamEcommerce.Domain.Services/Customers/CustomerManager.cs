@@ -14,10 +14,6 @@ namespace NamEcommerce.Domain.Services.Customers;
 
 public sealed class CustomerManager : ICustomerManager
 {
-    private const string RetailWalkInCustomerName = "Khách bán lẻ";
-    private const string RetailWalkInCustomerAddress = "Tại cửa hàng";
-    private const string RetailWalkInCustomerNote = "System customer for walk-in retail sales.";
-
     private readonly IRepository<Customer> _customerRepository;
     private readonly IEntityDataReader<Customer> _customerDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
@@ -82,7 +78,7 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task<CustomerDto?> GetCustomerByIdAsync(Guid id)
     {
-        var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var customer = await _customerDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         if (customer == null) return null;
 
         return new CustomerDto(customer.Id)
@@ -105,11 +101,10 @@ public sealed class CustomerManager : ICustomerManager
         if (existing is not null)
             return MapToDto(existing);
 
-        var customer = new Customer(Guid.NewGuid(), RetailWalkInCustomerName, string.Empty, RetailWalkInCustomerAddress)
+        var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, string.Empty, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
         {
             Kind = CustomerKind.RetailWalkIn,
-            IsSystem = true,
-            Note = RetailWalkInCustomerNote
+            IsSystem = true
         };
         customer.MarkCreated();
 

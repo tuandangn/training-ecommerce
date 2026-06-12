@@ -123,6 +123,20 @@ public sealed class PurchaseOrderDetailsModel
         public decimal RemainingDebt { get; init; }
         public int DebtCount { get; init; }
         public int PaymentCount { get; init; }
+        public decimal VendorAccountBalance { get; init; }
+        public IList<SettlementPaymentModel> Payments { get; init; } = [];
+    }
+
+    [Serializable]
+    public sealed record SettlementPaymentModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public decimal Amount { get; init; }
+        public string PaymentMethodText { get; init; } = string.Empty;
+        public string PaymentTypeText { get; init; } = string.Empty;
+        public string? Note { get; init; }
+        public DateTime PaidOn { get; init; }
     }
 
     [Serializable]

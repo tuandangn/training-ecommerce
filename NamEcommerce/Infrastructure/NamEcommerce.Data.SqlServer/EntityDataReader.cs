@@ -29,6 +29,16 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public async Task<IList<TEntity>> GetListAsync(ISpecification<TEntity> spec)
         => await ApplySpecification(spec).ToListAsync().ConfigureAwait(false);
 
+    public async Task<IList<TEntity>> GetPagedListAsync(ISpecification<TEntity> spec, int pageIndex, int pageSize)
+    {
+        return await ApplySpecification(spec)
+                .Skip(pageIndex * pageSize).Take(pageSize)
+                .ToListAsync().ConfigureAwait(false);
+    }
+
+    public async Task<int> CountAsync(ISpecification<TEntity> spec)
+        => await ApplySpecification(spec).CountAsync().ConfigureAwait(false);
+
     public Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec)
         => ApplySpecification(spec).FirstOrDefaultAsync();
 
@@ -40,7 +50,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _dbContext.GetDataAsync<TEntity>();
 
-    public Task<TEntity?> GetByIdAsync(Guid id)
+    public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => DataSource.FirstOrDefaultAsync(e => e.Id == id);
 
     public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)

@@ -42,14 +42,14 @@
                             <i class="bi bi-box-seam me-1"></i>
                             Kho xuất
                         </th>
-                        <th class="text-center" style="width: 140px;">
+                        <th class="text-center ui-w-140">
                             Trạng thái
                         </th>
                         <th class="d-none d-md-table-cell">
                             <i class="bi bi-calendar me-1"></i>
                             Ngày tạo
                         </th>
-                        <th style="width: 100px;"></th>
+                        <th class="ui-w-100"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,12 +98,12 @@
                                     </div>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
-                                    <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@deliveryNote.ShippingAddress">
+                                    <span class="d-inline-block text-truncate ui-max-w-250" title="@deliveryNote.ShippingAddress">
                                         @deliveryNote.ShippingAddress
                                     </span>
                                 </td>
                                 <td class="d-none d-xl-table-cell">
-                                    <span class="d-inline-block text-truncate small text-muted" style="max-width: 180px;" title="@deliveryNote.WarehouseName">
+                                    <span class="d-inline-block text-truncate small text-muted ui-max-w-180" title="@deliveryNote.WarehouseName">
                                         @deliveryNote.WarehouseName
                                     </span>
                                     @if (!string.IsNullOrWhiteSpace(deliveryNote.AssignedDeliveryFullName))
@@ -255,9 +255,9 @@
                         </div>
                         @if (!string.IsNullOrEmpty(deliveryNote.ShippingAddress))
                         {
-                            <div class="list-card-field list-card-field-stack">
+                            <div class="list-card-field">
                                 <span class="list-card-label">Địa chỉ giao</span>
-                                <span class="text-muted small">@deliveryNote.ShippingAddress</span>
+                                <span class="text-muted small text-end">@deliveryNote.ShippingAddress</span>
                             </div>
                         }
                         <div class="list-card-field">
@@ -285,11 +285,11 @@
                     </div>
                     <div class="list-card-actions justify-content-between">
                         <div class="d-flex align-items-center gap-2">
-                            <a class="btn btn-sm btn-light" asp-action="Details" asp-route-id="@deliveryNote.Id">
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@deliveryNote.Id">
                                 <i class="bi bi-info-circle me-1 text-primary"></i>
                                 <span class="visually-hidden">Chi tiết</span>
                             </a>
-                            <a class="btn btn-sm btn-light" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank">
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank">
                                 <i class="bi bi-printer me-1 text-secondary"></i>
                                 <span class="visually-hidden">In phiếu</span>
                             </a>
@@ -303,13 +303,13 @@
                             }
                             @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
                             {
-                                <a class="btn btn-sm @(canLeaveWarehouse ? "btn-secondary btn-delivering" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
+                                <a class="btn btn-sm @(canLeaveWarehouse ? "btn-outline-secondary btn-delivering" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
                                     <i class="bi bi-truck me-1"></i>Đang giao
                                 </a>
                             }
                             @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
                             {
-                                <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
+                                <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-outline-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                                 </a>
                             }
@@ -317,13 +317,13 @@
                             {
                                 if (deliveryNote.IsDirectShip)
                                 {
-                                    <a class="btn btn-sm btn-danger btn-customer-reject fw-medium" href="#" data-id="@deliveryNote.Id" data-code="@deliveryNote.Code">
+                                    <a class="btn btn-sm btn-outline-danger btn-customer-reject fw-medium" href="#" data-id="@deliveryNote.Id" data-code="@deliveryNote.Code">
                                         <i class="bi bi-person-fill-x me-1"></i>Từ chối
                                     </a>
                                 }
                                 else
                                 {
-                                    <a class="btn btn-sm btn-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id">
+                                    <a class="btn btn-sm btn-outline-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id">
                                         <i class="bi bi-x-circle me-1"></i>Hủy phiếu
                                     </a>
                                 }

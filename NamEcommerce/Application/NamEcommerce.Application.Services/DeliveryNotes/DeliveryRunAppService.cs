@@ -116,6 +116,12 @@ public sealed class DeliveryRunAppService(
         return run?.ToAppDto();
     }
 
+    public async Task<DeliveryRunAppDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId)
+    {
+        var run = await manager.GetByDeliveryNoteIdAsync(deliveryNoteId).ConfigureAwait(false);
+        return run?.ToAppDto();
+    }
+
     public async Task<IPagedDataAppDto<DeliveryRunListAppDto>> GetListAsync(int pageIndex, int pageSize,
         string? keywords, Guid? assignedDeliveryUserId, int? status)
     {

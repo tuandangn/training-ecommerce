@@ -1,5 +1,4 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.StockTransfer;
+﻿using NamEcommerce.Web.Contracts.Models.StockTransfer;
 
 namespace NamEcommerce.Web.Contracts.Commands.StockTransfer;
 
@@ -8,7 +7,7 @@ public sealed record CreateStockTransferNoteCommand(
     Guid ToWarehouseId,
     string? Note,
     List<StockTransferNoteItemInputModel> Items
-) : IRequest<CreateStockTransferNoteResultModel>;
+) : ICommand<CreateStockTransferNoteResultModel>;
 
-public sealed record ApproveStockTransferNoteCommand(Guid Id) : IRequest<StockTransferNoteActionResultModel>;
-public sealed record CancelStockTransferNoteCommand(Guid Id) : IRequest<StockTransferNoteActionResultModel>;
+public sealed record ApproveStockTransferNoteCommand(Guid Id) : ICommand<StockTransferNoteActionResultModel>;
+public sealed record CancelStockTransferNoteCommand(Guid Id) : ICommand<StockTransferNoteActionResultModel>;

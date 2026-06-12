@@ -49,14 +49,14 @@ public sealed class VendorReturnManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
         if (vendor is null)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.VendorNotFound", dto.VendorId);
 
         GoodsReceipt? goodsReceipt = null;
         if (dto.GoodsReceiptId.HasValue)
         {
-            goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value).ConfigureAwait(false);
+            goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value, default).ConfigureAwait(false);
             if (goodsReceipt is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.GoodsReceiptNotFound", dto.GoodsReceiptId.Value);
         }
@@ -64,7 +64,7 @@ public sealed class VendorReturnManager(
         Warehouse? warehouse = null;
         if (dto.WarehouseId.HasValue)
         {
-            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId.Value);
         }
@@ -86,7 +86,7 @@ public sealed class VendorReturnManager(
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
             if (product is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.ProductNotFound", itemDto.ProductId);
 
@@ -140,7 +140,7 @@ public sealed class VendorReturnManager(
             if (warehouseId.Value == Guid.Empty)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
 
-            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", warehouseId.Value);
 
@@ -242,7 +242,7 @@ public sealed class VendorReturnManager(
 
     public async Task<VendorReturnDto?> GetByIdAsync(Guid id)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return vendorReturn?.ToDto();
     }
 

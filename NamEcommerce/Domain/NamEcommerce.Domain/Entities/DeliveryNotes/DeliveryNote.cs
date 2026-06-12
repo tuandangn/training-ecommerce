@@ -147,7 +147,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveredOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect));
     }
 
     internal void MarkCreated()
@@ -204,7 +204,8 @@ public sealed record DeliveryNote : AppAggregateEntity
         string? completionNote = null,
         string? completionSource = null,
         string? idempotencyKey = null,
-        decimal? cashCollectedAmount = null)
+        decimal? cashCollectedAmount = null,
+        decimal rejectedGoodsAmount = 0)
     {
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
@@ -224,14 +225,14 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         if (wasConfirmed)
             RaiseDomainEvent(new DeliveryNoteDelivering(Id));
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect + rejectedGoodsAmount));
     }
 
     internal bool HasSameDeliveryCompletionRequest(string? idempotencyKey)
         => !string.IsNullOrWhiteSpace(idempotencyKey)
            && string.Equals(DeliveryCompletionIdempotencyKey, idempotencyKey.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note)
+    internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note, decimal rejectedGoodsAmount = 0)
     {
         if (Status == DeliveryNoteStatus.Delivered)
         {
@@ -258,7 +259,7 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         if (wasConfirmed)
             RaiseDomainEvent(new DeliveryNoteDelivering(Id));
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect + rejectedGoodsAmount));
         return true;
     }
 
@@ -315,7 +316,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveredOnUtc = confirmedAtUtc;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect));
     }
 
     internal void RejectDirectShipDelivery(string reason)

@@ -29,8 +29,8 @@
                 <div class="col-xl-8">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1 fw-bold">Phiếu giao sẵn sàng</h5>
-                            <div class="text-muted small">Phiếu đã xác nhận, giao từ kho và chưa nằm trong chuyến đang mở.</div>
+                            <h5 class="mb-1 fw-bold">Phiếu cần giao</h5>
+                            <div class="text-muted small">Phiếu đã xác nhận, giao từ kho.</div>
                         </div>
                         @if (Model.AvailableDeliveryNotes.Any())
                         {
@@ -46,7 +46,7 @@
                             <table class="table data-table align-middle">
                                 <thead>
                                     <tr>
-                                        <th class="ps-4" style="width: 48px;"></th>
+                                        <th class="ps-4 ui-w-48"></th>
                                         <th>Mã phiếu</th>
                                         <th>Khách hàng</th>
                                         <th>Hàng giao</th>
@@ -75,11 +75,11 @@
                                             </td>
                                             <td class="fw-medium">@note.CustomerName</td>
                                             <td>
-                                                <div class="fw-medium text-truncate" style="max-width: 220px;" title="@note.ProductSummary">@note.ProductSummary</div>
+                                                <div class="fw-medium text-truncate ui-max-w-220" title="@note.ProductSummary">@note.ProductSummary</div>
                                                 <div class="text-muted small">Tổng SL: @note.TotalQuantity.ToString("#,##0.##")</div>
                                             </td>
                                             <td>
-                                                <span class="d-inline-block text-truncate" style="max-width: 260px;" title="@note.ShippingAddress">@note.ShippingAddress</span>
+                                                <span class="d-inline-block text-truncate ui-max-w-260" title="@note.ShippingAddress">@note.ShippingAddress</span>
                                             </td>
                                             <td>
                                                 @if (string.IsNullOrWhiteSpace(note.AssignedDeliveryFullName))
@@ -112,7 +112,7 @@
                     <div class="border rounded-3 p-3 bg-light-subtle">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <h5 class="mb-0 fw-bold">Phân công</h5>
-                            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle" id="selected-count">0 phiếu</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="selected-count">0 phiếu</span>
                         </div>
 
                         <div class="mb-3">
@@ -128,13 +128,13 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú chuyến</label>
-                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ví dụ: ưu tiên tuyến xã A trước"></textarea>
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú</label>
+                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>
                         </div>
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary" id="btn-create-run" disabled="@(!Model.AvailableDeliveryNotes.Any())">
-                                <i class="bi bi-save me-1"></i>Tạo chuyến giao
+                                <i class="bi bi-truck me-1"></i>Tạo chuyến giao
                             </button>
                             <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
                         </div>

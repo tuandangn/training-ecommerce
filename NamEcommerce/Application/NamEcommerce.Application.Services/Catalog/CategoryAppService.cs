@@ -45,7 +45,7 @@ public sealed class CategoryAppService : ICategoryAppService
 
         if (dto.ParentId.HasValue)
         {
-            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value).ConfigureAwait(false);
+            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value, default).ConfigureAwait(false);
             if (parent is null)
             {
                 return new CreateCategoryResultAppDto
@@ -74,7 +74,7 @@ public sealed class CategoryAppService : ICategoryAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var category = await _categoryDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
         if (category == null)
         {
             return new DeleteCategoryResultAppDto
@@ -91,7 +91,7 @@ public sealed class CategoryAppService : ICategoryAppService
 
     public async Task<CategoryAppDto?> GetCategoryByIdAsync(Guid id)
     {
-        var category = await _categoryDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var category = await _categoryDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return category?.ToDto();
     }
 
@@ -143,7 +143,7 @@ public sealed class CategoryAppService : ICategoryAppService
             };
         }
 
-        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var category = await _categoryDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
         if (category == null)
         {
             return new UpdateCategoryResultAppDto
@@ -164,7 +164,7 @@ public sealed class CategoryAppService : ICategoryAppService
 
         if (dto.ParentId.HasValue)
         {
-            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value);
+            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value, default);
             if (parent is null)
             {
                 return new UpdateCategoryResultAppDto

@@ -3,6 +3,7 @@ namespace NamEcommerce.Application.Contracts.Dtos.Debts;
 [Serializable]
 public sealed record BankTransferReceivingAccountAppDto
 {
+    public Guid? BankAccountId { get; init; }
     public required string BankId { get; init; }
     public required string AccountNo { get; init; }
     public required string AccountName { get; init; }
@@ -78,6 +79,16 @@ public sealed record ManualConfirmBankTransferPaymentIntentAppDto
 {
     public required Guid IntentId { get; init; }
     public string? Note { get; init; }
+}
+
+[Serializable]
+public sealed record ConsumeBankTransferPaymentIntentAppDto
+{
+    public required Guid IntentId { get; init; }
+    public required Guid OrderId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public Guid? CustomerDebtId { get; init; }
+    public required Guid CustomerPaymentId { get; init; }
 }
 
 [Serializable]

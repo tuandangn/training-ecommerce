@@ -8,7 +8,7 @@
 
 <div class="page-header">
     <div class="d-flex align-items-center">
-        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="Index" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="page-header-title">Yêu cầu trả hàng từ portal</h1>
             <p class="page-header-subtitle">Khách tạo yêu cầu trả hàng, admin xem xét trước khi xử lý nội bộ</p>
@@ -43,11 +43,11 @@
                         <div class="text-muted small">@item.CustomerPhone</div>
                     </td>
                     <td class="text-muted small">@item.DeliveryNoteCode</td>
-                    <td class="text-truncate" style="max-width:320px">@item.Reason</td>
+                    <td class="text-truncate ui-max-w-320">@item.Reason</td>
                     <td class="text-center"><span class="badge @requestStatus.GetDisplayColor()">@requestStatus.GetDisplayText()</span></td>
                     <td class="text-center text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
                     <td class="text-end pe-3">
-                        <a asp-action="ReturnRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                        <a asp-action="ReturnRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
                     </td>
                 </tr>
             }

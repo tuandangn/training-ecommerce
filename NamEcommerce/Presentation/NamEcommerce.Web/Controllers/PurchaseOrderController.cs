@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
@@ -9,7 +8,6 @@ using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
-using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 
@@ -213,6 +211,20 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         }
 
         return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
+    public async Task<IActionResult> RecordSettlementPayment(RecordPurchaseOrderSettlementPaymentCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (result.Success)
+            NotifySuccess("Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.InvalidRequest");
+
+        return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
     }
 
     [HttpPost]

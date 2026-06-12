@@ -43,7 +43,7 @@ public sealed class CustomerReturnAppService(
 
         foreach (var item in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(item.ProductId, default).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateCustomerReturnResultAppDto
@@ -55,7 +55,7 @@ public sealed class CustomerReturnAppService(
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if ((new[] { item.RequestedQuantity, item.AcceptedQuantity }).Any(quantity => !NumberHelper.IsValidDecimalPlace(quantity, unitMeasurement.DecimalPlaces)))

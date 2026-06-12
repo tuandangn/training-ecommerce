@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Orders;
 
 [Serializable]
-public sealed class AddOrderItemCommand : IRequest<CommonActionResultModel>
+public sealed class AddOrderItemCommand : ICommand<CommonActionResultModel>
 {
     public required Guid OrderId { get; init; }
     public required Guid ProductId { get; init; }

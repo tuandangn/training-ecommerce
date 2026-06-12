@@ -21,144 +21,7 @@
 }
 
 @section Styles {
-    <style>
-        .delivery-stock-table {
-            font-variant-numeric: tabular-nums;
-        }
-
-            .delivery-stock-table tbody tr.stock-row-short {
-                background-color: rgba(245, 158, 11, 0.045);
-            }
-
-                .delivery-stock-table tbody tr.stock-row-short > td:first-child {
-                    box-shadow: inset 3px 0 0 #f59e0b;
-                }
-
-            .delivery-stock-table tbody tr.stock-row-empty {
-                background-color: rgba(239, 68, 68, 0.045);
-            }
-
-                .delivery-stock-table tbody tr.stock-row-empty > td:first-child {
-                    box-shadow: inset 3px 0 0 #ef4444;
-                }
-
-        .delivery-stock-state {
-            min-width: 170px;
-        }
-
-        .delivery-stock-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            border-radius: 999px;
-            border: 1px solid transparent;
-            padding: 0.18rem 0.55rem;
-            font-size: 0.76rem;
-            font-weight: 700;
-            line-height: 1.2;
-            white-space: nowrap;
-        }
-
-            .delivery-stock-status.is-neutral,
-            .delivery-stock-status.is-loading {
-                border-color: #e2e8f0;
-                background: #f8fafc;
-                color: #475569;
-            }
-
-            .delivery-stock-status.is-ok {
-                border-color: rgba(16, 185, 129, 0.28);
-                background: rgba(16, 185, 129, 0.09);
-                color: #047857;
-            }
-
-            .delivery-stock-status.is-short {
-                border-color: rgba(245, 158, 11, 0.34);
-                background: rgba(245, 158, 11, 0.11);
-                color: #92400e;
-            }
-
-            .delivery-stock-status.is-empty,
-            .delivery-stock-status.is-error {
-                border-color: rgba(239, 68, 68, 0.3);
-                background: rgba(239, 68, 68, 0.1);
-                color: #b91c1c;
-            }
-
-        .delivery-stock-note {
-            display: block;
-            max-width: 190px;
-            margin-top: 0.3rem;
-            color: #64748b;
-            font-size: 0.72rem;
-            line-height: 1.25;
-            white-space: normal;
-        }
-
-            .delivery-stock-note.is-short {
-                color: #92400e;
-            }
-
-            .delivery-stock-note.is-empty,
-            .delivery-stock-note.is-error {
-                color: #b91c1c;
-            }
-
-        .warehouse-allocation-list {
-            display: grid;
-            gap: 0.45rem;
-            min-width: 260px;
-        }
-
-        .warehouse-allocation-line {
-            display: grid;
-            grid-template-columns: minmax(120px, 1fr) 88px 94px;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.45rem 0.55rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            background: #fff;
-        }
-
-            .warehouse-allocation-line.is-empty {
-                background: #f8fafc;
-                color: #64748b;
-            }
-
-            .warehouse-allocation-line.is-short {
-                border-color: rgba(245, 158, 11, 0.34);
-                background: rgba(245, 158, 11, 0.06);
-            }
-
-            .warehouse-allocation-line.is-over {
-                border-color: rgba(239, 68, 68, 0.34);
-                background: rgba(239, 68, 68, 0.06);
-            }
-
-        .warehouse-allocation-name {
-            min-width: 0;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #334155;
-        }
-
-        .warehouse-allocation-meta {
-            font-size: 0.74rem;
-            color: #64748b;
-            text-align: right;
-            white-space: nowrap;
-        }
-
-        .warehouse-allocation-input {
-            height: 34px;
-            font-weight: 700;
-        }
-
-        .allocation-total-text {
-            font-variant-numeric: tabular-nums;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/pages/deliverynote-create.css" asp-append-version="true" />
 }
 
 <form asp-action="Create" method="post" id="createDeliveryForm">
@@ -174,7 +37,7 @@
                     </div>
                 </div>
                 <div class="content-card-body">
-                    <div class="order-workflow-info-grid">
+                    <div class="order-workflow-info-grid three-columns">
                         <div>
                             <div class="workflow-info-label">Đơn hàng</div>
                             <div class="fw-bold text-dark">
@@ -220,7 +83,7 @@
                 </div>
                 <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
                 <div class="content-card-body-flush">
-                    <div class="text-end px-3" id="selectedTotalContainer" style="display:none;">
+                    <div class="text-end px-3 d-none" id="selectedTotalContainer">
                         <span class="text-muted small">Tổng tiền chọn:</span>
                         <span class="fw-bold text-success ms-2" id="selectedTotalText">0đ</span>
                     </div>
@@ -228,14 +91,14 @@
                         <table class="table data-table delivery-stock-table mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;" class="text-center ps-4">
+                                    <th class="text-center ps-4 ui-w-50">
                                         <input type="checkbox" id="selectAll" class="form-check-input" checked />
                                     </th>
                                     <th>Mặt hàng</th>
                                     <th class="text-end">Đã đặt</th>
                                     <th class="text-end">Đã giao</th>
                                     <th>Phân bổ kho</th>
-                                    <th class="text-end pe-4" style="width: 130px;">Tổng xuất</th>
+                                    <th class="text-end pe-4 ui-w-130">Tổng xuất</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -303,7 +166,7 @@
                     </div>
                 </div>
                 <div class="content-card-footer d-flex align-items-center justify-content-between">
-                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-link text-decoration-none text-muted btn-sm ps-0">
+                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm ps-0">
                         <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng
                     </a>
                     <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>

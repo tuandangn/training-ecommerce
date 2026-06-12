@@ -34,7 +34,7 @@
                     <tr>
                         <th class="ps-4">Họ tên</th>
                         <th>Điện thoại</th>
-                        <th style="width: 100px;"></th>
+                        <th class="ui-w-100"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -57,8 +57,8 @@
                                             data-id="@item.Id" data-name="@item.FullName" title="Xóa">
                                         <i class="bi bi-trash"></i>
                                     </button>
-                                    <form id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
-                                          method="post" style="display:none;"></form>
+                                    <form class="d-none" id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
+                                          method="post"></form>
                                 </td>
                             </tr>
                         }

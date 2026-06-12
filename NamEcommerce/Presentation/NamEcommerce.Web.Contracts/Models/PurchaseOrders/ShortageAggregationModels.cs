@@ -112,7 +112,7 @@ public sealed class CreatedPurchaseOrderResultModel
 }
 
 [Serializable]
-public sealed class CreatePurchaseOrdersFromShortageResultModel
+public sealed class CreatePurchaseOrdersFromShortageResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

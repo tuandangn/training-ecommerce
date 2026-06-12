@@ -16,7 +16,7 @@ public sealed class GoodsReceiptSystemNotificationHandler(
         if (notification is null)
             return;
 
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt is null)
             return;
 

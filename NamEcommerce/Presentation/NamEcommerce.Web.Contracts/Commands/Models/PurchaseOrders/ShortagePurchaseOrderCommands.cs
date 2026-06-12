@@ -1,23 +1,22 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 
 [Serializable]
-public sealed class CheckExistingDraftsCommand : IRequest<ExistingDraftPurchaseOrdersResultModel>
+public sealed class CheckExistingDraftsCommand : ICommand<ExistingDraftPurchaseOrdersResultModel>
 {
     public IList<Guid> VendorIds { get; init; } = [];
 }
 
 [Serializable]
-public sealed class CheckRelatedPurchaseOrdersCommand : IRequest<RelatedPurchaseOrdersResultModel>
+public sealed class CheckRelatedPurchaseOrdersCommand : ICommand<RelatedPurchaseOrdersResultModel>
 {
     public IList<Guid> VendorIds { get; init; } = [];
     public IList<Guid> ProductIds { get; init; } = [];
 }
 
 [Serializable]
-public sealed class CreatePurchaseOrdersFromShortageCommand : IRequest<CreatePurchaseOrdersFromShortageResultModel>
+public sealed class CreatePurchaseOrdersFromShortageCommand : ICommand<CreatePurchaseOrdersFromShortageResultModel>
 {
     public IList<CreatePurchaseOrderFromShortageGroupCommand> Groups { get; init; } = [];
 }

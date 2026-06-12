@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 
@@ -21,9 +22,8 @@ public sealed class AccountingReportService : IAccountingReportService
     private readonly IEntityDataReader<InventoryCostLedgerEntry> _costLedger;
     private readonly IEntityDataReader<Expense> _expenses;
     private readonly IEntityDataReader<FixedAsset> _fixedAssets;
-    private readonly IEntityDataReader<CustomerDebt> _customerDebts;
-    private readonly IEntityDataReader<VendorDebt> _vendorDebts;
-    private readonly IEntityDataReader<VendorCreditNote> _vendorCreditNotes;
+    private readonly IEntityDataReader<CustomerLedgerEntry> _customerLedgerEntries;
+    private readonly IEntityDataReader<VendorLedgerEntry> _vendorLedgerEntries;
     private readonly IEntityDataReader<InventoryStock> _inventoryStocks;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceipts;
     private readonly IEntityDataReader<CustomerRefund> _refunds;
@@ -38,9 +38,8 @@ public sealed class AccountingReportService : IAccountingReportService
         IEntityDataReader<InventoryCostLedgerEntry> costLedger,
         IEntityDataReader<Expense> expenses,
         IEntityDataReader<FixedAsset> fixedAssets,
-        IEntityDataReader<CustomerDebt> customerDebts,
-        IEntityDataReader<VendorDebt> vendorDebts,
-        IEntityDataReader<VendorCreditNote> vendorCreditNotes,
+        IEntityDataReader<CustomerLedgerEntry> customerLedgerEntries,
+        IEntityDataReader<VendorLedgerEntry> vendorLedgerEntries,
         IEntityDataReader<InventoryStock> inventoryStocks,
         IEntityDataReader<GoodsReceipt> goodsReceipts,
         IEntityDataReader<CustomerRefund> refunds,
@@ -54,9 +53,8 @@ public sealed class AccountingReportService : IAccountingReportService
         _costLedger = costLedger;
         _expenses = expenses;
         _fixedAssets = fixedAssets;
-        _customerDebts = customerDebts;
-        _vendorDebts = vendorDebts;
-        _vendorCreditNotes = vendorCreditNotes;
+        _customerLedgerEntries = customerLedgerEntries;
+        _vendorLedgerEntries = vendorLedgerEntries;
         _inventoryStocks = inventoryStocks;
         _goodsReceipts = goodsReceipts;
         _refunds = refunds;
@@ -85,6 +83,13 @@ public sealed class AccountingReportService : IAccountingReportService
             .Where(dn => deliveredNoteIds.Contains(dn.Id))
             .SelectMany(dn => dn.Items)
             .Sum(i => (decimal?)i.SubTotal) ?? 0;
+
+        var surchargeRevenue = _customerLedgerEntries.DataSource
+            .Where(e => e.EntryType == CustomerLedgerEntryType.Surcharge
+                     && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+
+        grossRevenue += surchargeRevenue;
 
         var tradeDiscounts = allDeliveryNotes
             .Where(dn => deliveredNoteIds.Contains(dn.Id))
@@ -178,22 +183,32 @@ public sealed class AccountingReportService : IAccountingReportService
 
         // Credit notes consumed by cash refunds should still count as AR/AP timing
         // differences because their cash impact is tracked separately in refundsOut/vendorRefundsIn.
-        var arEnd = GetNetAccountsReceivable(end) + refundsOut;
-        var arBegin = GetNetAccountsReceivable(start.AddDays(-1));
+        // Opening-balance entries are excluded: they are not period cash flows.
+        var arEnd = GetOperationalAccountsReceivable(end) + refundsOut;
+        var arBegin = GetOperationalAccountsReceivable(start.AddDays(-1));
         var arChange = -(arEnd - arBegin);
 
-        var apEnd = GetNetAccountsPayable(end) - vendorRefundsIn;
-        var apBegin = GetNetAccountsPayable(start.AddDays(-1));
+        var apEnd = GetOperationalAccountsPayable(end) - vendorRefundsIn;
+        var apBegin = GetOperationalAccountsPayable(start.AddDays(-1));
         var apChange = apEnd - apBegin;
 
-        var inventoryIncrease = _costLedger.DataSource
+        var openingReceiptIds = GetOpeningReceiptIds();
+        var openingInventoryInPeriod = openingReceiptIds.Count > 0
+            ? (_costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.GoodsReceipt
+                         && openingReceiptIds.Contains(e.ReferenceId)
+                         && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+                .Sum(e => (decimal?)e.TotalCost) ?? 0)
+            : 0m;
+
+        var inventoryIncrease = (_costLedger.DataSource
             .Where(e => (e.MovementType == InventoryCostMovementType.GoodsReceipt
                       || e.MovementType == InventoryCostMovementType.CustomerReturn
                       || e.MovementType == InventoryCostMovementType.VendorReturnReversal
                       || e.MovementType == InventoryCostMovementType.PositiveAdjustment
                       || e.MovementType == InventoryCostMovementType.TransferIn)
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+            .Sum(e => (decimal?)e.TotalCost) ?? 0) - openingInventoryInPeriod;
 
         var inventoryDecrease = _costLedger.DataSource
             .Where(e => (e.MovementType == InventoryCostMovementType.SaleDispatch
@@ -287,7 +302,26 @@ public sealed class AccountingReportService : IAccountingReportService
         var ap = GetNetAccountsPayable(asOf);
         var vatPayable = GetVatPayable(asOf);
         var citPayable = setup.IsConfigured ? (setup.CorporateTaxProvision ?? 0) : 0;
-        var paidInCapital = setup.IsConfigured ? setup.OpeningEquity : 0;
+
+        // Auto-adjust opening equity for opening-balance items entered separately
+        // (opening inventory, opening customer AR, opening vendor AP) so BalanceSheet stays balanced.
+        var openingReceiptIds = GetOpeningReceiptIds();
+        var openingInventoryCost = openingReceiptIds.Count > 0
+            ? (_costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.GoodsReceipt
+                         && openingReceiptIds.Contains(e.ReferenceId))
+                .Sum(e => (decimal?)e.TotalCost) ?? 0)
+            : 0m;
+        var openingCustomerAR = _customerLedgerEntries.DataSource
+            .Where(e => e.EntryType == CustomerLedgerEntryType.OpeningBalance)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+        var openingVendorAP = _vendorLedgerEntries.DataSource
+            .Where(e => e.EntryType == VendorLedgerEntryType.OpeningBalance)
+            .Sum(e => (decimal?)e.Amount) ?? 0;
+
+        var paidInCapital = setup.IsConfigured
+            ? setup.OpeningEquity + openingInventoryCost + openingCustomerAR - openingVendorAP
+            : 0;
         var retainedEarnings = setup.IsConfigured
             ? await ComputeCumulativeNetProfitAsync(setup.AccountingStartDate, asOf).ConfigureAwait(false)
             : 0;
@@ -311,6 +345,32 @@ public sealed class AccountingReportService : IAccountingReportService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private HashSet<Guid> GetOpeningReceiptIds()
+        => _goodsReceipts.DataSource
+            .Where(gr => gr.SourceType == GoodsReceiptSourceType.OpeningBalance)
+            .Select(gr => gr.Id)
+            .ToHashSet();
+
+    private decimal GetOperationalAccountsPayable(DateTime asOf)
+    {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+        return _vendorLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff && e.EntryType != VendorLedgerEntryType.OpeningBalance)
+            .GroupBy(e => e.VendorId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
+    }
+
+    private decimal GetOperationalAccountsReceivable(DateTime asOf)
+    {
+        var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
+        return _customerLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff && e.EntryType != CustomerLedgerEntryType.OpeningBalance)
+            .GroupBy(e => e.CustomerId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
+    }
+
     private static decimal SumDepreciationInPeriod(FixedAsset asset, DateTime start, DateTime end)
     {
         decimal total = 0;
@@ -326,35 +386,21 @@ public sealed class AccountingReportService : IAccountingReportService
     private decimal GetNetAccountsReceivable(DateTime asOf)
     {
         var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
-
-        var gross = _customerDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= cutoff
-                     && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
-            .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
-
-        var creditNoteOffset = _creditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= cutoff
-                      && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
-            .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
-
-        return gross - creditNoteOffset;
+        return _customerLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff)
+            .GroupBy(e => e.CustomerId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
     }
 
     private decimal GetNetAccountsPayable(DateTime asOf)
     {
         var cutoff = asOf.Date.AddDays(1).AddTicks(-1);
-
-        var gross = _vendorDebts.DataSource
-            .Where(d => d.CreatedOnUtc <= cutoff
-                     && (d.Status == DebtStatus.Outstanding || d.Status == DebtStatus.PartiallyPaid))
-            .Sum(d => (decimal?)d.RemainingAmount) ?? 0;
-
-        var creditNoteOffset = _vendorCreditNotes.DataSource
-            .Where(cn => cn.CreatedOnUtc <= cutoff
-                      && (cn.Status == CreditNoteStatus.Unapplied || cn.Status == CreditNoteStatus.PartiallyApplied))
-            .Sum(cn => (decimal?)cn.RemainingAmount) ?? 0;
-
-        return gross - creditNoteOffset;
+        return _vendorLedgerEntries.DataSource
+            .Where(e => e.OccurredAtUtc <= cutoff)
+            .GroupBy(e => e.VendorId)
+            .AsEnumerable()
+            .Sum(g => g.Sum(e => e.Amount));
     }
 
     private decimal GetVatPayable(DateTime asOf)

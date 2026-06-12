@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 
 [Serializable]
-public sealed class QuickCreatePurchaseOrderCommand : IRequest<QuickCreatePurchaseOrderResultModel>
+public sealed class QuickCreatePurchaseOrderCommand : ICommand<QuickCreatePurchaseOrderResultModel>
 {
     public required Guid VendorId { get; init; }
     public required Guid DefaultWarehouseId { get; init; }

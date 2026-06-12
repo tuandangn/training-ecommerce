@@ -1,5 +1,4 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.FastSales;
+﻿using NamEcommerce.Web.Contracts.Models.FastSales;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.FastSales;
 
@@ -13,7 +12,7 @@ public sealed class QuickSaleItemCommand
 }
 
 [Serializable]
-public sealed class CreateCashQuickSaleCommand : IRequest<QuickSaleResultModel>
+public sealed class CreateCashQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid CustomerId { get; init; }
     public required Guid WarehouseId { get; init; }
@@ -23,10 +22,11 @@ public sealed class CreateCashQuickSaleCommand : IRequest<QuickSaleResultModel>
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 10;
     public decimal PaidAmount { get; init; }
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]
-public sealed class CreateBankTransferQuickSaleCommand : IRequest<QuickSaleResultModel>
+public sealed class CreateBankTransferQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid PaymentIntentId { get; init; }
     public required Guid CustomerId { get; init; }
@@ -37,10 +37,11 @@ public sealed class CreateBankTransferQuickSaleCommand : IRequest<QuickSaleResul
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 10;
     public decimal PaidAmount { get; init; }
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]
-public sealed class CreateUnpaidQuickSaleCommand : IRequest<QuickSaleResultModel>
+public sealed class CreateUnpaidQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid CustomerId { get; init; }
     public required Guid WarehouseId { get; init; }
@@ -49,10 +50,11 @@ public sealed class CreateUnpaidQuickSaleCommand : IRequest<QuickSaleResultModel
     public string? Note { get; init; }
     public int FulfillmentMode { get; init; } = 10;
     public int PaymentTiming { get; init; } = 20;
+    public string? ShippingAddress { get; set; }
 }
 
 [Serializable]
-public sealed class CreateBankTransferPaymentIntentCommand : IRequest<BankTransferPaymentIntentResultModel>
+public sealed class CreateBankTransferPaymentIntentCommand : ICommand<BankTransferPaymentIntentResultModel>
 {
     public required decimal Amount { get; init; }
     public Guid? CustomerId { get; init; }
@@ -60,20 +62,20 @@ public sealed class CreateBankTransferPaymentIntentCommand : IRequest<BankTransf
 }
 
 [Serializable]
-public sealed class GetBankTransferPaymentIntentStatusCommand : IRequest<BankTransferPaymentIntentResultModel>
+public sealed class GetBankTransferPaymentIntentStatusCommand : ICommand<BankTransferPaymentIntentResultModel>
 {
     public required Guid IntentId { get; init; }
 }
 
 [Serializable]
-public sealed class ManualConfirmBankTransferPaymentIntentCommand : IRequest<BankTransferPaymentIntentResultModel>
+public sealed class ManualConfirmBankTransferPaymentIntentCommand : ICommand<BankTransferPaymentIntentResultModel>
 {
     public required Guid IntentId { get; init; }
     public string? Note { get; init; }
 }
 
 [Serializable]
-public sealed class ProcessBankTransferProviderTransactionCommand : IRequest<BankTransferPaymentIntentResultModel>
+public sealed class ProcessBankTransferProviderTransactionCommand : ICommand<BankTransferPaymentIntentResultModel>
 {
     public required string ReferenceCode { get; init; }
     public required decimal Amount { get; init; }

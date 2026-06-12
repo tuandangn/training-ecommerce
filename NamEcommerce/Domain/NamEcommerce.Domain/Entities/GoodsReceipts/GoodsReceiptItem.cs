@@ -83,7 +83,7 @@ public sealed record GoodsReceiptItem : AppEntity
         if (!warehouseSettings.AllowNonWarehouse || warehouseId.HasValue)
             ArgumentNullException.ThrowIfNull(warehouseByIdGetter);
 
-        var product = await productByIdGetter.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await productByIdGetter.GetByIdAsync(productId, default).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
@@ -93,7 +93,7 @@ public sealed record GoodsReceiptItem : AppEntity
         Warehouse? warehouse = null;
         if (warehouseId.HasValue)
         {
-            warehouse = await warehouseByIdGetter!.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            warehouse = await warehouseByIdGetter!.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }

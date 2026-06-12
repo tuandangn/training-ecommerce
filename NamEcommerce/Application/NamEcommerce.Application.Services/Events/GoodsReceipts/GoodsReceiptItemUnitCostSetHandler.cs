@@ -31,7 +31,7 @@ public sealed class GoodsReceiptItemUnitCostSetHandler : INotificationHandler<Go
         if (notification is null)
             return;
 
-        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
+        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId, default).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 
         await AssignInventoryCostAsync(goodsReceipt, notification.GoodsReceiptItemId).ConfigureAwait(false);

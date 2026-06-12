@@ -39,7 +39,7 @@
 @if (Model.DeliveryNotes.Count == 0 && Model.DirectShipAllocations.Count == 0)
 {
     <div class="text-center text-muted py-4">
-        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+        <i class="bi bi-inbox fs-2"></i>
         <p class="mt-2 mb-0">Đơn hàng này chưa có phiếu giao.</p>
     </div>
 }
@@ -81,7 +81,7 @@ else
                         <thead class="text-muted small">
                             <tr>
                                 <th>Hàng hóa</th>
-                                <th class="text-end" style="width: 120px;">Số lượng</th>
+                                <th class="text-end order-quantity-column">Số lượng</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -142,9 +142,9 @@ else
                         <thead>
                             <tr>
                                 <th class="ps-3">Hàng hóa</th>
-                                <th class="text-end" style="width: 120px;">SL nhận</th>
-                                <th style="width: 160px;">Trạng thái</th>
-                                <th style="width: 130px;">Phiếu</th>
+                                <th class="text-end order-quantity-column">SL nhận</th>
+                                <th class="order-status-width-column">Trạng thái</th>
+                                <th class="order-code-column">Phiếu</th>
                             </tr>
                         </thead>
                         <tbody>

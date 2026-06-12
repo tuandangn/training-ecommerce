@@ -51,14 +51,14 @@ public sealed class StockTransferNoteItemInputModel
     public int QuantityDecimalPlaces { get; set; }
 }
 
-public sealed class CreateStockTransferNoteResultModel
+public sealed class CreateStockTransferNoteResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public Guid? CreatedId { get; set; }
 }
 
-public sealed class StockTransferNoteActionResultModel
+public sealed class StockTransferNoteActionResultModel : ICommandResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }

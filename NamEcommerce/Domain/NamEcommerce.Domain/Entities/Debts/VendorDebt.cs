@@ -116,104 +116,12 @@ public sealed record VendorDebt : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    internal void ApplyPayment(decimal amount)
-    {
-        if (amount <= 0) return;
-
-        PaidAmount += amount;
-        RemainingAmount -= amount;
-
-        if (RemainingAmount < 0)
-            RemainingAmount = 0;
-
-        Status = RemainingAmount <= 0
-            ? DebtStatus.FullyPaid
-            : DebtStatus.PartiallyPaid;
-
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
-    internal void ApplyCreditNote(decimal amount)
-    {
-        if (amount <= 0) return;
-
-        RemainingAmount -= amount;
-        if (RemainingAmount < 0)
-            RemainingAmount = 0;
-
-        Status = RemainingAmount <= 0
-            ? DebtStatus.FullyPaid
-            : PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
-
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
-    internal void ReverseCreditNote(decimal amount)
-    {
-        if (amount <= 0) return;
-
-        var maxRemaining = TotalAmount - PaidAmount;
-        RemainingAmount += amount;
-        if (RemainingAmount > maxRemaining)
-            RemainingAmount = maxRemaining;
-
-        Status = RemainingAmount <= 0
-            ? DebtStatus.FullyPaid
-            : PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
-
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
-    internal void MarkAsPaid()
-    {
-        PaidAmount = TotalAmount;
-        RemainingAmount = 0;
-        Status = DebtStatus.FullyPaid;
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
     internal void ChangeDueDate(DateTime? newDueDateUtc)
     {
         DueDateUtc = newDueDateUtc;
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
-    internal void ApplyReturn(decimal amount, Guid returnId)
-    {
-        if (amount <= 0) return;
-
-        var wasNonNegative = RemainingAmount >= 0;
-        RemainingAmount -= amount;
-        UpdatedOnUtc = DateTime.UtcNow;
-
-        if (RemainingAmount <= 0)
-            Status = DebtStatus.FullyPaid;
-
-        if (wasNonNegative && RemainingAmount < 0)
-        {
-            var overAmount = -RemainingAmount;
-            RaiseDomainEvent(new VendorDebtBecameNegative(Id, VendorId, returnId, overAmount, RemainingAmount));
-        }
-    }
-
-    internal void ReverseReturn(decimal amount)
-    {
-        if (amount <= 0) return;
-
-        RemainingAmount += amount;
-        UpdatedOnUtc = DateTime.UtcNow;
-
-        if (RemainingAmount > 0)
-            Status = PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
-    }
-
     internal void MarkCreated()
         => RaiseDomainEvent(new VendorDebtCreated(Id, VendorId, TotalAmount, PurchaseOrderId, GoodsReceiptId));
-
-    internal void MarkUpdated()
-    {
-        RaiseDomainEvent(new VendorDebtUpdated(Id));
-        if (Status == DebtStatus.FullyPaid)
-            RaiseDomainEvent(new VendorDebtFullyPaid(Id, VendorId));
-    }
 }

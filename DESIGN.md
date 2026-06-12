@@ -1,91 +1,98 @@
-[ROLE: Định nghĩa Hệ màu, Font, và Linh hồn của Thương hiệu]
+[ROLE: Định nghĩa hệ màu, font, component rules, và guardrails UI cho NamEcommerce]
 
-# Web App UI/UX Design System & Guidelines
+# NamEcommerce UI/UX Design System
 
-Mục đích của tài liệu này là cung cấp các nguyên tắc thiết kế, hệ thống design token và quy chuẩn giao diện hiện đại (Modern Web App) để AI tuân thủ tuyệt đối khi xây dựng Components, Pages và Layouts.
+Ứng dụng dùng Bootstrap 5 + Razor MVC. Tài liệu này là chuẩn Bootstrap-first: không dùng Tailwind class trong code mới, không tự dịch token Tailwind sang CSS tay từng màn.
 
----
+## 1. Design Philosophy
 
-## 1. Phong cách Thiết kế Chủ đạo (Design Philosophy)
+NamEcommerce là dashboard vận hành bán hàng/kho/công nợ, nên giao diện phải yên tĩnh, rõ dữ liệu và thao tác nhanh:
 
-AI cần áp dụng phong cách **Modern Minimalist / SaaS Dashboard** hiện đại với các đặc tính sau:
-* **Sạch sẽ & Rộng rãi:** Sử dụng khoảng trắng (whitespace) hợp lý để giao diện "thở", không nhồi nhét thông tin.
-* **Phẳng có chiều sâu (Semi-flat / Soft Shadows):** Sử dụng các lớp đổ bóng rất nhẹ (subtle shadows) và bo góc để tạo phân cấp trực quan (visual hierarchy).
-* **Trọng tâm vào dữ liệu:** Giảm thiểu các chi tiết trang trí thừa thãi, làm nổi bật nội dung của người dùng.
+- Sạch, ít trang trí, ưu tiên khả năng scan bảng/form.
+- Mỗi màn có phân cấp hành động rõ: một hành động chính, các hành động phụ giảm độ nổi.
+- Không đổi flow nghiệp vụ chỉ để làm đẹp. UI mới phải giúp thao tác lặp lại nhanh hơn.
+- Mobile dùng bố cục thực dụng: ưu tiên đọc dữ liệu và bấm đúng, không nhồi cột.
 
----
+## 2. Bootstrap Token Map
 
-## 2. Hệ màu sắc (Color Palette - Tailwind CSS Tokens)
+Token nằm trong `NamEcommerce/Presentation/NamEcommerce.Web/wwwroot/css/theme.css` và được load ngay sau `bootstrap.min.css`.
 
-Tất cả các thành phần giao diện phải sử dụng hệ màu nhất quán dưới đây (hoặc các class Tailwind tương đương):
+| Vai trò | Bootstrap/CSS variable | Hex | Dùng cho |
+|---|---|---:|---|
+| Primary | `--bs-primary` | `#4F46E5` | CTA chính, active state, link quan trọng |
+| Accent/Info | `--bs-info`, `--app-accent` | `#0EA5E9` | Badge/hint/highlight phụ |
+| App background | `--bs-body-bg` | `#F8FAFC` | Nền toàn trang |
+| Surface | `--app-surface` | `#FFFFFF` | Card, table, form, modal |
+| Text primary | `--bs-emphasis-color` | `#0F172A` | Heading, số liệu quan trọng |
+| Text secondary | `--bs-body-color` | `#475569` | Body text, label, mô tả |
+| Muted/Secondary action | `--bs-secondary` | `#64748B` | Text phụ, `btn-outline-secondary` |
+| Border | `--bs-border-color` | `#E2E8F0` | Divider, input/card border |
+| Success | `--bs-success` | `#10B981` | Trạng thái thành công |
+| Warning | `--bs-warning` | `#D97706` | Cảnh báo cần chú ý |
+| Danger | `--bs-danger` | `#EF4444` | Lỗi, xoá, huỷ nguy hiểm |
 
-| Quy định màu | Mã Màu (Hex) | Tailwind Class | Mục đích sử dụng |
-| :--- | :--- | :--- | :--- |
-| **Primary (Chủ đạo)** | `#4F46E5` | `indigo-600` | Các nút chính (CTA), trạng thái Active, Link quan trọng. |
-| **Secondary** | `#0EA5E9` | `sky-500` | Các thành phần bổ trợ, badge, highlight nhẹ. |
-| **Background App** | `#F8FAFC` | `slate-50` | Nền toàn trang (Light mode). |
-| **Surface/Card** | `#FFFFFF` | `white` | Nền của các thẻ, bảng, form, sidebar. |
-| **Text Primary** | `#0F172A` | `slate-900` | Tiêu đề chính, văn bản quan trọng. |
-| **Text Secondary**| `#475569` | `slate-600` | Văn bản phụ, chú thích, label của form. |
-| **Border / Divider**| `#E2E8F0` | `slate-200` | Đường kẻ phân chia, viền của input/card. |
-| **Success** | `#10B981` | `emerald-500` | Trạng thái thành công, thông báo tích cực. |
-| **Danger/Error** | `#EF4444` | `red-500` | Trạng thái lỗi, nút xóa, hành động nguy hiểm. |
+Không thêm hex màu mới trong view/page CSS. Nếu thiếu token, thêm vào `theme.css` trước.
 
----
+## 3. Typography, Spacing, Radius
 
-## 3. Hệ thống Typography & Spacing
+- Font stack: `Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif`; Inter được self-host ở `wwwroot/fonts/inter/InterVariable.woff2`.
+- H1/page title: 1.5-1.8rem, font-weight 700, màu `--bs-emphasis-color`.
+- Section/card title: 1-1.15rem, font-weight 600.
+- Body/form label: 0.875-1rem, màu `--bs-body-color`.
+- Spacing dùng Bootstrap utilities: `p-2/3/4`, `gap-2/3`, `mb-2/3/4`.
+- Radius mặc định: input/button 8px (`--bs-border-radius`), card/modal 12px (`--bs-border-radius-lg`) trừ khi component hiện có yêu cầu khác.
+- Shadow chỉ dùng 2 cấp trong `theme.css`: `--app-shadow-soft`, `--app-shadow-lifted`.
 
-### Typography
-* **Font chữ:** Ưu tiên hệ font Sans-serif hiện đại: `Inter`, `Plus Jakarta Sans`, hoặc hệ font hệ thống (`system-ui`).
-* **Cấp bậc Font (Font Hierarchy):**
-    * H1 (Trang chính): `text-3xl font-bold tracking-tight text-slate-900`
-    * H2 (Tiêu đề phân khu): `text-xl font-semibold text-slate-900`
-    * Body text: `text-sm font-normal text-slate-600 leading-relaxed`
-    * Small text (Chú thích): `text-xs text-slate-400`
+## 4. CSS Ownership
 
-### Spacing & Border Radius (Quy tắc bo góc)
-* **Padding/Margin:** Luôn tuân thủ hệ nhân 4 của Tailwind (`p-2`, `p-4`, `p-6`, `p-8`). Không dùng các khoảng cách lẻ.
-* **Bo góc (Border Radius):**
-    * Nút nhỏ, Input form: `rounded-lg` (8px)
-    * Thẻ (Card), Bảng (Table), Dialog: `rounded-xl` (12px) hoặc `rounded-2xl` (16px) để tạo cảm giác mềm mại, hiện đại.
+- `theme.css`: Bootstrap variables, màu/font/radius/shadow toàn cục, override component Bootstrap chung.
+- `components.css`: CSS cho partials dùng chung trong `Views/Shared/Components/`.
+- `site.css`: layout/app shell và component cũ chưa migrate.
+- `loading.css`: loading mask dùng chung.
+- `responsive/sm.css`: rule dùng chung quanh Bootstrap `sm` boundary.
+- `responsive/md.css`: rule dùng chung quanh Bootstrap `md` boundary.
+- `responsive/lg.css`, `responsive/xl.css`, `responsive/xxl.css`: rule dùng chung cho breakpoint lớn khi phát sinh.
+- `pages/{module}.css`: CSS riêng module, chỉ dùng khi không tái sử dụng được.
 
----
+View Razor không được thêm `<style>` mới và không thêm `style=""` mới. Khi migrate màn cũ, chuyển CSS sang đúng file ở trên.
 
-## 4. Quy chuẩn Components Hiện đại
+## 5. Component Rules
 
-AI khi tạo code cho các Component phải tuân theo các layout pattern sau:
+Các partial dùng chung nằm trong `NamEcommerce/Presentation/NamEcommerce.Web/Views/Shared/Components/` và nhận model từ `NamEcommerce.Web.Models.DesignSystem`.
 
-### A. Layout Tổng thể (App Layout)
-* Sử dụng cấu trúc **Sticky Sidebar** bên trái (hoặc Top Navigation cố định) kết hợp với vùng nội dung chính có `max-w-7xl` hoặc `w-full` kèm padding lớn (`p-6` hoặc `p-8`).
-* Sidebar phải có hiệu ứng `hover:bg-slate-100` và trạng thái `active` rõ ràng với màu `text-indigo-600`.
+- `_PageHeader`: title, subtitle, breadcrumb, actions.
+- `_FilterToolbar`: search, select filters, Lọc/Xoá lọc, responsive sẵn.
+- `_DataTable`: table wrapper, header style, hover, empty state.
+- `_StatusBadge`: status badge theo tone `success/info/warning/danger/muted`.
+- `_FormSection` / `_FormRow`: nhóm field form, label/help text/required marker.
+- `_EmptyState`: icon, message, CTA.
+- `_ConfirmModal`: modal confirm dùng Bootstrap data attributes.
+- `_MoneyDisplay` / `_QuantityDisplay`: format số/tiền thống nhất.
 
-### B. Thẻ Nội dung (Cards)
-* **Khuyến nghị:** Cấu trúc nền trắng, bo góc `rounded-xl`, đổ bóng cực nhẹ `shadow-sm`, viền mờ `border border-slate-100`.
-* *Code mẫu Tailwind định hướng:* `bg-white p-6 rounded-xl border border-slate-100 shadow-sm transition-all hover:shadow-md`
+- Page header: title + breadcrumb/context + vùng actions bên phải.
+- Button: mỗi màn tối đa một `btn-primary`. Hành động phụ dùng `btn-outline-secondary`. Hành động nguy hiểm dùng `btn-outline-danger`; nút danger solid chỉ dùng trong confirm modal.
+- Table: số/tiền căn phải, date thống nhất `dd/MM/yyyy HH:mm`, status dùng badge chuẩn.
+- Form: label nằm trên input; nhóm field bằng FormSection; footer form đặt Huỷ bên trái, Lưu bên phải.
+- Empty state: có message ngắn và hành động tiếp theo nếu có.
+- Modal confirm: nêu rõ hậu quả của thao tác huỷ/xoá/đảo.
+- Icon-only button phải có `title` hoặc `aria-label`.
 
-### C. Nút bấm (Buttons)
-* **Primary Button:** Nền màu chủ đạo, chữ trắng, không đổ bóng đậm. Hiệu ứng hover giảm độ sáng nhẹ (`hover:bg-indigo-700`).
-* **Secondary/Ghost Button:** Nền trong suốt hoặc xám nhạt (`bg-slate-50`), viền `border-slate-200`, `text-slate-700`.
-* Luôn có hiệu ứng `transition-colors duration-200` để chuyển đổi mượt mà.
+## 6. Guardrails
 
-### D. Biểu mẫu (Form Inputs)
-* Input phải có chiều cao vừa phải (`py-2 px-3`), viền `border-slate-200`, bo góc `rounded-lg`.
-* Khi focus: Viền chuyển sang màu primary và có hiệu ứng ring mờ: `focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none`.
+- Không dùng Tailwind class trong code mới.
+- Không dùng màu nguyên bản chói hoặc hex tự phát trong view.
+- Không dùng shadow đậm, gradient trang trí, blob/orb nền.
+- Không tạo card lồng card nếu có thể dùng section/full-width layout.
+- Không dùng `btn-light`, `btn-link` cho action nghiệp vụ; link chỉ dùng điều hướng.
+- Không import font/CDN mới trong view. Font self-host nếu cần thêm file font.
 
----
+## 7. Verification
 
-## 5. Rào chắn AI nghiêm cấm (Design Guardrails - DO NOT DO)
+Mỗi PR UI phải có:
 
-Để tránh giao diện bị lỗi thời hoặc thô kệch, **AI KHÔNG ĐƯỢC PHÉP**:
-1.  **KHÔNG** dùng các màu nguyên bản quá chói (như `bg-blue-500` thuần, `bg-red-600` thuần của hệ màu cũ) mà không có sự phối hợp.
-2.  **KHÔNG** dùng bo góc quá nhọn (`rounded-sm` hoặc không bo góc) trừ khi có yêu cầu đặc biệt.
-3.  **KHÔNG** dùng đổ bóng quá đậm (`shadow-xl`, `shadow-2xl` màu đen sì). Hãy dùng shadow mờ, mịn.
-4.  **KHÔNG** thiết kế các bảng dữ liệu (Tables) có đường viền đen đậm ngăn cách từng ô. Hãy dùng viền ngang mờ `border-b border-slate-100` và padding rộng rãi cho hàng.
-5.  **KHÔNG** tự ý dùng icon từ nhiều thư viện khác nhau. Hãy dùng nhất quán **Lucide Icons** hoặc **Heroicons**.
-
----
-
-## 6. Trạng thái và Hiệu ứng động (States & Animations)
-
-* **Hover State:** Tất cả các thành phần tương tác được (Clickable) bắt buộc phải có phản hồi khi hover (đổi màu nền, đổi màu chữ, hoặc nâng nhẹ shadow).
-* **Loading State:** Khi tải dữ liệu, sử dụng skeleton loading (`animate-pulse` với nền `bg-slate-200`) thay vì vòng xoay loading thô sơ.
+- Build Web project: `dotnet build NamEcommerce/Presentation/NamEcommerce.Web/NamEcommerce.Web.csproj`.
+- UI lint: `powershell -ExecutionPolicy Bypass -File tools/ui-lint.ps1`.
+- UI screenshot: `powershell -ExecutionPolicy Bypass -File tools/ui-screenshot.ps1 -Urls /design` (requires Playwright CLI: `npm install --save-dev @playwright/test && npx playwright install chromium`).
+- Screenshot trước/sau cho màn đã sửa.
+- Kiểm tra không tăng `<style>` và `style=""`.
+- Kiểm tra responsive ở mobile và desktop cho màn liên quan.

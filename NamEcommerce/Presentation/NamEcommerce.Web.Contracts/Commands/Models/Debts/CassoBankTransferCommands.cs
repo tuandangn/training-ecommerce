@@ -1,5 +1,4 @@
-using System.Text.Json.Serialization;
-using MediatR;
+﻿using System.Text.Json.Serialization;
 using NamEcommerce.Web.Contracts.Models.Debts;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Debts;
@@ -42,7 +41,7 @@ public sealed record CassoTransactionCommand
 }
 
 [Serializable]
-public sealed record ProcessCassoWebhookCommand : IRequest<CassoBankTransferProcessingResultModel>
+public sealed record ProcessCassoWebhookCommand : ICommand<CassoBankTransferProcessingResultModel>
 {
     public int? Error { get; init; }
     public IList<CassoTransactionCommand> Data { get; init; } = [];
@@ -50,7 +49,7 @@ public sealed record ProcessCassoWebhookCommand : IRequest<CassoBankTransferProc
 }
 
 [Serializable]
-public sealed record RunCassoReconciliationCommand : IRequest<CassoBankTransferProcessingResultModel>
+public sealed record RunCassoReconciliationCommand : ICommand<CassoBankTransferProcessingResultModel>
 {
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }

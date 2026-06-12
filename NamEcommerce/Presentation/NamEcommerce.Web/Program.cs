@@ -56,6 +56,7 @@ using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Data.SqlServer.Interceptors;
+using NamEcommerce.Data.SqlServer.BackgroundServices;
 using NamEcommerce.Data.SqlServer.Outbox;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
@@ -157,8 +158,9 @@ var app = builder.Build();
 Configure(app);
 
 //seed
-await using (var scope = app.Services.CreateAsyncScope())
+if (app.Configuration.GetValue("SeedData:RunOnStartup", true))
 {
+    await using var scope = app.Services.CreateAsyncScope();
     var runner = scope.ServiceProvider.GetRequiredService<DataSeederRunner>();
     await runner.RunAsync();
 }
@@ -214,9 +216,14 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     // Outbox processor (background service) — đọc OutboxMessages chưa processed và publish qua MediatR.
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
-    services.AddHostedService<OutboxProcessor>();
-    services.AddHostedService<CassoReconciliationHostedService>();
-    services.AddHostedService<DeliveryNoteReconciliationHostedService>();
+    if (configuration.GetValue("HostedServices:RunOnStartup", true))
+    {
+        services.AddHostedService<OutboxProcessor>();
+        services.AddHostedService<CassoReconciliationHostedService>();
+        services.AddHostedService<DeliveryNoteReconciliationHostedService>();
+        services.AddHostedService<InventoryReconciliationService>();
+        services.AddHostedService<StaleDeliveryNoteNotifierService>();
+    }
 
     services.AddScoped<EntityCodeGenerator>();
     services.AddScoped<IUserManager, UserManager>();
@@ -229,6 +236,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<InventoryStockManager>();
     services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
     services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
+    services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IOrderItemChangeAuditManager, OrderItemChangeAuditManager>();
     services.AddScoped<IPurchaseOrderItemChangeAuditManager, PurchaseOrderItemChangeAuditManager>();

@@ -1,7 +1,7 @@
 namespace NamEcommerce.Web.Contracts.Models.FastSales;
 
 [Serializable]
-public sealed record QuickSaleResultModel
+public sealed record QuickSaleResultModel : ICommandResult
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

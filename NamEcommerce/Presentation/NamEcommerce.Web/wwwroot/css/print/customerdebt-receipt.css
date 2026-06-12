@@ -1,0 +1,32 @@
+/* Extracted from Views/CustomerDebt\Receipt.cshtml during UI design-system cleanup. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #eee; }
+.page { width: 105mm; padding: 10mm 12mm 12mm; margin: 8mm auto; background: #fff; }
+/* Header */
+.shop { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 8px; }
+.shop-name { font-size: 13px; font-weight: bold; }
+.shop-sub { font-size: 10px; color: #555; margin-top: 2px; }
+/* Title */
+.title { text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase;
+         letter-spacing: 1px; margin: 8px 0 2px; }
+.code-line { text-align: center; font-size: 10.5px; color: #555; margin-bottom: 10px; }
+/* Info table */
+table.info { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+table.info td { padding: 4px 5px; font-size: 11.5px; vertical-align: top; }
+table.info td:first-child { color: #555; white-space: nowrap; width: 36%; }
+table.info td:last-child { font-weight: bold; }
+.divider { border: none; border-top: 1px dashed #bbb; margin: 8px 0; }
+/* Amount box */
+.amt-box { border: 2px solid #333; padding: 8px; text-align: center; margin: 10px 0; }
+.amt-lbl { font-size: 9.5px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
+.amt-val { font-size: 22px; font-weight: bold; margin-top: 3px; }
+/* Signature */
+.sig-row { display: flex; justify-content: space-around; margin-top: 20px; }
+.sig-box { text-align: center; width: 42%; font-size: 10.5px; }
+.sig-box strong { display: block; font-size: 11px; }
+.sig-box em { font-size: 9.5px; color: #666; }
+.sig-space { height: 32px; }
+@@media print {
+  body { background: #fff; }
+  .page { margin: 0; }
+}

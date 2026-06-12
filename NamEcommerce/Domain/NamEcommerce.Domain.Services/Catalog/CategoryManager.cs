@@ -109,7 +109,7 @@ public sealed class CategoryManager : ICategoryManager
 
     public async Task<CategoryDto?> GetCategoryByIdAsync(Guid id)
     {
-        var category = await _categoryDataReader.GetByIdAsync(id);
+        var category = await _categoryDataReader.GetByIdAsync(id, default);
         if (category is null)
             return null;
 

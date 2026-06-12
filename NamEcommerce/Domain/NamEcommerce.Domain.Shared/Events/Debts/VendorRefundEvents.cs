@@ -14,7 +14,7 @@ public sealed record VendorRefundCreated(
 public sealed record VendorRefundCompleted(
     Guid VendorRefundId,
     Guid VendorId,
-    decimal Amount) : DomainEvent;
+    decimal Amount) : DomainEvent, IReliableDomainEvent;
 
 /// <summary>
 /// Phiếu thu tiền hoàn từ NCC bị huỷ — không thực hiện thu tiền.

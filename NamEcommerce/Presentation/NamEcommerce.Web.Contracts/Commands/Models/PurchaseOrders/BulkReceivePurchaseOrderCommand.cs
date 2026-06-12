@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 
 [Serializable]
-public sealed class BulkReceivePurchaseOrderCommand : IRequest<BulkReceivePurchaseOrderResultModel>
+public sealed class BulkReceivePurchaseOrderCommand : ICommand<BulkReceivePurchaseOrderResultModel>
 {
     public required Guid PurchaseOrderId { get; init; }
     public IList<BulkReceiveLineCommand> Items { get; init; } = [];

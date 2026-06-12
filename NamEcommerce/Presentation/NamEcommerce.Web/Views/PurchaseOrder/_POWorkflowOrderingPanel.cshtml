@@ -54,7 +54,7 @@
         </div>
 
         <div class="content-card-body">
-            <div class="order-workflow-info-grid mb-3">
+            <div class="order-workflow-info-grid three-columns mb-3">
                 <div>
                     <div class="workflow-info-label">Nhà cung cấp</div>
                     <div class="fw-bold text-dark">@(Model.Info.VendorName ?? "—")</div>
@@ -123,19 +123,19 @@
                                     {
                                         <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-light border">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary border">
                                                 <i class="bi bi-copy me-1"></i>Sao chép
                                             </button>
                                         </form>
                                     }
                                     @if (canSplit)
                                     {
-                                        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
                                             <i class="bi bi-scissors me-1"></i>Chia đơn
                                         </button>
                                     }
                                 </div>
-                                <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none border-bottom-0" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
                                     <i class="bi bi-plus-lg me-1"></i>
                                     <span class="d-none d-md-inline">Thêm hàng hóa</span>
                                 </button>
@@ -151,7 +151,7 @@
                             <th class="text-end d-none d-md-table-cell pe-3">Thành tiền</th>
                             @if (Model.Info.CanAddItems)
                             {
-                                <th class="text-end" style="width: 48px"></th>
+                                <th class="text-end ui-w-48"></th>
                             }
                         </tr>
                     </thead>
@@ -166,13 +166,13 @@
                                         <div class="d-flex align-items-center gap-2">
                                             @if (!string.IsNullOrEmpty(item.ProductPicture))
                                             {
-                                                <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
-                                                     style="width:40px;height:40px;object-fit:cover;" alt="@item.ProductName" />
+                                                <img src="@item.ProductPicture" class="rounded d-none d-lg-block ui-size-40 object-fit-cover"
+                                                     alt="@item.ProductName" />
                                             }
                                             else
                                             {
-                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex"
-                                                     style="width:40px;height:40px;flex-shrink:0;">
+                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex ui-size-40 flex-shrink-0"
+                                                    >
                                                     <i class="bi bi-image text-muted"></i>
                                                 </div>
                                             }
@@ -305,7 +305,7 @@
 {
     <div class="modal fade" id="poEditInfoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content purchaseorder-modal-content">
                 <form asp-action="Edit" asp-controller="PurchaseOrder">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
@@ -317,7 +317,7 @@
                         @await Html.PartialAsync("Details.InfoModify", Model.ModifyInfo)
                     </div>
                     <div class="modal-footer border-0 pt-0">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>Lưu thay đổi
                         </button>

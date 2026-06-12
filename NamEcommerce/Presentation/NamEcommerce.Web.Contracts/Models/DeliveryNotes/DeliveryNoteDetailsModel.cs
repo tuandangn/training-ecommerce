@@ -60,6 +60,18 @@ public sealed class DeliveryNoteDetailsModel
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();
+    public DeliveryRunInfoModel? DeliveryRunInfo { get; set; }
+}
+
+public sealed class DeliveryRunInfoModel
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public int Status { get; set; }
+    public string StatusName { get; set; } = string.Empty;
+    public string AssignedDeliveryFullName { get; set; } = string.Empty;
+    public DateTime? HandedOverOnUtc { get; set; }
+    public DateTime CreatedOnUtc { get; set; }
 }
 
 public sealed class DeliveryNoteItemModel

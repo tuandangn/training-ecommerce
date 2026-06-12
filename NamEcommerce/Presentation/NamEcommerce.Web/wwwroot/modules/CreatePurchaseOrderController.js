@@ -220,7 +220,7 @@ export default class CreatePurchaseOrderController {
         getEl('grandTotal').textContent = DecimalFields.formatCurrencyWithSymbol(this.#state.total);
 
         const hasItems = this.#state.items.length > 0;
-        getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
+        getEl('noItemsMessage').classList.toggle('d-none', hasItems);
         //getEl('tableFooter').classList.toggle('d-none', !hasItems);
         getEl('grandTotalHint').textContent = this.#state.total > 0 ? SoBangChu.docSoTien(this.#state.total) : '';
     }
@@ -297,12 +297,12 @@ export default class CreatePurchaseOrderController {
         const { productInfo: p, quantity, unitCost } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
-        row.style.cursor = 'pointer';
+        row.classList.add('ui-cursor-pointer');
         row.innerHTML = `
             <td class="ps-4 align-middle">
                 <div class="d-flex align-items-center gap-3">
                     ${p.picture
-                        ? `<img src="${p.picture}" class="rounded object-fit-cover product-picture d-none d-lg-block" style="width:40px;height:40px;" alt="" />`
+                        ? `<img src="${p.picture}" class="rounded object-fit-cover product-picture d-none d-lg-block ui-size-40" alt="" />`
                         : ''
                     }
                     <div>
@@ -746,19 +746,19 @@ export class AddItemController {
             const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
             const tr = document.createElement('tr');
             tr.className = isCurrentVendor ? 'table-success' : '';
-            tr.style.cursor = 'pointer';
+            tr.classList.add('ui-cursor-pointer');
             tr.title = `Đơn: ${p.purchaseOrderCode}`;
 
             tr.innerHTML = `
                 <td class="ps-0 py-1 text-nowrap">
                     ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success vendor-selected"></i>' : ''}
                     <span class="fw-medium">${escapeHtml(p.vendorName ?? 'Không rõ')}</span>
-                    <div class="text-muted" style="font-size:0.72rem">${escapeHtml(p.purchaseOrderCode)}</div>
+                    <div class="text-muted ui-fs-072">${escapeHtml(p.purchaseOrderCode)}</div>
                 </td>
                 <td class="text-end py-1 fw-semibold text-nowrap">
                     ${DecimalFields.formatCurrency(p.unitCost)}
                 </td>
-                <td class="text-end py-1 text-muted text-nowrap" style="font-size:0.75rem">${escapeHtml(p.purchaseDate)}</td>`;
+                <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtml(p.purchaseDate)}</td>`;
 
             // Click vào hàng → điền giá
             tr.addEventListener('click', () => {

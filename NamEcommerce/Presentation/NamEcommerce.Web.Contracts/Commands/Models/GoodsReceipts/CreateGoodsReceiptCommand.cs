@@ -1,10 +1,9 @@
-using MediatR;
-using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
+﻿using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 
 [Serializable]
-public sealed class CreateGoodsReceiptCommand : IRequest<CreateGoodsReceiptResultModel>
+public sealed class CreateGoodsReceiptCommand : ICommand<CreateGoodsReceiptResultModel>
 {
     public required DateTime ReceivedOn { get; init; }
     public string? TruckDriverName { get; init; }

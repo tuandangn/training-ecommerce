@@ -1,0 +1,35 @@
+@model DataTableModel
+
+<div class="ui-data-table @Model.CssClass">
+    @if (Model.Rows.Count == 0)
+    {
+        <partial name="~/Views/Shared/Components/_EmptyState.cshtml" model="Model.EmptyState" />
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        @foreach (var column in Model.Columns)
+                        {
+                            <th class="@column.Align">@column.Text</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            @for (var i = 0; i < Model.Columns.Count; i++)
+                            {
+                                var value = i < row.Count ? row[i] : "";
+                                <td class="@Model.Columns[i].Align">@value</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

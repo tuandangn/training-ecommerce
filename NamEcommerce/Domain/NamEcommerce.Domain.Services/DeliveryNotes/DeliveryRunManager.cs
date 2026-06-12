@@ -199,8 +199,16 @@ public sealed class DeliveryRunManager(
 
     public async Task<DeliveryRunDto?> GetByIdAsync(Guid id)
     {
-        var run = await runReader.GetByIdAsync(id).ConfigureAwait(false);
+        var run = await runReader.GetByIdAsync(id, default).ConfigureAwait(false);
         return run?.ToDto();
+    }
+
+    public Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId)
+    {
+        var run = runReader.DataSource
+            .Where(r => r.Status != DeliveryRunStatus.Cancelled)
+            .FirstOrDefault(r => r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+        return Task.FromResult(run?.ToDto());
     }
 
     public Task<IPagedDataDto<DeliveryRunDto>> GetListAsync(int pageIndex, int pageSize, string? keywords,

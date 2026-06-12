@@ -48,7 +48,7 @@
         <a href="@Url.Action("Budgets", new { year = nextMonth.year, month = nextMonth.month })" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-chevron-right"></i>
         </a>
-        <a href="@Url.Action("Budgets")" class="btn btn-link btn-sm text-muted ms-2">Tháng hiện tại</a>
+        <a href="@Url.Action("Budgets")" class="btn btn-outline-secondary btn-sm text-muted ms-2">Tháng hiện tại</a>
     </div>
 </div>
 
@@ -64,7 +64,7 @@
             <div class="content-card h-100">
                 <div class="p-4">
                     <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light" style="width:44px;height:44px;flex-shrink:0;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light ui-size-44 flex-shrink-0">
                             <i class="bi @TypeIcon(item.ExpenseType) fs-5 text-secondary"></i>
                         </div>
                         <div>
@@ -86,8 +86,8 @@
                             <span class="text-muted">Đã chi</span>
                             <span class="fw-semibold @(isOver ? "text-danger" : "")">@item.ActualAmount.DisplayCurrencyWithSymbol()</span>
                         </div>
-                        <div class="progress" style="height:8px;">
-                            <div class="progress-bar @barClass" style="width: @pct%"></div>
+                        <div class="progress ui-h-8">
+                            <div class="progress-bar @barClass" data-progress-width="@pct"></div>
                         </div>
                         <div class="d-flex justify-content-between small mt-1">
                             <span class="text-muted">@pct% ngân sách</span>

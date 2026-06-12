@@ -7,8 +7,16 @@ namespace NamEcommerce.Domain.Shared.Services.Orders;
 
 public interface IOrderManager : ICodeExistCheckingService
 {
+    Task<OrderDto?> GetOrderByIdAsync(Guid id);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
+
     Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto);
     Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto);
+    Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto);
+    Task MarkOrderItemReceivedByCustomerAsync(MarkOrderItemReceivedByCustomerDto dto);
+    Task CompleteOrderAsync(CompleteOrderDto dto);
+    Task RequestQuickSaleDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc);
     Task DeleteOrderAsync(DeleteOrderDto dto);
     Task CancelOrderAsync(CancelOrderDto dto);
 
@@ -17,12 +25,7 @@ public interface IOrderManager : ICodeExistCheckingService
     Task DeleteOrderItemAsync(DeleteOrderItemDto dto);
 
     Task UpdateShippingAsync(UpdateShippingDto dto);
-    Task CompleteOrderAsync(CompleteOrderDto dto);
-    Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto);
-    Task MarkOrderItemReceivedByCustomerAsync(MarkOrderItemReceivedByCustomerDto dto);
 
-    Task<OrderDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
+    //**TODO** move to price module
     Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10);
 }

@@ -175,7 +175,7 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task<CustomerOtpChallengeDto?> GetOtpChallengeByIdAsync(Guid challengeId)
     {
-        var challenge = await otpChallengeReader.GetByIdAsync(challengeId).ConfigureAwait(false);
+        var challenge = await otpChallengeReader.GetByIdAsync(challengeId, default).ConfigureAwait(false);
         return challenge is null ? null : MapToDto(challenge);
     }
 

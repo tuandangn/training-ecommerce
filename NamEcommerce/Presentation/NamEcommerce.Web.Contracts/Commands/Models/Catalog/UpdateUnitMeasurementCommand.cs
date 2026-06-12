@@ -1,10 +1,9 @@
-﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
+﻿using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 
 [Serializable]
-public sealed class UpdateUnitMeasurementCommand : IRequest<UpdateUnitMeasurementResultModel>
+public sealed class UpdateUnitMeasurementCommand : ICommand<UpdateUnitMeasurementResultModel>
 {
     public required Guid Id { get; init; }
     public required string Name { get; init; }
