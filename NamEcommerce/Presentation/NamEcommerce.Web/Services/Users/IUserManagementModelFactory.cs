@@ -9,4 +9,8 @@ public interface IUserManagementModelFactory
     Task<UserRoleAssignmentModel?> PrepareUserRoleAssignmentModel(Guid userId, UserRoleAssignmentModel? oldModel = null);
 
     Task<RolePermissionsPageModel?> PrepareRolePermissionsPageModel(Guid roleId);
+
+    Task<AdminUserListModel> PrepareAdminUserListModel();
+
+    Task<ChangeUserPasswordModel?> PrepareChangeUserPasswordModel(Guid userId);
 }

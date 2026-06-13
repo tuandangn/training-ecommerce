@@ -10,6 +10,7 @@ public sealed record UserAppDto
 
     public string? Address { get; set; }
     public DateTime CreatedOnUtc { get; set; }
+    public bool IsLocked { get; set; }
     public IList<string> RoleNames { get; init; } = [];
 }
 
@@ -87,6 +88,13 @@ public sealed record UpdateUserRolesAppDto
 
 [Serializable]
 public sealed record UpdateUserRolesResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+}
+
+[Serializable]
+public sealed record UserManagementResultAppDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

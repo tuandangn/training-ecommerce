@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Events.Users;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -65,6 +65,8 @@ public sealed record User : AppAggregateEntity
 
     public string PhoneNumber { get; private set; }
 
+    public bool IsLocked { get; private set; }
+
     public DateTime CreatedOnUtc { get; }
 
     #endregion
@@ -79,6 +81,18 @@ public sealed record User : AppAggregateEntity
         var (passwordHash, passwordSalt) = await securityService.HashPasswordAsync(password).ConfigureAwait(false);
         PasswordHash = passwordHash;
         PasswordSalt = passwordSalt;
+    }
+
+    internal void Lock()
+    {
+        IsLocked = true;
+        RaiseDomainEvent(new UserLocked(Id));
+    }
+
+    internal void Unlock()
+    {
+        IsLocked = false;
+        RaiseDomainEvent(new UserUnlocked(Id));
     }
 
     static internal async Task<User> CreateAsync(
@@ -109,29 +123,15 @@ public sealed record User : AppAggregateEntity
 
     #region Domain Event Markers
 
-    /// <summary>
-    /// Đánh dấu user vừa được tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
-    /// </summary>
     internal void MarkCreated()
         => RaiseDomainEvent(new UserCreated(Id, Username, FullName));
 
-    /// <summary>
-    /// Đánh dấu thông tin user vừa cập nhật — raise <see cref="UserUpdated"/>.
-    /// </summary>
     internal void MarkUpdated()
         => RaiseDomainEvent(new UserUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu mật khẩu user vừa được đổi — raise <see cref="UserPasswordChanged"/>.
-    /// Manager gọi sau khi <see cref="SetPasswordAsync"/> + <c>UpdateAsync</c> thành công.
-    /// </summary>
     internal void MarkPasswordChanged()
         => RaiseDomainEvent(new UserPasswordChanged(Id));
 
-    /// <summary>
-    /// Đánh dấu user bị xoá — raise <see cref="UserDeleted"/>.
-    /// </summary>
     internal void MarkDeleted()
         => RaiseDomainEvent(new UserDeleted(Id, Username));
 

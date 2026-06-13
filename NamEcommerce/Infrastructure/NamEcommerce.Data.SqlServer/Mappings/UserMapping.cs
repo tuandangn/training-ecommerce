@@ -15,5 +15,6 @@ public sealed class UserMapping : IEntityTypeConfiguration<User>
         builder.Property(u => u.Address).HasMaxLength(400);
         builder.Property(u => u.NormalizedAddress).HasMaxLength(800);
         builder.Property(u => u.PhoneNumber).HasMaxLength(20).IsRequired();
+        builder.Property(u => u.IsLocked).IsRequired().HasDefaultValue(false);
     }
 }

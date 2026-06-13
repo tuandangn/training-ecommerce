@@ -25,6 +25,7 @@ public abstract record BaseUserDto
 public sealed record UserDto(Guid Id) : BaseUserDto
 {
     public DateTime CreatedOnUtc { get; set; }
+    public bool IsLocked { get; set; }
     public IList<string> RoleNames { get; init; } = [];
 }
 

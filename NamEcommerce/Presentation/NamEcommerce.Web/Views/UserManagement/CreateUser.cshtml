@@ -1,0 +1,60 @@
+@model CreateAdminUserModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Thêm tài khoản";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Thêm tài khoản</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Users" asp-controller="UserManagement" class="text-decoration-none">Quản lý tài khoản</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+<div class="content-card">
+    <form method="post" asp-antiforgery="true">
+        <div class="content-card-body">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <label asp-for="Username" class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                    <input asp-for="Username" class="form-control" placeholder="Nhập tên đăng nhập" />
+                    <span asp-validation-for="Username" class="text-danger small"></span>
+                </div>
+                <div class="col-lg-6">
+                    <label asp-for="Password" class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="Nhập mật khẩu" />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="col-lg-6">
+                    <label asp-for="FullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên" />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+                <div class="col-lg-6">
+                    <label asp-for="PhoneNumber" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Address" class="form-label">Địa chỉ</label>
+                    <input asp-for="Address" class="form-control" placeholder="Nhập địa chỉ" />
+                </div>
+            </div>
+        </div>
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="Users" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-person-plus me-1"></i>Tạo tài khoản
+            </button>
+        </div>
+    </form>
+</div>

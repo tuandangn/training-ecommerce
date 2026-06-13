@@ -13,6 +13,7 @@ public static class UserDtoExtensions
             PhoneNumber = user.PhoneNumber,
             Address = user.Address,
             CreatedOnUtc = user.CreatedOnUtc,
+            IsLocked = user.IsLocked,
             RoleNames = user.RoleNames
         };
 
