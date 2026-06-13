@@ -23,6 +23,21 @@ public sealed class CustomerPortalController(
         return View(model);
     }
 
+    public async Task<IActionResult> AccountDetails(Guid customerId)
+    {
+        var model = await customerPortalAdminAppService.GetAccountAsync(customerId).ConfigureAwait(false);
+        if (model is null)
+        {
+            NotifyError("Không tìm thấy tài khoản.");
+            return RedirectToAction(nameof(Accounts));
+        }
+
+        var securityEvents = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId).ConfigureAwait(false);
+        ViewBag.SecurityEvents = securityEvents;
+
+        return View(model);
+    }
+
     public async Task<IActionResult> SecurityEvents(Guid? customerId = null)
     {
         var model = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId).ConfigureAwait(false);

@@ -50,6 +50,7 @@ public sealed class MenuNavigationComponent(IAuthorizationService authorizationS
 
             CanManageUserRoles = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles).ConfigureAwait(false),
             CanManageCustomerPortal = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles).ConfigureAwait(false),
+            CanManageUsers = await CanAsync(user, SystemPermissions.Users.Manage).ConfigureAwait(false),
 
             CanViewAccounting = await CanAsync(user, SystemPermissions.Finance.Accounting).ConfigureAwait(false),
         };

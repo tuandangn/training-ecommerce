@@ -75,6 +75,7 @@
                         }
                     </td>
                     <td class="text-end pe-3">
+                        <a asp-action="AccountDetails" asp-route-customerId="@item.CustomerId" class="btn btn-sm btn-outline-secondary mb-2 me-1">Chi tiết</a>
                         <form asp-action="ResetAccountPassword" method="post" class="d-flex justify-content-end gap-2 mb-2">
                             <input type="hidden" name="customerId" value="@item.CustomerId" />
                             <input type="hidden" name="returnUrl" value="@returnUrl" />

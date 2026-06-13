@@ -24,4 +24,12 @@ public interface IUserManager : IUsernameExistCheckingService
     Task EnsureSystemRolesAsync();
 
     Task UpdateUserRolesAsync(UpdateUserRolesDto dto);
+
+    Task LockUserAsync(Guid userId);
+
+    Task UnlockUserAsync(Guid userId);
+
+    Task DeleteUserAsync(Guid userId);
+
+    Task ChangePasswordAsync(Guid userId, string newPassword);
 }

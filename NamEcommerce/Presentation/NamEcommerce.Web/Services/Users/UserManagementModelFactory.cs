@@ -29,4 +29,10 @@ public sealed class UserManagementModelFactory(IMediator mediator) : IUserManage
 
     public Task<RolePermissionsPageModel?> PrepareRolePermissionsPageModel(Guid roleId)
         => mediator.Send(new GetRolePermissionsPageQuery(roleId));
+
+    public Task<AdminUserListModel> PrepareAdminUserListModel()
+        => mediator.Send(new GetAdminUserListQuery());
+
+    public Task<ChangeUserPasswordModel?> PrepareChangeUserPasswordModel(Guid userId)
+        => mediator.Send(new GetChangeUserPasswordModelQuery(userId));
 }

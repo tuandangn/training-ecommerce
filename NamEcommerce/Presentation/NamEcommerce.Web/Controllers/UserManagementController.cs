@@ -5,6 +5,7 @@ using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Users;
 using NamEcommerce.Web.Contracts.Models.Users;
 using NamEcommerce.Web.Contracts.Queries.Models.Users;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Services.Permissions;
 using NamEcommerce.Web.Services.Users;
 
@@ -119,6 +120,116 @@ public sealed class UserManagementController : BaseAuthorizedController
         }
 
         return RedirectToAction(nameof(RolePermissions), new { roleId = command.RoleId });
+    }
+
+    [AllowAnonymous]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> Users()
+    {
+        var model = await _userManagementModelFactory.PrepareAdminUserListModel();
+        return View(model);
+    }
+
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public IActionResult CreateUser() => View(new CreateAdminUserModel());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> CreateUser(CreateAdminUserModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var result = await _mediator.Send(new CreateAdminUserCommand(
+            model.Username ?? string.Empty,
+            model.Password ?? string.Empty,
+            model.FullName ?? string.Empty,
+            model.PhoneNumber ?? string.Empty,
+            model.Address));
+
+        if (!result.Success)
+        {
+            AddLocalizedModelError(result.ErrorMessage);
+            return View(model);
+        }
+
+        NotifySuccess("Msg.SaveSuccess");
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> LockUser(Guid id)
+    {
+        var result = await _mediator.Send(new LockUserCommand(id));
+        if (!result.Success)
+            NotifyError(result.ErrorMessage);
+        else
+            NotifySuccess("Msg.SaveSuccess");
+
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> UnlockUser(Guid id)
+    {
+        var result = await _mediator.Send(new UnlockUserCommand(id));
+        if (!result.Success)
+            NotifyError(result.ErrorMessage);
+        else
+            NotifySuccess("Msg.SaveSuccess");
+
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteUserCommand(id));
+        if (!result.Success)
+            NotifyError(result.ErrorMessage);
+        else
+            NotifySuccess("Msg.DeleteSuccess");
+
+        return RedirectToAction(nameof(Users));
+    }
+
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> ChangePassword(Guid id)
+    {
+        var model = await _userManagementModelFactory.PrepareChangeUserPasswordModel(id);
+        if (model is null)
+        {
+            NotifyError("Error.UserIsNotFound");
+            return RedirectToAction(nameof(Users));
+        }
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Users.Manage)]
+    public async Task<IActionResult> ChangePassword(ChangeUserPasswordModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var result = await _mediator.Send(new ChangeUserPasswordCommand(model.UserId, model.NewPassword ?? string.Empty));
+        if (!result.Success)
+        {
+            AddLocalizedModelError(result.ErrorMessage);
+            return View(model);
+        }
+
+        NotifySuccess("Msg.SaveSuccess");
+        return RedirectToAction(nameof(Users));
     }
 
     private Task<bool> CanManageUserRoles()

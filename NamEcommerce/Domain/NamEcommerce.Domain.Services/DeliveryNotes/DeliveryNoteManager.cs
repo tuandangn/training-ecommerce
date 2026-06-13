@@ -222,7 +222,8 @@ public sealed class DeliveryNoteManager(
             dto.CompletionMetadata?.Source,
             dto.CompletionMetadata?.IdempotencyKey,
             dto.CompletionMetadata?.CashCollectedAmount,
-            acceptance.RejectedGoodsAmount);
+            acceptance.RejectedGoodsAmount,
+            acceptance.DebtAmount);
         // Save entity (display cost + status) → interceptor fires events.
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
@@ -275,7 +276,11 @@ public sealed class DeliveryNoteManager(
         }
 
         var transitionedToDelivered = deliveryNote.MarkReceivedByCustomer(
-            receivedAtUtc, receiverName, note, resolvedAcceptance?.RejectedGoodsAmount ?? 0);
+            receivedAtUtc,
+            receiverName,
+            note,
+            resolvedAcceptance?.RejectedGoodsAmount ?? 0,
+            resolvedAcceptance?.DebtAmount);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
         if (transitionedToDelivered && resolvedAcceptance is not null)
@@ -785,9 +790,14 @@ public sealed class DeliveryNoteManager(
         }
 
         var agreedCustomerCharge = acceptance?.AgreedCustomerCharge ?? 0m;
-        var amountToCollect = Math.Max(0m, acceptedGoodsAmount + deliveryNote.Surcharge + agreedCustomerCharge);
+        var deliveredChargeAmount = acceptedGoodsAmount + deliveryNote.Surcharge + agreedCustomerCharge;
+        var amountToCollect = deliveryNote.ShowPrice
+            ? deliveredChargeAmount
+            : deliveryNote.AmountToCollect + agreedCustomerCharge;
+        var debtAmount = deliveredChargeAmount + rejectedGoodsAmount;
         return new DeliveryAcceptanceResolution(
-            amountToCollect,
+            Math.Max(0m, amountToCollect),
+            Math.Max(0m, debtAmount),
             rejectedGoodsAmount,
             agreedCustomerCharge,
             acceptance?.AgreedCustomerChargeReason,
@@ -979,6 +989,7 @@ public sealed class DeliveryNoteManager(
 
     private sealed record DeliveryAcceptanceResolution(
         decimal AmountToCollect,
+        decimal DebtAmount,
         decimal RejectedGoodsAmount,
         decimal AgreedCustomerCharge,
         string? AgreedCustomerChargeReason,

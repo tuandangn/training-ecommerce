@@ -313,6 +313,12 @@
                     <li class="nav-item">
                         <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "RolePermissions") ? "active" : "")" asp-controller="UserManagement" asp-action="RolePermissions">Phân quyền</a>
                     </li>
+                    @if (Model.CanManageUsers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Users") || WebHelper.IsMatchRouteInfo("UserManagement", "CreateUser") || WebHelper.IsMatchRouteInfo("UserManagement", "ChangePassword") ? "active" : "")" asp-controller="UserManagement" asp-action="Users">Tài khoản</a>
+                        </li>
+                    }
                 </ul>
             </div>
         </li>

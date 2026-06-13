@@ -38,6 +38,7 @@ public sealed record MenuNavigationModel
 
     public required bool CanManageCustomerPortal { get; init; }
     public required bool CanManageUserRoles { get; init; }
+    public required bool CanManageUsers { get; init; }
 
     public required bool CanViewAccounting { get; init; }
 }

@@ -106,6 +106,7 @@ public static class SystemPermissions
     public static class Users
     {
         public const string ManageRoles = "Users.ManageRoles";
+        public const string Manage = "Users.Manage";
     }
 
     public static IReadOnlyList<string> GetAll() =>
@@ -141,5 +142,6 @@ public static class SystemPermissions
         Finance.ReportsFinancial, Finance.ReportsDirectShip,
 
         Users.ManageRoles,
+        Users.Manage,
     ];
 }

@@ -1,15 +1,17 @@
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.CustomerPortal;
 using NamEcommerce.Application.Services.Debts;
 using NamEcommerce.Application.Services.DeliveryNotes;
@@ -17,8 +19,14 @@ using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Application.Services.Orders;
+using NamEcommerce.Application.Services.Returns;
+using NamEcommerce.Application.Services.Users;
+using NamEcommerce.Customer.Api.Services;
+using NamEcommerce.Customer.Framework.Commands.Handlers;
+using NamEcommerce.Customer.Framework.Services;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.CustomerPortal;
 using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.DeliveryNotes;
@@ -30,6 +38,7 @@ using NamEcommerce.Domain.Services.Orders;
 using NamEcommerce.Domain.Services.PurchaseOrders;
 using NamEcommerce.Domain.Services.Returns;
 using NamEcommerce.Domain.Services.Security;
+using NamEcommerce.Domain.Services.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -43,10 +52,7 @@ using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
-using NamEcommerce.Customer.Framework.Commands.Handlers;
-using NamEcommerce.Customer.Framework.Services;
-using NamEcommerce.Application.Services.Returns;
-using NamEcommerce.Application.Contracts.Returns;
+using System.Threading.RateLimiting;
 
 namespace NamEcommerce.Customer.Api.Infrastructure;
 
@@ -144,11 +150,14 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
         services.AddScoped<IPictureManager, PictureManager>();
+        services.AddScoped<IUserManager, UserManager>();
         services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
         services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
         services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
         services.AddScoped<ISecurityService, SecurityService>();
 
+        services.AddScoped<IUserAppService, UserAppService>();
+        services.AddScoped<ILocalizationAppService, LocalizationService>();
         services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
         services.AddScoped<IWarehouseAppService, WarehouseAppService>();
         services.AddScoped<IPictureAppService, PictureAppService>();
@@ -165,6 +174,9 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ICustomerPortalNotificationSender, MockSmsCustomerPortalNotificationSender>();
         services.AddScoped<ICustomerPortalNotificationSender, MockEmailCustomerPortalNotificationSender>();
         services.AddScoped<ICustomerPaymentProvider, MockCustomerPaymentProvider>();
+
+        services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
+        services.AddScoped<EntityCodeGenerator>();
 
         services.AddMediatR(config =>
         {

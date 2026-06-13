@@ -1,0 +1,183 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using System.Globalization
+@model CustomerPortalAccountAdminAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Chi tiết tài khoản portal";
+    var returnUrl = Url.Action("Accounts", "CustomerPortal");
+    var securityEvents = (IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>)ViewBag.SecurityEvents;
+    var status = (CustomerPortalAccountStatus)Model.Status;
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="Accounts" class="btn btn-icon btn-outline-secondary me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">@Model.CustomerName</h1>
+            <p class="page-header-subtitle">Chi tiết tài khoản Customer Portal</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="content-card mb-4">
+            <div class="content-card-header">
+                <h6 class="mb-0">Thông tin tài khoản</h6>
+            </div>
+            <div class="content-card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted fw-normal">Khách hàng</dt>
+                    <dd class="col-7 fw-medium">@Model.CustomerName</dd>
+
+                    <dt class="col-5 text-muted fw-normal">Điện thoại</dt>
+                    <dd class="col-7">@(Model.CustomerPhone ?? "—")</dd>
+
+                    <dt class="col-5 text-muted fw-normal">Email / login</dt>
+                    <dd class="col-7">@(Model.CustomerEmail ?? "—")</dd>
+
+                    <dt class="col-5 text-muted fw-normal">Mật khẩu</dt>
+                    <dd class="col-7">
+                        <span class="badge @(Model.HasPassword ? "bg-success" : "bg-light text-dark border")">
+                            @(Model.HasPassword ? "Đã cài" : "Chưa cài")
+                        </span>
+                        @if (Model.PasswordSetOnUtc.HasValue)
+                        {
+                            <span class="text-muted small ms-2">@Model.PasswordSetOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                        }
+                    </dd>
+
+                    <dt class="col-5 text-muted fw-normal">Trạng thái</dt>
+                    <dd class="col-7"><span class="badge @status.GetDisplayColor()">@status.GetDisplayText()</span></dd>
+
+                    <dt class="col-5 text-muted fw-normal">Đăng nhập gần nhất</dt>
+                    <dd class="col-7 text-muted small">
+                        @(Model.LastLoginOnUtc.HasValue ? Model.LastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                    </dd>
+
+                    <dt class="col-5 text-muted fw-normal">Vị trí gần nhất</dt>
+                    <dd class="col-7 text-muted small">
+                        @if (Model.LastKnownLatitude.HasValue && Model.LastKnownLongitude.HasValue)
+                        {
+                            <a href="@BuildMapUrl(Model.LastKnownLatitude.Value, Model.LastKnownLongitude.Value)" target="_blank" rel="noreferrer" class="text-decoration-none">Xem bản đồ</a>
+                            if (Model.LastKnownLocationAccuracyMeters.HasValue)
+                            {
+                                <div>Sai số ~@Model.LastKnownLocationAccuracyMeters.Value.ToString("0", CultureInfo.InvariantCulture)m</div>
+                            }
+                            if (Model.LastKnownLocationCapturedOnUtc.HasValue)
+                            {
+                                <div>@Model.LastKnownLocationCapturedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                            }
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </dd>
+
+                    <dt class="col-5 text-muted fw-normal">Kích hoạt lúc</dt>
+                    <dd class="col-7 text-muted small">@Model.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="content-card-header">
+                <h6 class="mb-0">Thao tác</h6>
+            </div>
+            <div class="content-card-body d-flex flex-column gap-2">
+                <form asp-action="ResetAccountPassword" method="post" class="d-flex gap-2">
+                    <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="password"
+                           name="password"
+                           class="form-control form-control-sm"
+                           placeholder="Mật khẩu mới"
+                           minlength="8"
+                           required
+                           autocomplete="new-password" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Đặt lại mật khẩu</button>
+                </form>
+
+                @if (status == CustomerPortalAccountStatus.Blocked)
+                {
+                    <form asp-action="UnblockAccount" method="post">
+                        <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                        <input type="hidden" name="returnUrl" value="@Url.Action("AccountDetails", new { customerId = Model.CustomerId })" />
+                        <button type="submit" class="btn btn-sm btn-outline-success w-100">
+                            <i class="bi bi-unlock me-1"></i>Mở khóa tài khoản
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-action="BlockAccount" method="post">
+                        <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                        <input type="hidden" name="returnUrl" value="@Url.Action("AccountDetails", new { customerId = Model.CustomerId })" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('Khóa tài khoản này?')">
+                            <i class="bi bi-lock me-1"></i>Khóa tài khoản
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="content-card">
+            <div class="content-card-header">
+                <h6 class="mb-0">Lịch sử bảo mật <span class="badge bg-secondary ms-1">@securityEvents.Count</span></h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Sự kiện</th>
+                            <th>IP</th>
+                            <th class="text-center">Kết quả</th>
+                            <th class="text-end pe-3">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (securityEvents.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state py-4 text-muted">Không có sự kiện bảo mật</div>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var evt in securityEvents)
+                            {
+                                <tr>
+                                    <td class="ps-3 small">@evt.EventType</td>
+                                    <td class="small text-muted">@(evt.IpAddress ?? "—")</td>
+                                    <td class="text-center">
+                                        @if (evt.Outcome == 1)
+                                        {
+                                            <span class="badge bg-success">Thành công</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Thất bại</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3 small text-muted">
+                                        @evt.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string BuildMapUrl(double latitude, double longitude)
+        => $"https://www.google.com/maps/search/?api=1&query={latitude.ToString(CultureInfo.InvariantCulture)},{longitude.ToString(CultureInfo.InvariantCulture)}";
+}

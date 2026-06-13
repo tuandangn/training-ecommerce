@@ -1,0 +1,113 @@
+@model AdminUserListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Quản lý tài khoản";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Quản lý tài khoản</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Quản lý tài khoản</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="mb-3">
+    <a asp-action="CreateUser" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus me-1"></i>Thêm tài khoản
+    </a>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">Nhân sự</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th class="ui-w-160"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Users.Count > 0)
+                {
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-medium">@user.FullName</div>
+                                <div class="small text-muted">@user.PhoneNumber</div>
+                            </td>
+                            <td>@user.Username</td>
+                            <td>
+                                @if (user.RoleNames.Count == 0)
+                                {
+                                    <span class="text-muted">Chưa gán</span>
+                                }
+                                else
+                                {
+                                    foreach (var roleName in user.RoleNames)
+                                    {
+                                        <span class="badge rounded-pill text-bg-light bg-info border me-1">@roleName</span>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                @if (user.IsLocked)
+                                {
+                                    <span class="badge text-bg-danger"><i class="bi bi-lock me-1"></i>Đã khóa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-success"><i class="bi bi-unlock me-1"></i>Hoạt động</span>
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn-table-action" asp-action="ChangePassword" asp-route-id="@user.Id" title="Đổi mật khẩu">
+                                    <i class="bi bi-key"></i>
+                                </a>
+                                @if (user.IsLocked)
+                                {
+                                    <form method="post" asp-action="UnlockUser" asp-route-id="@user.Id" class="d-inline" asp-antiforgery="true">
+                                        <button type="submit" class="btn-table-action text-success" title="Mở khóa" onclick="return confirm('Mở khóa tài khoản này?')">
+                                            <i class="bi bi-unlock"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form method="post" asp-action="LockUser" asp-route-id="@user.Id" class="d-inline" asp-antiforgery="true">
+                                        <button type="submit" class="btn-table-action text-warning" title="Khóa tài khoản" onclick="return confirm('Khóa tài khoản này?')">
+                                            <i class="bi bi-lock"></i>
+                                        </button>
+                                    </form>
+                                }
+                                <form method="post" asp-action="DeleteUser" asp-route-id="@user.Id" class="d-inline" asp-antiforgery="true">
+                                    <button type="submit" class="btn-table-action text-danger" title="Xóa" onclick="return confirm('Xóa tài khoản @user.Username?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="bi bi-people"></i></div>
+                                <h5>Chưa có tài khoản nào</h5>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

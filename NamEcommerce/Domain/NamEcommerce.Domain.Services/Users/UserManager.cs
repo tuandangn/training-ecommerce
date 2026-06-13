@@ -126,7 +126,7 @@ public sealed class UserManager : IUserManager
             throw new ArgumentNullException(nameof(password));
 
         var query = from user in _userEntityDataReader.DataSource
-                    where user.Username == username
+                    where user.Username == username && !user.IsLocked
                     select user;
         var users = query.ToList();
         foreach (var user in users)
@@ -253,6 +253,56 @@ public sealed class UserManager : IUserManager
 
         foreach (var roleId in requestedRoleIds.Where(roleId => !currentRoleIds.Contains(roleId)))
             await _userRoleRepository.InsertAsync(new UserRole(dto.UserId, roleId)).ConfigureAwait(false);
+    }
+
+    public async Task LockUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User id is required", nameof(userId));
+
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false)
+            ?? throw new UserIsNotFoundException(userId);
+
+        user.Lock();
+        await _userRepository.UpdateAsync(user).ConfigureAwait(false);
+    }
+
+    public async Task UnlockUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User id is required", nameof(userId));
+
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false)
+            ?? throw new UserIsNotFoundException(userId);
+
+        user.Unlock();
+        await _userRepository.UpdateAsync(user).ConfigureAwait(false);
+    }
+
+    public async Task DeleteUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User id is required", nameof(userId));
+
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false)
+            ?? throw new UserIsNotFoundException(userId);
+
+        user.MarkDeleted();
+        await _userRepository.DeleteAsync(user).ConfigureAwait(false);
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, string newPassword)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User id is required", nameof(userId));
+        ArgumentException.ThrowIfNullOrEmpty(newPassword);
+
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false)
+            ?? throw new UserIsNotFoundException(userId);
+
+        await user.SetPasswordAsync(newPassword, _securityService).ConfigureAwait(false);
+        user.MarkPasswordChanged();
+        await _userRepository.UpdateAsync(user).ConfigureAwait(false);
     }
 
     private IReadOnlyList<Guid> GetRoleIdsByName(string roleName)

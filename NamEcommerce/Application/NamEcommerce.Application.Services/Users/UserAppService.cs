@@ -166,4 +166,70 @@ public sealed class UserAppService : IUserAppService
             };
         }
     }
+
+    public async Task<UserManagementResultAppDto> LockUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = "Error.UserRequired" };
+
+        try
+        {
+            await _userManager.LockUserAsync(userId).ConfigureAwait(false);
+            return new UserManagementResultAppDto { Success = true };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+        }
+    }
+
+    public async Task<UserManagementResultAppDto> UnlockUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = "Error.UserRequired" };
+
+        try
+        {
+            await _userManager.UnlockUserAsync(userId).ConfigureAwait(false);
+            return new UserManagementResultAppDto { Success = true };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+        }
+    }
+
+    public async Task<UserManagementResultAppDto> DeleteUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = "Error.UserRequired" };
+
+        try
+        {
+            await _userManager.DeleteUserAsync(userId).ConfigureAwait(false);
+            return new UserManagementResultAppDto { Success = true };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+        }
+    }
+
+    public async Task<UserManagementResultAppDto> ChangePasswordAsync(Guid userId, string newPassword)
+    {
+        if (userId == Guid.Empty)
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = "Error.UserRequired" };
+        if (string.IsNullOrEmpty(newPassword))
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = "Error.PasswordRequired" };
+
+        try
+        {
+            await _userManager.ChangePasswordAsync(userId, newPassword).ConfigureAwait(false);
+            return new UserManagementResultAppDto { Success = true };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new UserManagementResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+        }
+    }
 }

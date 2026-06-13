@@ -25,4 +25,12 @@ public interface IUserAppService
     Task<bool> IsUserInRoleAsync(Guid userId, string roleName);
 
     Task<UpdateUserRolesResultAppDto> UpdateUserRolesAsync(UpdateUserRolesAppDto dto);
+
+    Task<UserManagementResultAppDto> LockUserAsync(Guid userId);
+
+    Task<UserManagementResultAppDto> UnlockUserAsync(Guid userId);
+
+    Task<UserManagementResultAppDto> DeleteUserAsync(Guid userId);
+
+    Task<UserManagementResultAppDto> ChangePasswordAsync(Guid userId, string newPassword);
 }
