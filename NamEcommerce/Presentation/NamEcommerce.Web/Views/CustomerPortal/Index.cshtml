@@ -94,7 +94,7 @@
                             </td>
                             <td class="text-end fw-semibold">@item.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
                             <td class="text-end pe-3">
-                                <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
+                                <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Xem</a>
                             </td>
                         </tr>
                     }
@@ -134,7 +134,7 @@
                             <td class="text-muted small">@item.CustomerDebtCode</td>
                             <td class="text-end fw-bold text-danger">@item.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
                             <td class="text-end pe-3">
-                                <a asp-action="PaymentIntentDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
+                                <a asp-action="PaymentIntentDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Xem</a>
                             </td>
                         </tr>
                     }

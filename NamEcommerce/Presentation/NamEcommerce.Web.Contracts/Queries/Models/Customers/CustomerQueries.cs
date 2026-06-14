@@ -17,3 +17,4 @@ public sealed class GetCustomerByIdQuery : IRequest<CustomerModel?>
 {
     public required Guid Id { get; init; }
 }
+

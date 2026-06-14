@@ -3,6 +3,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Domain.Shared.Services.Customers;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Customers;
 

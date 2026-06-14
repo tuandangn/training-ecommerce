@@ -13,7 +13,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 namespace NamEcommerce.Domain.Services.Inventory;
 
 public sealed class ShortageQueryService(
-    InventoryStockManager inventoryStockManager,
+    IInventoryStockManager inventoryStockManager,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,

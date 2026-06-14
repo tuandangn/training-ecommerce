@@ -166,7 +166,7 @@
                     </div>
                 </div>
                 <div class="content-card-footer d-flex align-items-center justify-content-between">
-                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm ps-0">
+                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none btn-sm ps-0">
                         <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng
                     </a>
                     <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>
