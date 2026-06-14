@@ -292,9 +292,9 @@ export default class OrderController {
         const items = Array.from(this.#state.items);
         const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
         if (existingIndex !== -1) {
+            items[existingIndex].quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
-            this.#openEditorForIndex(existingIndex);
         } else {
             const unitPrice = await this.#addItemController.getSuggestedUnitPrice(product.id, product.unitPrice);
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
