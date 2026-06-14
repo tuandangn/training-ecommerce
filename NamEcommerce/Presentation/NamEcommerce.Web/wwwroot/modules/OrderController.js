@@ -136,6 +136,10 @@ export default class OrderController {
     #bindEvents() {
         const form = document.getElementById('createOrderForm');
         form.addEventListener('submit', e => {
+            if (!$(e.target).valid()) {
+                e.preventDefault();
+                return;
+            }
             if (!this.#state.items.length) {
                 e.preventDefault();
                 toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
@@ -506,7 +510,9 @@ export default class OrderController {
             try {
                 const result = await apiPost(form.action, new FormData(form));
                 if (!result.success) {
-                    toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
+                    if (result.message) {
+                        toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
+                    }
                     return;
                 }
 
@@ -534,19 +540,23 @@ export default class OrderController {
             try {
                 const result = await apiPost(form.action, new FormData(form));
                 if (!result.success) {
-                    toast('Lỗi', result.message || 'Không thể tạo hàng hóa.', 'error');
+                    if (result.message) {
+                        toast('Lỗi', result.message || 'Không thể tạo hàng hóa.', 'error');
+                    }
                     return;
                 }
 
-                this.#setState({
-                    items: [...this.#state.items, new OrderItem(result.product, 1, result.unitPrice)],
-                });
                 this.#productPicker?.clear();
                 this.#addItemController.reset();
                 form.reset();
                 quickProductModal?.hide();
                 this.#productBrowser.reload();
-                toast('Thành công', result.message || 'Đã tạo hàng hóa.', 'success');
+
+                const items = Array.from(this.#state.items);
+                items.push(new OrderItem(new ProductInfo(result.product), 1, result.unitPrice || 0));
+                this.#activeRowIndex = items.length - 1;
+                this.#setState({ items });
+                this.#openEditorForIndex(items.length - 1, { canRemove: false });
             } catch {
                 toast('Lỗi', 'Có lỗi xảy ra khi tạo hàng hóa.', 'error');
             } finally {

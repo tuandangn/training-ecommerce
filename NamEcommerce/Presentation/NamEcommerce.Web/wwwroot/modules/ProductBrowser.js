@@ -141,7 +141,7 @@ export default class ProductBrowser {
                 <span class="text-muted small">Đang tải danh mục...</span>
             </div>
             <div id="collapseProductBrowser" class="accordion-collapse collapse ${this.#options.initialShow ? 'show' : ''}" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
-                <div class="accordion-body p-0 mt-3">
+                <div class="accordion-body p-0 mt-3 text-muted small">
                     <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
                 </div>
             </div>

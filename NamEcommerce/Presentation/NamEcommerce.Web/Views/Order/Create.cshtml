@@ -311,28 +311,28 @@
                     <div class="row g-3">
                         <div class="col-12 col-md-7">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerFullName">Họ tên</label>
-                            <input id="quickCustomerFullName" name="FullName" class="form-control" autocomplete="off" placeholder="Nhập họ và tên" 
-                                data-val="true" data-val-maxlength="Họ tên không được vượt quá 200 ký tự." 
-                                data-val-maxlength-max="200" data-val-required="Vui lòng nhập Họ tên." />
+                            <input id="quickCustomerFullName" name="FullName" class="form-control" autocomplete="off" placeholder="Nhập họ và tên"
+                                   data-val="true" data-val-maxlength="Họ tên không được vượt quá 200 ký tự."
+                                   data-val-maxlength-max="200" data-val-required="Vui lòng nhập Họ tên." />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="FullName" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12 col-md-5">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
                             <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" placeholder="Nhập số điện thoại"
-                               data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}" 
-                               data-val-required="Vui lòng nhập Số điện thoại." />
+                                   data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
+                                   data-val-required="Vui lòng nhập Số điện thoại." />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="PhoneNumber" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerAddress">Địa chỉ</label>
                             <input id="quickCustomerAddress" name="Address" class="form-control" autocomplete="off" placeholder="Nhập địa chỉ"
-                                   data-val="true" data-val-maxlength="Địa chỉ không được vượt quá 500 ký tự." 
+                                   data-val="true" data-val-maxlength="Địa chỉ không được vượt quá 500 ký tự."
                                    data-val-maxlength-max="500" data-val-required="Vui lòng nhập Địa chỉ." />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="Address" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerEmail">Email</label>
-                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email"/>
+                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -358,45 +358,61 @@
                 <input type="hidden" name="DisplayOrder" value="1" />
                 <div class="modal-body py-3">
                     <div class="row g-3">
-                        <div class="col-12 col-md-7">
-                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductName">Tên hàng hóa</label>
-                            <input id="quickProductName" name="Name" class="form-control" autocomplete="off" placeholder="Nhập tên hàng hóa"
-                               data-val="true" data-val-maxlength="Tên hàng hóa không được vượt quá 200 ký tự." 
-                               data-val-maxlength-max="200" data-val-required="Vui lòng nhập Tên hàng hóa." />
-                            <span class="text-danger small field-validation-valid" data-valmsg-for="Name" data-valmsg-replace="true"></span>
+                        <div class="col-lg-8 order-lg-0">
+                            <div class="row">
+                                <div class="col-12 col-md-7">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductName">Tên hàng hóa</label>
+                                    <input id="quickProductName" name="Name" class="form-control" autocomplete="off" placeholder="Nhập tên hàng hóa"
+                                           data-val="true" data-val-maxlength="Tên hàng hóa không được vượt quá 200 ký tự."
+                                           data-val-maxlength-max="200" data-val-required="Vui lòng nhập Tên hàng hóa." />
+                                    <span class="text-danger small field-validation-valid" data-valmsg-for="Name" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnitPrice">Giá bán</label>
+                                    <input id="quickProductUnitPrice" name="UnitPrice" class="form-control" data-decimal="currency" autocomplete="off" placeholder="Nhập giá bán" 
+                                           data-val="true" data-val-required="Vui lòng nhập giá bán."
+                                           data-val-range="Giá bán phải lớn hơn 0" data-val-range-min="0.1"
+                                           data-val-number="Giá bán phải là số" / />
+                                    <span class="text-danger small field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnit">Đơn vị tính</label>
+                                    <select id="quickProductUnit" name="UnitMeasurementId" class="form-select">
+                                        <option value="">(Không chọn)</option>
+                                        @if (Model.AvailableUnitMeasurements is not null)
+                                        {
+                                            foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
+                                            {
+                                                <option value="@unitMeasurement.Id">@unitMeasurement.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span class="text-danger small field-validation-valid" data-valmsg-for="UnitMeasurementId" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductCategory">Danh mục</label>
+                                    <select id="quickProductCategory" name="CategoryId" class="form-select">
+                                        <option value="">(Không chọn)</option>
+                                        @if (Model.AvailableCategories is not null)
+                                        {
+                                            foreach (var category in Model.AvailableCategories)
+                                            {
+                                                <option value="@category.Id">@category.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span class="text-danger small field-validation-valid" data-valmsg-for="CategoryId" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-12 col-md-5">
-                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnitPrice">Giá bán</label>
-                            <input id="quickProductUnitPrice" name="UnitPrice" class="form-control" data-decimal="currency" autocomplete="off" placeholder="Nhập giá bán" />
-                            <span class="text-danger small field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnit">Đơn vị tính</label>
-                            <select id="quickProductUnit" name="UnitMeasurementId" class="form-select">
-                                <option value="">(Không chọn)</option>
-                                @if (Model.AvailableUnitMeasurements is not null)
-                                {
-                                    foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
-                                    {
-                                        <option value="@unitMeasurement.Id">@unitMeasurement.Name</option>
-                                    }
-                                }
-                            </select>
-                            <span class="text-danger small field-validation-valid" data-valmsg-for="UnitMeasurementId" data-valmsg-replace="true"></span>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductCategory">Danh mục</label>
-                            <select id="quickProductCategory" name="CategoryId" class="form-select">
-                                <option value="">(Không chọn)</option>
-                                @if (Model.AvailableCategories is not null)
-                                {
-                                    foreach (var category in Model.AvailableCategories)
-                                    {
-                                        <option value="@category.Id">@category.Name</option>
-                                    }
-                                }
-                            </select>
-                            <span class="text-danger small field-validation-valid" data-valmsg-for="CategoryId" data-valmsg-replace="true"></span>
+                        <div class="col-lg-4">
+                            @await Html.PartialAsync("_ImageUploader", new NamEcommerce.Web.Models.Common.ImageUploaderModel
+                            {
+                                FieldName = "PictureId",
+                                Label = "Hình ảnh",
+                                MaxFiles = 1,
+                                Required = false
+                            })
                         </div>
                         <div class="col-12">
                             <div class="form-label small fw-bold text-muted text-uppercase">Nhà cung cấp</div>
