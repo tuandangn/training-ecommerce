@@ -10,5 +10,6 @@ public interface IOrderFulfillmentScheduleManager
     Task<CreateOrderFulfillmentScheduleResultDto> CreateAsync(CreateOrderFulfillmentScheduleDto dto);
     Task<UpdateOrderFulfillmentScheduleResultDto> UpdateAsync(UpdateOrderFulfillmentScheduleDto dto);
     Task SetActiveAsync(SetOrderFulfillmentScheduleActiveDto dto);
+    Task DeleteAsync(Guid id);
     Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<Guid> orderItemIds);
 }

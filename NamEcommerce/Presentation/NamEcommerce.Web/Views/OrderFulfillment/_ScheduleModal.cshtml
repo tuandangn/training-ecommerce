@@ -21,11 +21,11 @@
                                 <option value="@((int)OrderFulfillmentScheduleMode.WhenStockAvailable)">Khi có hàng</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-4" data-schedule-date-field>
                             <label class="form-label" for="fulfillmentScheduleFrom">Bắt đầu</label>
                             <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày bắt đầu" />
                         </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-4" data-schedule-date-field>
                             <label class="form-label" for="fulfillmentScheduleTo">Kết thúc</label>
                             <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày kết thúc"/>
                         </div>

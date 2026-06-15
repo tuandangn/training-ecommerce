@@ -36,3 +36,6 @@ public sealed record UpdateOrderFulfillmentScheduleCommand : ICommand<CommonActi
 
 [Serializable]
 public sealed record SetOrderFulfillmentScheduleActiveCommand(Guid Id, bool IsActive) : ICommand<CommonActionResultModel>;
+
+[Serializable]
+public sealed record DeleteOrderFulfillmentScheduleCommand(Guid Id) : ICommand<CommonActionResultModel>;

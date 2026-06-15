@@ -87,6 +87,14 @@ public sealed class OrderFulfillmentController(
         return ToJson(result);
     }
 
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
+    public async Task<IActionResult> DeleteSchedule(Guid id)
+    {
+        var result = await mediator.Send(new DeleteOrderFulfillmentScheduleCommand(id)).ConfigureAwait(false);
+        return ToJson(result);
+    }
+
     private IActionResult ToJson(CommonActionResultModel result)
         => Json(result.Success
             ? new { success = true, message = LocalizeError(result.SuccessMessage ?? "Msg.SaveSuccess") }

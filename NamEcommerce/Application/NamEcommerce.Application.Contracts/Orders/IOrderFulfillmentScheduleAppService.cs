@@ -10,6 +10,7 @@ public interface IOrderFulfillmentScheduleAppService
     Task<CreateOrderFulfillmentScheduleResultAppDto> CreateAsync(CreateOrderFulfillmentScheduleAppDto dto);
     Task<UpdateOrderFulfillmentScheduleResultAppDto> UpdateAsync(UpdateOrderFulfillmentScheduleAppDto dto);
     Task<CommonActionResultDto> SetActiveAsync(SetOrderFulfillmentScheduleActiveAppDto dto);
+    Task<CommonActionResultDto> DeleteAsync(Guid id);
     Task<OrderFulfillmentBoardAppDto> GetBoardAsync(OrderFulfillmentBoardFilterAppDto filter);
     Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(IReadOnlyCollection<Guid> purchaseOrderItemIds);
 }

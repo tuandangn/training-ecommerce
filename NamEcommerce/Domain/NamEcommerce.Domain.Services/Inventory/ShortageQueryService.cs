@@ -2,11 +2,13 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -18,6 +20,7 @@ public sealed class ShortageQueryService(
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
+    IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IRepository<Order> orderRepository) : IShortageQueryService
 {
@@ -70,7 +73,7 @@ public sealed class ShortageQueryService(
             .Where(item => item.OrderItemId != Guid.Empty)
             .Select(item => item.OrderItemId)
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id);
+        var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id, order.Id);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
         var result = new List<DeliveryNoteItemShortageDto>();
 
@@ -190,7 +193,7 @@ public sealed class ShortageQueryService(
         var orderItems = order.OrderItems
             .Where(item => limitedOrderItemIds is null || limitedOrderItemIds.Contains(item.Id))
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null);
+        var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null, order.Id);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItems.Select(item => item.Id));
         var result = new List<OrderItemFulfillmentStateDto>();
 
@@ -233,7 +236,7 @@ public sealed class ShortageQueryService(
         return result;
     }
 
-    private Dictionary<Guid, decimal> GetShippedQuantities(IEnumerable<Guid> orderItemIds, Guid? excludedDeliveryNoteId)
+    private Dictionary<Guid, decimal> GetShippedQuantities(IEnumerable<Guid> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
     {
         var ids = orderItemIds.ToList();
         if (ids.Count == 0)
@@ -245,11 +248,47 @@ public sealed class ShortageQueryService(
         if (excludedDeliveryNoteId.HasValue)
             query = query.Where(note => note.Id != excludedDeliveryNoteId.Value);
 
-        return query
+        var shippedQuantities = query
             .SelectMany(note => note.Items)
             .Where(item => ids.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+
+        var returnedQuantities = GetCompensatedReturnedQuantities(orderId, ids);
+        foreach (var id in ids)
+        {
+            shippedQuantities[id] = Math.Max(
+                0m,
+                shippedQuantities.GetValueOrDefault(id) - returnedQuantities.GetValueOrDefault(id));
+        }
+
+        return shippedQuantities;
+    }
+
+    private Dictionary<Guid, decimal> GetCompensatedReturnedQuantities(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    {
+        if (orderItemIds.Count == 0)
+            return [];
+
+        var validDeliveryNoteItems = deliveryNoteReader.DataSource
+            .Where(note => note.OrderId == orderId)
+            .SelectMany(note => note.Items)
+            .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
+            .Select(item => new { item.Id, item.OrderItemId });
+
+        return customerReturnReader.DataSource
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
+                && returnNote.CompensateInNextDelivery
+                && returnNote.Status != CustomerReturnStatus.Draft)
+            .SelectMany(returnNote => returnNote.Items)
+            .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
+            .Join(
+                validDeliveryNoteItems,
+                returnItem => returnItem.DeliveryNoteItemId!.Value,
+                deliveryNoteItem => deliveryNoteItem.Id,
+                (returnItem, deliveryNoteItem) => new { deliveryNoteItem.OrderItemId, returnItem.AcceptedQuantity })
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.AcceptedQuantity));
     }
 
     private Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> GetPurchaseOrderAllocations(IEnumerable<Guid> orderItemIds)
