@@ -15,6 +15,7 @@
                 <label class="form-label" for="fulfillmentRisk">Trạng thái</label>
                 <select id="fulfillmentRisk" name="Risk" class="form-select">
                     <option value="">Tất cả</option>
+                    <option value="unscheduled" selected="@(Model.Risk == "unscheduled")">Chưa hẹn</option>
                     <option value="danger" selected="@(Model.Risk == "danger")">Cần xử lý</option>
                     <option value="warning" selected="@(Model.Risk == "warning")">Cần theo dõi</option>
                     <option value="success" selected="@(Model.Risk == "success")">Sẵn sàng</option>

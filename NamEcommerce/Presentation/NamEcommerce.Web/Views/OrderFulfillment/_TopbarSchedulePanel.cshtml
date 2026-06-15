@@ -8,6 +8,7 @@
         new { Id = "next7", Label = "7 ngày", Days = board.Next7Days },
         new { Id = "next30", Label = "1 tháng", Days = board.Next30Days }
     };
+    var unscheduledEntries = board.UnscheduledGroups.SelectMany(g => g.Entries).Take(8).ToList();
 }
 
 <div class="fulfillment-schedule-panel-header">
@@ -32,6 +33,19 @@
             </button>
         </li>
     }
+    <li class="nav-item" role="presentation">
+        <button class="nav-link"
+                data-bs-toggle="pill"
+                data-bs-target="#topbarFulfillmentUnscheduled"
+                type="button"
+                role="tab">
+            Chưa hẹn
+            @if (unscheduledEntries.Count > 0)
+            {
+                <span class="badge bg-secondary ms-1">@board.UnscheduledGroups.Sum(g => g.Entries.Count)</span>
+            }
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content fulfillment-schedule-mini-content">
@@ -78,4 +92,29 @@
             }
         </div>
     }
+    <div class="tab-pane fade" id="topbarFulfillmentUnscheduled" role="tabpanel">
+        @if (unscheduledEntries.Count == 0)
+        {
+            <div class="fulfillment-schedule-mini-empty">
+                <i class="bi bi-calendar-check"></i>
+                <span>Không có đơn chưa hẹn.</span>
+            </div>
+        }
+        else
+        {
+            <div class="fulfillment-schedule-mini-list">
+                @foreach (var entry in unscheduledEntries)
+                {
+                    <a asp-controller="Order" asp-action="Details" asp-route-id="@entry.OrderId" class="fulfillment-schedule-mini-item">
+                        <span class="fulfillment-schedule-mini-tone @entry.Tone"></span>
+                        <span class="fulfillment-schedule-mini-main">
+                            <span class="fulfillment-schedule-mini-title">@entry.SourceCode</span>
+                            <span class="fulfillment-schedule-mini-meta">@entry.StatusText</span>
+                        </span>
+                        <span class="fulfillment-schedule-mini-count">@entry.Items.Count hàng</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
 </div>

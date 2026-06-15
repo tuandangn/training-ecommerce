@@ -1,6 +1,15 @@
 namespace NamEcommerce.Web.Contracts.Models.FastSales;
 
 [Serializable]
+public sealed record QuickSaleOrderItemResultModel
+{
+    public required Guid OrderItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+}
+
+[Serializable]
 public sealed record QuickSaleResultModel : ICommandResult
 {
     public bool Success { get; init; }
@@ -10,6 +19,7 @@ public sealed record QuickSaleResultModel : ICommandResult
     public Guid? CustomerDebtId { get; init; }
     public Guid? CustomerPaymentId { get; init; }
     public Guid? PaymentIntentId { get; init; }
+    public IList<QuickSaleOrderItemResultModel> OrderItems { get; init; } = [];
 }
 
 [Serializable]

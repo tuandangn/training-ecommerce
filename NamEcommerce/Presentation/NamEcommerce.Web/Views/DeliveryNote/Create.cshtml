@@ -165,8 +165,8 @@
                         </table>
                     </div>
                 </div>
-                <div class="content-card-footer d-flex align-items-center justify-content-between">
-                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none btn-sm ps-0">
+                <div class="content-card-footer align-items-center justify-content-between d-none d-md-flex">
+                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none btn-sm">
                         <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng
                     </a>
                     <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>
@@ -272,6 +272,11 @@
                             Bật tùy chọn này nếu muốn bù số lượng khách trả lại trong các lần giao tiếp theo.
                         </div>
                     </div>
+                </div>
+                <div class="content-card-footer d-grid d-md-none">
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>
+                        <i class="bi bi-floppy"></i> Tạo phiếu xuất
+                    </button>
                 </div>
             </div>
         </div>

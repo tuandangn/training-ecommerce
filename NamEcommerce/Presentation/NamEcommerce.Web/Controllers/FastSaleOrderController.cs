@@ -78,7 +78,14 @@ public sealed partial class OrderController : BaseAuthorizedController
             deliveryNoteId = result.DeliveryNoteId,
             customerDebtId = result.CustomerDebtId,
             customerPaymentId = result.CustomerPaymentId,
-            orderUrl = result.OrderId.HasValue ? Url.Action("Details", "Order", new { id = result.OrderId.Value }) : null
+            orderUrl = result.OrderId.HasValue ? Url.Action("Details", "Order", new { id = result.OrderId.Value }) : null,
+            orderItems = result.OrderItems.Select(item => new
+            {
+                orderItemId = item.OrderItemId,
+                productId = item.ProductId,
+                productName = item.ProductName,
+                quantity = item.Quantity
+            })
         });
     }
 

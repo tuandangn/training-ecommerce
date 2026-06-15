@@ -100,6 +100,15 @@ public sealed record CreateQuickSaleAppDto
 }
 
 [Serializable]
+public sealed record QuickSaleOrderItemResultAppDto
+{
+    public required Guid OrderItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+}
+
+[Serializable]
 public sealed record QuickSaleResultAppDto : CommonActionResultDto
 {
     public Guid? OrderId { get; init; }
@@ -107,6 +116,7 @@ public sealed record QuickSaleResultAppDto : CommonActionResultDto
     public Guid? CustomerDebtId { get; init; }
     public Guid? CustomerPaymentId { get; init; }
     public Guid? PaymentIntentId { get; init; }
+    public IList<QuickSaleOrderItemResultAppDto> OrderItems { get; init; } = [];
 
     public static new QuickSaleResultAppDto CreateError(string? errorMessage)
         => new() { Success = false, ErrorMessage = errorMessage };

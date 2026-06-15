@@ -480,7 +480,11 @@ public sealed class OrderFulfillmentScheduleAppService(
         if (string.IsNullOrWhiteSpace(risk))
             return entries;
 
-        return entries.Where(entry => string.Equals(entry.Tone, risk.Trim(), StringComparison.OrdinalIgnoreCase));
+        var trimmed = risk.Trim();
+        if (string.Equals(trimmed, "unscheduled", StringComparison.OrdinalIgnoreCase))
+            return entries.Where(entry => entry.SourceType == "Order");
+
+        return entries.Where(entry => string.Equals(entry.Tone, trimmed, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IList<OrderFulfillmentBoardDayAppDto> BuildDays(

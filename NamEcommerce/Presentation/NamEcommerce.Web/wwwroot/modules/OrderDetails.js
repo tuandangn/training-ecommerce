@@ -44,6 +44,7 @@ function parseDecimalInput(input) {
             if (!id || !action) return;
 
             try {
+                showPageLoading();
                 let result;
                 if (action === 'confirm') {
                     result = await deliveryNoteController.confirm(id);
@@ -151,7 +152,6 @@ function parseDecimalInput(input) {
 
         $('.btnEditItem').on('click', function () {
             const data = $(this).data();
-            console.log(data);
             $('#editItemId').val(data.id);
             $('#editProductName').text(data.product);
             const editQtyEl = document.getElementById('editQuantity');

@@ -30,6 +30,7 @@
      data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
      data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
      data-create-unpaid-sale-url="@Url.Action("CreateUnpaidSale", "Order")"
+     data-schedule-url="@Url.Action("CreateSchedule", "OrderFulfillment")"
      data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
      data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
@@ -82,9 +83,15 @@
                         </div>
                         <div class="content-card-header">
                             <h5>Danh sách hàng hóa</h5>
-                            <button type="button" class="btn btn-sm btn-outline-danger d-none" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
-                                Xóa danh sách
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
+                                        data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
+                                    <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger d-none" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
+                                    Xóa danh sách
+                                </button>
+                            </div>
                         </div>
                         <div class="content-card-body-flush">
                             <div class="table-responsive">
@@ -135,7 +142,7 @@
                         </div>
                     </section>
                 </div>
-                <div class="col-12">
+                <div class="col-12 d-none d-lg-block">
                     <section class="content-card">
                         <div class="content-card-body">
                             <div id="fastSaleProductBrowser" data-col-class="col-xl-4 col-sm-6"></div>
@@ -158,16 +165,18 @@
                             </button>
                         </div>
                     </div>
-                    <div class="ship-info mb-3 d-none">
-                        <div class="mb-3">
-                            <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhap so dien thoai giao hang" disabled />
-                            <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
-                        </div>
-                        <div>
-                            <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
-                            <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                    <div class="ship-info d-none">
+                        <div class="row">
+                            <div class="col-lg-6 mb-3">
+                                <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhap so dien thoai giao hang" disabled />
+                                <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
+                            </div>
+                            <div class="col-lg-6">
+                                <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
+                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                            </div>
                         </div>
                     </div>
                     <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
@@ -239,6 +248,16 @@
     </div>
 </div>
 
+<div class="offcanvas offcanvas-bottom d-lg-none ui-top-sheet" tabindex="-1" id="productBrowserOffcanvas">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title">Chọn hàng hóa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-3">
+        <div id="fastSaleProductBrowserMobile" data-col-class="col-12"></div>
+    </div>
+</div>
+
 @await Html.PartialAsync("_ItemEditOffcanvas")
 <partial name="_ItemEditModal" />
 
@@ -284,6 +303,47 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> Thêm khách hàng
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fastSaleScheduleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ui-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Lên lịch giao hàng</h5>
+            </div>
+            <form id="fastSaleScheduleForm">
+                <div class="modal-body py-3">
+                    <input type="hidden" name="OrderId" id="fastSaleScheduleOrderId" />
+                    <div id="fastSaleScheduleItemsPayload"></div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="fastSaleScheduleMode">Kiểu lịch</label>
+                            <select id="fastSaleScheduleMode" name="Mode" class="form-select">
+                                <option value="@((int)OrderFulfillmentScheduleMode.AsSoonAsPossible)">Giao sớm nhất</option>
+                                <option value="@((int)OrderFulfillmentScheduleMode.NotBeforeDate)">Không trước ngày</option>
+                                <option value="@((int)OrderFulfillmentScheduleMode.WhenStockAvailable)">Khi có hàng</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 d-none" id="fastSaleScheduleDateSection">
+                            <label class="form-label" for="fastSaleScheduleFrom">Ngày giao</label>
+                            <input id="fastSaleScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="fastSaleScheduleNote">Ghi chú</label>
+                            <textarea id="fastSaleScheduleNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú..."></textarea>
+                        </div>
+                    </div>
+                    <div id="fastSaleScheduleItemsTable" class="mt-3"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-outline-secondary" id="fastSaleScheduleSkip">Bỏ qua</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-calendar-check me-1"></i> Lên lịch và hoàn tất
                     </button>
                 </div>
             </form>
