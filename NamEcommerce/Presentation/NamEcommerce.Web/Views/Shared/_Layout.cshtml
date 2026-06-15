@@ -1,8 +1,10 @@
-@using NamEcommerce.Web.Contracts.Configurations
+@using NamEcommerce.Domain.Shared.Services.Users
 @inject IWebHelper WebHelper
+@inject ICurrentUserAccessor CurrentUserAccessor
 @{
     var isAuthPage = WebHelper.IsLoginPage() || WebHelper.IsRegisterPage();
     var pageTitle = ViewData[ViewConstants.PageTitle] as string ?? Information.Name;
+    var currentUser = await CurrentUserAccessor.GetCurrentUserAsync();
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -30,6 +32,15 @@
             <nav class="sidebar-nav" aria-label="Menu chính">
                 @await Component.InvokeAsync("MenuNavigationComponent")
             </nav>
+
+            @if (currentUser is not null)
+            {
+                <div class="d-grid p-3">
+                    <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary btn-sm">
+                        Đăng xuất
+                    </a>
+                </div>
+            }
         </aside>
         <div class="main-area">
             <header class="topbar">
