@@ -23,6 +23,7 @@ public sealed record DeliveryNoteListItemModel
     public required string Code { get; init; }
     public required string CustomerName { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 
     public Guid WarehouseId { get; init; }
     public string? WarehouseName { get; set; }

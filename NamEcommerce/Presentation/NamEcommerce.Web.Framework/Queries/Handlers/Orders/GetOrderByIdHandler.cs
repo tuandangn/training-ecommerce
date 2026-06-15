@@ -46,6 +46,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Note = order.Note,
             ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
             ShippingAddress = order.ShippingAddress,
+            ShippingPhoneNumber = order.ShippingPhoneNumber,
             CompletedOn = order.CompletedOnUtc?.ToLocalTime(),
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,

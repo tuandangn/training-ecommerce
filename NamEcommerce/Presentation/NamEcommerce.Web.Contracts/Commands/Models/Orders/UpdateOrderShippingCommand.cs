@@ -3,5 +3,5 @@
 namespace NamEcommerce.Web.Contracts.Commands.Models.Orders;
 
 [Serializable]
-public sealed record UpdateOrderShippingCommand(Guid OrderId, DateTime? ExpectedShippingDate, string? Address) 
+public sealed record UpdateOrderShippingCommand(Guid OrderId, DateTime? ExpectedShippingDate, string? Address, string? PhoneNumber)
     : ICommand<CommonActionResultModel>;

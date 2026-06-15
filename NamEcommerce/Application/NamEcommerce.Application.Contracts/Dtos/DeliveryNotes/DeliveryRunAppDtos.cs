@@ -57,6 +57,7 @@ public sealed record DeliveryRunItemAppDto
     public required string DeliveryNoteCode { get; init; }
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public required string ShippingAddress { get; init; }
     public decimal AmountToCollect { get; init; }
 }

@@ -11,6 +11,8 @@ public sealed record CustomerModel
     public string? Email { get; init; }
     public string? Address { get; init; }
     public string? Note { get; init; }
+    public int Kind { get; init; }
+    public bool IsSystem { get; init; }
     public DateTime CreatedOnUtc { get; init; }
 }
 
@@ -26,6 +28,8 @@ public sealed class CustomerListModel
         public required string FullName { get; init; }
         public required string PhoneNumber { get; init; }
         public required string Address { get; set; }
+        public int Kind { get; init; }
+        public bool IsSystem { get; init; }
     }
 }
 

@@ -37,6 +37,7 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public DateTime? CompletedOnUtc { get; set; }
 
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCancelOrder { get; init; }
@@ -53,12 +54,17 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 {
     public required Guid CustomerId { get; init; }
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
     public IList<OrderItemAppDto> Items { get; } = [];
 
     public override (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
             return (false, "Error.ExpectedShippingDateInvalid");
+        if (string.IsNullOrWhiteSpace(ShippingAddress))
+            return (false, "Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+            return (false, "Error.PhoneNumberRequired");
 
         if (Items.Count == 0)
             return (false, "Error.OrderItemRequired");
@@ -123,11 +129,16 @@ public sealed record UpdateOrderShippingAppDto
     public required Guid OrderId { get; init; }
     public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? Address { get; set; }
+    public string? PhoneNumber { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
             return (false, "Error.ExpectedShippingDateInvalid");
+        if (string.IsNullOrWhiteSpace(Address))
+            return (false, "Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(PhoneNumber))
+            return (false, "Error.PhoneNumberRequired");
 
         return (true, string.Empty);
     }

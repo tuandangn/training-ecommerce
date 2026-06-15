@@ -91,6 +91,7 @@ public sealed class DirectShipAppService(
             CustomerName = d.CustomerName,
             CustomerPhone = d.CustomerPhone,
             ShippingAddress = d.ShippingAddress,
+            ShippingPhoneNumber = d.ShippingPhoneNumber,
             CreatedOnUtc = d.CreatedOnUtc,
             Items = d.Items.Select(i => new PendingDirectShipDeliveryItemAppDto
             {

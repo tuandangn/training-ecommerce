@@ -25,6 +25,7 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
                           .HasMaxLength(1000)
                           .IsRequired();
         });
+        builder.Property(o => o.ShippingPhoneNumber).HasMaxLength(50).IsRequired(false);
         builder.Property(o => o.CompletedOnUtc).IsRequired(false);
 
         builder.Property(o => o.OrderSubTotal).HasColumnType("decimal(18,2)");

@@ -65,6 +65,7 @@
                 @foreach (var stop in run.Items.Take(2))
                 {
                     var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
+                    var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
                     var productParts = stop.ProductItems
                         .Take(2)
                         .Select(product => product.ProductName)
@@ -80,9 +81,9 @@
                     <div class="mobile-stop">
                         <div class="mobile-stop-header">
                             <strong>@receiverName</strong>
-                            @if (!string.IsNullOrWhiteSpace(stop.CustomerPhone))
+                            @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
                             {
-                                <a href="tel:@stop.CustomerPhone" class="mobile-phone-link">@stop.CustomerPhone</a>
+                                <a href="tel:@shippingPhoneNumber" class="mobile-phone-link">@shippingPhoneNumber</a>
                             }
                         </div>
                         <div class="mobile-stop-address">@stop.ShippingAddress</div>

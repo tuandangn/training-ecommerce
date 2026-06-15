@@ -43,6 +43,7 @@ public sealed record OrderDetailsModel
 
     public DateTime? ExpectedShippingDate { get; set; }
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCompleteOrder { get; set; }

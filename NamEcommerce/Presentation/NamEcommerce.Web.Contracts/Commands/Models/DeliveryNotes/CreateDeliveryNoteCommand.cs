@@ -1,4 +1,6 @@
 ﻿
+using NamEcommerce.Web.Contracts.Models.Common;
+
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 [Serializable]
@@ -6,6 +8,7 @@ public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResul
 {
     public Guid OrderId { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
+    public string? ShippingPhoneNumber { get; set; }
     public Guid WarehouseId { get; set; }
     public bool ShowPrice { get; set; }
     public bool CompensateReturnedQuantityInNextDelivery { get; set; }
@@ -25,6 +28,10 @@ public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResul
         public int QuantityDecimalPlaces { get; set; }
     }
 }
+
+[Serializable]
+public sealed record UpdateDeliveryNoteShippingCommand(Guid DeliveryNoteId, string? ShippingAddress, string? ShippingPhoneNumber)
+    : ICommand<CommonActionResultModel>;
 
 [Serializable]
 public sealed class CreateDeliveryNoteResultModel : ICommandResult

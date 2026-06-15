@@ -72,6 +72,7 @@ public sealed record DeliveryRunCandidateDeliveryNoteModel
     public required string Code { get; init; }
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public required string ShippingAddress { get; init; }
     public string? AssignedDeliveryFullName { get; init; }
     public required string ProductSummary { get; init; }
@@ -119,6 +120,7 @@ public sealed record DeliveryRunItemModel
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public required string ShippingAddress { get; init; }
     public decimal AmountToCollect { get; init; }
     public decimal? CashCollectedAmount { get; init; }

@@ -247,6 +247,15 @@
                                   data-valmsg-replace="true"></span>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label" for="shippingPhoneNumber">Số điện thoại giao hàng</label>
+                            <input id="shippingPhoneNumber" name="PhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber"
+                                   placeholder="Nhập số điện thoại giao hàng" data-val="true"
+                                   data-val-required="Vui lòng nhập số điện thoại giao hàng."
+                                   data-val-maxlength="Số điện thoại tối đa 50 ký tự." data-val-maxlength-max="50" />
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="PhoneNumber"
+                                  data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label" for="shippingAddress">Địa chỉ giao hàng</label>
                             <input id="shippingAddress" name="Address" class="form-control" value="@Model.ShippingAddress"
                                    placeholder="Nhập địa chỉ giao hàng" data-val="true"

@@ -69,6 +69,7 @@ public sealed partial class OrderController : BaseAuthorizedController
             Note = model.Note,
             ExpectedShippingDate = model.ExpectedShippingDate,
             ShippingAddress = model.ShippingAddress!,
+            ShippingPhoneNumber = model.ShippingPhoneNumber!,
             Items = model.Items.Select(item => new OrderItemModel
             {
                 ProductId = item.ProductId ?? default,
@@ -359,7 +360,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateInfo") });
 
-        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
+        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address, model.PhoneNumber));
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });

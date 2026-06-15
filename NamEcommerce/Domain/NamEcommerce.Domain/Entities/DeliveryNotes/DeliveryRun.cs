@@ -56,7 +56,7 @@ public sealed record DeliveryRun : AppAggregateEntity
     private readonly List<DeliveryRunItem> _items;
     public IReadOnlyCollection<DeliveryRunItem> Items => _items.AsReadOnly();
 
-    internal void AddItem(Guid deliveryNoteId, string deliveryNoteCode, string? orderCode, string customerName,
+    internal void AddItem(Guid deliveryNoteId, string deliveryNoteCode, string? orderCode, string customerName, string? shippingPhoneNumber,
         string shippingAddress, decimal amountToCollect)
     {
         if (Status != DeliveryRunStatus.ReadyForHandover)
@@ -64,7 +64,7 @@ public sealed record DeliveryRun : AppAggregateEntity
         if (_items.Any(item => item.DeliveryNoteId == deliveryNoteId))
             throw new NamEcommerceDomainException("Error.DeliveryRunDuplicateDeliveryNote");
 
-        _items.Add(new DeliveryRunItem(Id, deliveryNoteId, deliveryNoteCode, orderCode, customerName, shippingAddress, amountToCollect));
+        _items.Add(new DeliveryRunItem(Id, deliveryNoteId, deliveryNoteCode, orderCode, customerName, shippingPhoneNumber, shippingAddress, amountToCollect));
         UpdatedOnUtc = DateTime.UtcNow;
     }
 

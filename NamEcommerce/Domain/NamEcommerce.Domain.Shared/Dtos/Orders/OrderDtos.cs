@@ -36,6 +36,7 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public DateTime? CompletedOnUtc { get; set; }
 
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
     public DateTime CreatedOnUtc { get; set; }
 
     public bool CanUpdateInfo { get; init; }
@@ -51,6 +52,7 @@ public sealed record CreateOrderDto : BaseOrderDto
 {
     public required Guid CustomerId { get; init; }
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
     public IList<AddOrderItemDto> Items { get; } = [];
     public bool RequireAvailableStock { get; init; } = true;
 
@@ -96,6 +98,7 @@ public sealed record UpdateShippingDto
     public required Guid OrderId { get; init; }
     public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? Address { get; set; }
+    public string? PhoneNumber { get; set; }
 
     public void Verify()
     {

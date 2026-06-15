@@ -36,7 +36,9 @@ public sealed class DirectShipDeliveryController(
                 OrderId = deliveryNote.OrderId,
                 OrderCode = deliveryNote.OrderCode,
                 CustomerName = deliveryNote.CustomerName,
-                CustomerPhone = deliveryNote.CustomerPhone,
+                CustomerPhone = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
+                    ? deliveryNote.CustomerPhone
+                    : deliveryNote.ShippingPhoneNumber,
                 ShippingAddress = deliveryNote.ShippingAddress,
                 CreatedOn = deliveryNote.CreatedOnUtc.ToLocalTime(),
                 Items = deliveryNote.Items.Select(i => new PendingDirectShipDeliveryItemModel

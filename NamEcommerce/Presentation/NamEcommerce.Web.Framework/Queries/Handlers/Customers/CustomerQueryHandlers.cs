@@ -25,7 +25,9 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
         {
             FullName = c.FullName,
             PhoneNumber = c.PhoneNumber,
-            Address = c.Address
+            Address = c.Address,
+            Kind = c.Kind,
+            IsSystem = c.IsSystem
         }).ToList();
 
         return new CustomerListModel
@@ -58,6 +60,8 @@ public sealed class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuer
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
+            Kind = dto.Kind,
+            IsSystem = dto.IsSystem,
             CreatedOnUtc = dto.CreatedOnUtc
         };
     }

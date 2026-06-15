@@ -19,6 +19,10 @@ public sealed class EditOrderShippingValidator : AbstractValidator<EditOrderShip
             .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Address"]])
             .MaximumLength(1000).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Address"], 1000]);
 
+        RuleFor(m => m.PhoneNumber)
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Phone"]])
+            .MaximumLength(50).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Phone"], 50]);
+
         RuleFor(m => m.Note)
             .MaximumLength(1000).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
     }

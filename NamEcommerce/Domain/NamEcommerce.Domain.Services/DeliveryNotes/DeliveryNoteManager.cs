@@ -104,6 +104,9 @@ public sealed class DeliveryNoteManager(
             customerPhone: order.CustomerInfo.PhoneNumber,
             customerAddress: order.CustomerInfo.Address,
             shippingAddress: dto.ShippingAddress,
+            shippingPhoneNumber: string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
+                ? order.ShippingPhoneNumber ?? order.CustomerInfo.PhoneNumber
+                : dto.ShippingPhoneNumber,
             warehouseId: dto.WarehouseId,
             showPrice: dto.ShowPrice,
             note: dto.Note,
@@ -181,6 +184,19 @@ public sealed class DeliveryNoteManager(
             dto.AssignedDeliveryUsername,
             dto.AssignedDeliveryFullName,
             DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task UpdateShippingAsync(UpdateDeliveryNoteShippingDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        deliveryNote.UpdateShippingInfo(dto.ShippingAddress, dto.ShippingPhoneNumber);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
@@ -353,6 +369,7 @@ public sealed class DeliveryNoteManager(
             customerPhone: contactPhone,
             customerAddress: dto.ShippingAddress,
             shippingAddress: dto.ShippingAddress,
+            shippingPhoneNumber: contactPhone,
             warehouseId: dto.DirectShipWarehouseId,
             showPrice: false,
             note: null,
@@ -1014,6 +1031,7 @@ public sealed class DeliveryNoteManager(
             CustomerPhone = deliveryNote.CustomerInfo.PhoneNumber,
             CustomerAddress = deliveryNote.CustomerInfo.Address,
             ShippingAddress = deliveryNote.ShippingAddress,
+            ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,

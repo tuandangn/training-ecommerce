@@ -431,7 +431,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
         {
             OrderId = dto.OrderId,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
-            Address = dto.Address
+            Address = dto.Address,
+            PhoneNumber = dto.PhoneNumber
         }).ConfigureAwait(false);
 
         return new UpdateOrderShippingResultAppDto
@@ -604,7 +605,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
-            ShippingAddress = dto.ShippingAddress
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = dto.ShippingPhoneNumber
         };
         foreach (var orderItem in dto.Items)
         {
