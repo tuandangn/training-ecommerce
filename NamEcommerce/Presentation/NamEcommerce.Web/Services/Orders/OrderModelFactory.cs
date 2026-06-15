@@ -30,6 +30,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Application.Contracts.Inventory;
 
@@ -180,6 +181,20 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
             });
         }
+        model.FulfillmentSchedule = new OrderFulfillmentSchedulePanelModel
+        {
+            OrderId = order.Id,
+            CanUpdateSchedules = order.CanUpdateInfo,
+            AvailableItems = model.Items.Select(item => new OrderFulfillmentScheduleAvailableItemModel
+            {
+                OrderItemId = item.Id,
+                ProductId = item.ProductId,
+                ProductName = item.ProductName ?? string.Empty,
+                Quantity = item.Quantity,
+                QuantityDecimalPlaces = item.QuantityDecimalPlaces
+            }).ToList(),
+            Schedules = await _mediator.Send(new GetOrderFulfillmentSchedulesByOrderQuery(order.Id)).ConfigureAwait(false)
+        };
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         foreach (var dn in deliveryNotes)

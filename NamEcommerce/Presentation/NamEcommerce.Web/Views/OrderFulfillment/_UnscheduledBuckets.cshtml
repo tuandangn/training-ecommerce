@@ -1,0 +1,29 @@
+@model IList<OrderFulfillmentUnscheduledGroupModel>
+
+<div class="fulfillment-unscheduled">
+    @foreach (var group in Model)
+    {
+        <section class="fulfillment-unscheduled-group">
+            <div class="fulfillment-day-header">
+                <h2>@group.Title</h2>
+                <span>@group.Entries.Count việc</span>
+            </div>
+            @if (group.Entries.Count == 0)
+            {
+                <div class="workflow-soft-empty">
+                    <i class="bi bi-inbox"></i>
+                    <span>Không có đơn trong nhóm này.</span>
+                </div>
+            }
+            else
+            {
+                <div class="fulfillment-entry-grid">
+                    @foreach (var entry in group.Entries)
+                    {
+                        @await Html.PartialAsync("_EntryCard", entry)
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>

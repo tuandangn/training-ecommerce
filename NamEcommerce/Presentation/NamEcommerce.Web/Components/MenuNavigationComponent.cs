@@ -17,6 +17,7 @@ public sealed class MenuNavigationComponent(IAuthorizationService authorizationS
             CanViewDashboard = user.Identity?.IsAuthenticated == true,
 
             CanViewOrders = await CanAsync(user, SystemPermissions.Orders.View).ConfigureAwait(false),
+            CanViewOrderFulfillmentSchedule = await CanAsync(user, SystemPermissions.Orders.View).ConfigureAwait(false),
             CanUseFastSale = await CanAsync(user, SystemPermissions.Orders.FastSale).ConfigureAwait(false),
             CanUsePreparation = await CanAsync(user, SystemPermissions.Inventory.Preparation).ConfigureAwait(false),
             CanManageCustomerReturns = await CanAsync(user, SystemPermissions.CustomerReturns.Manage).ConfigureAwait(false),

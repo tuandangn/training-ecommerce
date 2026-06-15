@@ -1,0 +1,38 @@
+@model OrderFulfillmentBoardSearchModel
+
+<form method="get" class="content-card fulfillment-filter-card">
+    <div class="content-card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="fulfillmentKeywords">Tìm kiếm</label>
+                <input id="fulfillmentKeywords" name="Keywords" class="form-control" value="@Model.Keywords" placeholder="Mã đơn, địa chỉ giao" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="fulfillmentDate">Ngày</label>
+                <input id="fulfillmentDate" name="Date" type="date" class="form-control" value="@Model.Date?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="fulfillmentRisk">Trạng thái</label>
+                <select id="fulfillmentRisk" name="Risk" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="danger" selected="@(Model.Risk == "danger")">Cần xử lý</option>
+                    <option value="warning" selected="@(Model.Risk == "warning")">Cần theo dõi</option>
+                    <option value="success" selected="@(Model.Risk == "success")">Sẵn sàng</option>
+                    <option value="info" selected="@(Model.Risk == "info")">Đang giao</option>
+                </select>
+            </div>
+            <div class="col-12 col-lg-2">
+                <div class="form-check fulfillment-filter-check">
+                    <input id="fulfillmentIncludeInactive" name="IncludeInactive" type="checkbox" class="form-check-input" value="true" checked="@Model.IncludeInactive" />
+                    <label class="form-check-label" for="fulfillmentIncludeInactive">Gồm lịch tạm tắt</label>
+                </div>
+            </div>
+            <div class="col-12 col-lg-2 text-lg-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i>
+                    Lọc
+                </button>
+            </div>
+        </div>
+    </div>
+</form>

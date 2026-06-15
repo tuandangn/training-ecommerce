@@ -5,6 +5,7 @@ public sealed record MenuNavigationModel
     public required bool CanViewDashboard { get; init; }
 
     public required bool CanViewOrders { get; init; }
+    public required bool CanViewOrderFulfillmentSchedule { get; init; }
     public required bool CanUseFastSale { get; init; }
     public required bool CanUsePreparation { get; init; }
     public required bool CanManageCustomerReturns { get; init; }

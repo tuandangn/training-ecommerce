@@ -35,6 +35,7 @@
     <div class="order-workflow-main">
         @await Html.PartialAsync("_OrderWorkflowOrderPanel", Model)
         @await Html.PartialAsync("_OrderWorkflowPreparationPanel", Model)
+        @await Html.PartialAsync("_OrderFulfillmentSchedulePanel", Model.FulfillmentSchedule)
         @await Html.PartialAsync("_OrderWorkflowDeliveryPanel", Model)
         @await Html.PartialAsync("_OrderWorkflowSettlementPanel", Model)
     </div>
