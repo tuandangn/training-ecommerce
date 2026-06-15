@@ -51,9 +51,6 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext30" type="button" role="tab">1 tháng</button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentUnscheduled" type="button" role="tab">Chưa hẹn</button>
-        </li>
     </ul>
 
     <div class="tab-content fulfillment-tab-content">
@@ -108,9 +105,6 @@
                     <h5>Không có lịch trong tháng tới</h5>
                 </div>
             }
-        </div>
-        <div class="tab-pane fade" id="fulfillmentUnscheduled" role="tabpanel">
-            @await Html.PartialAsync("_UnscheduledBuckets", board.UnscheduledGroups)
         </div>
     </div>
 </section>
