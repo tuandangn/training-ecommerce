@@ -21,6 +21,7 @@ public sealed class OrderFulfillmentScheduleMapping : IEntityTypeConfiguration<O
         builder.Property(schedule => schedule.CreatedOnUtc).IsRequired();
         builder.Property(schedule => schedule.UpdatedOnUtc).IsRequired(false);
         builder.Property(schedule => schedule.InactivatedOnUtc).IsRequired(false);
+        builder.Property(schedule => schedule.InactivatedByUserId).IsRequired(false);
 
         builder.HasIndex(schedule => schedule.OrderId);
         builder.HasIndex(schedule => schedule.ScheduledFromUtc);

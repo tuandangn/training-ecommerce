@@ -23,10 +23,10 @@ public sealed class CreateOrderModel
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedShippingDate { get; set; }
 
-    [Display(Name = "Địa chỉ giao hàng")]
+    [Display(Name = "Địa chỉ")]
     public string? ShippingAddress { get; set; }
 
-    [Display(Name = "Số điện thoại giao hàng")]
+    [Display(Name = "Số điện thoại")]
     public string? ShippingPhoneNumber { get; set; }
 
     [Display(Name = "Giảm giá")]

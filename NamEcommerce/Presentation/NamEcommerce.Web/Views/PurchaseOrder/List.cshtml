@@ -46,7 +46,7 @@
 <div class="content-card" data-responsive-list data-list-key="purchase-order-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new PurchaseOrderListSearchModel { Keywords = Model.Keywords, Status = (PurchaseOrderStatus?)Model.Status })" />
-        <a asp-action="QuickCreate" class="btn btn-success">
+        <a asp-action="QuickCreate" class="btn btn-outline-secondary">
             <i class="bi bi-lightning-fill me-1"></i> Nhập nhanh
         </a>
         <a asp-action="Create" class="btn btn-primary">

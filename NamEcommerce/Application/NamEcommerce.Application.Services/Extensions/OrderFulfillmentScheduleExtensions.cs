@@ -20,6 +20,7 @@ public static class OrderFulfillmentScheduleExtensions
             CreatedOnUtc = schedule.CreatedOnUtc,
             UpdatedOnUtc = schedule.UpdatedOnUtc,
             InactivatedOnUtc = schedule.InactivatedOnUtc,
+            InactivatedByUserId = schedule.InactivatedByUserId,
             Items = schedule.Items
                 .Select(item => new OrderFulfillmentScheduleItemAppDto(item.Id)
                 {

@@ -35,4 +35,10 @@ public sealed record CloseDeliveryRunCommand(Guid Id) : ICommand<CommonActionRes
 public sealed record ConfirmDeliveryRunCashHandoverCommand(Guid Id, decimal Amount, string? Note) : ICommand<CommonActionResultModel>;
 
 [Serializable]
+public sealed record UpdateDeliveryRunDeliveredNoteCashCollectedCommand(
+    Guid Id,
+    Guid DeliveryNoteId,
+    decimal CashCollectedAmount) : ICommand<CommonActionResultModel>;
+
+[Serializable]
 public sealed record CancelDeliveryRunCommand(Guid Id) : ICommand<CommonActionResultModel>;

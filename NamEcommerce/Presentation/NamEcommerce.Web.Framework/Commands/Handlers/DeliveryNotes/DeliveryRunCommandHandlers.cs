@@ -72,6 +72,18 @@ public sealed class ConfirmDeliveryRunCashHandoverHandler(IDeliveryRunAppService
         }).ConfigureAwait(false));
 }
 
+public sealed class UpdateDeliveryRunDeliveredNoteCashCollectedHandler(IDeliveryRunAppService deliveryRunAppService)
+    : IRequestHandler<UpdateDeliveryRunDeliveredNoteCashCollectedCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(UpdateDeliveryRunDeliveredNoteCashCollectedCommand request, CancellationToken cancellationToken)
+        => DeliveryRunActionResultMapper.Map(await deliveryRunAppService.UpdateDeliveredNoteCashCollectedAsync(new UpdateDeliveryRunDeliveredNoteCashCollectedAppDto
+        {
+            DeliveryRunId = request.Id,
+            DeliveryNoteId = request.DeliveryNoteId,
+            CashCollectedAmount = request.CashCollectedAmount
+        }).ConfigureAwait(false));
+}
+
 public sealed class CancelDeliveryRunHandler(IDeliveryRunAppService deliveryRunAppService)
     : IRequestHandler<CancelDeliveryRunCommand, CommonActionResultModel>
 {

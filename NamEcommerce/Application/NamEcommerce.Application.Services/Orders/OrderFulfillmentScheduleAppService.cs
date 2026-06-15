@@ -116,7 +116,7 @@ public sealed class OrderFulfillmentScheduleAppService(
 
         var baseDateUtc = filter.DateUtc ?? DateTime.UtcNow;
         var todayLocal = baseDateUtc.ToLocalTime().Date;
-        var orders = GetOpenOrders(filter.Keywords);
+        var orders = GetOpenOrders();
         var orderIds = orders.Select(order => order.Id).ToList();
         var statesByOrder = await GetStatesByOrderAsync(orderIds).ConfigureAwait(false);
         var processingDeliveryOrderIds = GetProcessingDeliveryOrderIds(orderIds);
@@ -124,6 +124,19 @@ public sealed class OrderFulfillmentScheduleAppService(
             .Where(order => processingDeliveryOrderIds.Contains(order.Id)
                 || statesByOrder.GetValueOrDefault(order.Id)?.Any(state => state.RequiredQuantity > state.ShippedQuantity) == true)
             .ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.Keywords))
+        {
+            var kw = filter.Keywords.Trim();
+            orders = orders.Where(order =>
+                order.Code.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                || order.ShippingAddress.Value.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                || statesByOrder.GetValueOrDefault(order.Id)?.Any(state =>
+                    state.CustomerName?.Contains(kw, StringComparison.OrdinalIgnoreCase) == true
+                    || state.CustomerPhone?.Contains(kw) == true) == true)
+                .ToList();
+        }
+
         orderIds = orders.Select(order => order.Id).ToList();
         var schedules = await GetSchedulesAsync(orders, filter.IncludeInactive).ConfigureAwait(false);
 
@@ -137,35 +150,26 @@ public sealed class OrderFulfillmentScheduleAppService(
         return new OrderFulfillmentBoardAppDto
         {
             DateUtc = baseDateUtc,
+            Overdue = BuildDays(filteredEntries, DateTime.MinValue.Date, todayLocal.AddDays(-1)),
             Today = BuildDays(filteredEntries, todayLocal, todayLocal),
             Next3Days = BuildDays(filteredEntries, todayLocal.AddDays(1), todayLocal.AddDays(3)),
             Next7Days = BuildDays(filteredEntries, todayLocal.AddDays(1), todayLocal.AddDays(7)),
             Next30Days = BuildDays(filteredEntries, todayLocal.AddDays(1), todayLocal.AddDays(30)),
             UnscheduledGroups = BuildUnscheduledGroups(filteredEntries),
             TotalEntries = filteredEntries.Count,
+            OverdueCount = filteredEntries.Count(entry =>
+                entry.ScheduledFromUtc.HasValue
+                && entry.ScheduledFromUtc.Value.ToLocalTime().Date < todayLocal),
             DangerCount = filteredEntries.Count(entry => entry.Tone == "danger"),
             WarningCount = filteredEntries.Count(entry => entry.Tone == "warning")
         };
     }
 
-    private IList<Order> GetOpenOrders(string? keywords)
-    {
-        var query = orderDataReader.DataSource
-            .Where(order => order.OrderStatus == OrderStatus.Pending);
-
-        var orders = query
+    private IList<Order> GetOpenOrders()
+        => orderDataReader.DataSource
+            .Where(order => order.OrderStatus == OrderStatus.Pending)
             .OrderBy(order => order.CreatedOnUtc)
             .ToList();
-
-        if (string.IsNullOrWhiteSpace(keywords))
-            return orders;
-
-        var normalizedKeywords = keywords.Trim();
-        return orders
-            .Where(order => order.Code.Contains(normalizedKeywords, StringComparison.OrdinalIgnoreCase)
-                || order.ShippingAddress.Value.Contains(normalizedKeywords, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
 
     private HashSet<Guid> GetProcessingDeliveryOrderIds(IReadOnlyCollection<Guid> orderIds)
     {

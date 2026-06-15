@@ -26,12 +26,14 @@ public sealed class GetOrderFulfillmentBoardHandler(IOrderFulfillmentScheduleApp
         => new()
         {
             DateUtc = board.DateUtc,
+            Overdue = board.Overdue.Select(ToModel).ToList(),
             Today = board.Today.Select(ToModel).ToList(),
             Next3Days = board.Next3Days.Select(ToModel).ToList(),
             Next7Days = board.Next7Days.Select(ToModel).ToList(),
             Next30Days = board.Next30Days.Select(ToModel).ToList(),
             UnscheduledGroups = board.UnscheduledGroups.Select(ToModel).ToList(),
             TotalEntries = board.TotalEntries,
+            OverdueCount = board.OverdueCount,
             DangerCount = board.DangerCount,
             WarningCount = board.WarningCount
         };
@@ -122,6 +124,7 @@ public sealed class GetOrderFulfillmentSchedulesByOrderHandler(IOrderFulfillment
             CreatedOnUtc = schedule.CreatedOnUtc,
             UpdatedOnUtc = schedule.UpdatedOnUtc,
             InactivatedOnUtc = schedule.InactivatedOnUtc,
+            InactivatedByUserId = schedule.InactivatedByUserId,
             Items = schedule.Items.Select(item => new OrderFulfillmentScheduleItemModel(item.Id)
             {
                 OrderFulfillmentScheduleId = item.OrderFulfillmentScheduleId,

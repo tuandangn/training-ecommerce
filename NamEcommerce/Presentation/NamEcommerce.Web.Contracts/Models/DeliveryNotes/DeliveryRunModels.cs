@@ -133,8 +133,12 @@ public sealed record DeliveryRunItemModel
 
 public sealed record DeliveryRunProductItemModel
 {
+    public required Guid DeliveryNoteItemId { get; init; }
     public required string ProductName { get; init; }
     public decimal Quantity { get; init; }
+    public decimal UnitPrice { get; init; }
+    public decimal SubTotal { get; init; }
+    public int QuantityDecimalPlaces { get; init; } = 2;
 }
 
 public sealed class DeliveryMobileIndexModel

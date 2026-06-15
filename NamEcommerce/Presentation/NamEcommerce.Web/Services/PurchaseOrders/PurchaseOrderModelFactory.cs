@@ -288,13 +288,11 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         model.Timeline = BuildTimeline(model, itemChangeAudits, vendorDebts, vendorPayments);
     }
 
-    private static PurchaseOrderDetailsModel.WorkflowStage CalculateActiveStage(
-        PurchaseOrderDetailsModel model,
-        PurchaseOrderStatus status)
+    private static PurchaseOrderDetailsModel.WorkflowStage CalculateActiveStage(PurchaseOrderDetailsModel model, PurchaseOrderStatus status)
     {
-        if (status is PurchaseOrderStatus.Completed or PurchaseOrderStatus.Cancelled)
+        if (status is PurchaseOrderStatus.Completed or PurchaseOrderStatus.Cancelled || model.Info.Items.All(item => item.RemainingQuantity == 0))
             return PurchaseOrderDetailsModel.WorkflowStage.Settlement;
-        if (model.RelatedVendorReturns.Count > 0 || model.Info.Items.Any(item => item.QuantityReceived > 0) || model.RelatedGoodsReceipts.Count > 0)
+        if (status is PurchaseOrderStatus.Approved || model.RelatedVendorReturns.Count > 0 || model.Info.Items.Any(item => item.QuantityReceived > 0) || model.RelatedGoodsReceipts.Count > 0)
             return PurchaseOrderDetailsModel.WorkflowStage.Receiving;
 
         return PurchaseOrderDetailsModel.WorkflowStage.Ordering;
@@ -408,10 +406,14 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             ReceivingStatusClass = receivingStatus.Class,
             Steps =
             [
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus", model.Info.Items.Count > 0 ? "Đã có hàng" : "Chưa có hàng", activeStage, model.Info.Items.Count > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3", allocationText, activeStage, false),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check", GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus", 
+                    $"{model.Info.Items.Count} mặt hàng", activeStage, model.Info.Items.Count > 0),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", 
+                    receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3", 
+                    allocationText, activeStage, false),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check", 
+                    GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
             ]
         };
     }

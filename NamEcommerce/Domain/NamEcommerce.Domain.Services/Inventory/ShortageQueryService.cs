@@ -111,7 +111,9 @@ public sealed class ShortageQueryService(
                     ShippedQuantity = shippedQuantities.GetValueOrDefault(item.OrderItemId),
                     AvailableQuantity = availableQuantity,
                     ShortageQuantity = Math.Max(0, requiredQuantity - availableQuantity - allocatedIncoming),
-                    AllocatedFromPurchaseOrders = allocations
+                    AllocatedFromPurchaseOrders = allocations,
+                    ShippingAddress = order.ShippingAddress,
+                    ShippingPhoneNumber = order.ShippingPhoneNumber
                 });
             }
         }
@@ -183,9 +185,10 @@ public sealed class ShortageQueryService(
                 CustomerName = state.CustomerName,
                 CustomerPhone = state.CustomerPhone,
                 CustomerAddress = state.CustomerAddress,
+                ShippingAddress = state.ShippingAddress,
+                ShippingPhoneNumber = state.ShippingPhoneNumber,
                 AllocatedFromPurchaseOrders = state.AllocatedFromPurchaseOrders
-            })
-            .ToList();
+            }).ToList();
     }
 
     private async Task<IList<OrderItemFulfillmentStateDto>> BuildOrderItemFulfillmentStatesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
@@ -228,6 +231,8 @@ public sealed class ShortageQueryService(
                     CustomerName = order.CustomerInfo.FullName,
                     CustomerPhone = order.CustomerInfo.PhoneNumber,
                     CustomerAddress = order.CustomerInfo.Address,
+                    ShippingAddress = order.ShippingAddress,
+                    ShippingPhoneNumber = order.ShippingPhoneNumber,
                     AllocatedFromPurchaseOrders = allocations
                 });
             }

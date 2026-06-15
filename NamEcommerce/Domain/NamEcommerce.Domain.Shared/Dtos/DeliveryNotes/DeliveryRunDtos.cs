@@ -49,6 +49,24 @@ public sealed record ConfirmDeliveryRunCashHandoverDto
 }
 
 [Serializable]
+public sealed record UpdateDeliveryRunDeliveredNoteCashCollectedDto
+{
+    public required Guid DeliveryRunId { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public decimal CashCollectedAmount { get; init; }
+
+    public void Verify()
+    {
+        if (DeliveryRunId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryRunRequired");
+        if (DeliveryNoteId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryNoteRequired");
+        if (CashCollectedAmount < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+    }
+}
+
+[Serializable]
 public sealed record DeliveryRunItemDto
 {
     public required Guid Id { get; init; }

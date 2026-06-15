@@ -15,4 +15,13 @@ public sealed class CompleteMobileDeliveryNoteCommand : ICommand<CommonActionRes
     public string? Note { get; init; }
     public string? IdempotencyKey { get; init; }
     public decimal? CashCollectedAmount { get; init; }
+    public IList<CompleteMobileDeliveryNoteItemCommand> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed class CompleteMobileDeliveryNoteItemCommand
+{
+    public Guid DeliveryNoteItemId { get; init; }
+    public decimal ReturnedQuantity { get; init; }
+    public string? RejectReason { get; init; }
 }

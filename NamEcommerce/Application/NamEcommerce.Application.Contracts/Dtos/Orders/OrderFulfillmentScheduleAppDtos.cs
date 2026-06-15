@@ -27,6 +27,7 @@ public sealed record OrderFulfillmentScheduleAppDto(Guid Id)
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public DateTime? InactivatedOnUtc { get; init; }
+    public Guid? InactivatedByUserId { get; init; }
     public IList<OrderFulfillmentScheduleItemAppDto> Items { get; init; } = [];
 }
 
@@ -100,12 +101,14 @@ public sealed record OrderFulfillmentBoardFilterAppDto
 public sealed record OrderFulfillmentBoardAppDto
 {
     public required DateTime DateUtc { get; init; }
+    public IList<OrderFulfillmentBoardDayAppDto> Overdue { get; init; } = [];
     public IList<OrderFulfillmentBoardDayAppDto> Today { get; init; } = [];
     public IList<OrderFulfillmentBoardDayAppDto> Next3Days { get; init; } = [];
     public IList<OrderFulfillmentBoardDayAppDto> Next7Days { get; init; } = [];
     public IList<OrderFulfillmentBoardDayAppDto> Next30Days { get; init; } = [];
     public IList<OrderFulfillmentUnscheduledGroupAppDto> UnscheduledGroups { get; init; } = [];
     public int TotalEntries { get; init; }
+    public int OverdueCount { get; init; }
     public int DangerCount { get; init; }
     public int WarningCount { get; init; }
 }

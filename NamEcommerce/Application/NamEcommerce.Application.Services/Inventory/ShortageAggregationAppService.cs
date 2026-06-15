@@ -20,7 +20,6 @@ public sealed class ShortageAggregationAppService(
     IPurchaseOrderManager purchaseOrderManager,
     IPurchaseOrderAppService purchaseOrderAppService,
     IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-    IDirectShipManager directShipManager,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Product> productReader,
     IEntityDataReader<UnitMeasurement> unitMeasurementReader) : IShortageAggregationAppService
@@ -100,6 +99,8 @@ public sealed class ShortageAggregationAppService(
                 CustomerName = shortage.CustomerName,
                 CustomerPhone = shortage.CustomerPhone,
                 CustomerAddress = shortage.CustomerAddress,
+                ShippingAddress = shortage.ShippingAddress,
+                ShippingPhoneNumber = shortage.ShippingPhoneNumber,
                 SupplierSuggestions = suggestions.Select(suggestion => new SupplierSuggestionAppDto
                 {
                     VendorId = suggestion.VendorId,
@@ -610,6 +611,7 @@ public sealed class ShortageAggregationAppService(
                     shortage.AvailableQuantity,
                     shortage.ShortageQuantity,
                     null, null, null,
+                    shortage.ShippingAddress, shortage.ShippingPhoneNumber,
                     shortage.AllocatedFromPurchaseOrders))
                 .ToList();
         }
@@ -640,6 +642,7 @@ public sealed class ShortageAggregationAppService(
                 shortage.CustomerName,
                 shortage.CustomerPhone,
                 shortage.CustomerAddress,
+                shortage.ShippingAddress, shortage.ShippingPhoneNumber,
                 shortage.AllocatedFromPurchaseOrders))
             .ToList();
     }
@@ -657,5 +660,7 @@ public sealed class ShortageAggregationAppService(
         string? CustomerName,
         string? CustomerPhone,
         string? CustomerAddress,
+        string ShippingAddress,
+        string? ShippingPhoneNumber,
         IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders);
 }

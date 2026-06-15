@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class ReCreateDb : Migration
+    public partial class Db16062026 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -653,9 +653,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     AssignedDeliveryFullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     AssignedDeliveryOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Surcharge = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    SurchargeReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AmountToCollect = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ShippingPhoneNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Surcharge = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    SurchargeReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    AmountToCollect = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
                     InvoiceNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     InvoiceSeries = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     InvoiceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1268,6 +1269,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Address = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: true),
                     NormalizedAddress = table.Column<string>(type: "nvarchar(800)", maxLength: 800, nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IsLocked = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1528,6 +1530,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     ExpectedShippingDateUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ShippingPhoneNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     OrderSubTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     OrderTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     OrderDiscount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -1712,6 +1715,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     DeliveryNoteCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     OrderCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     CustomerName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    ShippingPhoneNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     ShippingAddress = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     AmountToCollect = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
                 },
@@ -2243,6 +2247,39 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OrderFulfillmentSchedule",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ScheduledFromUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ScheduledToUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Mode = table.Column<int>(type: "int", nullable: false, defaultValue: 10),
+                    Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    InactivatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    InactivatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderFulfillmentSchedule", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderFulfillmentSchedule_Order_OrderId",
+                        column: x => x.OrderId,
+                        principalSchema: "tbl",
+                        principalTable: "Order",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OrderItem",
                 schema: "tbl",
                 columns: table => new
@@ -2338,6 +2375,38 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         principalTable: "CustomerReturnRequestItem",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OrderFulfillmentScheduleItem",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderFulfillmentScheduleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderFulfillmentScheduleItem", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderFulfillmentScheduleItem_OrderFulfillmentSchedule_OrderFulfillmentScheduleId",
+                        column: x => x.OrderFulfillmentScheduleId,
+                        principalSchema: "tbl",
+                        principalTable: "OrderFulfillmentSchedule",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_OrderFulfillmentScheduleItem_OrderItem_OrderItemId",
+                        column: x => x.OrderItemId,
+                        principalSchema: "tbl",
+                        principalTable: "OrderItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -3065,6 +3134,48 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "CustomerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentSchedule_IsActive",
+                schema: "tbl",
+                table: "OrderFulfillmentSchedule",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentSchedule_Mode",
+                schema: "tbl",
+                table: "OrderFulfillmentSchedule",
+                column: "Mode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentSchedule_OrderId",
+                schema: "tbl",
+                table: "OrderFulfillmentSchedule",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentSchedule_ScheduledFromUtc",
+                schema: "tbl",
+                table: "OrderFulfillmentSchedule",
+                column: "ScheduledFromUtc");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentScheduleItem_OrderFulfillmentScheduleId",
+                schema: "tbl",
+                table: "OrderFulfillmentScheduleItem",
+                column: "OrderFulfillmentScheduleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentScheduleItem_OrderItemId",
+                schema: "tbl",
+                table: "OrderFulfillmentScheduleItem",
+                column: "OrderItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderFulfillmentScheduleItem_ProductId",
+                schema: "tbl",
+                table: "OrderFulfillmentScheduleItem",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrderItem_OrderId",
                 schema: "tbl",
                 table: "OrderItem",
@@ -3656,6 +3767,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "OrderFulfillmentScheduleItem",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "OrderItemChangeAudit",
                 schema: "tbl");
 
@@ -3793,6 +3908,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "Warehouse",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "OrderFulfillmentSchedule",
                 schema: "tbl");
 
             migrationBuilder.DropTable(

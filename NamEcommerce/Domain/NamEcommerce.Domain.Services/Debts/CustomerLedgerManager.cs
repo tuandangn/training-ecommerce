@@ -11,6 +11,7 @@ namespace NamEcommerce.Domain.Services.Debts;
 
 public sealed class CustomerLedgerManager(
     IDbContext dbContext,
+    IUnitOfWork unitOfWork,
     IRepository<CustomerLedgerEntry> entryRepository,
     IEntityDataReader<CustomerLedgerEntry> entryReader,
     IRepository<CustomerAccountBalance> balanceRepository,
@@ -277,6 +278,10 @@ public sealed class CustomerLedgerManager(
         var inserted = await entryRepository.InsertAsync(entry).ConfigureAwait(false);
         await UpsertBalanceAsync(entry.CustomerId, entry.Amount, entry.OccurredAtUtc).ConfigureAwait(false);
 
+        // Flush staged changes to DB within the open transaction so subsequent
+        // UpsertBalanceAsync calls (same unit-of-work) see the committed balance row
+        // and do UPDATE instead of INSERT, preventing duplicate key on CustomerAccountBalance.
+        await unitOfWork.CommitAsync().ConfigureAwait(false);
         await transaction.CommitAsync().ConfigureAwait(false);
         return MapToDto(inserted);
     }

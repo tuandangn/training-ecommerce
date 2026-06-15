@@ -34,6 +34,12 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="mb-3">
+                                        <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                        <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng"
+                                               data-val-range-max="@DateTime.Now.ToString("s")" />
+                                        <span asp-validation-for="PlacedOn" class="text-danger small"></span>
+                                    </div>
+                                    <div>
                                         <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
                                         <div>
                                             <div id="vendorPicker" data-testid="po-vendor-picker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone"
@@ -42,12 +48,6 @@
                                             <input type="text" class="visually-hidden" asp-for="VendorId" />
                                             <span asp-validation-for="VendorId" class="small text-danger"></span>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                        <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng"
-                                               data-val-range-max="@DateTime.Now.ToString("s")" />
-                                        <span asp-validation-for="PlacedOn" class="text-danger small"></span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

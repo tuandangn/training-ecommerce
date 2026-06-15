@@ -20,11 +20,12 @@ public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
 
         RuleFor(p => p.ShippingAddress)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Address"]])
-            .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Address"], 1000]);
+            .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Address"], 500]);
 
         RuleFor(p => p.ShippingPhoneNumber)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Phone"]])
-            .MaximumLength(50).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Phone"], 50]);
+            .MaximumLength(50).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Phone"], 50])
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);

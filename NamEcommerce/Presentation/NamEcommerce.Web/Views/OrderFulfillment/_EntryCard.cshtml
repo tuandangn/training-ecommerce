@@ -109,7 +109,14 @@
     <div class="fulfillment-entry-actions">
         @if (Model.SourceType is "Schedule" or "Order" && Model.OrderId != Guid.Empty)
         {
-            <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.OrderId" class="btn btn-sm btn-outline-primary">
+            var preSelected = Model.SourceType == "Schedule"
+                ? string.Join(",", Model.Items.Select(item => item.OrderItemId))
+                : null;
+            <a asp-controller="DeliveryNote"
+               asp-action="Create"
+               asp-route-orderId="@Model.OrderId"
+               asp-route-selected="@preSelected"
+               class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-box-arrow-up-right"></i>
                 Xuất hàng
             </a>
