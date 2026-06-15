@@ -23,15 +23,15 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label" for="fulfillmentScheduleFrom">Bắt đầu</label>
-                            <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" />
+                            <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày bắt đầu" />
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label" for="fulfillmentScheduleTo">Kết thúc</label>
-                            <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" />
+                            <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày kết thúc"/>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="fulfillmentScheduleNote">Ghi chú</label>
-                            <textarea id="fulfillmentScheduleNote" name="Note" class="form-control" rows="2"></textarea>
+                            <textarea id="fulfillmentScheduleNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
                         </div>
                     </div>
 
@@ -54,7 +54,7 @@
                                         <td class="fw-600">@item.ProductName</td>
                                         <td class="text-end">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
                                         <td class="text-end">
-                                            <input type="text"
+                                            <input type="text" placeholder="Nhập số lượng"
                                                    class="form-control form-control-sm text-end schedule-item-quantity"
                                                    data-decimal="quantity"
                                                    data-decimals="@item.QuantityDecimalPlaces"

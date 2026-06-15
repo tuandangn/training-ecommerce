@@ -385,6 +385,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDataSeeder, SystemWarehousesSeeder>();
     services.AddScoped<IDataSeeder, SystemCustomerSeeder>();
     services.AddScoped<IDataSeeder, DefaultUnitMeasurementSeeder>();
+    services.AddScoped<IDataSeeder, DefaultCategorySeeder>();
     services.AddScoped<IDataSeeder, AdminUserSeeder>();
     services.AddScoped<IDataSeeder, AccountingSetupSeeder>();
     services.AddScoped<IDataSeeder, SystemPermissionsSeeder>();

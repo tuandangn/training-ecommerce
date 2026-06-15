@@ -11,7 +11,7 @@ public sealed record OrderFulfillmentScheduleItem : AppEntity
     }
 
     internal OrderFulfillmentScheduleItem(Guid scheduleId, Guid orderItemId, Guid productId, string productName, decimal quantity)
-        : base(Guid.NewGuid())
+        : base(Guid.Empty)
     {
         OrderFulfillmentScheduleId = scheduleId;
         OrderItemId = orderItemId;

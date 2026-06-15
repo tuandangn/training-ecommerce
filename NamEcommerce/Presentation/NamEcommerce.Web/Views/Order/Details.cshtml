@@ -35,7 +35,6 @@
     <div class="order-workflow-main">
         @await Html.PartialAsync("_OrderWorkflowOrderPanel", Model)
         @await Html.PartialAsync("_OrderWorkflowPreparationPanel", Model)
-        @await Html.PartialAsync("_OrderFulfillmentSchedulePanel", Model.FulfillmentSchedule)
         @await Html.PartialAsync("_OrderWorkflowDeliveryPanel", Model)
         @await Html.PartialAsync("_OrderWorkflowSettlementPanel", Model)
     </div>
@@ -243,7 +242,7 @@
                                     <span class="fw-medium">(@Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat))</span>
                                 }
                             </label>
-                            <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control" />
+                            <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control" placeholder="Ngày giao dự kiến"/>
                             <span class="small text-danger field-validation-valid" data-valmsg-for="ExpectedShippingDate"
                                   data-valmsg-replace="true"></span>
                         </div>

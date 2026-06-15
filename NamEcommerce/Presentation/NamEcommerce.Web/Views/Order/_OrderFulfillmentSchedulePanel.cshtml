@@ -14,8 +14,7 @@
                 : "success";
 }
 
-<section class="workflow-panel active fulfillment-order-panel" data-workflow-panel="fulfillment" role="tabpanel">
-    <div class="content-card">
+<div class="content-card">
         <div class="content-card-header">
             <div>
                 <h5>Lịch xử lý <span class="status-badge @summaryTone">@activeSchedules.Count lịch hoạt động</span></h5>
@@ -145,7 +144,6 @@
             }
         </div>
     </div>
-</section>
 
 @if (Model.CanUpdateSchedules)
 {

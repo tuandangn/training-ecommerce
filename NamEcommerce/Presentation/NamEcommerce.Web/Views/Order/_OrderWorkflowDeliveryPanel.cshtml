@@ -8,7 +8,9 @@
 }
 
 <section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="delivery" role="tabpanel">
-    <div class="content-card">
+    @await Html.PartialAsync("_OrderFulfillmentSchedulePanel", Model.FulfillmentSchedule)
+
+    <div class="content-card mt-3">
         <div class="content-card-header">
             <div>
                 <h5>Giao hàng <span class="status-badge @Model.DeliveryWorkflow.StatusClass">@Model.DeliveryWorkflow.StatusText</span></h5>
