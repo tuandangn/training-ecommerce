@@ -1,4 +1,6 @@
+@using NamEcommerce.Web.Framework.Services
 @model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
+@inject InfoOptions Info
 @{
     Layout = null; // No standard layout for print
 }
@@ -17,12 +19,11 @@
         <div class="print-page @(copy == 2 ? "page-break" : "")">
             <div class="print-header-grid">
                 <div>
-                    <strong>CỬA HÀNG VLXD TUẤN KHÔI</strong><br />
-                    Địa chỉ: Số 123 Đường ABCD, Quận XYZ, TP.HCM<br />
-                    Điện thoại: 0909.123.456
+                    <strong>@Info.Name</strong><br />
+                    Địa chỉ: @Info.Address<br />
+                    Điện thoại: @Info.PhoneNumber
                 </div>
                 <div class="text-right">
-                    <strong>Bản @(copy == 1 ? "1 (Giao khách hàng)" : "2 (Lưu tại cửa hàng)")</strong>
                     @if (!string.IsNullOrWhiteSpace(Model.CustomerPortalQrCodeSvg))
                     {
                         <div class="qr-box mt-2">
@@ -42,7 +43,10 @@
             <div class="header">
                 <h1>PHIẾU XUẤT KHO</h1>
                 <p>Số: @Model.Code</p>
-                <p>Ngày @Model.CreatedOnUtc.ToLocalTime().ToString("dd") tháng @Model.CreatedOnUtc.ToLocalTime().ToString("MM") năm @Model.CreatedOnUtc.ToLocalTime().ToString("yyyy")</p>
+                @{
+                    var createdOn = DateTimeHelper.ToLocalTime(Model.CreatedOnUtc);
+                }
+                <p>Ngày @createdOn.ToString("dd") tháng @createdOn.ToString("MM") năm @createdOn.ToString("yyyy")</p>
             </div>
 
             <table class="info-table">

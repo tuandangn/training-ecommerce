@@ -1,4 +1,5 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
+using System.Text.RegularExpressions;
 
 namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 
@@ -65,6 +66,8 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
             return (false, "Error.ShippingAddressRequired");
         if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
             return (false, "Error.PhoneNumberRequired");
+        if (!Regex.IsMatch(ShippingPhoneNumber, @"0\d{9,10}"))
+            return (false, "Error.PhoneNumberInvalid");
 
         if (Items.Count == 0)
             return (false, "Error.OrderItemRequired");

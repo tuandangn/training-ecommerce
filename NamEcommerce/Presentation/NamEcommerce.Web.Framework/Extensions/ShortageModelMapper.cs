@@ -62,6 +62,8 @@ public static class ShortageModelMapper
             CustomerName = dto.CustomerName,
             CustomerPhone = dto.CustomerPhone,
             CustomerAddress = dto.CustomerAddress,
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = dto.ShippingPhoneNumber,
             SupplierSuggestions = dto.SupplierSuggestions.Select(ToModel).ToList(),
             AllocatedFromPurchaseOrders = dto.AllocatedFromPurchaseOrders.Select(ToModel).ToList()
         };

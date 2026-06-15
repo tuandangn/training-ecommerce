@@ -378,7 +378,6 @@ export default class CreatePurchaseOrderController {
             existingItem.quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
-            this.#openEditorForIndex(existingIndex);
         } else {
             let unitCost = 0;
             if (this.#state.vendor)
@@ -386,11 +385,11 @@ export default class CreatePurchaseOrderController {
             items.push(new PurchaseOrderItem(new ProductInfo(product), 1, unitCost));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
-            this.#openEditorForIndex(items.length - 1);
+            this.#openEditorForIndex(items.length - 1, { canRemove: false });
         }
     }
 
-    #openEditorForIndex(index) {
+    #openEditorForIndex(index, openOptions) {
         const item = this.#state.items[index];
         if (!item || !this.#itemEditor) return;
         this.#itemEditor.open(
@@ -412,7 +411,7 @@ export default class CreatePurchaseOrderController {
                     });
                     this.#dispatch('purchaseOrder:itemRemoved');
                 },
-            }
+            }, openOptions
         );
     }
 

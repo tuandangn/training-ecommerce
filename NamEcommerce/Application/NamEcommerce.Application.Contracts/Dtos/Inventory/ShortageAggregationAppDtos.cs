@@ -63,6 +63,8 @@ public sealed record ShortageAggregationItemAppDto
     public string? CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
+    public required string ShippingAddress { get; init; }
+    public required string? ShippingPhoneNumber { get; init; }
     public IList<SupplierSuggestionAppDto> SupplierSuggestions { get; init; } = [];
     public IList<PurchaseOrderShortageAllocationAppDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }

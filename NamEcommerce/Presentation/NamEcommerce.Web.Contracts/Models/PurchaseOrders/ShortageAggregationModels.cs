@@ -44,6 +44,8 @@ public sealed class ShortageAggregationItemModel
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
+    public required string ShippingAddress { get; set; }
+    public required string? ShippingPhoneNumber { get; set; }
     public IList<SupplierSuggestionModel> SupplierSuggestions { get; set; } = [];
     public IList<PurchaseOrderShortageAllocationModel> AllocatedFromPurchaseOrders { get; set; } = [];
 }

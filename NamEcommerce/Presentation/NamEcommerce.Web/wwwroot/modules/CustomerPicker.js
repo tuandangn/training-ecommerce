@@ -1,4 +1,6 @@
-﻿class Customer {
+﻿import { customerSettings } from '/modules/Settings.js';
+
+class Customer {
     constructor({ id, name, phone, address, kind, isSystem }) {
         this.id = id;
         this.name = name ?? '';
@@ -6,6 +8,9 @@
         this.address = address ?? '';
         this.kind = Number(kind ?? 0);
         this.isSystem = isSystem === true || isSystem === 'true';
+    }
+    get isDefaultCustomer() {
+        return this.id == customerSettings.defaultCustomerId;
     }
 }
 

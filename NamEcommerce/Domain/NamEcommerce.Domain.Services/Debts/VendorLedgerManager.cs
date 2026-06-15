@@ -11,6 +11,7 @@ namespace NamEcommerce.Domain.Services.Debts;
 
 public sealed class VendorLedgerManager(
     IDbContext dbContext,
+    IUnitOfWork unitOfWork,
     IRepository<VendorLedgerEntry> entryRepository,
     IEntityDataReader<VendorLedgerEntry> entryReader,
     IRepository<VendorAccountBalance> balanceRepository,
@@ -264,6 +265,7 @@ public sealed class VendorLedgerManager(
         var inserted = await entryRepository.InsertAsync(entry).ConfigureAwait(false);
         await UpsertBalanceAsync(entry.VendorId, entry.Amount, entry.OccurredAtUtc).ConfigureAwait(false);
 
+        await unitOfWork.CommitAsync().ConfigureAwait(false);
         await transaction.CommitAsync().ConfigureAwait(false);
         return MapToDto(inserted);
     }

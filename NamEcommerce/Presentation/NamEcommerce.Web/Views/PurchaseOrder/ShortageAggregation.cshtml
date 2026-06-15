@@ -218,8 +218,8 @@
                                      data-shortage-quantity='@item.ShortageQuantity.ToString("0.####", CultureInfo.InvariantCulture)'
                                      data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")"
                                      data-customer-name="@(item.CustomerName ?? "")"
-                                     data-customer-phone="@(item.CustomerPhone ?? "")"
-                                     data-customer-address="@(item.CustomerAddress ?? "")"
+                                     data-customer-phone="@(item.ShippingPhoneNumber ?? item.CustomerPhone ?? "")"
+                                     data-customer-address="@(item.ShippingAddress ?? item.CustomerAddress ?? "")"
                                      data-suggestions="@suggestionsJson">
                                     <div class="shortage-item-check">
                                         <input type="checkbox" class="form-check-input item-check" @(item.IsFromPrimaryOrder ? "checked" : "") />

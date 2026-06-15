@@ -15,6 +15,9 @@ class Customer {
         this.kind = Number(kind ?? 0);
         this.isSystem = isSystem === true || isSystem === 'true';
     }
+    get isDefaultCustomer() {
+        return this.id == customerSettings.defaultCustomerId;
+    }
 }
 
 class ProductInfo {
@@ -83,7 +86,6 @@ export default class OrderController {
 
         this.#bindProductPicker();
         this.#bindAddItemForm();
-        this.#bindShippingAddressEdit();
 
         const initialCustomer = this.#bindCustomerPicker();
         const initialDiscount = this.#bindDiscount();
@@ -113,7 +115,9 @@ export default class OrderController {
             customer: initialCustomer,
             discount: initialDiscount,
             expectedDate: initialExpectedDate,
-            items: initialItems
+            items: initialItems,
+            shippingAddress: getEl('ShippingAddress').value,
+            shippingPhoneNumber: getEl('ShippingPhoneNumber').value
         });
 
         this.#initialized = true;
@@ -144,6 +148,9 @@ export default class OrderController {
                 toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
             }
         });
+
+        getEl('ShippingAddress').addEventListener('change', (e) => this.#setState({ shippingAddress: e.target.value }));
+        getEl('ShippingPhoneNumber').addEventListener('change', (e) => this.#setState({ shippingPhoneNumber: e.target.value }));
     }
 
     #renderSummary() {
@@ -162,26 +169,23 @@ export default class OrderController {
     }
 
     #renderCustomer() {
-        const { customer } = this.#state;
+        const { customer, shippingAddress, shippingPhoneNumber } = this.#state;
         const customerId = getEl('CustomerId');
         const shippingAddr = getEl('ShippingAddress');
         const shippingPhone = getEl('ShippingPhoneNumber');
-        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
 
         customerId.value = customer?.id ?? '';
 
-        if (isRetailWalkInSystem) {
-            if (shippingAddr.hasAttribute('readonly') || shippingAddr.value === customer?.address)
-                shippingAddr.value = '';
-            if (shippingPhone && shippingPhone.value === customer?.phone)
-                shippingPhone.value = '';
-            return;
-        }
+        shippingAddr.value = shippingAddress;
+        shippingPhone.value = shippingPhoneNumber;
 
-        if (shippingAddr.hasAttribute('readonly') || !shippingAddr.value)
-            shippingAddr.value = customer?.address ?? '';
-        if (shippingPhone && !shippingPhone.value)
-            shippingPhone.value = customer?.phone ?? '';
+        if (customer) {
+            shippingAddr.removeAttribute('readonly');
+            shippingPhone.removeAttribute('readonly');
+        } else {
+            shippingAddr.setAttribute('readonly', true);
+            shippingPhone.setAttribute('readonly', true);
+        }
     }
 
     #renderItems() {
@@ -234,9 +238,9 @@ export default class OrderController {
             <td class="ps-4 align-middle">
                 <div class="d-flex align-items-center gap-3">
                     ${p.picture
-                        ? `<img src="${p.picture}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />`
-                        : ''
-                    }
+                ? `<img src="${p.picture}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />`
+                : ''
+            }
                     <div>
                         <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
                         <div class="text-muted small d-md-none">
@@ -399,13 +403,15 @@ export default class OrderController {
 
         el.addEventListener('select', (e) => {
             const customer = e.detail?.customer ? new Customer(e.detail.customer) : null;
-            this.#applyCustomerShippingDefaults(customer);
-            this.#setState({ customer });
+            this.#setState({
+                customer,
+                shippingAddress: customer?.isDefaultCustomer ? '' : customer?.address,
+                shippingPhoneNumber: customer?.isDefaultCustomer ? '' : customer?.phone
+            });
             this.#addItemController.refreshPriceReference();
         });
         el.addEventListener('remove', () => {
-            this.#applyCustomerShippingDefaults(null);
-            this.#setState({ customer: null });
+            this.#setState({ customer: null, shippingAddress: '', shippingPhoneNumber: '' });
             this.#addItemController.refreshPriceReference();
         });
 
@@ -416,21 +422,6 @@ export default class OrderController {
             return customer;
         }
         return null;
-    }
-
-    #applyCustomerShippingDefaults(customer) {
-        const shippingAddr = getEl('ShippingAddress');
-        const shippingPhone = getEl('ShippingPhoneNumber');
-        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
-
-        if (!customer || isRetailWalkInSystem) {
-            if (shippingAddr) shippingAddr.value = '';
-            if (shippingPhone) shippingPhone.value = '';
-            return;
-        }
-
-        if (shippingAddr) shippingAddr.value = customer.address ?? '';
-        if (shippingPhone) shippingPhone.value = customer.phone ?? '';
     }
 
     #bindProductPicker() {
@@ -493,23 +484,6 @@ export default class OrderController {
 
             this.#dispatch('order:itemAdded');
         });
-    }
-
-    #bindShippingAddressEdit() {
-        document.getElementById('btnEditShippingAddress')?.addEventListener('click', () => {
-            const addr = getEl('ShippingAddress');
-            this.#toggleEditShippingAddress(addr.hasAttribute('readonly'));
-            addr.focus();
-        });
-    }
-    #toggleEditShippingAddress(canEdit) {
-        const addr = getEl('ShippingAddress');
-        if(canEdit)
-            addr.removeAttribute('readonly');
-        else
-            addr.setAttribute('readonly', true);
-        addr.classList.toggle('border-end-0', !canEdit);
-        addr.classList.toggle('rounded', canEdit);
     }
 
     #bindQuickCreateForms() {

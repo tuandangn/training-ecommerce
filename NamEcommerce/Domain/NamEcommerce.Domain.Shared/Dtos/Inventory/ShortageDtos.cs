@@ -26,6 +26,8 @@ public sealed record OrderItemShortageDto
     public string? CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
+    public required string ShippingAddress { get; set; }
+    public required string? ShippingPhoneNumber { get; set; }
     public IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }
 
@@ -45,6 +47,8 @@ public sealed record OrderItemFulfillmentStateDto
     public string? CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
+    public required string ShippingAddress { get; set; }
+    public required string? ShippingPhoneNumber { get; set; }
     public IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }
 
@@ -61,6 +65,8 @@ public sealed record DeliveryNoteItemShortageDto
     public required decimal ShippedQuantity { get; init; }
     public required decimal AvailableQuantity { get; init; }
     public required decimal ShortageQuantity { get; init; }
+    public required string ShippingAddress { get; init; }
+    public required string? ShippingPhoneNumber { get; init; }
     public IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }
 
