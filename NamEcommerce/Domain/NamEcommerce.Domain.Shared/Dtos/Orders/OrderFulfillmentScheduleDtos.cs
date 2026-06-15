@@ -28,6 +28,7 @@ public sealed record OrderFulfillmentScheduleDto(Guid Id)
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public DateTime? InactivatedOnUtc { get; init; }
+    public Guid? InactivatedByUserId { get; init; }
     public IList<OrderFulfillmentScheduleItemDto> Items { get; init; } = [];
 }
 

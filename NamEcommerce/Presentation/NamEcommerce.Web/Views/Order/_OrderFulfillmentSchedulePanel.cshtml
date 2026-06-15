@@ -101,7 +101,13 @@
                                         <div class="delivery-quick-actions">
                                             @if (schedule.IsActive)
                                             {
-                                                <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@schedule.OrderId" class="btn-table-action" title="Tạo phiếu giao" aria-label="Tạo phiếu giao">
+                                                <a asp-controller="DeliveryNote"
+                                                   asp-action="Create"
+                                                   asp-route-orderId="@schedule.OrderId"
+                                                   asp-route-selected="@string.Join(",", schedule.Items.Select(item => item.OrderItemId))"
+                                                   class="btn-table-action"
+                                                   title="Tạo phiếu giao"
+                                                   aria-label="Tạo phiếu giao">
                                                     <i class="bi bi-box-arrow-up-right"></i>
                                                 </a>
                                             }

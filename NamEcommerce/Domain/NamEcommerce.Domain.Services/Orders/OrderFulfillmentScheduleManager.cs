@@ -133,7 +133,8 @@ public sealed class OrderFulfillmentScheduleManager(
         }
         else
         {
-            schedule.Inactivate();
+            var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+            schedule.Inactivate(currentUser?.Id);
         }
 
         await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);

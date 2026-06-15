@@ -25,6 +25,7 @@ public sealed record OrderFulfillmentScheduleModel(Guid Id)
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public DateTime? InactivatedOnUtc { get; init; }
+    public Guid? InactivatedByUserId { get; init; }
     public IList<OrderFulfillmentScheduleItemModel> Items { get; init; } = [];
 }
 
@@ -32,12 +33,14 @@ public sealed record OrderFulfillmentScheduleModel(Guid Id)
 public sealed record OrderFulfillmentBoardModel
 {
     public required DateTime DateUtc { get; init; }
+    public IList<OrderFulfillmentBoardDayModel> Overdue { get; init; } = [];
     public IList<OrderFulfillmentBoardDayModel> Today { get; init; } = [];
     public IList<OrderFulfillmentBoardDayModel> Next3Days { get; init; } = [];
     public IList<OrderFulfillmentBoardDayModel> Next7Days { get; init; } = [];
     public IList<OrderFulfillmentBoardDayModel> Next30Days { get; init; } = [];
     public IList<OrderFulfillmentUnscheduledGroupModel> UnscheduledGroups { get; init; } = [];
     public int TotalEntries { get; init; }
+    public int OverdueCount { get; init; }
     public int DangerCount { get; init; }
     public int WarningCount { get; init; }
 }

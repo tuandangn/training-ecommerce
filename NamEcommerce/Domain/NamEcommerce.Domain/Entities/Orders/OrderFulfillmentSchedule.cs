@@ -51,6 +51,7 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
     public DateTime? InactivatedOnUtc { get; private set; }
+    public Guid? InactivatedByUserId { get; private set; }
 
     private readonly List<OrderFulfillmentScheduleItem> _items;
     public IReadOnlyCollection<OrderFulfillmentScheduleItem> Items => _items.AsReadOnly();
@@ -119,10 +120,11 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
-    internal void Inactivate()
+    internal void Inactivate(Guid? inactivatedByUserId)
     {
         IsActive = false;
         InactivatedOnUtc = DateTime.UtcNow;
+        InactivatedByUserId = inactivatedByUserId;
         UpdatedOnUtc = DateTime.UtcNow;
     }
 }
