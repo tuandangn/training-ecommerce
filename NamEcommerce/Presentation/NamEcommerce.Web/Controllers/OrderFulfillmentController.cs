@@ -26,6 +26,16 @@ public sealed class OrderFulfillmentController(
         return PartialView("~/Views/Order/_OrderFulfillmentSchedulePanel.cshtml", model);
     }
 
+    public async Task<IActionResult> TopbarSchedule()
+    {
+        var model = await orderFulfillmentModelFactory.PrepareBoardModelAsync(new OrderFulfillmentBoardSearchModel
+        {
+            Date = DateTime.Today
+        }).ConfigureAwait(false);
+
+        return PartialView("~/Views/OrderFulfillment/_TopbarSchedulePanel.cshtml", model.Board);
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> CreateSchedule(OrderFulfillmentScheduleInputModel model)

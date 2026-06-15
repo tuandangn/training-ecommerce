@@ -8,6 +8,17 @@
 <div class="topbar-actions">
     @if (Model.IsAuthenticated)
     {
+        @if (Model.CanViewOrderFulfillmentSchedule)
+        {
+            <div class="fulfillment-schedule-center" data-fulfillment-schedule-center>
+                <button class="fulfillment-schedule-btn" type="button" data-fulfillment-schedule-toggle title="Lịch xử lý đơn hàng" aria-label="Lịch xử lý đơn hàng" aria-expanded="false">
+                    <i class="bi bi-calendar2-week"></i>
+                </button>
+                <div class="fulfillment-schedule-panel" data-fulfillment-schedule-panel hidden>
+                    <div class="fulfillment-schedule-panel-loading">Đang tải lịch...</div>
+                </div>
+            </div>
+        }
         <div class="system-notification-center" data-system-notification-center>
             <button class="notification-btn" type="button" data-system-notification-toggle aria-label="Thông báo" aria-expanded="false">
                 <i class="bi bi-bell"></i>

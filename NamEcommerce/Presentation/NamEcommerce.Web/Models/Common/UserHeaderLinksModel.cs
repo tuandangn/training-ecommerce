@@ -8,4 +8,5 @@ public sealed record UserHeaderLinksModel
     public Guid UserId { get; set; }
     public string? Username { get; set; }
     public string? FullName { get; set; }
+    public bool CanViewOrderFulfillmentSchedule { get; set; }
 }

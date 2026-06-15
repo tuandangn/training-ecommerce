@@ -110,7 +110,7 @@ public sealed class OrderFulfillmentScheduleAppService(
 
         var entries = new List<OrderFulfillmentBoardEntryAppDto>();
         entries.AddRange(BuildScheduleEntries(schedules, orders, statesByOrder));
-        entries.AddRange(BuildUnscheduledOrderEntries(orders, schedules, statesByOrder));
+        entries.AddRange(BuildUnscheduledOrderEntries(orders, schedules, statesByOrder, baseDateUtc));
         entries.AddRange(BuildDeliveryNoteEntries(orderIds));
         entries.AddRange(BuildDeliveryRunEntries());
 
@@ -223,7 +223,8 @@ public sealed class OrderFulfillmentScheduleAppService(
     private static IEnumerable<OrderFulfillmentBoardEntryAppDto> BuildUnscheduledOrderEntries(
         IList<Order> orders,
         IList<OrderFulfillmentScheduleAppDto> schedules,
-        Dictionary<Guid, IList<OrderItemFulfillmentStateDto>> statesByOrder)
+        Dictionary<Guid, IList<OrderItemFulfillmentStateDto>> statesByOrder,
+        DateTime fallbackScheduledFromUtc)
     {
         var scheduledOrderIds = schedules
             .Where(schedule => schedule.IsActive)
@@ -261,7 +262,7 @@ public sealed class OrderFulfillmentScheduleAppService(
                 CustomerName = firstState?.CustomerName,
                 CustomerPhone = firstState?.CustomerPhone,
                 ShippingAddress = order.ShippingAddress,
-                ScheduledFromUtc = null,
+                ScheduledFromUtc = fallbackScheduledFromUtc,
                 ScheduledToUtc = null,
                 Mode = (int)OrderFulfillmentScheduleMode.AsSoonAsPossible,
                 Tone = tone,
