@@ -106,6 +106,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             {
                 OrderId = model.OrderId,
                 ShippingAddress = model.ShippingAddress,
+                ShippingPhoneNumber = model.ShippingPhoneNumber,
                 WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
                 Note = model.Note,
@@ -429,6 +430,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 ShowPrice = model.ShowPrice,
                 WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
+                ShippingPhoneNumber = model.ShippingPhoneNumber,
                 Surcharge = request.Surcharge,
                 SurchargeReason = request.SurchargeReason,
                 AmountToCollect = request.AmountToCollect,
@@ -504,6 +506,23 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
 
         return result;
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> UpdateShipping(Guid deliveryNoteId, string? shippingAddress, string? shippingPhoneNumber)
+    {
+        var result = await _mediator.Send(new UpdateDeliveryNoteShippingCommand(
+            deliveryNoteId,
+            shippingAddress,
+            shippingPhoneNumber)).ConfigureAwait(false);
+
+        if (result.Success)
+            NotifySuccess("Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.DeliveryNoteCannotUpdateShipping");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
     }
 }
 

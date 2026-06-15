@@ -85,10 +85,10 @@
                                     <div class="fw-bold">
                                         @HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)
                                     </div>
-                                    @if (!string.IsNullOrEmpty(deliveryNote.CustomerPhone))
+                                    @if (!string.IsNullOrEmpty(deliveryNote.ShippingPhoneNumber))
                                     {
-                                        <a href="tel:@deliveryNote.CustomerPhone" class="small text-muted text-decoration-none">
-                                            @HighlighHelper.Highlight(deliveryNote.CustomerPhone ?? "", query)
+                                        <a href="tel:@deliveryNote.ShippingPhoneNumber" class="small text-muted text-decoration-none">
+                                            @HighlighHelper.Highlight(deliveryNote.ShippingPhoneNumber ?? "", query)
                                         </a>
                                     }
                                     <div class="d-md-none mt-1">
@@ -246,10 +246,10 @@
                         <div class="list-card-field list-card-field-stack">
                             <span class="list-card-label">Khách hàng</span>
                             <span class="fw-medium text-dark">@HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)</span>
-                            @if (!string.IsNullOrEmpty(deliveryNote.CustomerPhone))
+                            @if (!string.IsNullOrEmpty(deliveryNote.ShippingPhoneNumber))
                             {
-                                <a href="tel:@deliveryNote.CustomerPhone" class="small text-muted text-decoration-none">
-                                    @HighlighHelper.Highlight(deliveryNote.CustomerPhone ?? "", query)
+                                <a href="tel:@deliveryNote.ShippingPhoneNumber" class="small text-muted text-decoration-none">
+                                    @HighlighHelper.Highlight(deliveryNote.ShippingPhoneNumber ?? "", query)
                                 </a>
                             }
                         </div>

@@ -65,7 +65,9 @@ public sealed class CustomerController : BaseAuthorizedController
             id = it.Id,
             name = it.FullName,
             phone = it.PhoneNumber,
-            address = it.Address
+            address = it.Address,
+            kind = it.Kind,
+            isSystem = it.IsSystem
         }));
     }
 
@@ -81,7 +83,9 @@ public sealed class CustomerController : BaseAuthorizedController
             id = customer.Id,
             name = customer.FullName,
             phone = customer.PhoneNumber,
-            address = customer.Address
+            address = customer.Address,
+            kind = customer.Kind,
+            isSystem = customer.IsSystem
         });
     }
 
@@ -151,7 +155,9 @@ public sealed class CustomerController : BaseAuthorizedController
                 id = customer.Id,
                 name = customer.FullName,
                 phone = customer.PhoneNumber,
-                address = customer.Address
+                address = customer.Address,
+                kind = customer.Kind,
+                isSystem = customer.IsSystem
             }
         });
     }

@@ -24,7 +24,8 @@ public sealed class CreateCashQuickSaleHandler(IFastSaleAppService fastSaleAppSe
             PaymentTiming = request.PaymentTiming,
             PaymentMethod = 0,
             PaidAmount = request.PaidAmount,
-            ShippingAddress = request.ShippingAddress
+            ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber
         }).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapResult(result);
@@ -47,7 +48,8 @@ public sealed class CreateBankTransferQuickSaleHandler(IFastSaleAppService fastS
             PaymentTiming = request.PaymentTiming,
             PaymentMethod = 1,
             PaidAmount = request.PaidAmount,
-            ShippingAddress = request.ShippingAddress
+            ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber
         }, request.PaymentIntentId).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapResult(result);
@@ -70,7 +72,8 @@ public sealed class CreateUnpaidQuickSaleHandler(IFastSaleAppService fastSaleApp
             PaymentTiming = request.PaymentTiming,
             PaymentMethod = 0,
             PaidAmount = 0,
-            ShippingAddress = request.ShippingAddress
+            ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber
         }).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapResult(result);

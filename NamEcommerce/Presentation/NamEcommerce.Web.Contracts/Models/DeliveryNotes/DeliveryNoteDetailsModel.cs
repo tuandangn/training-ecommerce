@@ -16,6 +16,7 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
+    public string? ShippingPhoneNumber { get; set; }
 
     public Guid WarehouseId { get; set; }
     public string? WarehouseName { get; set; }

@@ -81,6 +81,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             CustomerName = deliveryNote.CustomerName,
             CustomerPhone = deliveryNote.CustomerPhone,
             ShippingAddress = deliveryNote.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
+                ? deliveryNote.CustomerPhone
+                : deliveryNote.ShippingPhoneNumber,
             IsDirectShip = deliveryNote.IsDirectShip,
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode ?? string.Empty,
@@ -148,6 +151,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         model.CustomerAddress = order.CustomerAddress;
         model.CustomerPhoneNumber = order.CustomerPhone ?? string.Empty;
         model.ShippingAddress = order.ShippingAddress ?? string.Empty;
+        model.ShippingPhoneNumber = string.IsNullOrWhiteSpace(order.ShippingPhoneNumber)
+            ? order.CustomerPhone ?? string.Empty
+            : order.ShippingPhoneNumber;
 
         model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
@@ -260,6 +266,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             CustomerPhone = deliveryNote.CustomerPhone,
             CustomerAddress = deliveryNote.CustomerAddress,
             ShippingAddress = deliveryNote.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
+                ? deliveryNote.CustomerPhone
+                : deliveryNote.ShippingPhoneNumber,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,

@@ -6,11 +6,13 @@ import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 
 class Customer {
-    constructor({ id, name, phone, address }) {
+    constructor({ id, name, phone, address, kind, isSystem }) {
         this.id = id;
         this.name = name ?? '';
         this.phone = phone ?? '';
         this.address = address ?? '';
+        this.kind = Number(kind ?? 0);
+        this.isSystem = isSystem === true || isSystem === 'true';
     }
 }
 
@@ -166,11 +168,23 @@ export default class OrderController {
         const { customer } = this.#state;
         const customerId = getEl('CustomerId');
         const shippingAddr = getEl('ShippingAddress');
+        const shippingPhone = getEl('ShippingPhoneNumber');
+        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
 
         customerId.value = customer?.id ?? '';
 
+        if (isRetailWalkInSystem) {
+            if (shippingAddr.hasAttribute('readonly') || shippingAddr.value === customer?.address)
+                shippingAddr.value = '';
+            if (shippingPhone && shippingPhone.value === customer?.phone)
+                shippingPhone.value = '';
+            return;
+        }
+
         if (shippingAddr.hasAttribute('readonly') || !shippingAddr.value)
             shippingAddr.value = customer?.address ?? '';
+        if (shippingPhone && !shippingPhone.value)
+            shippingPhone.value = customer?.phone ?? '';
     }
 
     #renderItems() {
@@ -387,10 +401,13 @@ export default class OrderController {
         });
 
         el.addEventListener('select', (e) => {
-            this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
+            const customer = e.detail?.customer ? new Customer(e.detail.customer) : null;
+            this.#applyCustomerShippingDefaults(customer);
+            this.#setState({ customer });
             this.#addItemController.refreshPriceReference();
         });
         el.addEventListener('remove', () => {
+            this.#applyCustomerShippingDefaults(null);
             this.#setState({ customer: null });
             this.#addItemController.refreshPriceReference();
         });
@@ -402,6 +419,21 @@ export default class OrderController {
             return customer;
         }
         return null;
+    }
+
+    #applyCustomerShippingDefaults(customer) {
+        const shippingAddr = getEl('ShippingAddress');
+        const shippingPhone = getEl('ShippingPhoneNumber');
+        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
+
+        if (!customer || isRetailWalkInSystem) {
+            if (shippingAddr) shippingAddr.value = '';
+            if (shippingPhone) shippingPhone.value = '';
+            return;
+        }
+
+        if (shippingAddr) shippingAddr.value = customer.address ?? '';
+        if (shippingPhone) shippingPhone.value = customer.phone ?? '';
     }
 
     #bindProductPicker() {

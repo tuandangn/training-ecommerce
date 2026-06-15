@@ -19,6 +19,7 @@ public sealed record PendingDirectShipDeliveryAppDto
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
     public required IList<PendingDirectShipDeliveryItemAppDto> Items { get; init; }
 }

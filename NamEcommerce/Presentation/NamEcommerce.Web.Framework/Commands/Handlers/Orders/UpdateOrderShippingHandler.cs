@@ -21,7 +21,8 @@ public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShip
         {
             OrderId = request.OrderId,
             ExpectedShippingDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate.ToEndOfDate()),
-            Address = request.Address
+            Address = request.Address,
+            PhoneNumber = request.PhoneNumber
         });
 
         return new CommonActionResultModel

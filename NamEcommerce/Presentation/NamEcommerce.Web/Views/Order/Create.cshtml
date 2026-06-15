@@ -38,9 +38,15 @@
                                             <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase mb-0">Khách hàng</label>
                                         </div>
                                         <div id="customerPicker" data-testid="order-customer-picker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
-                                             data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
+                                             data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"
+                                             data-kind="@Model.CustomerDisplayKind" data-is-system="@Model.CustomerDisplayIsSystem.ToString().ToLowerInvariant()"></div>
                                         <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                         <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                        <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhap so dien thoai giao hang" />
+                                        <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
                                     </div>
                                     <div class="mb-3">
                                         <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>

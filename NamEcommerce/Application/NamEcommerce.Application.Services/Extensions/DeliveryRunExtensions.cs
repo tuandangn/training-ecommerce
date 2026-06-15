@@ -38,6 +38,7 @@ public static class DeliveryRunExtensions
                 DeliveryNoteCode = item.DeliveryNoteCode,
                 OrderCode = item.OrderCode,
                 CustomerName = item.CustomerName,
+                ShippingPhoneNumber = item.ShippingPhoneNumber,
                 ShippingAddress = item.ShippingAddress,
                 AmountToCollect = item.AmountToCollect
             }).ToList()

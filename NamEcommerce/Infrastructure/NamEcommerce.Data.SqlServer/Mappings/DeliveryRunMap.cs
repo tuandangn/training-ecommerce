@@ -61,6 +61,7 @@ public sealed class DeliveryRunItemMap : IEntityTypeConfiguration<DeliveryRunIte
         builder.Property(item => item.DeliveryNoteCode).IsRequired().HasMaxLength(100);
         builder.Property(item => item.OrderCode).HasMaxLength(100).IsRequired(false);
         builder.Property(item => item.CustomerName).IsRequired().HasMaxLength(200);
+        builder.Property(item => item.ShippingPhoneNumber).HasMaxLength(50).IsRequired(false);
         builder.Property(item => item.ShippingAddress).IsRequired().HasMaxLength(1000);
         builder.Property(item => item.AmountToCollect).HasPrecision(18, 2).IsRequired();
 

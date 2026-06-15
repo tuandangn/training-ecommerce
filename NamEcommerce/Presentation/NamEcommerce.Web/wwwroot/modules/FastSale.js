@@ -97,6 +97,7 @@ class FastSale {
         this.complete = document.getElementById('fastSaleComplete');
         this.clearCart = document.getElementById('fastSaleClearCart');
         this.customer = document.getElementById('CustomerId');
+        this.shippingPhoneNumber = document.getElementById('ShippingPhoneNumber');
         this.shippingAddress = document.getElementById('ShippingAddress');
     }
 
@@ -107,11 +108,13 @@ class FastSale {
             });
             this.customerPickerEl.addEventListener('select', (event) => {
                 this.selectedCustomer = event.detail?.customer || null;
+                this.applyCustomerShippingDefaults();
                 this.resetPaymentIntent();
                 this.render();
             });
             this.customerPickerEl.addEventListener('remove', () => {
                 this.selectedCustomer = null;
+                this.applyCustomerShippingDefaults();
                 this.resetPaymentIntent();
                 this.render();
             });
@@ -122,7 +125,9 @@ class FastSale {
                     id: initialCustomer.id,
                     name: initialCustomer.name,
                     phone: initialCustomer.phone,
-                    address: initialCustomer.address
+                    address: initialCustomer.address,
+                    kind: initialCustomer.kind,
+                    isSystem: initialCustomer.isSystem
                 });
             }
         }
@@ -141,6 +146,18 @@ class FastSale {
         }
 
         this.bindQuickCustomerForm();
+    }
+
+    applyCustomerShippingDefaults() {
+        const isRetailWalkInSystem = this.selectedCustomer?.isSystem && Number(this.selectedCustomer?.kind) === 20;
+        if (!this.selectedCustomer || isRetailWalkInSystem) {
+            this.shippingAddress.value = '';
+            this.shippingPhoneNumber.value = '';
+            return;
+        }
+
+        this.shippingAddress.value = this.selectedCustomer.address ?? '';
+        this.shippingPhoneNumber.value = this.selectedCustomer.phone ?? '';
     }
 
     bindQuickCustomerForm() {
@@ -211,6 +228,8 @@ class FastSale {
             this.resetPaymentIntent();
             this.render();
         });
+        this.shippingAddress?.addEventListener('input', () => this.resetPaymentIntent());
+        this.shippingPhoneNumber?.addEventListener('input', () => this.resetPaymentIntent());
     }
 
     setFulfillmentMode(mode) {
@@ -356,9 +375,10 @@ class FastSale {
             this.totalHint.textContent = window.SoBangChu?.docSoTien(total) ?? '';
 
         this.customer.value = this.selectedCustomer?.id ?? '';
-        this.shippingAddress.value = (this.selectedCustomer?.id != this.defaultCustomer ?  this.selectedCustomer?.address : '') ?? '';
-        this.shippingAddress.disabled = this.cart.length == 0;
-        this.shippingAddress.closest('.ship-info').classList.toggle('d-none', this.cart.length == 0);
+        const showShippingInfo = this.cart.length > 0 && this.fulfillmentMode === 'notDelivered';
+        this.shippingAddress.disabled = !showShippingInfo;
+        this.shippingPhoneNumber.disabled = !showShippingInfo;
+        this.shippingAddress.closest('.ship-info').classList.toggle('d-none', !showShippingInfo);
 
         this.discount.disabled = this.cart.length === 0;
 
@@ -655,6 +675,10 @@ class FastSale {
         if (this.cart.length === 0) return 'Vui lòng thêm hàng hóa.';
         if (this.cart.some(item => item.quantity <= 0)) return 'Số lượng phải lớn hơn 0.';
         if (this.calculateTotal() <= 0) return 'Tổng tiền phải lớn hơn 0.';
+        if (this.fulfillmentMode === 'notDelivered') {
+            if (!this.shippingPhoneNumber.value.trim()) return 'Vui lòng nhập số điện thoại giao hàng.';
+            if (!this.shippingAddress.value.trim()) return 'Vui lòng nhập địa chỉ giao hàng.';
+        }
         return null;
     }
 
@@ -670,6 +694,7 @@ class FastSale {
                 unitPrice: item.unitPrice
             })),
             shippingAddress: this.shippingAddress.value,
+            shippingPhoneNumber: this.shippingPhoneNumber.value,
             orderDiscount: this.getDiscount(),
             note: this.note.value,
             fulfillmentMode: this.fulfillmentMode === 'deliverNow' ? FulfillmentMode.DeliverNow : FulfillmentMode.NotDelivered,

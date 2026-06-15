@@ -10,5 +10,6 @@ public sealed class CreateOrderCommand : ICommand<CreateOrderResultModel>
     public decimal? OrderDiscount { get; init; }
     public DateTime? ExpectedShippingDate { get; set; }
     public required string ShippingAddress { get; set; }
+    public required string ShippingPhoneNumber { get; set; }
     public IList<OrderItemModel> Items { get; init; } = [];
 }

@@ -15,12 +15,19 @@ public sealed class CreateOrderModel
     public string? CustomerDisplayPhone { get; set; }
     [ValidateNever]
     public string? CustomerDisplayAddress { get; set; }
+    [ValidateNever]
+    public int CustomerDisplayKind { get; set; }
+    [ValidateNever]
+    public bool CustomerDisplayIsSystem { get; set; }
 
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedShippingDate { get; set; }
 
     [Display(Name = "Địa chỉ giao hàng")]
     public string? ShippingAddress { get; set; }
+
+    [Display(Name = "Số điện thoại giao hàng")]
+    public string? ShippingPhoneNumber { get; set; }
 
     [Display(Name = "Giảm giá")]
     public decimal? OrderDiscount { get; set; }

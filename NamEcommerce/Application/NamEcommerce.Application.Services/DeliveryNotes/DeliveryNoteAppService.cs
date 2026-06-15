@@ -35,6 +35,16 @@ public sealed class DeliveryNoteAppService(
 {
     public async Task<CreateDeliveryNoteResultAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
     {
+        var validateResult = dto.Validate();
+        if (!validateResult.valid)
+        {
+            return new CreateDeliveryNoteResultAppDto
+            {
+                Success = false,
+                ErrorMessage = validateResult.errorMessage
+            };
+        }
+
         var order = await orderDataReader.GetByIdAsync(dto.OrderId, default).ConfigureAwait(false);
         if (order is null)
         {
@@ -158,6 +168,7 @@ public sealed class DeliveryNoteAppService(
         {
             OrderId = dto.OrderId,
             ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = dto.ShippingPhoneNumber,
             ShowPrice = dto.ShowPrice,
             CompensateReturnedQuantityInNextDelivery = dto.CompensateReturnedQuantityInNextDelivery,
             Note = dto.Note,
@@ -357,6 +368,29 @@ public sealed class DeliveryNoteAppService(
                 Success = false,
                 ErrorMessage = ex.ErrorCode
             };
+        }
+    }
+
+    public async Task<CommonActionResultDto> UpdateShippingAsync(UpdateDeliveryNoteShippingAppDto dto)
+    {
+        var validateResult = dto.Validate();
+        if (!validateResult.valid)
+            return CommonActionResultDto.CreateError(validateResult.errorMessage);
+
+        try
+        {
+            await deliveryNoteManager.UpdateShippingAsync(new UpdateDeliveryNoteShippingDto
+            {
+                DeliveryNoteId = dto.DeliveryNoteId,
+                ShippingAddress = dto.ShippingAddress,
+                ShippingPhoneNumber = dto.ShippingPhoneNumber
+            }).ConfigureAwait(false);
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
         }
     }
 

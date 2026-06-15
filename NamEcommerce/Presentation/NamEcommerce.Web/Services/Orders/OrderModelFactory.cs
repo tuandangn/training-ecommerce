@@ -105,6 +105,13 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 model.CustomerDisplayName = customer.FullName;
                 model.CustomerDisplayPhone = customer.PhoneNumber;
                 model.CustomerDisplayAddress = customer.Address;
+                model.CustomerDisplayKind = customer.Kind;
+                model.CustomerDisplayIsSystem = customer.IsSystem;
+                if (!IsRetailWalkInSystemCustomer(customer.Kind, customer.IsSystem))
+                {
+                    model.ShippingPhoneNumber ??= customer.PhoneNumber;
+                    model.ShippingAddress ??= customer.Address;
+                }
             }
         }
 
@@ -156,6 +163,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             Note = order.Note,
             ExpectedShippingDate = order.ExpectedShippingDate,
             ShippingAddress = order.ShippingAddress,
+            ShippingPhoneNumber = order.ShippingPhoneNumber,
             CompletedOn = order.CompletedOn,
             CustomerAddress = order.CustomerAddress,
             CustomerPhoneNumber = order.CustomerPhoneNumber,
@@ -1219,6 +1227,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
         return "Đã phân bổ giao thẳng";
     }
+
+    private static bool IsRetailWalkInSystemCustomer(int kind, bool isSystem)
+        => isSystem && kind == 20;
 
     private static string GetDebtStatusText(DebtStatus status)
         => status switch

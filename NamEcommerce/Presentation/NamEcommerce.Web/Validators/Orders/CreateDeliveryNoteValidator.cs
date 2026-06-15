@@ -19,6 +19,10 @@ public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDelive
             .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Address"]])
             .MaximumLength(500).WithMessage(x => localizer["Error.MaxLength", localizer["Label.Address"], 500]);
 
+        RuleFor(x => x.ShippingPhoneNumber)
+            .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Phone"]])
+            .MaximumLength(50).WithMessage(x => localizer["Error.MaxLength", localizer["Label.Phone"], 50]);
+
         RuleFor(x => x.Note)
             .MaximumLength(1000).WithMessage(x => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
 

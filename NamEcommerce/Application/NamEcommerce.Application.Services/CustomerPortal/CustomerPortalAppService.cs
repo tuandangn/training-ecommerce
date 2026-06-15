@@ -215,11 +215,13 @@ public sealed class CustomerPortalAppService(
         if (!IsOrderRequestPriced(request))
             return CustomerPortalConversionResultAppDto.Fail("Error.CustomerPortal.OrderRequest.NotFullyPriced");
 
+        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
         var createDto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             ExpectedShippingDateUtc = request.ExpectedShippingDateUtc,
             ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = customer?.PhoneNumber,
             Note = BuildConvertedOrderNote(request, "Khách đã xác nhận báo giá trên portal.")
         };
 

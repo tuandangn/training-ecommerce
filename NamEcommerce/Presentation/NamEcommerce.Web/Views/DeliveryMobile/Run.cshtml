@@ -68,6 +68,7 @@
     var isDelivered = noteStatus == DeliveryNoteStatus.Delivered;
     var cashCollectedAmount = item.CashCollectedAmount ?? item.AmountToCollect;
     var receiverName = string.IsNullOrWhiteSpace(item.ReceiverName) ? item.CustomerName : item.ReceiverName;
+    var shippingPhoneNumber = string.IsNullOrWhiteSpace(item.ShippingPhoneNumber) ? item.CustomerPhone : item.ShippingPhoneNumber;
     var totalQuantity = item.ProductItems.Sum(product => product.Quantity);
 
     <article class="mobile-card mobile-route-card @(isDelivered ? "is-delivered" : null)">
@@ -87,11 +88,11 @@
                 <span>Người nhận</span>
                 <strong>@receiverName</strong>
             </div>
-            @if (!string.IsNullOrWhiteSpace(item.CustomerPhone))
+            @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
             {
-                <a href="tel:@item.CustomerPhone" class="mobile-info-cell mobile-phone-link">
+                <a href="tel:@shippingPhoneNumber" class="mobile-info-cell mobile-phone-link">
                     <span>SĐT</span>
-                    <strong>@item.CustomerPhone</strong>
+                    <strong>@shippingPhoneNumber</strong>
                 </a>
             }
         </div>

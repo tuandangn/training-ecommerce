@@ -31,6 +31,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
         {
             OrderId = request.OrderId,
             ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber,
             WarehouseId = request.WarehouseId,
             ShowPrice = request.ShowPrice,
             CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery,
@@ -49,8 +50,29 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
         var result = await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
         return new CreateDeliveryNoteResultModel
         {
-            Success = true,
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage,
             CreatedId = result.CreatedId
+        };
+    }
+}
+
+public sealed class UpdateDeliveryNoteShippingHandler(IDeliveryNoteAppService deliveryNoteAppService)
+    : IRequestHandler<UpdateDeliveryNoteShippingCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(UpdateDeliveryNoteShippingCommand request, CancellationToken cancellationToken)
+    {
+        var result = await deliveryNoteAppService.UpdateShippingAsync(new UpdateDeliveryNoteShippingAppDto
+        {
+            DeliveryNoteId = request.DeliveryNoteId,
+            ShippingAddress = request.ShippingAddress ?? string.Empty,
+            ShippingPhoneNumber = request.ShippingPhoneNumber
+        }).ConfigureAwait(false);
+
+        return new CommonActionResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
         };
     }
 }

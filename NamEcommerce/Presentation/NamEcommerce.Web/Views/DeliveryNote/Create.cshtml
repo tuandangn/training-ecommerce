@@ -187,6 +187,11 @@
                 </div>
                 <div class="content-card-body">
                     <div class="mb-3">
+                        <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                        <input asp-for="ShippingPhoneNumber" class="form-control" />
+                        <span asp-validation-for="ShippingPhoneNumber" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
                         <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="ShippingAddress" class="form-control" rows="2"></textarea>
                         <span asp-validation-for="ShippingAddress" class="text-danger small"></span>

@@ -1,9 +1,11 @@
 ﻿class Customer {
-    constructor({ id, name, phone, address }) {
+    constructor({ id, name, phone, address, kind, isSystem }) {
         this.id = id;
         this.name = name ?? '';
         this.phone = phone ?? '';
         this.address = address ?? '';
+        this.kind = Number(kind ?? 0);
+        this.isSystem = isSystem === true || isSystem === 'true';
     }
 }
 

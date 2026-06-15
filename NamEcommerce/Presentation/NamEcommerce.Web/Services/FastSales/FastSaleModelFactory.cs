@@ -31,6 +31,8 @@ public sealed class FastSaleModelFactory(
             CustomerName = retailWalkInCustomer.FullName,
             CustomerPhone = retailWalkInCustomer.PhoneNumber,
             CustomerAddress = retailWalkInCustomer.Address,
+            CustomerKind = retailWalkInCustomer.Kind,
+            CustomerIsSystem = retailWalkInCustomer.IsSystem,
             Warehouses = warehouses.Options,
             BankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true,
             BankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)

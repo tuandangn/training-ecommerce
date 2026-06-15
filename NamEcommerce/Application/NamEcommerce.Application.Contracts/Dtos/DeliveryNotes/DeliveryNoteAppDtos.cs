@@ -24,6 +24,7 @@ public sealed record DeliveryNoteAppDto
     public string? CustomerAddress { get; init; }
     
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
@@ -79,6 +80,7 @@ public sealed record CreateDeliveryNoteAppDto
     public required Guid OrderId { get; init; }
     public required Guid WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
     public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
@@ -95,6 +97,8 @@ public sealed record CreateDeliveryNoteAppDto
             return (false, "Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
             return (false, "Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+            return (false, "Error.PhoneNumberRequired");
         if (Items == null || !Items.Any())
             return (false, "Error.DeliveryNoteItemsRequired");
         if (Items.Any(i => i.WarehouseId == Guid.Empty))
@@ -161,6 +165,26 @@ public sealed record MarkDeliveryNoteDeliveredAppDto
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
     public DeliveryCompletionMetadataAppDto? CompletionMetadata { get; init; }
+}
+
+[Serializable]
+public sealed record UpdateDeliveryNoteShippingAppDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (string.IsNullOrWhiteSpace(ShippingAddress))
+            return (false, "Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+            return (false, "Error.PhoneNumberRequired");
+
+        return (true, null);
+    }
 }
 [Serializable]
 public sealed record MarkDeliveryNoteDeliveredResultAppDto

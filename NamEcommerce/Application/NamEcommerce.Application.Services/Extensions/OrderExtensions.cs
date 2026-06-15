@@ -23,6 +23,7 @@ public static class OrderExtensions
             IsFinished = order.Status == OrderStatus.Completed,
             Note = order.Note,
             ShippingAddress = order.ShippingAddress,
+            ShippingPhoneNumber = order.ShippingPhoneNumber,
             CompletedOnUtc = order.CompletedOnUtc,
             CreatedByUserId = order.CreatedByUserId,
             CreatedByUsername = order.CreatedByUsername,
