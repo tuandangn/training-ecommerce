@@ -22,9 +22,6 @@ public sealed class UserHeaderLinksComponent(
 
         model = model with
         {
-            UserId = currentUser!.Id,
-            FullName = currentUser.FullName,
-            Username = currentUser.Username,
             CanViewOrderFulfillmentSchedule = (await authorizationService
                 .AuthorizeAsync(HttpContext.User, SystemPermissions.Orders.View)
                 .ConfigureAwait(false)).Succeeded

@@ -65,6 +65,17 @@
         display: none;
     }
 
+    .system-notification-panel,
+    .fulfillment-schedule-panel {
+        position: fixed;
+        top: calc(var(--topbar-height) + 0.5rem);
+        right: 0.75rem;
+        left: 0.75rem;
+        width: auto;
+        max-height: calc(100vh - var(--topbar-height) - 1rem);
+        max-height: calc(100dvh - var(--topbar-height) - 1rem);
+    }
+
     .sidebar-overlay.active {
         display: block;
     }
