@@ -1,5 +1,6 @@
 import { toast } from "/modules/modals.js";
 import { apiGet, apiPost } from "/modules/ajax-helper.js";
+import { customerSettings } from "/modules/Settings.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
@@ -136,10 +137,6 @@ export default class OrderController {
     #bindEvents() {
         const form = document.getElementById('createOrderForm');
         form.addEventListener('submit', e => {
-            if (!$(e.target).valid()) {
-                e.preventDefault();
-                return;
-            }
             if (!this.#state.items.length) {
                 e.preventDefault();
                 toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
@@ -168,9 +165,9 @@ export default class OrderController {
         const shippingAddr = getEl('ShippingAddress');
 
         customerId.value = customer?.id ?? '';
+        shippingAddr.value = customer?.address ?? '';
 
-        if (shippingAddr.hasAttribute('readonly') || !shippingAddr.value)
-            shippingAddr.value = customer?.address ?? '';
+        this.#toggleEditShippingAddress(customer?.id == customerSettings.defaultCustomerId);
     }
 
     #renderItems() {
@@ -387,7 +384,10 @@ export default class OrderController {
         });
 
         el.addEventListener('select', (e) => {
-            this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
+            const customer = e.detail?.customer ? new Customer(e.detail.customer) : null;
+            if (customer != null && customer.id == customerSettings.defaultCustomerId)
+                customer.address = '';
+            this.#setState({ customer });
             this.#addItemController.refreshPriceReference();
         });
         el.addEventListener('remove', () => {
@@ -467,14 +467,20 @@ export default class OrderController {
     }
 
     #bindShippingAddressEdit() {
-        document.getElementById('btnEditShippingAddress')?.addEventListener('click', function () {
+        document.getElementById('btnEditShippingAddress')?.addEventListener('click', () => {
             const addr = getEl('ShippingAddress');
-            addr.removeAttribute('readonly');
-            addr.placeholder = 'Nhập địa chỉ giao hàng';
-            addr.classList.remove('border-end-0');
+            this.#toggleEditShippingAddress(addr.hasAttribute('readonly'));
             addr.focus();
-            this.remove();
         });
+    }
+    #toggleEditShippingAddress(canEdit) {
+        const addr = getEl('ShippingAddress');
+        if(canEdit)
+            addr.removeAttribute('readonly');
+        else
+            addr.setAttribute('readonly', true);
+        addr.classList.toggle('border-end-0', !canEdit);
+        addr.classList.toggle('rounded', canEdit);
     }
 
     #bindQuickCreateForms() {

@@ -46,13 +46,10 @@
                                         <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <div class="input-group">
                                             <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
-                                            @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
-                                            {
-                                                <button type="button" class="btn btn-outline-secondary" id="btnEditShippingAddress"
-                                                        data-bs-toggle="tooltip" title="Chỉnh sửa địa chỉ">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-                                            }
+                                            <button type="button" class="btn btn-outline-secondary @(string.IsNullOrEmpty(Model.ShippingAddress) ? "" : "d-none")" id="btnEditShippingAddress"
+                                                    data-bs-toggle="tooltip" title="Chỉnh sửa địa chỉ">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
                                         </div>
                                         <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
                                     </div>

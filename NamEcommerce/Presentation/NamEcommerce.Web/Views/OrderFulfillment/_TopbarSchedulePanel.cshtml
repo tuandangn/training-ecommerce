@@ -39,7 +39,7 @@
     {
         var tab = tabs[index];
         var entries = tab.Days.SelectMany(day => day.Entries).Take(8).ToList();
-        <div class="tab-pane fade @(index == 0 ? "show active" : "")" id="topbarFulfillment@tab.Id" role="tabpanel">
+        <div class="tab-pane fade @(index == 0 ? "show active" : "")" id="topbarFulfillment@(tab.Id)" role="tabpanel">
             @if (entries.Count == 0)
             {
                 <div class="fulfillment-schedule-mini-empty">

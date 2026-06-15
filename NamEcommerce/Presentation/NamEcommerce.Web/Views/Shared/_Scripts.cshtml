@@ -1,5 +1,6 @@
 ﻿@using System.Text.Json
 @inject WarehouseSettings WarehouseSettings
+@inject NamEcommerce.Web.Services.Common.ICachedValuesService CachedValueService
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/chartjs/chart.umd.min.js"></script>
@@ -17,8 +18,9 @@
 <script src="~/js/currency-hint.js" asp-append-version="true" defer></script>
 <script src="~/js/decimal-field.js" asp-append-version="true" defer></script>
 <script type="module">
-    import { setWarehouseSettings } from '/modules/Settings.js';
-    setWarehouseSettings(@Html.Raw(JsonSerializer.Serialize(WarehouseSettings)))
+    import { setWarehouseSettings, setCustomerSettings  } from '/modules/Settings.js';
+    setWarehouseSettings(@Html.Raw(JsonSerializer.Serialize(WarehouseSettings)));
+    setCustomerSettings({ defaultCustomerId: '@CachedValueService.DefaultCustomerId' });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/vn.js" defer></script>
