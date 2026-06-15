@@ -18,6 +18,11 @@ public sealed class MarkDeliveryNoteDeliveredHandler(IDeliveryNoteAppService del
             DeliveryNoteId = request.DeliveryNoteId,
             PictureIds = request.PictureIds.ToList().AsReadOnly(),
             ReceiverName = request.ReceiverName,
+            CompletionMetadata = new DeliveryCompletionMetadataAppDto
+            {
+                Source = "Admin",
+                CashCollectedAmount = request.CashCollectedAmount ?? 0
+            },
             Acceptance = new DeliveryAcceptanceAppDto
             {
                 AgreedCustomerCharge = request.AgreedCustomerCharge,

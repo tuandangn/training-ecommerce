@@ -648,6 +648,27 @@
   <data name="Error.AmountToCollectCannotBeNegative" xml:space="preserve">
     <value>Số tiền thu không được âm.</value>
   </data>
+  <data name="Error.CashCollectedAmountCannotBeNegative" xml:space="preserve">
+    <value>Số tiền shipper đã thu không được âm.</value>
+  </data>
+  <data name="Error.CashCollectedAmountCannotExceedAmountToCollect" xml:space="preserve">
+    <value>Số tiền shipper đã thu không được lớn hơn số tiền phải thu của phiếu.</value>
+  </data>
+  <data name="Error.DeliveryCashCollectedAmountRequired" xml:space="preserve">
+    <value>Cần khai báo số tiền shipper đã thu cho các phiếu đã giao trước khi xác nhận bàn giao tiền.</value>
+  </data>
+  <data name="Error.DeliveryNoteRequired" xml:space="preserve">
+    <value>Vui lòng chọn phiếu giao hàng.</value>
+  </data>
+  <data name="Error.DeliveryNoteMustBeDelivered" xml:space="preserve">
+    <value>Chỉ cập nhật tiền thu cho phiếu đã giao.</value>
+  </data>
+  <data name="Error.DeliveryRunRequired" xml:space="preserve">
+    <value>Vui lòng chọn chuyến giao.</value>
+  </data>
+  <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
+    <value>Phiếu giao hàng không thuộc chuyến giao này.</value>
+  </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
   </data>

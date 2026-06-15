@@ -213,6 +213,8 @@ public sealed class DeliveryNoteManager(
         }
 
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
+        if (dto.CompletionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
 
         // Snapshot chỉ cập nhật khi phiếu chưa xuất kho (Confirmed → Delivered trực tiếp).
         // Nếu đang ở Delivering, CostAtDispatch đã được set đúng trước khi xuất kho ở MarkDeliveringAsync.

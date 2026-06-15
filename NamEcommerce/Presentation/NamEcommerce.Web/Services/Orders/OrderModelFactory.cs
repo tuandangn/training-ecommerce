@@ -1033,13 +1033,14 @@ public sealed class OrderModelFactory : IOrderModelFactory
         foreach (var payment in payments)
         {
             var paymentMethod = (PaymentMethod)payment.PaymentMethod;
-            var description = $"{payment.Code} - {payment.Amount.DisplayCurrencyWithSymbol()} - {paymentMethod.GetDisplayText()}";
+            var paymentType = (PaymentType)payment.PaymentType;
+            var description = GetPaymentTimelineDescription(payment, paymentMethod, paymentType);
             timeline.Add(new OrderDetailsModel.TimelineEventModel
             {
                 OccurredOn = payment.PaidOnUtc.ToLocalTime(),
-                Title = paymentMethod == PaymentMethod.BankTransfer ? "Khách chuyển khoản" : "Thu tiền khách",
+                Title = GetPaymentTimelineTitle(payment, paymentMethod, paymentType),
                 Description = string.IsNullOrWhiteSpace(payment.Note) ? description : $"{description} - {payment.Note}",
-                Icon = paymentMethod == PaymentMethod.BankTransfer ? "bi-qr-code" : "bi-cash-coin",
+                Icon = GetPaymentTimelineIcon(payment, paymentMethod, paymentType),
                 Tone = "success",
                 Stage = OrderDetailsModel.WorkflowStage.Settlement
             });
@@ -1087,6 +1088,39 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .OrderBy(item => item.OccurredOn)
             .ToList();
     }
+
+    private static string GetPaymentTimelineTitle(CustomerPaymentAppDto payment, PaymentMethod method, PaymentType type)
+    {
+        if (IsCodCashHandoverPayment(payment, method, type))
+            return "Thủ quỹ nhận tiền COD";
+
+        return method == PaymentMethod.BankTransfer ? "Khách chuyển khoản" : "Thu tiền khách";
+    }
+
+    private static string GetPaymentTimelineDescription(CustomerPaymentAppDto payment, PaymentMethod method, PaymentType type)
+    {
+        var parts = new List<string> { payment.Code };
+        if (IsCodCashHandoverPayment(payment, method, type) && !string.IsNullOrWhiteSpace(payment.DeliveryNoteCode))
+            parts.Add(payment.DeliveryNoteCode);
+
+        parts.Add(payment.Amount.DisplayCurrencyWithSymbol());
+        parts.Add(method.GetDisplayText());
+        return string.Join(" - ", parts);
+    }
+
+    private static string GetPaymentTimelineIcon(CustomerPaymentAppDto payment, PaymentMethod method, PaymentType type)
+    {
+        if (IsCodCashHandoverPayment(payment, method, type))
+            return "bi-cash-stack";
+
+        return method == PaymentMethod.BankTransfer ? "bi-qr-code" : "bi-cash-coin";
+    }
+
+    private static bool IsCodCashHandoverPayment(CustomerPaymentAppDto payment, PaymentMethod method, PaymentType type)
+        => method == PaymentMethod.Cash
+           && type == PaymentType.DebtPayment
+           && payment.DeliveryNoteId.HasValue
+           && payment.Note?.Contains("COD", StringComparison.OrdinalIgnoreCase) == true;
 
     private static string GetOrderItemChangeTitle(OrderItemChangeAuditAppDto audit)
         => (OrderItemChangeAuditAction)audit.Action switch

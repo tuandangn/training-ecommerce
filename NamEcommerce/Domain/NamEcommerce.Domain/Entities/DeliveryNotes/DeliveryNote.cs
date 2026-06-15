@@ -256,6 +256,19 @@ public sealed record DeliveryNote : AppAggregateEntity
         => !string.IsNullOrWhiteSpace(idempotencyKey)
            && string.Equals(DeliveryCompletionIdempotencyKey, idempotencyKey.Trim(), StringComparison.OrdinalIgnoreCase);
 
+    internal void UpdateDeliveryCashCollectedAmount(decimal cashCollectedAmount)
+    {
+        if (Status != DeliveryNoteStatus.Delivered)
+            throw new NamEcommerceDomainException("Error.DeliveryNoteMustBeDelivered");
+        if (cashCollectedAmount < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+        if (cashCollectedAmount > AmountToCollect)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
+
+        DeliveryCashCollectedAmount = cashCollectedAmount;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal bool MarkReceivedByCustomer(
         DateTime receivedAtUtc,
         string? receiverName,

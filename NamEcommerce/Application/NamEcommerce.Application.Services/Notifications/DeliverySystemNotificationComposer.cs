@@ -73,7 +73,7 @@ public static class DeliverySystemNotificationComposer
             SystemNotificationType.DeliveryRunCashHandoverPending,
             SystemNotificationSeverity.Warning,
             $"Chuyến {run.Code} cần xác nhận tiền",
-            $"Chuyến giao có {run.Items.Sum(item => item.AmountToCollect):N0} cần theo dõi bàn giao tiền.",
+            "Chuyến giao có phiếu COD, cần theo dõi tiền shipper đã thu sau khi giao hàng.",
             DeliveryRunsConfirmCashHandoverPermission);
 
     private static CreateSystemNotificationAppDto DeliveryNoteNotification(

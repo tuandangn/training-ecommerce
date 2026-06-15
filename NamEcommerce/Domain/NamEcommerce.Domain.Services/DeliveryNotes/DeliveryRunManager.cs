@@ -19,6 +19,7 @@ namespace NamEcommerce.Domain.Services.DeliveryNotes;
 public sealed class DeliveryRunManager(
     IDbContext dbContext,
     IRepository<DeliveryRun> runRepository,
+    IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryRun> runReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IDeliveryNoteManager deliveryNoteManager,
@@ -167,9 +168,7 @@ public sealed class DeliveryRunManager(
         if (run.Status == DeliveryRunStatus.ReadyForHandover && deliveredNotes.Count == 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
-        var runItemsByDeliveryNoteId = run.Items.ToDictionary(item => item.DeliveryNoteId);
-        var expectedAmount = deliveredNotes.Sum(note =>
-            GetCashCollectedAmount(note, runItemsByDeliveryNoteId.GetValueOrDefault(note.Id)));
+        var expectedAmount = deliveredNotes.Sum(GetCashCollectedAmount);
         if (expectedAmount <= 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCashHandoverNotRequired");
         if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m)
@@ -189,6 +188,25 @@ public sealed class DeliveryRunManager(
             .ConfigureAwait(false);
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
         await transaction.CommitAsync().ConfigureAwait(false);
+    }
+
+    public async Task UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var run = await runRepository.GetByIdAsync(dto.DeliveryRunId).ConfigureAwait(false)
+                  ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
+        if (run.CashHandoverConfirmedOnUtc.HasValue)
+            throw new NamEcommerceDomainException("Error.DeliveryRunCashHandoverAlreadyConfirmed");
+        if (run.Items.All(item => item.DeliveryNoteId != dto.DeliveryNoteId))
+            throw new NamEcommerceDomainException("Error.DeliveryRunDeliveryNoteNotInRun");
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false)
+                           ?? throw new NamEcommerceDomainException("Error.DeliveryNoteNotFound");
+
+        deliveryNote.UpdateDeliveryCashCollectedAmount(dto.CashCollectedAmount);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)
@@ -236,8 +254,21 @@ public sealed class DeliveryRunManager(
         return Task.FromResult(PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total));
     }
 
-    private static decimal GetCashCollectedAmount(DeliveryNote note, DeliveryRunItem? runItem = null)
-        => note.DeliveryCashCollectedAmount ?? runItem?.AmountToCollect ?? note.AmountToCollect;
+    private static decimal GetCashCollectedAmount(DeliveryNote note)
+    {
+        if (!note.DeliveryCashCollectedAmount.HasValue)
+        {
+            if (note.AmountToCollect <= 0)
+                return 0;
+
+            throw new NamEcommerceDomainException("Error.DeliveryCashCollectedAmountRequired");
+        }
+
+        if (note.DeliveryCashCollectedAmount.Value > note.AmountToCollect)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
+
+        return note.DeliveryCashCollectedAmount.Value;
+    }
 
     private async Task RecordCodPaymentsAsync(
         DeliveryRun run,
@@ -249,11 +280,9 @@ public sealed class DeliveryRunManager(
         var itemOrder = run.Items
             .Select((item, index) => new { item.DeliveryNoteId, Index = index })
             .ToDictionary(item => item.DeliveryNoteId, item => item.Index);
-        var itemsByDeliveryNoteId = run.Items.ToDictionary(item => item.DeliveryNoteId);
-
         foreach (var note in deliveredNotes.OrderBy(note => itemOrder.GetValueOrDefault(note.Id)))
         {
-            var amount = GetCashCollectedAmount(note, itemsByDeliveryNoteId.GetValueOrDefault(note.Id));
+            var amount = GetCashCollectedAmount(note);
             if (amount <= 0)
                 continue;
 
@@ -286,21 +315,6 @@ public sealed class DeliveryRunManager(
                 }).ConfigureAwait(false);
             }
 
-            var extraAmount = amount - debtPaymentAmount;
-            if (extraAmount > 0)
-            {
-                await customerDebtManager.RecordPaymentAsync(new CreateCustomerPaymentDto
-                {
-                    CustomerId = note.CustomerId,
-                    OrderId = note.OrderId,
-                    Amount = extraAmount,
-                    PaymentMethod = PaymentMethod.Cash,
-                    PaymentType = PaymentType.Deposit,
-                    PaidOnUtc = paidOnUtc,
-                    RecordedByUserId = recordedByUserId,
-                    Note = BuildCodOverpaymentNote(run.Code, note.Code, cashHandoverNote)
-                }).ConfigureAwait(false);
-            }
         }
     }
 
@@ -309,8 +323,4 @@ public sealed class DeliveryRunManager(
             ? $"Thu COD chuyen {runCode}, phieu {noteCode}"
             : $"Thu COD chuyen {runCode}, phieu {noteCode}. {cashHandoverNote.Trim()}";
 
-    private static string BuildCodOverpaymentNote(string runCode, string noteCode, string? cashHandoverNote)
-        => string.IsNullOrWhiteSpace(cashHandoverNote)
-            ? $"Thu du COD chuyen {runCode}, phieu {noteCode}"
-            : $"Thu du COD chuyen {runCode}, phieu {noteCode}. {cashHandoverNote.Trim()}";
 }

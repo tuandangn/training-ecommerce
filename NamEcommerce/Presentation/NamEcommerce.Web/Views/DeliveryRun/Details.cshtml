@@ -26,14 +26,20 @@
         && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
         && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
     var canCancel = canManageDeliveryRun && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled;
-    var expectedCashAmount = Model.Items
+    var deliveredItems = Model.Items
         .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
-        .Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
+        .ToList();
+    var missingCashReviewCount = deliveredItems.Count(item => item.AmountToCollect > 0 && !item.CashCollectedAmount.HasValue);
+    var expectedCashAmount = deliveredItems.Sum(item => item.CashCollectedAmount ?? 0m);
+    var canReviewCashCollected = canConfirmDeliveryRunCashHandover
+        && !Model.CashHandoverConfirmedOnUtc.HasValue
+        && status != DeliveryRunStatus.Cancelled;
     var deliveryProgressPercent = Model.Items.Count == 0
         ? 0
         : (int)Math.Round((decimal)Model.DeliveredItemCount * 100 / Model.Items.Count);
     var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
         && expectedCashAmount > 0
+        && missingCashReviewCount == 0
         && (Model.IsDeliveryCompleted || status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled)
         && !Model.CashHandoverConfirmedOnUtc.HasValue;
 }
@@ -131,14 +137,14 @@
             </div>
             <div class="col-lg-4">
                 <div class="border rounded p-3 h-100">
-                    <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền đã thu</h5>
+                    <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền shipper giữ</h5>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Phải thu</span>
-                        <span class="fw-bold text-muted">@expectedCashAmount.DisplayCurrencyWithSymbol()</span>
+                        <span class="text-muted">Đã khai báo</span>
+                        <span class="fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Đã thu</span>
-                        <span class="fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</span>
+                        <span class="text-muted">Thiếu khai báo</span>
+                        <span class="fw-bold @(missingCashReviewCount > 0 ? "text-warning" : "text-muted")">@missingCashReviewCount phiếu</span>
                     </div>
                     @if (Model.CashHandoverConfirmedOnUtc.HasValue)
                     {
@@ -175,6 +181,13 @@
                                 </button>
                             </div>
                         </form>
+                    }
+                    else if (missingCashReviewCount > 0)
+                    {
+                        <hr />
+                        <div class="alert alert-warning mb-0">
+                            Cần khai báo tiền shipper đã thu cho @missingCashReviewCount phiếu đã giao trước khi thủ quỹ xác nhận nhận tiền.
+                        </div>
                     }
                     @if (!string.IsNullOrWhiteSpace(Model.Note))
                     {
@@ -234,12 +247,17 @@
                     <th>Khách hàng</th>
                     <th>Địa chỉ giao</th>
                     <th class="text-end">Tiền COD</th>
-                    <th class="text-end">Đã thu</th>
+                    <th class="text-end">Shipper thu</th>
+                    @if (canReviewCashCollected)
+                    {
+                        <th class="text-end ui-w-220">Cập nhật</th>
+                    }
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in Model.Items)
                 {
+                    var isDelivered = item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered;
                     <tr>
                         <td class="ps-4">
                             <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId" class="fw-bold text-decoration-none">@item.DeliveryNoteCode</a>
@@ -254,7 +272,40 @@
                         </td>
                         <td>@item.ShippingAddress</td>
                         <td class="text-end fw-medium">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
-                        <td class="text-end fw-medium">@((item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered ? item.CashCollectedAmount ?? item.AmountToCollect : 0m).DisplayCurrencyWithSymbol())</td>
+                        <td class="text-end fw-medium">
+                            @if (!isDelivered)
+                            {
+                                <span class="text-muted">Chưa giao</span>
+                            }
+                            else if (item.CashCollectedAmount.HasValue)
+                            {
+                                @item.CashCollectedAmount.Value.DisplayCurrencyWithSymbol()
+                            }
+                            else if (item.AmountToCollect > 0)
+                            {
+                                <span class="text-warning">Chưa khai báo</span>
+                            }
+                            else
+                            {
+                                @(0m.DisplayCurrencyWithSymbol())
+                            }
+                        </td>
+                        @if (canReviewCashCollected)
+                        {
+                            <td class="text-end">
+                                @if (isDelivered)
+                                {
+                                    <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-2">
+                                        <input type="hidden" name="id" value="@Model.Id" />
+                                        <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+                                        <input type="number" name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140" min="0" max="@item.AmountToCollect" step="1000" value="@(item.CashCollectedAmount ?? 0m)" />
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-save me-1"></i>Lưu
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>

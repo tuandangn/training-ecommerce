@@ -11,6 +11,7 @@ public interface IDeliveryRunAppService
     Task<CommonActionResultDto> HandOverAsync(Guid id);
     Task<CommonActionResultDto> CloseAsync(Guid id);
     Task<CommonActionResultDto> ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverAppDto dto);
+    Task<CommonActionResultDto> UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedAppDto dto);
     Task<CommonActionResultDto> CancelAsync(Guid id);
     Task<DeliveryRunAppDto?> GetByIdAsync(Guid id);
     Task<DeliveryRunAppDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId);

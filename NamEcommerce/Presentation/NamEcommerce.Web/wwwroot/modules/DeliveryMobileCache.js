@@ -65,6 +65,69 @@ function getCurrentPosition() {
     });
 }
 
+function parseQuantity(value) {
+    const parsed = Number(String(value ?? '').replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatQuantity(value) {
+    return Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+}
+
+function updateAcceptedQuantity(line) {
+    const quantity = parseQuantity(line.dataset.quantity);
+    const input = line.querySelector('.returned-quantity-input');
+    const accepted = line.querySelector('.accepted-quantity-text');
+    if (!input || !accepted) {
+        return;
+    }
+
+    let returned = parseQuantity(input.value);
+    if (returned < 0) returned = 0;
+    if (returned > quantity) returned = quantity;
+    input.value = returned;
+    accepted.textContent = formatQuantity(Math.max(0, quantity - returned));
+}
+
+function installReturnedQuantityControls(form) {
+    form.querySelectorAll('.delivery-return-line').forEach(line => {
+        updateAcceptedQuantity(line);
+        line.querySelector('.returned-quantity-input')?.addEventListener('input', () => updateAcceptedQuantity(line));
+    });
+}
+
+function prepareAcceptancePayload(form, status) {
+    const lines = Array.from(form.querySelectorAll('.delivery-return-line'));
+    const rejectReason = String(form.querySelector('textarea[name="rejectReason"]')?.value || '').trim();
+    let hasReturnedQuantity = false;
+    const items = lines.map(line => {
+        const quantity = parseQuantity(line.dataset.quantity);
+        const input = line.querySelector('.returned-quantity-input');
+        let returned = parseQuantity(input?.value);
+        if (returned < 0) returned = 0;
+        if (returned > quantity) returned = quantity;
+        if (returned > 0) hasReturnedQuantity = true;
+        if (input) input.value = returned;
+        updateAcceptedQuantity(line);
+        return {
+            deliveryNoteItemId: line.dataset.itemId,
+            returnedQuantity: returned,
+            rejectReason: returned > 0 ? rejectReason : null
+        };
+    });
+
+    if (hasReturnedQuantity && !rejectReason) {
+        if (status) status.textContent = 'Vui lòng nhập lý do trả hàng.';
+        return false;
+    }
+
+    const payload = form.querySelector('input[name="acceptanceItemsJson"]');
+    if (payload) {
+        payload.value = JSON.stringify(items);
+    }
+    return true;
+}
+
 function openDeliveryDb() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(dbName, dbVersion);
@@ -189,6 +252,7 @@ export async function installDeliveryRunCache({ runId, cacheUrl }) {
 export function installDeliveryCompletionForms() {
     document.querySelectorAll('.delivery-complete-form').forEach(form => {
         installProofPreview(form);
+        installReturnedQuantityControls(form);
 
         const noteId = form.dataset.noteId;
         const stateKey = `delivery-note-sync-state:${noteId}`;
@@ -215,6 +279,11 @@ export function installDeliveryCompletionForms() {
             if (position) {
                 form.querySelector('input[name="latitude"]').value = position.coords.latitude;
                 form.querySelector('input[name="longitude"]').value = position.coords.longitude;
+            }
+
+            if (!prepareAcceptancePayload(form, status)) {
+                submitButton.disabled = false;
+                return;
             }
 
             if (!navigator.onLine) {
