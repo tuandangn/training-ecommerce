@@ -10,6 +10,7 @@ public sealed class MarkDeliveryNoteDeliveredCommand : ICommand<MarkDeliveryNote
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
     public bool CompensateInNextDelivery { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
     public IList<MarkDeliveryNoteDeliveredItemCommand> Items { get; init; } = [];
     
     public IList<Guid> PictureIds { get; init; } = [];

@@ -648,6 +648,27 @@
   <data name="Error.AmountToCollectCannotBeNegative" xml:space="preserve">
     <value>Amount to collect cannot be negative.</value>
   </data>
+  <data name="Error.CashCollectedAmountCannotBeNegative" xml:space="preserve">
+    <value>Collected cash amount cannot be negative.</value>
+  </data>
+  <data name="Error.CashCollectedAmountCannotExceedAmountToCollect" xml:space="preserve">
+    <value>Collected cash amount cannot exceed the delivery note amount to collect.</value>
+  </data>
+  <data name="Error.DeliveryCashCollectedAmountRequired" xml:space="preserve">
+    <value>Please enter the cash collected by the shipper for delivered notes before confirming cash handover.</value>
+  </data>
+  <data name="Error.DeliveryNoteRequired" xml:space="preserve">
+    <value>Please select a delivery note.</value>
+  </data>
+  <data name="Error.DeliveryNoteMustBeDelivered" xml:space="preserve">
+    <value>Cash collected can only be updated for delivered notes.</value>
+  </data>
+  <data name="Error.DeliveryRunRequired" xml:space="preserve">
+    <value>Please select a delivery run.</value>
+  </data>
+  <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
+    <value>The delivery note does not belong to this delivery run.</value>
+  </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>

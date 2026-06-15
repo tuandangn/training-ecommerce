@@ -12,6 +12,7 @@ public interface IDeliveryRunManager
     Task HandOverAsync(Guid id);
     Task CloseAsync(Guid id);
     Task ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverDto dto);
+    Task UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedDto dto);
     Task CancelAsync(Guid id);
     Task<DeliveryRunDto?> GetByIdAsync(Guid id);
     Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId);

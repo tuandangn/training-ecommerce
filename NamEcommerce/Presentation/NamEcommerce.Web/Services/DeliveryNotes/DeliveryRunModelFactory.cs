@@ -66,9 +66,6 @@ public sealed class DeliveryRunModelFactory(
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
-            var cashCollectedAmount = note?.DeliveryCashCollectedAmount;
-            if (cashCollectedAmount is null && note?.Status == (int)DeliveryNoteStatus.Delivered)
-                cashCollectedAmount = item.AmountToCollect;
 
             return new DeliveryRunItemModel
             {
@@ -87,13 +84,17 @@ public sealed class DeliveryRunModelFactory(
                     : note?.ShippingPhoneNumber,
                 ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
                 AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
-                CashCollectedAmount = cashCollectedAmount,
+                CashCollectedAmount = note?.DeliveryCashCollectedAmount,
                 ReceiverName = note?.DeliveryReceiverName,
                 DeliveryProofPictureId = note?.DeliveryProofPictureId,
                 ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
                 {
+                    DeliveryNoteItemId = product.Id,
                     ProductName = product.ProductName,
-                    Quantity = product.Quantity
+                    Quantity = product.Quantity,
+                    UnitPrice = product.UnitPrice,
+                    SubTotal = product.SubTotal,
+                    QuantityDecimalPlaces = 2
                 }).ToList() ?? []
             };
         }).ToList();
@@ -339,10 +340,10 @@ public sealed class DeliveryRunModelFactory(
     }
 
     private static decimal GetPendingCashAmount(IEnumerable<DeliveryRunItemModel> items)
-        => items.Sum(item =>
-            item.AmountToCollect > item.CashCollectedAmount.GetValueOrDefault()
-                ? item.AmountToCollect - item.CashCollectedAmount.GetValueOrDefault()
-                : 0);
+        => items
+            .Where(item => item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Delivered &&
+                           item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Cancelled)
+            .Sum(item => item.AmountToCollect);
 
     private sealed record DeliveryRunProgressInfo(
         string StatusName,

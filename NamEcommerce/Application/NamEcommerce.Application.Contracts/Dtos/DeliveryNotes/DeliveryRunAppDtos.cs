@@ -81,6 +81,26 @@ public sealed record ConfirmDeliveryRunCashHandoverAppDto
 }
 
 [Serializable]
+public sealed record UpdateDeliveryRunDeliveredNoteCashCollectedAppDto
+{
+    public required Guid DeliveryRunId { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public decimal CashCollectedAmount { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryRunId == Guid.Empty)
+            return (false, "Error.DeliveryRunRequired");
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (CashCollectedAmount < 0)
+            return (false, "Error.CashCollectedAmountCannotBeNegative");
+
+        return (true, null);
+    }
+}
+
+[Serializable]
 public sealed record CreateDeliveryRunAppDto
 {
     public required Guid AssignedDeliveryUserId { get; init; }

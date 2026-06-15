@@ -107,6 +107,20 @@ public sealed class DeliveryRunAppService(
         }));
     }
 
+    public Task<CommonActionResultDto> UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return Task.FromResult(CommonActionResultDto.CreateError(errorMessage!));
+
+        return RunActionAsync(() => manager.UpdateDeliveredNoteCashCollectedAsync(new UpdateDeliveryRunDeliveredNoteCashCollectedDto
+        {
+            DeliveryRunId = dto.DeliveryRunId,
+            DeliveryNoteId = dto.DeliveryNoteId,
+            CashCollectedAmount = dto.CashCollectedAmount
+        }));
+    }
+
     public Task<CommonActionResultDto> CancelAsync(Guid id)
         => RunActionAsync(() => manager.CancelAsync(id));
 

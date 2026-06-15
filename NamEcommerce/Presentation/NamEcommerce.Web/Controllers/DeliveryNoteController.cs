@@ -273,7 +273,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     public async Task<IActionResult> MarkDelivered(
         Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
         string? agreedCustomerChargeReason, bool compensateInNextDelivery,
-        string? acceptanceItemsJson, [FromForm] IList<Guid>? pictureIds)
+        decimal? cashCollectedAmount, string? acceptanceItemsJson, [FromForm] IList<Guid>? pictureIds)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -290,6 +290,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             AgreedCustomerCharge = agreedCustomerCharge,
             AgreedCustomerChargeReason = agreedCustomerChargeReason,
             CompensateInNextDelivery = compensateInNextDelivery,
+            CashCollectedAmount = cashCollectedAmount,
             Items = acceptanceItems,
             PictureIds = pictureIds
         });

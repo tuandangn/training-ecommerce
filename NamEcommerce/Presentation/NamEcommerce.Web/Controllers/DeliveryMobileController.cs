@@ -8,6 +8,7 @@ using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
+using System.Text.Json;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -86,6 +87,7 @@ public sealed class DeliveryMobileController(
         string? locationAddress,
         string? idempotencyKey,
         decimal? cashCollectedAmount,
+        string? acceptanceItemsJson,
         IFormFile? proofFile)
     {
         var currentUser = await currentUserAccessor.GetCurrentUserAsync();
@@ -140,7 +142,8 @@ public sealed class DeliveryMobileController(
             LocationAddress = locationAddress,
             Note = note,
             IdempotencyKey = idempotencyKey,
-            CashCollectedAmount = cashCollectedAmount
+            CashCollectedAmount = cashCollectedAmount,
+            Items = ParseAcceptanceItems(acceptanceItemsJson)
         });
 
         return Json(new { success = result.Success, message = result.ErrorMessage });
@@ -148,4 +151,21 @@ public sealed class DeliveryMobileController(
 
     private static bool IsAllowedImage(string contentType)
         => contentType is "image/jpeg" or "image/jpg" or "image/png" or "image/webp" or "image/gif";
+
+    private static IList<CompleteMobileDeliveryNoteItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
+    {
+        if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
+            return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<CompleteMobileDeliveryNoteItemCommand>>(
+                acceptanceItemsJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
 }

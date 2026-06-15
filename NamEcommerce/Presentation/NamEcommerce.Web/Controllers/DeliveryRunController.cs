@@ -146,6 +146,21 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.ConfirmCashHandover)]
+    public async Task<IActionResult> UpdateDeliveredNoteCashCollected(Guid id, Guid deliveryNoteId, decimal cashCollectedAmount)
+    {
+        var result = await mediator
+            .Send(new UpdateDeliveryRunDeliveredNoteCashCollectedCommand(id, deliveryNoteId, cashCollectedAmount))
+            .ConfigureAwait(false);
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.DeliveryRunCannotConfirmCashHandover");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
