@@ -23,6 +23,7 @@ public static class DeliveryNoteExtensions
             CustomerPhone = deliveryNote.CustomerPhone,
             CustomerAddress = deliveryNote.CustomerAddress,
             ShippingAddress = deliveryNote.ShippingAddress,
+            ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = (int)deliveryNote.Status,

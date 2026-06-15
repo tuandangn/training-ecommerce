@@ -73,7 +73,13 @@
                                                     <div class="text-muted small">@note.OrderCode</div>
                                                 }
                                             </td>
-                                            <td class="fw-medium">@note.CustomerName</td>
+                                            <td>
+                                                <div class="fw-medium">@note.CustomerName</div>
+                                                @if (!string.IsNullOrWhiteSpace(note.ShippingPhoneNumber))
+                                                {
+                                                    <a href="tel:@note.ShippingPhoneNumber" class="small text-muted text-decoration-none">@note.ShippingPhoneNumber</a>
+                                                }
+                                            </td>
                                             <td>
                                                 <div class="fw-medium text-truncate ui-max-w-220" title="@note.ProductSummary">@note.ProductSummary</div>
                                                 <div class="text-muted small">Tổng SL: @note.TotalQuantity.ToString("#,##0.##")</div>

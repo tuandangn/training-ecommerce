@@ -19,6 +19,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         Code = string.Empty;
         CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         ShippingAddress = string.Empty;
+        ShippingPhoneNumber = string.Empty;
         _items = [];
     }
 
@@ -34,12 +35,13 @@ public sealed record DeliveryNote : AppAggregateEntity
         CustomerId = Guid.Empty;
         CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         ShippingAddress = string.Empty;
+        ShippingPhoneNumber = string.Empty;
         _items = [];
     }
 
     internal DeliveryNote(string code, Guid orderId,
         Guid customerId, string customerName, string customerPhone, string? customerAddress,
-        string shippingAddress, Guid warehouseId, bool showPrice, string? note,
+        string shippingAddress, string? shippingPhoneNumber, Guid warehouseId, bool showPrice, string? note,
         decimal surcharge, decimal amountToCollect, string? surchargeReason,
         Guid? createdByUserId) : base(Guid.NewGuid())
     {
@@ -48,6 +50,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         CustomerId = customerId;
         CustomerInfo = new CustomerInfo(customerName, customerPhone, customerAddress);
         ShippingAddress = shippingAddress;
+        ShippingPhoneNumber = string.IsNullOrWhiteSpace(shippingPhoneNumber) ? null : shippingPhoneNumber.Trim();
         ShowPrice = showPrice;
         Note = note;
         Surcharge = surcharge;
@@ -80,6 +83,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     public Guid CustomerId { get; private set; }
     public CustomerInfo CustomerInfo { get; private set; }
     public NormalizableString ShippingAddress { get; internal set; }
+    public string? ShippingPhoneNumber { get; internal set; }
     
     public decimal Surcharge { get; internal set; }
     public string? SurchargeReason { get; internal set; }
@@ -152,6 +156,20 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     internal void MarkCreated()
         => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+
+    internal void UpdateShippingInfo(string shippingAddress, string? shippingPhoneNumber)
+    {
+        if (Status is DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled)
+            throw new NamEcommerceDomainException("Error.DeliveryNoteCannotUpdateShipping");
+        if (string.IsNullOrWhiteSpace(shippingAddress))
+            throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(shippingPhoneNumber))
+            throw new NamEcommerceDomainException("Error.PhoneNumberRequired");
+
+        ShippingAddress = shippingAddress.Trim();
+        ShippingPhoneNumber = shippingPhoneNumber.Trim();
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
 
     internal void Confirm()
     {

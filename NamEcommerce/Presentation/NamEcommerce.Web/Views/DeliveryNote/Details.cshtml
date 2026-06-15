@@ -20,6 +20,8 @@
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var canLeaveWarehouse = isDirectShip || isCounterPickup;
     var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering && canLeaveWarehouse;
+    var canUpdateShippingInfo = Model.Status != (int)DeliveryNoteStatus.Delivered
+        && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
@@ -170,7 +172,21 @@
                     </div>
                 }
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Địa chỉ giao hàng</label>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-0">Thông tin giao hàng</label>
+                        @if (canUpdateShippingInfo)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#deliveryShippingModal">
+                                <i class="bi bi-pencil-square me-1"></i>Sửa
+                            </button>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingPhoneNumber))
+                    {
+                        <a href="tel:@Model.ShippingPhoneNumber" class="text-decoration-none small d-inline-block mb-1">
+                            <i class="bi bi-telephone me-1"></i>@Model.ShippingPhoneNumber
+                        </a>
+                    }
                     <div class="text-dark">@Model.ShippingAddress</div>
                 </div>
 
@@ -456,7 +472,7 @@
                 </div>
             </div>
             <div class="content-card-footer d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm">
+                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none btn-sm">
                     <i class="bi bi-arrow-left"></i>
                     Trở về
                 </a>
@@ -519,6 +535,38 @@
         }
     </div>
 </div>
+@if (canUpdateShippingInfo)
+{
+    <div class="modal fade" id="deliveryShippingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content deliverynote-modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Cập nhật giao hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" asp-action="UpdateShipping">
+                    <div class="modal-body py-3">
+                        <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label for="deliveryShippingPhoneNumber" class="form-label">Số điện thoại giao hàng</label>
+                            <input id="deliveryShippingPhoneNumber" name="shippingPhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber" required maxlength="50" />
+                        </div>
+                        <div class="mb-0">
+                            <label for="deliveryShippingAddress" class="form-label">Địa chỉ giao hàng</label>
+                            <textarea id="deliveryShippingAddress" name="shippingAddress" class="form-control" rows="3" required maxlength="1000">@Model.ShippingAddress</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1"></i>Lưu lại
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 <!-- Image Modal -->
 @if (!string.IsNullOrEmpty(deliveryProofPictureSrc))
 {

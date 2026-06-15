@@ -22,6 +22,7 @@ public sealed record OrderModel
     public string? Note { get; set; }
 
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCompleteOrder { get; init; }

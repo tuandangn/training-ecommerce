@@ -19,12 +19,14 @@ export default class ItemEditModal {
     #incrementBtn;
     #applyBtn;
     #deleteBtn;
+    #form;
 
     #openOptions;
 
     constructor(modalEl, opts = {}) {
         this.#modalEl = modalEl;
         this.#bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        this.#form = modalEl.querySelector('form');
         this.#showPrice = opts.showPrice !== false;
 
         this.#nameEl = modalEl.querySelector('[data-oe-name]');
@@ -105,6 +107,10 @@ export default class ItemEditModal {
         }
 
         this.#deleteBtn.classList.toggle('d-none', !this.#openOptions.canRemove);
+        this.#form.querySelectorAll('.field-validation-error').forEach(element => element.style.display = 'none');
+
+        $(this.#form).removeData('validator').removeData('unobtrusiveValidation');
+        $.validator.unobtrusive.parse(this.#form);
     }
 
     #getQty() {
@@ -175,7 +181,12 @@ export default class ItemEditModal {
         }
         this.#decrementBtn?.addEventListener('click', () => this.#adjustQty(-1));
         this.#incrementBtn?.addEventListener('click', () => this.#adjustQty(1));
-        this.#applyBtn?.addEventListener('click', () => this.#apply());
+        this.#form?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!$(this.#form).valid())
+                return;
+            this.#apply();
+        });
         this.#deleteBtn?.addEventListener('click', () => this.#confirmDelete());
     }
 }

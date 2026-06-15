@@ -64,6 +64,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
                           .HasMaxLength(1000)
                           .IsRequired();
         });
+        builder.Property(d => d.ShippingPhoneNumber).HasMaxLength(50).IsRequired(false);
 
         builder.Property(d => d.ShowPrice).IsRequired().HasDefaultValue(false);
         builder.Property(d => d.Note).HasMaxLength(2000).IsRequired(false);

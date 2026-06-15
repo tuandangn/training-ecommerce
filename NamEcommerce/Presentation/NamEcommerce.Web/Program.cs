@@ -44,7 +44,6 @@ using NamEcommerce.Application.Services.Finance;
 using NamEcommerce.Application.Services.GoodsReceipts;
 using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
-using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Application.Services.Orders;
 using NamEcommerce.Application.Services.Preparation;
 using NamEcommerce.Application.Services.PurchaseOrders;
@@ -135,6 +134,7 @@ using NamEcommerce.Web.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Localizations;
 using NamEcommerce.Web.Services.Notifications;
+using NamEcommerce.Web.Services.OrderFulfillment;
 using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
@@ -146,6 +146,8 @@ using NamEcommerce.Web.Services.Seeding;
 using NamEcommerce.Web.Services.Users;
 using NamEcommerce.Web.Validators.Users;
 using System.Globalization;
+using NamEcommerce.Web.Services.Common;
+using NamEcommerce.Application.Services.Notifications;
 
 #endregion
 
@@ -163,6 +165,13 @@ if (app.Configuration.GetValue("SeedData:RunOnStartup", true))
     await using var scope = app.Services.CreateAsyncScope();
     var runner = scope.ServiceProvider.GetRequiredService<DataSeederRunner>();
     await runner.RunAsync();
+}
+//cached values
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var customerManager = scope.ServiceProvider.GetRequiredService<ICustomerManager>();
+    var cachedValuesService = scope.ServiceProvider.GetRequiredService<ICachedValuesService>();
+    cachedValuesService.SetDefaultCustomerId((await customerManager.GetOrCreateRetailWalkInCustomerAsync()).Id);
 }
 
 //start
@@ -233,8 +242,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IProductManager, ProductManager>();
     services.AddScoped<IPictureManager, PictureManager>();
     services.AddScoped<IWarehouseManager, WarehouseManager>();
-    services.AddScoped<InventoryStockManager>();
-    services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
+    services.AddScoped<IInventoryStockManager,InventoryStockManager>();
     services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
     services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
@@ -253,6 +261,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDeliveryRunManager, DeliveryRunManager>();
     services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
     services.AddScoped<IOrderManager, OrderManager>();
+    services.AddScoped<IOrderFulfillmentScheduleManager, OrderFulfillmentScheduleManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<ICustomerLedgerManager, CustomerLedgerManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
@@ -308,6 +317,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ISystemNotificationAppService, RealtimeSystemNotificationAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
+    services.AddScoped<IOrderFulfillmentScheduleAppService, OrderFulfillmentScheduleAppService>();
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
     services.AddScoped<IFastSaleAppService, FastSaleAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
@@ -343,6 +353,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerPortalQrCodeService, CustomerPortalQrCodeService>();
     services.AddScoped<INotificationService, TempDataNotificationService>();
     services.AddScoped<ISystemNotificationRealtimePublisher, SignalRSystemNotificationRealtimePublisher>();
+    services.AddSingleton<ICachedValuesService, CachedValuesService>();
 
     services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
     services.AddScoped<IProductModelFactory, ProductModelFactory>();
@@ -350,6 +361,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseModelFactory, WarehouseModelFactory>();
     services.AddScoped<IPurchaseOrderModelFactory, PurchaseOrderModelFactory>();
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
+    services.AddScoped<IOrderFulfillmentModelFactory, OrderFulfillmentModelFactory>();
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
     services.AddScoped<IDeliveryRunModelFactory, DeliveryRunModelFactory>();
@@ -373,6 +385,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDataSeeder, SystemWarehousesSeeder>();
     services.AddScoped<IDataSeeder, SystemCustomerSeeder>();
     services.AddScoped<IDataSeeder, DefaultUnitMeasurementSeeder>();
+    services.AddScoped<IDataSeeder, DefaultCategorySeeder>();
     services.AddScoped<IDataSeeder, AdminUserSeeder>();
     services.AddScoped<IDataSeeder, AccountingSetupSeeder>();
     services.AddScoped<IDataSeeder, SystemPermissionsSeeder>();

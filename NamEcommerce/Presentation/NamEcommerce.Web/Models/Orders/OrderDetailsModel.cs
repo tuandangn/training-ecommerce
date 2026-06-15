@@ -2,6 +2,7 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+using NamEcommerce.Web.Models.OrderFulfillment;
 
 namespace NamEcommerce.Web.Models.Orders;
 
@@ -42,6 +43,7 @@ public sealed record OrderDetailsModel
 
     public DateTime? ExpectedShippingDate { get; set; }
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCompleteOrder { get; set; }
@@ -80,6 +82,10 @@ public sealed record OrderDetailsModel
     public IList<DirectShipAllocationModel> DirectShipAllocations { get; set; } = [];
     public IList<ReturnWarehouseOptionModel> ReturnWarehouseOptions { get; set; } = [];
     public EntityOptionListModel? AvailableWarehouses { get; set; }
+    public OrderFulfillmentSchedulePanelModel FulfillmentSchedule { get; set; } = new()
+    {
+        OrderId = Guid.Empty
+    };
     public WorkflowModel Workflow { get; set; } = new();
     public PreparationModel Preparation { get; set; } = new();
     public DeliveryWorkflowModel DeliveryWorkflow { get; set; } = new();

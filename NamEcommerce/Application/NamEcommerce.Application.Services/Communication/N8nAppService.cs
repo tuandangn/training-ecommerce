@@ -24,7 +24,10 @@ public sealed class N8nAppService(HttpClient httpClient, IDeliveryNoteAppService
             shippingAddress = deliveryNote.ShippingAddress,
             customerId = deliveryNote.CustomerId,
             customerName = deliveryNote.CustomerName,
-            customerPhone = deliveryNote.CustomerPhone,
+            shippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
+            customerPhone = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
+                ? deliveryNote.CustomerPhone
+                : deliveryNote.ShippingPhoneNumber,
             customerAddress = deliveryNote.CustomerAddress,
             note = deliveryNote.Note,
             items = deliveryNote.Items.Select(i => new

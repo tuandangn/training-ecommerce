@@ -1,0 +1,227 @@
+.fulfillment-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.fulfillment-filter-card .content-card-body {
+    padding: 1rem;
+}
+
+.fulfillment-filter-check {
+    padding-top: 2rem;
+}
+
+.fulfillment-metrics {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fulfillment-metric {
+    background: var(--app-surface);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+}
+
+.fulfillment-metric span {
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+}
+
+.fulfillment-metric strong {
+    color: var(--bs-emphasis-color);
+    font-size: 1.25rem;
+}
+
+.fulfillment-metric.danger strong {
+    color: var(--bs-danger);
+}
+
+.fulfillment-metric.warning strong {
+    color: var(--bs-warning);
+}
+
+.fulfillment-tabs {
+    border-bottom: 1px solid var(--bs-border-color);
+    gap: 0.35rem;
+    padding-bottom: 0.5rem;
+}
+
+.fulfillment-tab-content {
+    min-height: 320px;
+}
+
+.fulfillment-day,
+.fulfillment-unscheduled-group {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.fulfillment-day-header {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.fulfillment-day-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.fulfillment-day-header span {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.fulfillment-entry-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fulfillment-entry {
+    background: var(--app-surface);
+    border: 1px solid var(--bs-border-color);
+    border-left: 4px solid var(--bs-secondary);
+    border-radius: 8px;
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.9rem;
+}
+
+.fulfillment-entry-success {
+    border-left-color: var(--bs-success);
+}
+
+.fulfillment-entry-warning {
+    border-left-color: var(--bs-warning);
+}
+
+.fulfillment-entry-danger {
+    border-left-color: var(--bs-danger);
+}
+
+.fulfillment-entry-info {
+    border-left-color: var(--bs-info);
+}
+
+.fulfillment-entry-muted {
+    opacity: 0.72;
+}
+
+.fulfillment-entry-top,
+.fulfillment-entry-actions,
+.fulfillment-item-row,
+.fulfillment-dependency,
+.fulfillment-entry-title {
+    align-items: center;
+    display: flex;
+    gap: 0.6rem;
+}
+
+.fulfillment-entry-top,
+.fulfillment-item-row,
+.fulfillment-dependency {
+    justify-content: space-between;
+}
+
+.fulfillment-entry-title {
+    min-width: 0;
+}
+
+.fulfillment-source-icon {
+    align-items: center;
+    background: var(--bs-secondary-bg);
+    border-radius: 8px;
+    display: inline-flex;
+    flex: 0 0 2rem;
+    height: 2rem;
+    justify-content: center;
+    width: 2rem;
+}
+
+.fulfillment-entry-meta,
+.fulfillment-address,
+.fulfillment-availability {
+    color: var(--bs-secondary-color);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    gap: 0.6rem;
+}
+
+.fulfillment-address {
+    align-items: flex-start;
+}
+
+.fulfillment-address span,
+.fulfillment-item-row span,
+.fulfillment-entry-title a,
+.fulfillment-entry-title .small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fulfillment-items {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.fulfillment-item-row strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.fulfillment-dependencies {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.fulfillment-dependency {
+    background: var(--bs-secondary-bg);
+    border-radius: 8px;
+    color: var(--bs-body-color);
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+    text-decoration: none;
+}
+
+.fulfillment-dependency:hover,
+.fulfillment-dependency:focus {
+    background: var(--bs-tertiary-bg);
+}
+
+.fulfillment-entry-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.status-badge.muted {
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+}
+
+@media (max-width: 1200px) {
+    .fulfillment-entry-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .fulfillment-metrics,
+    .fulfillment-entry-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fulfillment-filter-check {
+        padding-top: 0;
+    }
+}

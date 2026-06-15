@@ -1,0 +1,110 @@
+@model OrderFulfillmentBoardSearchModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Lịch xử lý đơn hàng";
+    var board = Model.Board ?? new OrderFulfillmentBoardModel { DateUtc = DateTime.UtcNow };
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Lịch xử lý đơn hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Lịch xử lý đơn hàng</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/order-fulfillment.css" asp-append-version="true" />
+}
+
+<section class="fulfillment-shell">
+    @await Html.PartialAsync("_BoardFilters", Model)
+
+    <div class="fulfillment-metrics" aria-label="Tổng quan lịch xử lý">
+        <div class="fulfillment-metric">
+            <span>Tổng việc</span>
+            <strong>@board.TotalEntries</strong>
+        </div>
+        <div class="fulfillment-metric danger">
+            <span>Cần xử lý</span>
+            <strong>@board.DangerCount</strong>
+        </div>
+        <div class="fulfillment-metric warning">
+            <span>Cần theo dõi</span>
+            <strong>@board.WarningCount</strong>
+        </div>
+    </div>
+
+    <ul class="nav nav-pills fulfillment-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#fulfillmentToday" type="button" role="tab">Hôm nay</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext3" type="button" role="tab">3 ngày</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext7" type="button" role="tab">7 ngày</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext30" type="button" role="tab">1 tháng</button>
+        </li>
+    </ul>
+
+    <div class="tab-content fulfillment-tab-content">
+        <div class="tab-pane fade show active" id="fulfillmentToday" role="tabpanel">
+            @foreach (var day in board.Today)
+            {
+                @await Html.PartialAsync("_TimelineDay", day)
+            }
+            @if (!board.Today.Any(day => day.Entries.Count > 0))
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-calendar-check"></i></div>
+                    <h5>Không có lịch trong hôm nay</h5>
+                </div>
+            }
+        </div>
+        <div class="tab-pane fade" id="fulfillmentNext3" role="tabpanel">
+            @foreach (var day in board.Next3Days)
+            {
+                @await Html.PartialAsync("_TimelineDay", day)
+            }
+            @if (!board.Next3Days.Any(day => day.Entries.Count > 0))
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-calendar3"></i></div>
+                    <h5>Không có lịch trong 3 ngày tới</h5>
+                </div>
+            }
+        </div>
+        <div class="tab-pane fade" id="fulfillmentNext7" role="tabpanel">
+            @foreach (var day in board.Next7Days)
+            {
+                @await Html.PartialAsync("_TimelineDay", day)
+            }
+            @if (!board.Next7Days.Any(day => day.Entries.Count > 0))
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-calendar-week"></i></div>
+                    <h5>Không có lịch trong 7 ngày tới</h5>
+                </div>
+            }
+        </div>
+        <div class="tab-pane fade" id="fulfillmentNext30" role="tabpanel">
+            @foreach (var day in board.Next30Days)
+            {
+                @await Html.PartialAsync("_TimelineDay", day)
+            }
+            @if (!board.Next30Days.Any(day => day.Entries.Count > 0))
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-calendar4-week"></i></div>
+                    <h5>Không có lịch trong tháng tới</h5>
+                </div>
+            }
+        </div>
+    </div>
+</section>

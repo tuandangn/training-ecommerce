@@ -1,16 +1,19 @@
 import { toast } from "/modules/modals.js";
 import { apiGet, apiPost } from "/modules/ajax-helper.js";
+import { customerSettings } from "/modules/Settings.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 
 class Customer {
-    constructor({ id, name, phone, address }) {
+    constructor({ id, name, phone, address, kind, isSystem }) {
         this.id = id;
         this.name = name ?? '';
         this.phone = phone ?? '';
         this.address = address ?? '';
+        this.kind = Number(kind ?? 0);
+        this.isSystem = isSystem === true || isSystem === 'true';
     }
 }
 
@@ -162,11 +165,23 @@ export default class OrderController {
         const { customer } = this.#state;
         const customerId = getEl('CustomerId');
         const shippingAddr = getEl('ShippingAddress');
+        const shippingPhone = getEl('ShippingPhoneNumber');
+        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
 
         customerId.value = customer?.id ?? '';
 
+        if (isRetailWalkInSystem) {
+            if (shippingAddr.hasAttribute('readonly') || shippingAddr.value === customer?.address)
+                shippingAddr.value = '';
+            if (shippingPhone && shippingPhone.value === customer?.phone)
+                shippingPhone.value = '';
+            return;
+        }
+
         if (shippingAddr.hasAttribute('readonly') || !shippingAddr.value)
             shippingAddr.value = customer?.address ?? '';
+        if (shippingPhone && !shippingPhone.value)
+            shippingPhone.value = customer?.phone ?? '';
     }
 
     #renderItems() {
@@ -292,9 +307,9 @@ export default class OrderController {
         const items = Array.from(this.#state.items);
         const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
         if (existingIndex !== -1) {
+            items[existingIndex].quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
-            this.#openEditorForIndex(existingIndex);
         } else {
             const unitPrice = await this.#addItemController.getSuggestedUnitPrice(product.id, product.unitPrice);
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
@@ -383,10 +398,13 @@ export default class OrderController {
         });
 
         el.addEventListener('select', (e) => {
-            this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
+            const customer = e.detail?.customer ? new Customer(e.detail.customer) : null;
+            this.#applyCustomerShippingDefaults(customer);
+            this.#setState({ customer });
             this.#addItemController.refreshPriceReference();
         });
         el.addEventListener('remove', () => {
+            this.#applyCustomerShippingDefaults(null);
             this.#setState({ customer: null });
             this.#addItemController.refreshPriceReference();
         });
@@ -398,6 +416,21 @@ export default class OrderController {
             return customer;
         }
         return null;
+    }
+
+    #applyCustomerShippingDefaults(customer) {
+        const shippingAddr = getEl('ShippingAddress');
+        const shippingPhone = getEl('ShippingPhoneNumber');
+        const isRetailWalkInSystem = customer?.isSystem && customer?.kind === 20;
+
+        if (!customer || isRetailWalkInSystem) {
+            if (shippingAddr) shippingAddr.value = '';
+            if (shippingPhone) shippingPhone.value = '';
+            return;
+        }
+
+        if (shippingAddr) shippingAddr.value = customer.address ?? '';
+        if (shippingPhone) shippingPhone.value = customer.phone ?? '';
     }
 
     #bindProductPicker() {
@@ -463,14 +496,20 @@ export default class OrderController {
     }
 
     #bindShippingAddressEdit() {
-        document.getElementById('btnEditShippingAddress')?.addEventListener('click', function () {
+        document.getElementById('btnEditShippingAddress')?.addEventListener('click', () => {
             const addr = getEl('ShippingAddress');
-            addr.removeAttribute('readonly');
-            addr.placeholder = 'Nhập địa chỉ giao hàng';
-            addr.classList.remove('border-end-0');
+            this.#toggleEditShippingAddress(addr.hasAttribute('readonly'));
             addr.focus();
-            this.remove();
         });
+    }
+    #toggleEditShippingAddress(canEdit) {
+        const addr = getEl('ShippingAddress');
+        if(canEdit)
+            addr.removeAttribute('readonly');
+        else
+            addr.setAttribute('readonly', true);
+        addr.classList.toggle('border-end-0', !canEdit);
+        addr.classList.toggle('rounded', canEdit);
     }
 
     #bindQuickCreateForms() {
@@ -506,7 +545,9 @@ export default class OrderController {
             try {
                 const result = await apiPost(form.action, new FormData(form));
                 if (!result.success) {
-                    toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
+                    if (result.message) {
+                        toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
+                    }
                     return;
                 }
 
@@ -534,19 +575,23 @@ export default class OrderController {
             try {
                 const result = await apiPost(form.action, new FormData(form));
                 if (!result.success) {
-                    toast('Lỗi', result.message || 'Không thể tạo hàng hóa.', 'error');
+                    if (result.message) {
+                        toast('Lỗi', result.message || 'Không thể tạo hàng hóa.', 'error');
+                    }
                     return;
                 }
 
-                this.#setState({
-                    items: [...this.#state.items, new OrderItem(result.product, 1, result.unitPrice)],
-                });
                 this.#productPicker?.clear();
                 this.#addItemController.reset();
                 form.reset();
                 quickProductModal?.hide();
                 this.#productBrowser.reload();
-                toast('Thành công', result.message || 'Đã tạo hàng hóa.', 'success');
+
+                const items = Array.from(this.#state.items);
+                items.push(new OrderItem(new ProductInfo(result.product), 1, result.unitPrice || 0));
+                this.#activeRowIndex = items.length - 1;
+                this.#setState({ items });
+                this.#openEditorForIndex(items.length - 1, { canRemove: false });
             } catch {
                 toast('Lỗi', 'Có lỗi xảy ra khi tạo hàng hóa.', 'error');
             } finally {

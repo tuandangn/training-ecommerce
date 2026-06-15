@@ -29,12 +29,15 @@ public sealed record Order : AppAggregateEntity
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
         CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
+        ShippingAddress = string.Empty;
+        ShippingPhoneNumber = string.Empty;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     public string Code { get; }
     public DateTime? ExpectedShippingDateUtc { get; internal set; }
     public NormalizableString ShippingAddress { get; internal set;  }
+    public string? ShippingPhoneNumber { get; internal set; }
     public decimal OrderSubTotal { get; private set; }
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
@@ -100,6 +103,8 @@ public sealed record Order : AppAggregateEntity
         CustomerInfo = new CustomerInfo(customer.FullName, customer.PhoneNumber, customer.Address);
         if (string.IsNullOrEmpty(ShippingAddress))
             ShippingAddress = customer.Address;
+        if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+            ShippingPhoneNumber = customer.PhoneNumber;
     }
 
     internal async Task AddOrderItemAsync(Guid productId, decimal unitPrice, decimal quantity, IGetByIdService<Product> byIdGetter)

@@ -166,7 +166,7 @@
                     </div>
                 </div>
                 <div class="content-card-footer d-flex align-items-center justify-content-between">
-                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none text-muted btn-sm ps-0">
+                    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary text-decoration-none btn-sm ps-0">
                         <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng
                     </a>
                     <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>
@@ -186,6 +186,11 @@
                     </h5>
                 </div>
                 <div class="content-card-body">
+                    <div class="mb-3">
+                        <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                        <input asp-for="ShippingPhoneNumber" class="form-control" />
+                        <span asp-validation-for="ShippingPhoneNumber" class="text-danger small"></span>
+                    </div>
                     <div class="mb-3">
                         <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="ShippingAddress" class="form-control" rows="2"></textarea>

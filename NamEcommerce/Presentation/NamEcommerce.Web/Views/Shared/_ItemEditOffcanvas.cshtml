@@ -1,5 +1,4 @@
-<div class="offcanvas offcanvas-bottom ui-top-sheet-auto" id="itemEditOffcanvas" tabindex="-1"
-    >
+<div class="offcanvas offcanvas-bottom ui-top-sheet-auto" id="itemEditOffcanvas" tabindex="-1">
     <div class="offcanvas-header border-bottom pb-3">
         <div class="d-flex align-items-center gap-2 overflow-hidden">
             <img data-oe-picture class="rounded object-fit-cover d-none ui-size-36" alt="" />
@@ -7,42 +6,50 @@
         </div>
         <button type="button" class="btn-close ms-2 flex-shrink-0" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
     </div>
-    <div class="offcanvas-body py-3">
-        <div class="mb-3">
-            <label class="form-label small fw-bold text-muted text-uppercase" data-oe-qty-label>Số lượng</label>
-            <div class="input-group">
-                <button type="button" class="btn btn-outline-secondary px-3" data-oe-decrement tabindex="-1">
-                    <i class="bi bi-dash-lg"></i>
-                </button>
-                <input type="text" class="form-control text-end" data-oe-qty
-                       inputmode="decimal" autocomplete="off" />
-                <button type="button" class="btn btn-outline-secondary px-3" data-oe-increment tabindex="-1">
-                    <i class="bi bi-plus-lg"></i>
-                </button>
+    <form method="post">
+        <div class="offcanvas-body py-3">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted text-uppercase" data-oe-qty-label>Số lượng</label>
+                <div class="input-group">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-oe-decrement tabindex="-1">
+                        <i class="bi bi-dash-lg"></i>
+                    </button>
+                    <input type="text" class="form-control text-end" data-oe-qty inputmode="decimal" autocomplete="off" placeholder="Nhập số lượng"
+                           name="quantity" data-val="true" data-val-required="Vui lòng nhập số lượng"
+                           data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.001"
+                           data-val-number="Số lượng phải là số" />
+                    <button type="button" class="btn btn-outline-secondary px-3" data-oe-increment tabindex="-1">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <span class="small text-danger field-validation-valid" data-valmsg-for="quantity" data-valmsg-replace="true"></span>
+            </div>
+            <div class="mb-3" data-oe-price-section>
+                <label class="form-label small fw-bold text-muted text-uppercase" data-oe-price-label>Đơn giá</label>
+                <div class="input-group">
+                    <input type="text" class="form-control text-end" data-oe-price placeholder="Nhập đơn giá"
+                           name="unitPrice" data-val="true" data-val-required="Vui lòng nhập đơn giá."
+                           data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.001"
+                           data-val-number="Đơn giá phải là số" />
+                    <span class="input-group-text">đ</span>
+                </div>
+                <span class="small text-danger field-validation-valid" data-valmsg-for="unitPrice" data-valmsg-replace="true"></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center px-1 text-muted small" data-oe-total-section>
+                <span>Thành tiền</span>
+                <div>
+                    <span data-oe-total class="fw-bold text-primary fs-6 d-block text-end">0 đ</span>
+                    <span data-oe-total-hint class="d-block"></span>
+                </div>
             </div>
         </div>
-        <div class="mb-3" data-oe-price-section>
-            <label class="form-label small fw-bold text-muted text-uppercase" data-oe-price-label>Đơn giá</label>
-            <div class="input-group">
-                <input type="text" class="form-control text-end" data-oe-price
-                       inputmode="decimal" autocomplete="off" />
-                <span class="input-group-text">đ</span>
-            </div>
+        <div class="offcanvas-footer border-top p-3 d-flex justify-content-between align-items-center gap-2">
+            <button type="button" class="btn btn-outline-danger text-decoration-none px-1" data-oe-delete>
+                <i class="bi bi-trash me-1"></i>Xóa dòng
+            </button>
+            <button type="submit" class="btn btn-primary px-4" data-oe-apply>
+                <i class="bi bi-check-lg me-1"></i>Xác nhận
+            </button>
         </div>
-        <div class="d-flex justify-content-between align-items-center px-1 text-muted small" data-oe-total-section>
-            <span>Thành tiền</span>
-            <div>
-                <span data-oe-total class="fw-bold text-primary fs-6 d-block text-end">0 đ</span>
-                <span data-oe-total-hint class="d-block"></span>
-            </div>
-        </div>
-    </div>
-    <div class="offcanvas-footer border-top p-3 d-flex justify-content-between align-items-center gap-2">
-        <button type="button" class="btn btn-outline-danger text-decoration-none px-1" data-oe-delete>
-            <i class="bi bi-trash me-1"></i>Xóa dòng
-        </button>
-        <button type="button" class="btn btn-primary px-4" data-oe-apply>
-            <i class="bi bi-check-lg me-1"></i>Xác nhận
-        </button>
-    </div>
+    </form>
 </div>

@@ -37,6 +37,12 @@
                     <div class="fw-bold text-dark">
                         @(Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat) ?? "Chưa hẹn ngày")
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingPhoneNumber))
+                    {
+                        <a href="tel:@Model.ShippingPhoneNumber" class="text-decoration-none small d-inline-block mt-1">
+                            <i class="bi bi-telephone me-1"></i>@Model.ShippingPhoneNumber
+                        </a>
+                    }
                     @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress))
                     {
                         var encodedShippingAddress = WebHelper.EncodeUrlComponent(Model.ShippingAddress);
@@ -79,7 +85,7 @@
                     {
                         <caption>
                             <div class="pe-1 d-flex justify-content-start justify-content-sm-end">
-                                <button type="button" class="btn btn-sm btn-outline-secondary border-bottom" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
                                     <i class="bi bi-plus-lg me-1"></i>
                                     <span>Thêm hàng hóa</span>
                                 </button>

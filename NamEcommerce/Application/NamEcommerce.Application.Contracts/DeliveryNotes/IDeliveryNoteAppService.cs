@@ -18,6 +18,8 @@ public interface IDeliveryNoteAppService
     Task<MarkDeliveryNoteDeliveredResultAppDto> MarkDeliveredAsync(MarkDeliveryNoteDeliveredAppDto dto);
 
     Task<AssignDeliveryUserResultAppDto> AssignDeliveryUserAsync(AssignDeliveryUserAppDto dto);
+
+    Task<CommonActionResultDto> UpdateShippingAsync(UpdateDeliveryNoteShippingAppDto dto);
     
     Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id);
     

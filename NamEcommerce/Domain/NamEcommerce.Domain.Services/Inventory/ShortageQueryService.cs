@@ -1,11 +1,14 @@
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -13,11 +16,13 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 namespace NamEcommerce.Domain.Services.Inventory;
 
 public sealed class ShortageQueryService(
-    InventoryStockManager inventoryStockManager,
+    IInventoryStockManager inventoryStockManager,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
-    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader) : IShortageQueryService
+    IEntityDataReader<CustomerReturn> customerReturnReader,
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
+    IRepository<Order> orderRepository) : IShortageQueryService
 {
     private static readonly DeliveryNoteStatus[] ShippedStatuses =
     [
@@ -36,10 +41,22 @@ public sealed class ShortageQueryService(
 
     public async Task<IList<OrderItemShortageDto>> GetOrderItemShortagesAsync(Guid orderId)
     {
-        var order = GetOrder(orderId);
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
         var shortages = await BuildOrderItemShortagesAsync(order, null).ConfigureAwait(false);
 
         return shortages.Where(x => x.ShortageQuantity > 0).ToList();
+    }
+
+    public async Task<IList<OrderItemFulfillmentStateDto>> GetOrderItemFulfillmentStatesAsync(Guid orderId)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        return await BuildOrderItemFulfillmentStatesAsync(order, null).ConfigureAwait(false);
     }
 
     public async Task<IList<DeliveryNoteItemShortageDto>> GetDeliveryNoteShortagesAsync(Guid deliveryNoteId)
@@ -48,13 +65,15 @@ public sealed class ShortageQueryService(
         if (deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.OrderId == Guid.Empty)
             return [];
 
-        var order = GetOrder(deliveryNote.OrderId);
+        var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(deliveryNote.OrderId);
 
         var orderItemIds = deliveryNote.Items
             .Where(item => item.OrderItemId != Guid.Empty)
             .Select(item => item.OrderItemId)
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id);
+        var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id, order.Id);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
         var result = new List<DeliveryNoteItemShortageDto>();
 
@@ -114,7 +133,10 @@ public sealed class ShortageQueryService(
             if (deliveryNote.OrderId == Guid.Empty)
                 return [];
 
-            var order = GetOrder(deliveryNote.OrderId);
+            var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            if (order is null)
+                throw new OrderIsNotFoundException(deliveryNote.OrderId);
+
             var itemIds = deliveryNote.Items
                 .Where(item => item.OrderItemId != Guid.Empty)
                 .Select(item => item.OrderItemId)
@@ -139,22 +161,41 @@ public sealed class ShortageQueryService(
         return ApplyFilter(result, filter).ToList();
     }
 
-    private Order GetOrder(Guid orderId)
-        => orderReader.DataSource.SingleOrDefault(order => order.Id == orderId)
-           ?? throw new OrderIsNotFoundException(orderId);
-
     private DeliveryNote GetDeliveryNote(Guid deliveryNoteId)
         => deliveryNoteReader.DataSource.SingleOrDefault(deliveryNote => deliveryNote.Id == deliveryNoteId)
            ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
     private async Task<List<OrderItemShortageDto>> BuildOrderItemShortagesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
     {
+        var fulfillmentStates = await BuildOrderItemFulfillmentStatesAsync(order, limitedOrderItemIds).ConfigureAwait(false);
+        return fulfillmentStates
+            .Select(state => new OrderItemShortageDto
+            {
+                OrderId = state.OrderId,
+                OrderCode = state.OrderCode,
+                OrderItemId = state.OrderItemId,
+                ProductId = state.ProductId,
+                ProductName = state.ProductName,
+                RequiredQuantity = state.RequiredQuantity,
+                ShippedQuantity = state.ShippedQuantity,
+                AvailableQuantity = state.AvailableQuantity,
+                ShortageQuantity = state.MissingSourceQuantity,
+                CustomerName = state.CustomerName,
+                CustomerPhone = state.CustomerPhone,
+                CustomerAddress = state.CustomerAddress,
+                AllocatedFromPurchaseOrders = state.AllocatedFromPurchaseOrders
+            })
+            .ToList();
+    }
+
+    private async Task<IList<OrderItemFulfillmentStateDto>> BuildOrderItemFulfillmentStatesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
+    {
         var orderItems = order.OrderItems
             .Where(item => limitedOrderItemIds is null || limitedOrderItemIds.Contains(item.Id))
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null);
+        var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null, order.Id);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItems.Select(item => item.Id));
-        var result = new List<OrderItemShortageDto>();
+        var result = new List<OrderItemFulfillmentStateDto>();
 
         foreach (var productGroup in orderItems.GroupBy(item => item.ProductId))
         {
@@ -172,7 +213,7 @@ public sealed class ShortageQueryService(
                 var allocations = GetAllocationsForOrderItem(allocationsByOrderItem, item.Id);
                 var allocatedIncoming = allocations.Sum(allocation => allocation.AllocatedQty - allocation.ReceivedQty);
 
-                result.Add(new OrderItemShortageDto
+                result.Add(new OrderItemFulfillmentStateDto
                 {
                     OrderId = order.Id,
                     OrderCode = order.Code,
@@ -182,7 +223,8 @@ public sealed class ShortageQueryService(
                     RequiredQuantity = item.Quantity,
                     ShippedQuantity = shippedQuantity,
                     AvailableQuantity = availableQuantity,
-                    ShortageQuantity = Math.Max(0, stillNeeded - availableQuantity - allocatedIncoming),
+                    AllocatedIncomingQuantity = allocatedIncoming,
+                    MissingSourceQuantity = Math.Max(0, stillNeeded - availableQuantity - allocatedIncoming),
                     CustomerName = order.CustomerInfo.FullName,
                     CustomerPhone = order.CustomerInfo.PhoneNumber,
                     CustomerAddress = order.CustomerInfo.Address,
@@ -194,7 +236,7 @@ public sealed class ShortageQueryService(
         return result;
     }
 
-    private Dictionary<Guid, decimal> GetShippedQuantities(IEnumerable<Guid> orderItemIds, Guid? excludedDeliveryNoteId)
+    private Dictionary<Guid, decimal> GetShippedQuantities(IEnumerable<Guid> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
     {
         var ids = orderItemIds.ToList();
         if (ids.Count == 0)
@@ -206,11 +248,47 @@ public sealed class ShortageQueryService(
         if (excludedDeliveryNoteId.HasValue)
             query = query.Where(note => note.Id != excludedDeliveryNoteId.Value);
 
-        return query
+        var shippedQuantities = query
             .SelectMany(note => note.Items)
             .Where(item => ids.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+
+        var returnedQuantities = GetCompensatedReturnedQuantities(orderId, ids);
+        foreach (var id in ids)
+        {
+            shippedQuantities[id] = Math.Max(
+                0m,
+                shippedQuantities.GetValueOrDefault(id) - returnedQuantities.GetValueOrDefault(id));
+        }
+
+        return shippedQuantities;
+    }
+
+    private Dictionary<Guid, decimal> GetCompensatedReturnedQuantities(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    {
+        if (orderItemIds.Count == 0)
+            return [];
+
+        var validDeliveryNoteItems = deliveryNoteReader.DataSource
+            .Where(note => note.OrderId == orderId)
+            .SelectMany(note => note.Items)
+            .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
+            .Select(item => new { item.Id, item.OrderItemId });
+
+        return customerReturnReader.DataSource
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
+                && returnNote.CompensateInNextDelivery
+                && returnNote.Status != CustomerReturnStatus.Draft)
+            .SelectMany(returnNote => returnNote.Items)
+            .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
+            .Join(
+                validDeliveryNoteItems,
+                returnItem => returnItem.DeliveryNoteItemId!.Value,
+                deliveryNoteItem => deliveryNoteItem.Id,
+                (returnItem, deliveryNoteItem) => new { deliveryNoteItem.OrderItemId, returnItem.AcceptedQuantity })
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.AcceptedQuantity));
     }
 
     private Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> GetPurchaseOrderAllocations(IEnumerable<Guid> orderItemIds)
@@ -264,7 +342,8 @@ public sealed class ShortageQueryService(
                 POCode = purchaseOrderItem.PurchaseOrderCode,
                 AllocatedQty = allocation.AllocatedQuantity,
                 ReceivedQty = allocation.ReceivedQuantity,
-                ExpectedReceiveDateUtc = purchaseOrderItem.ExpectedDeliveryDateUtc
+                ExpectedReceiveDateUtc = purchaseOrderItem.ExpectedDeliveryDateUtc,
+                IsDirectShip = allocation.IsDirectShip
             });
         }
 

@@ -9,17 +9,19 @@ public sealed record DeliveryRunItem : AppEntity
     {
         DeliveryNoteCode = string.Empty;
         CustomerName = string.Empty;
+        ShippingPhoneNumber = string.Empty;
         ShippingAddress = string.Empty;
     }
 
     internal DeliveryRunItem(Guid deliveryRunId, Guid deliveryNoteId, string deliveryNoteCode, string? orderCode,
-        string customerName, string shippingAddress, decimal amountToCollect) : base(Guid.NewGuid())
+        string customerName, string? shippingPhoneNumber, string shippingAddress, decimal amountToCollect) : base(Guid.NewGuid())
     {
         DeliveryRunId = deliveryRunId;
         DeliveryNoteId = deliveryNoteId;
         DeliveryNoteCode = deliveryNoteCode;
         OrderCode = orderCode;
         CustomerName = customerName;
+        ShippingPhoneNumber = shippingPhoneNumber;
         ShippingAddress = shippingAddress;
         AmountToCollect = amountToCollect;
     }
@@ -29,6 +31,7 @@ public sealed record DeliveryRunItem : AppEntity
     public string DeliveryNoteCode { get; private set; }
     public string? OrderCode { get; private set; }
     public string CustomerName { get; private set; }
+    public string? ShippingPhoneNumber { get; private set; }
     public string ShippingAddress { get; private set; }
     public decimal AmountToCollect { get; private set; }
 }

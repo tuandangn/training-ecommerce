@@ -24,6 +24,7 @@ public static class OrderExtensions
             CompletedOnUtc = order.CompletedOnUtc,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             ShippingAddress = order.ShippingAddress,
+            ShippingPhoneNumber = order.ShippingPhoneNumber,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateOrderItems = order.CanUpdateOrderItems(),
             CanUpdateInfo = order.CanUpdateInfo(),

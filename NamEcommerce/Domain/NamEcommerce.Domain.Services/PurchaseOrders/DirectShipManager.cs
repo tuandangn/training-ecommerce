@@ -437,6 +437,7 @@ public sealed class DirectShipManager(
             CustomerPhone = d.CustomerInfo.PhoneNumber,
             CustomerAddress = d.CustomerInfo.Address,
             ShippingAddress = d.ShippingAddress,
+            ShippingPhoneNumber = d.ShippingPhoneNumber,
             ShowPrice = d.ShowPrice,
             Note = d.Note,
             Status = d.Status,

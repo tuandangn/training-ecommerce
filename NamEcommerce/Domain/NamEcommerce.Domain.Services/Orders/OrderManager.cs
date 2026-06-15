@@ -60,6 +60,7 @@ public sealed class OrderManager(
         {
             Note = dto.Note,
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? customer.Address : dto.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber) ? customer.PhoneNumber : dto.ShippingPhoneNumber.Trim(),
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
         };
         await order.SetCustomerAsync(dto.CustomerId, customerDataReader).ConfigureAwait(false);
@@ -304,6 +305,7 @@ public sealed class OrderManager(
         if (dto.ExpectedShippingDateUtc.HasValue)
             order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
         order.ShippingAddress = dto.Address;
+        order.ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
         order.UpdatedOnUtc = DateTime.UtcNow;
         order.MarkShippingUpdated();
 

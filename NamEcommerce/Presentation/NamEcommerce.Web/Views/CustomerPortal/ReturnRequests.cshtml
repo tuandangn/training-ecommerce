@@ -47,7 +47,7 @@
                     <td class="text-center"><span class="badge @requestStatus.GetDisplayColor()">@requestStatus.GetDisplayText()</span></td>
                     <td class="text-center text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
                     <td class="text-end pe-3">
-                        <a asp-action="ReturnRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary text-primary">Xem</a>
+                        <a asp-action="ReturnRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Xem</a>
                     </td>
                 </tr>
             }

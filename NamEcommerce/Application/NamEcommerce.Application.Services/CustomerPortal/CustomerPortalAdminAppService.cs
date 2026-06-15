@@ -244,11 +244,13 @@ public sealed class CustomerPortalAdminAppService(
         if (request.Items.Any(item => item.UnitPriceSnapshot <= 0))
             return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được báo giá đầy đủ.");
 
+        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
         var createDto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             ExpectedShippingDateUtc = request.ExpectedShippingDateUtc,
             ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = customer?.PhoneNumber,
             Note = BuildConvertedOrderNote(request)
         };
 

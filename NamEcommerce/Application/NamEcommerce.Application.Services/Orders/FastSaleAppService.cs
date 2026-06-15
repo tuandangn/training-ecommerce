@@ -248,6 +248,7 @@ public sealed class FastSaleAppService(
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date,
             ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = dto.ShippingPhoneNumber,
             RequireAvailableStock = (QuickSaleFulfillmentMode)dto.FulfillmentMode == QuickSaleFulfillmentMode.DeliverNow
         };
 
@@ -280,6 +281,7 @@ public sealed class FastSaleAppService(
             OrderId = orderId,
             WarehouseId = ResolveHeaderWarehouseId(dto),
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS : dto.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber) ? order.ShippingPhoneNumber : dto.ShippingPhoneNumber,
             ShowPrice = true,
             CompensateReturnedQuantityInNextDelivery = false,
             Surcharge = 0,

@@ -64,7 +64,14 @@
                             <strong>@item.DeliveryNoteCode</strong><br />
                             <span>@item.OrderCode</span>
                         </td>
-                        <td>@item.CustomerName</td>
+                        <td>
+                            @item.CustomerName
+                            @if (!string.IsNullOrWhiteSpace(item.ShippingPhoneNumber))
+                            {
+                                <br />
+                                <span>@item.ShippingPhoneNumber</span>
+                            }
+                        </td>
                         <td>@item.ShippingAddress</td>
                         <td class="text-right">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                         <td></td>

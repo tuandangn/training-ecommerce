@@ -1,0 +1,81 @@
+@model OrderFulfillmentBoardModel?
+@{
+    var board = Model ?? new OrderFulfillmentBoardModel { DateUtc = DateTime.UtcNow };
+    var tabs = new[]
+    {
+        new { Id = "today", Label = "Hôm nay", Days = board.Today },
+        new { Id = "next3", Label = "3 ngày", Days = board.Next3Days },
+        new { Id = "next7", Label = "7 ngày", Days = board.Next7Days },
+        new { Id = "next30", Label = "1 tháng", Days = board.Next30Days }
+    };
+}
+
+<div class="fulfillment-schedule-panel-header">
+    <div>
+        <div class="fulfillment-schedule-panel-title">Lịch xử lý</div>
+        <div class="fulfillment-schedule-panel-subtitle">Việc cần theo dõi theo mốc thời gian</div>
+    </div>
+    <a asp-controller="OrderFulfillment" asp-action="Index" class="btn btn-sm btn-outline-secondary">Mở bảng</a>
+</div>
+
+<ul class="nav nav-pills fulfillment-schedule-mini-tabs" role="tablist">
+    @for (var index = 0; index < tabs.Length; index++)
+    {
+        var tab = tabs[index];
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(index == 0 ? "active" : "")"
+                    data-bs-toggle="pill"
+                    data-bs-target="#topbarFulfillment@(tab.Id)"
+                    type="button"
+                    role="tab">
+                @tab.Label
+            </button>
+        </li>
+    }
+</ul>
+
+<div class="tab-content fulfillment-schedule-mini-content">
+    @for (var index = 0; index < tabs.Length; index++)
+    {
+        var tab = tabs[index];
+        var entries = tab.Days.SelectMany(day => day.Entries).Take(8).ToList();
+        <div class="tab-pane fade @(index == 0 ? "show active" : "")" id="topbarFulfillment@(tab.Id)" role="tabpanel">
+            @if (entries.Count == 0)
+            {
+                <div class="fulfillment-schedule-mini-empty">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Không có lịch trong mốc này.</span>
+                </div>
+            }
+            else
+            {
+                <div class="fulfillment-schedule-mini-list">
+                    @foreach (var entry in entries)
+                    {
+                        var detailController = entry.SourceType switch
+                        {
+                            "DeliveryNote" => "DeliveryNote",
+                            "DeliveryRun" => "DeliveryRun",
+                            _ => "Order"
+                        };
+                        var detailId = entry.SourceType is "DeliveryNote" or "DeliveryRun" ? entry.SourceId : entry.OrderId;
+                        <a asp-controller="@detailController" asp-action="Details" asp-route-id="@detailId" class="fulfillment-schedule-mini-item">
+                            <span class="fulfillment-schedule-mini-tone @entry.Tone"></span>
+                            <span class="fulfillment-schedule-mini-main">
+                                <span class="fulfillment-schedule-mini-title">@entry.SourceCode</span>
+                                <span class="fulfillment-schedule-mini-meta">
+                                    @entry.StatusText
+                                    @if (entry.ScheduledFromUtc.HasValue)
+                                    {
+                                        <span>@entry.ScheduledFromUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                                    }
+                                </span>
+                            </span>
+                            <span class="fulfillment-schedule-mini-count">@entry.Items.Count hàng</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -69,10 +69,6 @@
                             <span class="label">Công nợ đã tạo (@s.DebtCount)</span>
                             <span class="value text-danger">@s.DebtTotal.DisplayCurrencyWithSymbol()</span>
                         </div>
-                        <div class="order-summary-row">
-                            <span class="label">Đã thanh toán (@s.PaymentCount)</span>
-                            <span class="value text-success">@s.PaidTotal.DisplayCurrencyWithSymbol()</span>
-                        </div>
                         <div class="order-summary-row total">
                             <span class="label">Còn lại</span>
                             <span class="value @(s.RemainingDebt > 0 ? "text-danger" : "text-success")">

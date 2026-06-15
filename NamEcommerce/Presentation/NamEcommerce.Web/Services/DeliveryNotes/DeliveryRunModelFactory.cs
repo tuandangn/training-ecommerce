@@ -66,6 +66,10 @@ public sealed class DeliveryRunModelFactory(
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+            var cashCollectedAmount = note?.DeliveryCashCollectedAmount;
+            if (cashCollectedAmount is null && note?.Status == (int)DeliveryNoteStatus.Delivered)
+                cashCollectedAmount = item.AmountToCollect;
+
             return new DeliveryRunItemModel
             {
                 DeliveryNoteStatus = note?.Status,
@@ -75,10 +79,15 @@ public sealed class DeliveryRunModelFactory(
                 DeliveryNoteCode = item.DeliveryNoteCode,
                 OrderCode = note?.OrderCode ?? item.OrderCode,
                 CustomerName = note?.CustomerName ?? item.CustomerName,
-                CustomerPhone = note?.CustomerPhone,
+                CustomerPhone = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
+                    ? item.ShippingPhoneNumber
+                    : note?.ShippingPhoneNumber,
+                ShippingPhoneNumber = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
+                    ? item.ShippingPhoneNumber
+                    : note?.ShippingPhoneNumber,
                 ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
                 AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
-                CashCollectedAmount = note?.DeliveryCashCollectedAmount,
+                CashCollectedAmount = cashCollectedAmount,
                 ReceiverName = note?.DeliveryReceiverName,
                 DeliveryProofPictureId = note?.DeliveryProofPictureId,
                 ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
@@ -201,6 +210,9 @@ public sealed class DeliveryRunModelFactory(
                 Code = note.Code,
                 OrderCode = note.OrderCode,
                 CustomerName = note.CustomerName,
+                ShippingPhoneNumber = string.IsNullOrWhiteSpace(note.ShippingPhoneNumber)
+                    ? note.CustomerPhone
+                    : note.ShippingPhoneNumber,
                 ShippingAddress = note.ShippingAddress,
                 AssignedDeliveryFullName = note.AssignedDeliveryFullName,
                 ProductSummary = BuildProductSummary(note.Items),

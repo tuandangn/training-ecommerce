@@ -2754,9 +2754,11 @@ body {
 .topbar-actions {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
 }
 
-    .topbar-actions .notification-btn {
+    .topbar-actions .notification-btn,
+    .topbar-actions .fulfillment-schedule-btn {
         width: 36px;
         height: 36px;
         border-radius: 50%;
@@ -2775,7 +2777,17 @@ body {
             background-color: #fef3c7;
         }
 
-.system-notification-center {
+.topbar-actions .fulfillment-schedule-btn {
+    color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+    .topbar-actions .fulfillment-schedule-btn:hover {
+        background-color: var(--info-light);
+    }
+
+.system-notification-center,
+.fulfillment-schedule-center {
     position: relative;
 }
 
@@ -2881,6 +2893,143 @@ body {
     text-align: center;
 }
 
+.fulfillment-schedule-panel {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    width: min(460px, calc(100vw - 2rem));
+    max-height: min(620px, calc(100vh - 6rem));
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--card-radius);
+    background: #fff;
+    box-shadow: var(--card-shadow-lg);
+    z-index: 1080;
+}
+
+.fulfillment-schedule-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.fulfillment-schedule-panel-title {
+    color: var(--gray-900);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.fulfillment-schedule-panel-subtitle,
+.fulfillment-schedule-panel-loading,
+.fulfillment-schedule-mini-empty,
+.fulfillment-schedule-mini-meta,
+.fulfillment-schedule-mini-count {
+    color: var(--gray-500);
+    font-size: 0.82rem;
+}
+
+.fulfillment-schedule-panel-loading,
+.fulfillment-schedule-mini-empty {
+    padding: 1rem;
+    text-align: center;
+}
+
+.fulfillment-schedule-mini-tabs {
+    padding: 0.75rem 1rem 0;
+    gap: 0.35rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+    .fulfillment-schedule-mini-tabs .nav-link {
+        border-radius: 999px;
+        padding: 0.35rem 0.65rem;
+        color: var(--gray-700);
+        font-size: 0.82rem;
+        font-weight: 650;
+    }
+
+.fulfillment-schedule-mini-content {
+    max-height: 440px;
+    overflow-y: auto;
+}
+
+.fulfillment-schedule-mini-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.fulfillment-schedule-mini-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid var(--gray-100);
+    transition: var(--transition);
+}
+
+    .fulfillment-schedule-mini-item:hover,
+    .fulfillment-schedule-mini-item:focus {
+        background: var(--gray-50);
+        color: inherit;
+        outline: none;
+    }
+
+.fulfillment-schedule-mini-tone {
+    width: 0.55rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: var(--gray-300);
+}
+
+    .fulfillment-schedule-mini-tone.danger {
+        background: var(--danger);
+    }
+
+    .fulfillment-schedule-mini-tone.warning {
+        background: var(--warning);
+    }
+
+    .fulfillment-schedule-mini-tone.success {
+        background: var(--success);
+    }
+
+    .fulfillment-schedule-mini-tone.info {
+        background: var(--info);
+    }
+
+.fulfillment-schedule-mini-main {
+    min-width: 0;
+}
+
+.fulfillment-schedule-mini-title,
+.fulfillment-schedule-mini-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.fulfillment-schedule-mini-title {
+    color: var(--gray-900);
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+.fulfillment-schedule-mini-meta {
+    margin-top: 0.15rem;
+    flex-wrap: wrap;
+}
+
+.fulfillment-schedule-mini-count {
+    white-space: nowrap;
+}
+
 .page-content {
     padding: var(--page-gutter);
     flex-grow: 1;
@@ -2893,12 +3042,6 @@ body {
         max-width: 1680px;
         margin: 0 auto;
     }
-
-.user-avatar {
-    background: var(--primary-light) !important;
-    color: var(--primary) !important;
-    border: 1px solid #E0E7FF;
-}
 
 .dashboard-table th {
     border-bottom-color: var(--gray-200) !important;

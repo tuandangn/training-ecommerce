@@ -48,6 +48,7 @@ public sealed record CreateQuickSaleAppDto
     public int PaymentMethod { get; init; }
     public decimal PaidAmount { get; init; }
     public string? ShippingAddress { get; set; }
+    public string? ShippingPhoneNumber { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {
@@ -75,6 +76,13 @@ public sealed record CreateQuickSaleAppDto
             return (false, "Error.PaymentAmountMustBePositive");
         if (paymentTiming == QuickSalePaymentTiming.Unpaid && PaidAmount != 0)
             return (false, "Error.PaymentAmountMustBeZeroWhenUnpaid");
+        if (fulfillmentMode == QuickSaleFulfillmentMode.NotDelivered)
+        {
+            if (string.IsNullOrWhiteSpace(ShippingAddress))
+                return (false, "Error.ShippingAddressRequired");
+            if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+                return (false, "Error.PhoneNumberRequired");
+        }
 
         foreach (var item in Items)
         {

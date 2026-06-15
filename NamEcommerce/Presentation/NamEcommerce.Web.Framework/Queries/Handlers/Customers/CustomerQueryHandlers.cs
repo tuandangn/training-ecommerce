@@ -3,6 +3,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Domain.Shared.Services.Customers;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Customers;
 
@@ -24,7 +25,9 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
         {
             FullName = c.FullName,
             PhoneNumber = c.PhoneNumber,
-            Address = c.Address
+            Address = c.Address,
+            Kind = c.Kind,
+            IsSystem = c.IsSystem
         }).ToList();
 
         return new CustomerListModel
@@ -57,6 +60,8 @@ public sealed class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuer
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
+            Kind = dto.Kind,
+            IsSystem = dto.IsSystem,
             CreatedOnUtc = dto.CreatedOnUtc
         };
     }

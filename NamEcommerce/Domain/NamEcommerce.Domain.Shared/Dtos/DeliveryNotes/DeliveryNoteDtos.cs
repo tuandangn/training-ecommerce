@@ -23,6 +23,7 @@ public sealed record DeliveryNoteDto
     public string? CustomerAddress { get; init; }
     
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
@@ -83,6 +84,7 @@ public sealed record CreateDeliveryNoteDto
     public required Guid WarehouseId { get; init; }
     public string? WarehouseName { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
     public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
@@ -178,6 +180,24 @@ public sealed record AssignDeliveryUserDto
             throw new NamEcommerceDomainException("Error.DeliveryUsernameRequired");
         if (string.IsNullOrWhiteSpace(AssignedDeliveryFullName))
             throw new NamEcommerceDomainException("Error.DeliveryFullNameRequired");
+    }
+}
+
+[Serializable]
+public sealed record UpdateDeliveryNoteShippingDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required string ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
+
+    public void Verify()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryNoteRequired");
+        if (string.IsNullOrWhiteSpace(ShippingAddress))
+            throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
+        if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
+            throw new NamEcommerceDomainException("Error.PhoneNumberRequired");
     }
 }
 

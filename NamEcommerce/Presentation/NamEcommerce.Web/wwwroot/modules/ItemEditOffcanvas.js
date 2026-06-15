@@ -19,6 +19,7 @@ export default class ItemEditOffcanvas {
     #incrementBtn;
     #applyBtn;
     #deleteBtn;
+    #form;
 
     #openOptions;
 
@@ -26,6 +27,7 @@ export default class ItemEditOffcanvas {
     constructor(offcanvasEl, opts = {}) {
         this.#offcanvasEl = offcanvasEl;
         this.#bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+        this.#form = offcanvasEl.querySelector('form');
         this.#showPrice = opts.showPrice !== false;
 
         this.#nameEl = offcanvasEl.querySelector('[data-oe-name]');
@@ -108,6 +110,11 @@ export default class ItemEditOffcanvas {
         }
 
         this.#deleteBtn.classList.toggle('d-none', !this.#openOptions.canRemove);
+
+        this.#form.querySelectorAll('.field-validation-error').forEach(element => element.style.display = 'none');
+
+        $(this.#form).removeData('validator').removeData('unobtrusiveValidation');
+        $.validator.unobtrusive.parse(this.#form);
     }
 
     #getQty() {
@@ -179,7 +186,12 @@ export default class ItemEditOffcanvas {
         }
         this.#decrementBtn?.addEventListener('click', () => this.#adjustQty(-1));
         this.#incrementBtn?.addEventListener('click', () => this.#adjustQty(1));
-        this.#applyBtn?.addEventListener('click', () => this.#apply());
+        this.#form?.addEventListener('form', (e) => {
+            e.preventDefault();
+            if (!$(this.#form).valid())
+                return;
+            this.#apply();
+        });
         this.#deleteBtn?.addEventListener('click', () => this.#confirmDelete());
     }
 }

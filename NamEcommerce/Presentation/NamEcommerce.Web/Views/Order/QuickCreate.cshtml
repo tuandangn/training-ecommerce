@@ -48,7 +48,9 @@
                                      data-id="@Model.DefaultCustomerId"
                                      data-name="@Model.CustomerName"
                                      data-phone="@Model.CustomerPhone"
-                                     data-address="@Model.CustomerAddress"></div>
+                                     data-address="@Model.CustomerAddress"
+                                     data-kind="@Model.CustomerKind"
+                                     data-is-system="@Model.CustomerIsSystem.ToString().ToLowerInvariant()"></div>
                                 <input type="text" class="visually-hidden" asp-for="CustomerId" data-default="@Model.DefaultCustomerId" />
                                 <span asp-validation-for="CustomerId" class="small text-danger"></span>
                             </div>
@@ -157,7 +159,12 @@
                         </div>
                     </div>
                     <div class="ship-info mb-3 d-none">
-                        <div class="">
+                        <div class="mb-3">
+                            <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhap so dien thoai giao hang" disabled />
+                            <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
+                        </div>
+                        <div>
                             <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
                             <span asp-validation-for="ShippingAddress" class="small text-danger"></span>

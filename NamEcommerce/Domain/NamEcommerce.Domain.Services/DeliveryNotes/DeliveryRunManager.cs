@@ -78,6 +78,7 @@ public sealed class DeliveryRunManager(
                 note.Code,
                 note.OrderCode,
                 note.CustomerInfo.FullName.Value,
+                string.IsNullOrWhiteSpace(note.ShippingPhoneNumber) ? note.CustomerInfo.PhoneNumber : note.ShippingPhoneNumber,
                 note.ShippingAddress.Value,
                 note.AmountToCollect);
         }
@@ -166,7 +167,9 @@ public sealed class DeliveryRunManager(
         if (run.Status == DeliveryRunStatus.ReadyForHandover && deliveredNotes.Count == 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
-        var expectedAmount = deliveredNotes.Sum(GetCashCollectedAmount);
+        var runItemsByDeliveryNoteId = run.Items.ToDictionary(item => item.DeliveryNoteId);
+        var expectedAmount = deliveredNotes.Sum(note =>
+            GetCashCollectedAmount(note, runItemsByDeliveryNoteId.GetValueOrDefault(note.Id)));
         if (expectedAmount <= 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCashHandoverNotRequired");
         if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m)
@@ -233,8 +236,8 @@ public sealed class DeliveryRunManager(
         return Task.FromResult(PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total));
     }
 
-    private static decimal GetCashCollectedAmount(DeliveryNote note)
-        => note.DeliveryCashCollectedAmount ?? note.AmountToCollect;
+    private static decimal GetCashCollectedAmount(DeliveryNote note, DeliveryRunItem? runItem = null)
+        => note.DeliveryCashCollectedAmount ?? runItem?.AmountToCollect ?? note.AmountToCollect;
 
     private async Task RecordCodPaymentsAsync(
         DeliveryRun run,
@@ -246,10 +249,11 @@ public sealed class DeliveryRunManager(
         var itemOrder = run.Items
             .Select((item, index) => new { item.DeliveryNoteId, Index = index })
             .ToDictionary(item => item.DeliveryNoteId, item => item.Index);
+        var itemsByDeliveryNoteId = run.Items.ToDictionary(item => item.DeliveryNoteId);
 
         foreach (var note in deliveredNotes.OrderBy(note => itemOrder.GetValueOrDefault(note.Id)))
         {
-            var amount = GetCashCollectedAmount(note);
+            var amount = GetCashCollectedAmount(note, itemsByDeliveryNoteId.GetValueOrDefault(note.Id));
             if (amount <= 0)
                 continue;
 

@@ -15,6 +15,8 @@ public sealed class FastSaleModel
     public string? CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
+    public int CustomerKind { get; init; }
+    public bool CustomerIsSystem { get; init; }
     public Guid? DefaultCustomerId { get; init; }
 
     [Display(Name = "Giảm giá")]
@@ -22,6 +24,9 @@ public sealed class FastSaleModel
 
     [Display(Name = "Địa chỉ giao hàng")]
     public string? ShippingAddress { get; set; }
+
+    [Display(Name = "Số điện thoại giao hàng")]
+    public string? ShippingPhoneNumber { get; set; }
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }

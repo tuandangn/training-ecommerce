@@ -8,3 +8,10 @@ export function setWarehouseSettings(settings) {
 export function getWarehouseSettings(settings) {
     return Object.assign({}, warehouseSettings);
 }
+
+export let customerSettings = {
+    defaultCustomerId: null
+};
+export function setCustomerSettings(settings) {
+    customerSettings = Object.assign({}, customerSettings, settings);
+}
