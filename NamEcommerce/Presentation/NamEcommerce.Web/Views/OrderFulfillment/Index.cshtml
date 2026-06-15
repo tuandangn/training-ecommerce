@@ -28,6 +28,13 @@
             <span>Tổng việc</span>
             <strong>@board.TotalEntries</strong>
         </div>
+        @if (board.OverdueCount > 0)
+        {
+            <div class="fulfillment-metric danger">
+                <span>Quá hạn</span>
+                <strong>@board.OverdueCount</strong>
+            </div>
+        }
         <div class="fulfillment-metric danger">
             <span>Cần xử lý</span>
             <strong>@board.DangerCount</strong>
@@ -39,8 +46,17 @@
     </div>
 
     <ul class="nav nav-pills fulfillment-tabs" role="tablist">
+        @if (board.OverdueCount > 0)
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#fulfillmentOverdue" type="button" role="tab">
+                    Quá hạn
+                    <span class="badge bg-danger ms-1">@board.OverdueCount</span>
+                </button>
+            </li>
+        }
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#fulfillmentToday" type="button" role="tab">Hôm nay</button>
+            <button class="nav-link @(board.OverdueCount == 0 ? "active" : "")" data-bs-toggle="pill" data-bs-target="#fulfillmentToday" type="button" role="tab">Hôm nay</button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext3" type="button" role="tab">3 ngày</button>
@@ -51,10 +67,29 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentNext30" type="button" role="tab">1 tháng</button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#fulfillmentUnscheduled" type="button" role="tab">Chưa hẹn</button>
+        </li>
     </ul>
 
     <div class="tab-content fulfillment-tab-content">
-        <div class="tab-pane fade show active" id="fulfillmentToday" role="tabpanel">
+        @if (board.OverdueCount > 0)
+        {
+            <div class="tab-pane fade show active" id="fulfillmentOverdue" role="tabpanel">
+                @foreach (var day in board.Overdue)
+                {
+                    @await Html.PartialAsync("_TimelineDay", day)
+                }
+                @if (!board.Overdue.Any(day => day.Entries.Count > 0))
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+                        <h5>Không có lịch quá hạn</h5>
+                    </div>
+                }
+            </div>
+        }
+        <div class="tab-pane fade @(board.OverdueCount == 0 ? "show active" : "")" id="fulfillmentToday" role="tabpanel">
             @foreach (var day in board.Today)
             {
                 @await Html.PartialAsync("_TimelineDay", day)
@@ -105,6 +140,9 @@
                     <h5>Không có lịch trong tháng tới</h5>
                 </div>
             }
+        </div>
+        <div class="tab-pane fade" id="fulfillmentUnscheduled" role="tabpanel">
+            @await Html.PartialAsync("_UnscheduledBuckets", board.UnscheduledGroups)
         </div>
     </div>
 </section>
