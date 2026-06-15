@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260615191058_UpdateSchedule")]
-    partial class UpdateSchedule
+    [Migration("20260615192240_Db16062026")]
+    partial class Db16062026
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -4118,6 +4118,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("DeletedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("InactivatedByUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("InactivatedOnUtc")
                         .HasColumnType("datetime2");
