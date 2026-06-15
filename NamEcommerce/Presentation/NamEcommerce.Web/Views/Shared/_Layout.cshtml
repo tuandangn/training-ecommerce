@@ -35,7 +35,7 @@
 
             @if (currentUser is not null)
             {
-                <div class="d-grid p-3">
+                <div class="d-grid p-3 pb-2">
                     <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary btn-sm">
                         Đăng xuất
                     </a>
@@ -72,7 +72,7 @@
             </footer>
         </div>
     </div>
-    <div id="loading-mask" class="loader-wrapper d-none">
+    <div id="loading-mask" class="loader-wrapper" style="display:none;">
         <div class="loader-content">
             <div class="spinner"></div>
             <p>Đang xử lý, vui lòng đợi trong giây lát...</p>

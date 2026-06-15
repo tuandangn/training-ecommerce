@@ -230,12 +230,22 @@ public sealed class FastSaleAppService(
                 paymentIntentId.Value, orderId, null, null, payment.Id).ConfigureAwait(false);
         }
 
+        var createdOrder = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        var orderItems = createdOrder?.Items.Select(item => new QuickSaleOrderItemResultAppDto
+        {
+            OrderItemId = item.Id,
+            ProductId = item.ProductId,
+            ProductName = item.ProductName ?? string.Empty,
+            Quantity = item.Quantity
+        }).ToList() ?? [];
+
         return new QuickSaleResultAppDto
         {
             Success = true,
             OrderId = orderId,
             CustomerPaymentId = payment?.Id,
-            PaymentIntentId = paymentIntentId
+            PaymentIntentId = paymentIntentId,
+            OrderItems = orderItems
         };
     }
 

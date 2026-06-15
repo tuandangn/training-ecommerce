@@ -32,7 +32,8 @@ class FastSale {
             confirmIntent: root.dataset.confirmIntentUrl,
             createCashSale: root.dataset.createCashSaleUrl,
             createBankSale: root.dataset.createBankSaleUrl,
-            createUnpaidSale: root.dataset.createUnpaidSaleUrl
+            createUnpaidSale: root.dataset.createUnpaidSaleUrl,
+            schedule: root.dataset.scheduleUrl
         };
         this.bankTransferEnabled = root.dataset.bankTransferEnabled === 'true';
         this.manualConfirmEnabled = root.dataset.manualConfirmEnabled === 'true';
@@ -48,6 +49,7 @@ class FastSale {
         this.pollRequestSeq = 0;
         this.customerPicker = null;
         this.productBrowser = null;
+        this.productBrowserMobile = null;
         this.itemEditor = null;
         this.fromCommand = 'add';
 
@@ -71,6 +73,7 @@ class FastSale {
         this.warehouse = document.getElementById('fastSaleWarehouse');
         this.customerPickerEl = document.getElementById('fastSaleCustomerPicker');
         this.productBrowserEl = document.getElementById('fastSaleProductBrowser');
+        this.productBrowserMobileEl = document.getElementById('fastSaleProductBrowserMobile');
         this.cartBody = document.getElementById('fastSaleCartBody');
         this.emptyCart = document.getElementById('fastSaleEmptyCart');
         this.discount = document.getElementById('fastSaleDiscount');
@@ -143,6 +146,19 @@ class FastSale {
                 }
             );
             this.productBrowser.init();
+        }
+
+        if (this.productBrowserMobileEl) {
+            this.productBrowserMobile = new ProductBrowser(
+                this.productBrowserMobileEl,
+                (product) => this.addItem(product),
+                {
+                    colClass: this.productBrowserMobileEl.dataset.colClass,
+                    initialShow: true,
+                    checkProduct: (product) => this.isProductSelectable(product)
+                }
+            );
+            this.productBrowserMobile.init();
         }
 
         this.bindQuickCustomerForm();
@@ -241,6 +257,7 @@ class FastSale {
         });
         this.resetPaymentIntent();
         this.productBrowser?.reload();
+        this.productBrowserMobile?.reload();
         this.render();
     }
 
@@ -295,6 +312,30 @@ class FastSale {
 
         this.resetPaymentIntent();
         this.render();
+
+        const idx = this.cart.findIndex(item => item.productId === product.id && item.warehouseId === warehouseId);
+        if (this.itemEditor && idx >= 0) {
+            const cartItem = this.cart[idx];
+            this.itemEditor.open({
+                name: cartItem.name,
+                quantity: cartItem.quantity,
+                unitPrice: cartItem.unitPrice,
+                quantityDecimalPlaces: cartItem.quantityDecimalPlaces
+            }, {
+                onApply: (qty, price) => {
+                    cartItem.quantity = qty;
+                    cartItem.unitPrice = price;
+                    this.resetPaymentIntent();
+                    this.render();
+                },
+                onDelete: () => {
+                    const i = this.cart.indexOf(cartItem);
+                    if (i >= 0) this.cart.splice(i, 1);
+                    this.resetPaymentIntent();
+                    this.render();
+                }
+            }, { canRemove: false });
+        }
     }
 
     isProductSelectable(product) {
@@ -458,7 +499,8 @@ class FastSale {
                 this.cart.splice(index, 1);
                 this.resetPaymentIntent();
                 this.render();
-                this.productBrowser.refresh();
+                this.productBrowser?.refresh();
+                this.productBrowserMobile?.refresh();
             });
 
             if (this.itemEditor) {
@@ -663,7 +705,13 @@ class FastSale {
             return;
         }
 
-        this.showAlert('success', 'Đã hoàn tất bán hàng.');
+        this.showAlert('success', 'Đơn bán đã được tạo thành công.');
+
+        if (this.fulfillmentMode === 'notDelivered' && response.orderItems?.length > 0 && this.urls.schedule) {
+            this.showScheduleModal(response.orderId, response.orderItems, response.orderUrl);
+            return;
+        }
+
         if (response.orderUrl) {
             window.setTimeout(() => { window.location.href = response.orderUrl; }, 500);
         }
@@ -825,6 +873,107 @@ class FastSale {
         const div = document.createElement('div');
         div.textContent = value ?? '';
         return div.innerHTML;
+    }
+
+    showScheduleModal(orderId, orderItems, orderUrl) {
+        const modalEl = document.getElementById('fastSaleScheduleModal');
+        if (!modalEl) {
+            if (orderUrl) window.location.href = orderUrl;
+            return;
+        }
+
+        const notBeforeDateValue = '20';
+        const modeSelect = document.getElementById('fastSaleScheduleMode');
+        const dateSection = document.getElementById('fastSaleScheduleDateSection');
+        const fromInput = document.getElementById('fastSaleScheduleFrom');
+        const noteInput = document.getElementById('fastSaleScheduleNote');
+        const orderIdInput = document.getElementById('fastSaleScheduleOrderId');
+        const itemsPayload = document.getElementById('fastSaleScheduleItemsPayload');
+        const itemsTable = document.getElementById('fastSaleScheduleItemsTable');
+        const form = document.getElementById('fastSaleScheduleForm');
+        const skipBtn = document.getElementById('fastSaleScheduleSkip');
+
+        orderIdInput.value = orderId ?? '';
+        noteInput.value = '';
+        fromInput.value = '';
+        modeSelect.value = '10';
+        dateSection.classList.add('d-none');
+        fromInput.removeAttribute('required');
+
+        modeSelect.onchange = () => {
+            const needsDate = modeSelect.value === notBeforeDateValue;
+            dateSection.classList.toggle('d-none', !needsDate);
+            fromInput.toggleAttribute('required', needsDate);
+            if (!needsDate) fromInput.value = '';
+        };
+
+        itemsTable.innerHTML = '';
+        const cartItems = this.cart;
+        const rows = orderItems.map((item, index) => {
+            const cartItem = cartItems[index];
+            const decimalPlaces = cartItem?.quantityDecimalPlaces ?? 0;
+            const div = document.createElement('div');
+            div.className = 'd-flex align-items-center justify-content-between gap-3 py-2 border-bottom';
+            div.innerHTML = `
+                <span class="fw-medium">${this.escape(item.productName)}</span>
+                <input type="text" class="form-control form-control-sm text-end schedule-qty-input"
+                       style="max-width:120px"
+                       value="${this.formatQuantity(item.quantity, decimalPlaces)}"
+                       data-decimal="quantity" data-decimals="${decimalPlaces}"
+                       placeholder="SL" />`;
+            itemsTable.appendChild(div);
+            return { item, input: div.querySelector('input') };
+        });
+        DecimalFields.autoWrap(itemsTable);
+
+        skipBtn.onclick = () => {
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            if (orderUrl) window.location.href = orderUrl;
+        };
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+
+            itemsPayload.replaceChildren();
+            let index = 0;
+            rows.forEach(({ item, input }) => {
+                const qty = DecimalFields.getValue(input);
+                if (!qty) return;
+                const append = (name, value) => {
+                    const el = document.createElement('input');
+                    el.type = 'hidden'; el.name = name; el.value = value ?? '';
+                    itemsPayload.appendChild(el);
+                };
+                append(`Items[${index}].OrderItemId`, item.orderItemId);
+                append(`Items[${index}].ProductId`, item.productId);
+                append(`Items[${index}].ProductName`, item.productName);
+                append(`Items[${index}].Quantity`, qty);
+                index++;
+            });
+
+            if (index === 0) {
+                this.showAlert('warning', 'Vui lòng nhập số lượng cho ít nhất một hàng hóa.');
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            try {
+                const response = await fetch(this.urls.schedule, { method: 'POST', body: new FormData(form) });
+                const data = await response.json();
+                if (!data.success) {
+                    this.showAlert('error', data.message || 'Không thể lưu lịch.');
+                    return;
+                }
+            } finally {
+                submitBtn.disabled = false;
+            }
+
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            if (orderUrl) window.location.href = orderUrl;
+        };
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 }
 

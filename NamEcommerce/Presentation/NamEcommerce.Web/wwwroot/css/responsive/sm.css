@@ -177,4 +177,11 @@
         min-height: 4rem;
         border-right: 0;
     }
+
+    .order-workflow-info-grid, .workflow-metric-grid {
+        grid-template-columns: repeat(1, minmax(0px, 1fr));
+    }
+    .order-workflow-info-grid.three-columns {
+        grid-template-columns: repeat(1, minmax(0px, 1fr));
+    }
 }

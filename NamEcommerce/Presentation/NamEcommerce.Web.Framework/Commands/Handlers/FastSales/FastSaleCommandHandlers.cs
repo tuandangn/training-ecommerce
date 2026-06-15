@@ -162,7 +162,14 @@ internal static class FastSaleCommandHandlerMapper
             DeliveryNoteId = result.DeliveryNoteId,
             CustomerDebtId = result.CustomerDebtId,
             CustomerPaymentId = result.CustomerPaymentId,
-            PaymentIntentId = result.PaymentIntentId
+            PaymentIntentId = result.PaymentIntentId,
+            OrderItems = result.OrderItems.Select(item => new QuickSaleOrderItemResultModel
+            {
+                OrderItemId = item.OrderItemId,
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                Quantity = item.Quantity
+            }).ToList()
         };
 
     public static BankTransferPaymentIntentResultModel MapIntentResult(BankTransferPaymentIntentResultAppDto result)

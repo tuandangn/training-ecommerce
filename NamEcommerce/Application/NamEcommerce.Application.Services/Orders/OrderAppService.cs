@@ -376,6 +376,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         var orderItemDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
                                      where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                        && deliveryNote.Status != DeliveryNoteStatus.Cancelled
                                      select deliveryNote;
         if (orderItemDeliveryNotes.Any())
         {
