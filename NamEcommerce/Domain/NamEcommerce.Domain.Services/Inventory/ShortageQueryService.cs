@@ -1,3 +1,4 @@
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -17,7 +18,8 @@ public sealed class ShortageQueryService(
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
-    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader) : IShortageQueryService
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
+    IRepository<Order> orderRepository) : IShortageQueryService
 {
     private static readonly DeliveryNoteStatus[] ShippedStatuses =
     [
@@ -36,16 +38,22 @@ public sealed class ShortageQueryService(
 
     public async Task<IList<OrderItemShortageDto>> GetOrderItemShortagesAsync(Guid orderId)
     {
-        var order = GetOrder(orderId);
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
         var shortages = await BuildOrderItemShortagesAsync(order, null).ConfigureAwait(false);
 
         return shortages.Where(x => x.ShortageQuantity > 0).ToList();
     }
 
-    public Task<IList<OrderItemFulfillmentStateDto>> GetOrderItemFulfillmentStatesAsync(Guid orderId)
+    public async Task<IList<OrderItemFulfillmentStateDto>> GetOrderItemFulfillmentStatesAsync(Guid orderId)
     {
-        var order = GetOrder(orderId);
-        return BuildOrderItemFulfillmentStatesAsync(order, null);
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        return await BuildOrderItemFulfillmentStatesAsync(order, null).ConfigureAwait(false);
     }
 
     public async Task<IList<DeliveryNoteItemShortageDto>> GetDeliveryNoteShortagesAsync(Guid deliveryNoteId)
@@ -54,7 +62,9 @@ public sealed class ShortageQueryService(
         if (deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.OrderId == Guid.Empty)
             return [];
 
-        var order = GetOrder(deliveryNote.OrderId);
+        var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(deliveryNote.OrderId);
 
         var orderItemIds = deliveryNote.Items
             .Where(item => item.OrderItemId != Guid.Empty)
@@ -120,7 +130,10 @@ public sealed class ShortageQueryService(
             if (deliveryNote.OrderId == Guid.Empty)
                 return [];
 
-            var order = GetOrder(deliveryNote.OrderId);
+            var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            if (order is null)
+                throw new OrderIsNotFoundException(deliveryNote.OrderId);
+
             var itemIds = deliveryNote.Items
                 .Where(item => item.OrderItemId != Guid.Empty)
                 .Select(item => item.OrderItemId)
@@ -144,10 +157,6 @@ public sealed class ShortageQueryService(
 
         return ApplyFilter(result, filter).ToList();
     }
-
-    private Order GetOrder(Guid orderId)
-        => orderReader.DataSource.SingleOrDefault(order => order.Id == orderId)
-           ?? throw new OrderIsNotFoundException(orderId);
 
     private DeliveryNote GetDeliveryNote(Guid deliveryNoteId)
         => deliveryNoteReader.DataSource.SingleOrDefault(deliveryNote => deliveryNote.Id == deliveryNoteId)

@@ -2,7 +2,6 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
@@ -15,7 +14,7 @@ namespace NamEcommerce.Domain.Services.Orders;
 public sealed class OrderFulfillmentScheduleManager(
     IRepository<OrderFulfillmentSchedule> scheduleRepository,
     IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
-    IEntityDataReader<Order> orderDataReader,
+    IRepository<Order> orderRepository,
     IShortageQueryService shortageQueryService,
     ICurrentUserAccessor currentUserAccessor) : IOrderFulfillmentScheduleManager
 {
@@ -156,7 +155,7 @@ public sealed class OrderFulfillmentScheduleManager(
 
     private async Task<Order> GetEditableOrderAsync(Guid orderId)
     {
-        var order = await orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false)
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false)
             ?? throw new OrderIsNotFoundException(orderId);
         if (!order.CanUpdateInfo())
             throw new OrderCannotUpdateInfoException();
