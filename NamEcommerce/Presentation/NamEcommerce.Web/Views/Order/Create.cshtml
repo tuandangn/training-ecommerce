@@ -354,17 +354,17 @@
             <form asp-action="QuickCreate" asp-controller="Product" method="post" id="quickCreateProductForm" asp-antiforgery="true">
                 <input type="hidden" name="DisplayOrder" value="1" />
                 <div class="modal-body py-3">
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-lg-8 order-lg-0">
                             <div class="row">
-                                <div class="col-12 col-md-7">
+                                <div class="col-12 col-md-7 mb-3">
                                     <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductName">Tên hàng hóa</label>
                                     <input id="quickProductName" name="Name" class="form-control" autocomplete="off" placeholder="Nhập tên hàng hóa"
                                            data-val="true" data-val-maxlength="Tên hàng hóa không được vượt quá 200 ký tự."
                                            data-val-maxlength-max="200" data-val-required="Vui lòng nhập Tên hàng hóa." />
                                     <span class="text-danger small field-validation-valid" data-valmsg-for="Name" data-valmsg-replace="true"></span>
                                 </div>
-                                <div class="col-12 col-md-5">
+                                <div class="col-12 col-md-5 mb-3">
                                     <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnitPrice">Giá bán</label>
                                     <input id="quickProductUnitPrice" name="UnitPrice" class="form-control" data-decimal="currency" autocomplete="off" placeholder="Nhập giá bán" 
                                            data-val="true" data-val-required="Vui lòng nhập giá bán."
@@ -372,7 +372,7 @@
                                            data-val-number="Giá bán phải là số" / />
                                     <span class="text-danger small field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12 col-md-6 mb-3">
                                     <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnit">Đơn vị tính</label>
                                     <select id="quickProductUnit" name="UnitMeasurementId" class="form-select">
                                         <option value="">(Không chọn)</option>

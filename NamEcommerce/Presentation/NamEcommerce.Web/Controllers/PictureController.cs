@@ -24,9 +24,12 @@ public sealed class PictureController : BaseAuthorizedController
     [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client)]
     public async Task<IActionResult> Get(Guid id)
     {
+        if (id == Guid.Empty)
+            return File("~/images/default-image.png", "image/png");
+
         var file = await _mediator.Send(new GetPictureQuery { Id = id }).ConfigureAwait(false);
         if (file is null)
-            return NotFound();
+            return File("~/images/default-image.png", "image/png");
 
         return File(file.Data, file.MimeType);
     }
