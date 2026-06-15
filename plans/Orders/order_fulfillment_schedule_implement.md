@@ -472,6 +472,55 @@ Expected: each opens the correct detail page.
 
 ---
 
+## Task 14: InactivatedByUserId + Pre-fill Delivery Note From Schedule
+
+**Files:**
+- Modify: `NamEcommerce\Domain\NamEcommerce.Domain\Entities\Orders\OrderFulfillmentSchedule.cs`
+- Modify: `NamEcommerce\Infrastructure\NamEcommerce.Data.SqlServer\Mappings\OrderFulfillmentScheduleMapping.cs`
+- Modify: `NamEcommerce\Domain\NamEcommerce.Domain.Shared\Dtos\Orders\OrderFulfillmentScheduleDtos.cs`
+- Modify: `NamEcommerce\Domain\NamEcommerce.Domain.Services\Extensions\OrderFulfillmentScheduleExtensions.cs`
+- Modify: `NamEcommerce\Domain\NamEcommerce.Domain.Services\Orders\OrderFulfillmentScheduleManager.cs`
+- Modify: `NamEcommerce\Application\NamEcommerce.Application.Contracts\Dtos\Orders\OrderFulfillmentScheduleAppDtos.cs`
+- Modify: `NamEcommerce\Application\NamEcommerce.Application.Services\Extensions\OrderFulfillmentScheduleExtensions.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web.Contracts\Models\Orders\OrderFulfillmentScheduleModels.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web.Framework\Queries\Handlers\Orders\OrderFulfillmentScheduleQueryHandlers.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web\Views\Order\_OrderFulfillmentSchedulePanel.cshtml`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web\Views\OrderFulfillment\_EntryCard.cshtml`
+
+**Implementation:**
+
+- [x] Add `InactivatedByUserId` property to `OrderFulfillmentSchedule` entity.
+- [x] Update `Inactivate()` to `Inactivate(Guid? inactivatedByUserId)` — sets both `InactivatedOnUtc` and `InactivatedByUserId`.
+- [x] Add `InactivatedByUserId` to EF mapping (nullable, no index needed).
+- [x] Propagate `InactivatedByUserId` through domain DTO → domain extension → app DTO → app extension → web model → query handler.
+- [x] In `OrderFulfillmentScheduleManager.SetActiveAsync`: when inactivating, call `currentUserAccessor.GetCurrentUserAsync()` and pass the id to `Inactivate()`.
+- [x] Pre-fill delivery note from schedule panel: pass `asp-route-selected` with comma-joined `OrderItemId`s from schedule items so `DeliveryNote/Create` pre-selects those items.
+- [x] Pre-fill delivery note from board entry card: when `SourceType == "Schedule"`, pass `selected` query param with item ids. "Order" entries get no pre-selection (unknown which items apply).
+
+**Migration required:** `InactivatedByUserId` is a new column — user must create migration.
+
+---
+
+## Task 13: Board Improvements (Overdue Bucket, Customer Search, Unscheduled Tab)
+
+**Files:**
+- Modify: `NamEcommerce\Application\NamEcommerce.Application.Contracts\Dtos\Orders\OrderFulfillmentScheduleAppDtos.cs`
+- Modify: `NamEcommerce\Application\NamEcommerce.Application.Services\Orders\OrderFulfillmentScheduleAppService.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web.Contracts\Models\Orders\OrderFulfillmentScheduleModels.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web.Framework\Queries\Handlers\Orders\OrderFulfillmentScheduleQueryHandlers.cs`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web\Views\OrderFulfillment\Index.cshtml`
+- Modify: `NamEcommerce\Presentation\NamEcommerce.Web\Views\OrderFulfillment\_BoardFilters.cshtml`
+
+**Implementation:**
+
+- [x] Add `Overdue` bucket to board: entries where `ScheduledFromUtc < today` in local time, grouped by day (same `BuildDays` method with `[MinValue, yesterday]` range).
+- [x] Add `OverdueCount` to `OrderFulfillmentBoardAppDto` and `OrderFulfillmentBoardModel`. Surface in metrics bar with red badge; show "Quá hạn" tab as the active default tab when count > 0.
+- [x] Fix keyword search: restructure `GetBoardAsync` to apply keyword filter **after** states are loaded so customer name and phone (from `OrderItemFulfillmentStateDto`) can be included in the match. Remove keyword parameter from `GetOpenOrders`.
+- [x] Fix "Chưa hẹn" (Unscheduled) tab: add missing nav-pill and `_UnscheduledBuckets` tab-pane to `Index.cshtml`.
+- [x] Update filter placeholder to `"Mã đơn, địa chỉ, tên/SĐT khách"`.
+
+---
+
 ## Task 12: Final Verification
 
 **Commands:**
