@@ -42,6 +42,12 @@ public sealed class ShortageQueryService(
         return shortages.Where(x => x.ShortageQuantity > 0).ToList();
     }
 
+    public Task<IList<OrderItemFulfillmentStateDto>> GetOrderItemFulfillmentStatesAsync(Guid orderId)
+    {
+        var order = GetOrder(orderId);
+        return BuildOrderItemFulfillmentStatesAsync(order, null);
+    }
+
     public async Task<IList<DeliveryNoteItemShortageDto>> GetDeliveryNoteShortagesAsync(Guid deliveryNoteId)
     {
         var deliveryNote = GetDeliveryNote(deliveryNoteId);
@@ -149,12 +155,35 @@ public sealed class ShortageQueryService(
 
     private async Task<List<OrderItemShortageDto>> BuildOrderItemShortagesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
     {
+        var fulfillmentStates = await BuildOrderItemFulfillmentStatesAsync(order, limitedOrderItemIds).ConfigureAwait(false);
+        return fulfillmentStates
+            .Select(state => new OrderItemShortageDto
+            {
+                OrderId = state.OrderId,
+                OrderCode = state.OrderCode,
+                OrderItemId = state.OrderItemId,
+                ProductId = state.ProductId,
+                ProductName = state.ProductName,
+                RequiredQuantity = state.RequiredQuantity,
+                ShippedQuantity = state.ShippedQuantity,
+                AvailableQuantity = state.AvailableQuantity,
+                ShortageQuantity = state.MissingSourceQuantity,
+                CustomerName = state.CustomerName,
+                CustomerPhone = state.CustomerPhone,
+                CustomerAddress = state.CustomerAddress,
+                AllocatedFromPurchaseOrders = state.AllocatedFromPurchaseOrders
+            })
+            .ToList();
+    }
+
+    private async Task<IList<OrderItemFulfillmentStateDto>> BuildOrderItemFulfillmentStatesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
+    {
         var orderItems = order.OrderItems
             .Where(item => limitedOrderItemIds is null || limitedOrderItemIds.Contains(item.Id))
             .ToList();
         var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItems.Select(item => item.Id));
-        var result = new List<OrderItemShortageDto>();
+        var result = new List<OrderItemFulfillmentStateDto>();
 
         foreach (var productGroup in orderItems.GroupBy(item => item.ProductId))
         {
@@ -172,7 +201,7 @@ public sealed class ShortageQueryService(
                 var allocations = GetAllocationsForOrderItem(allocationsByOrderItem, item.Id);
                 var allocatedIncoming = allocations.Sum(allocation => allocation.AllocatedQty - allocation.ReceivedQty);
 
-                result.Add(new OrderItemShortageDto
+                result.Add(new OrderItemFulfillmentStateDto
                 {
                     OrderId = order.Id,
                     OrderCode = order.Code,
@@ -182,7 +211,8 @@ public sealed class ShortageQueryService(
                     RequiredQuantity = item.Quantity,
                     ShippedQuantity = shippedQuantity,
                     AvailableQuantity = availableQuantity,
-                    ShortageQuantity = Math.Max(0, stillNeeded - availableQuantity - allocatedIncoming),
+                    AllocatedIncomingQuantity = allocatedIncoming,
+                    MissingSourceQuantity = Math.Max(0, stillNeeded - availableQuantity - allocatedIncoming),
                     CustomerName = order.CustomerInfo.FullName,
                     CustomerPhone = order.CustomerInfo.PhoneNumber,
                     CustomerAddress = order.CustomerInfo.Address,
@@ -264,7 +294,8 @@ public sealed class ShortageQueryService(
                 POCode = purchaseOrderItem.PurchaseOrderCode,
                 AllocatedQty = allocation.AllocatedQuantity,
                 ReceivedQty = allocation.ReceivedQuantity,
-                ExpectedReceiveDateUtc = purchaseOrderItem.ExpectedDeliveryDateUtc
+                ExpectedReceiveDateUtc = purchaseOrderItem.ExpectedDeliveryDateUtc,
+                IsDirectShip = allocation.IsDirectShip
             });
         }
 

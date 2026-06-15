@@ -135,6 +135,7 @@ using NamEcommerce.Web.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Localizations;
 using NamEcommerce.Web.Services.Notifications;
+using NamEcommerce.Web.Services.OrderFulfillment;
 using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
@@ -253,6 +254,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDeliveryRunManager, DeliveryRunManager>();
     services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
     services.AddScoped<IOrderManager, OrderManager>();
+    services.AddScoped<IOrderFulfillmentScheduleManager, OrderFulfillmentScheduleManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<ICustomerLedgerManager, CustomerLedgerManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
@@ -308,6 +310,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ISystemNotificationAppService, RealtimeSystemNotificationAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
+    services.AddScoped<IOrderFulfillmentScheduleAppService, OrderFulfillmentScheduleAppService>();
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
     services.AddScoped<IFastSaleAppService, FastSaleAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
@@ -350,6 +353,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseModelFactory, WarehouseModelFactory>();
     services.AddScoped<IPurchaseOrderModelFactory, PurchaseOrderModelFactory>();
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
+    services.AddScoped<IOrderFulfillmentModelFactory, OrderFulfillmentModelFactory>();
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
     services.AddScoped<IDeliveryRunModelFactory, DeliveryRunModelFactory>();

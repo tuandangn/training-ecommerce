@@ -2,6 +2,7 @@
 @model MenuNavigationModel
 @{
     var showSales = Model.CanViewOrders
+        || Model.CanViewOrderFulfillmentSchedule
         || Model.CanUseFastSale
         || Model.CanUsePreparation
         || Model.CanManageCustomerReturns
@@ -41,16 +42,22 @@
     @if (showSales)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "" : "collapsed")"
-               data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "true" : "false")">
+            <a class="nav-link @(WebHelper.IsHasController("Order", "OrderFulfillment", "Preparation", "Customer", "CustomerReturn") ? "" : "collapsed")"
+               data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "OrderFulfillment", "Preparation", "Customer", "CustomerReturn") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Bán hàng
             </a>
-            <div class="collapse @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "show" : "")" id="collapseSales">
+            <div class="collapse @(WebHelper.IsHasController("Order", "OrderFulfillment", "Preparation", "Customer", "CustomerReturn") ? "show" : "")" id="collapseSales">
                 <ul class="nav flex-column sub-menu">
                     @if (Model.CanViewOrders)
                     {
                         <li class="nav-item">
                             <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
+                        </li>
+                    }
+                    @if (Model.CanViewOrderFulfillmentSchedule)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("OrderFulfillment") ? "active" : "")" asp-controller="OrderFulfillment" asp-action="Index">Lịch xử lý đơn hàng</a>
                         </li>
                     }
                     @if (Model.CanUsePreparation)

@@ -1,0 +1,122 @@
+@model OrderFulfillmentBoardEntryModel
+@{
+    var sourceIcon = Model.SourceType switch
+    {
+        "DeliveryNote" => "bi-truck",
+        "DeliveryRun" => "bi-person-badge",
+        "Order" => "bi-receipt",
+        _ => "bi-calendar2-check"
+    };
+    var detailController = Model.SourceType switch
+    {
+        "DeliveryNote" => "DeliveryNote",
+        "DeliveryRun" => "DeliveryRun",
+        _ => "Order"
+    };
+    var detailId = Model.SourceType switch
+    {
+        "DeliveryNote" => Model.SourceId,
+        "DeliveryRun" => Model.SourceId,
+        _ => Model.OrderId
+    };
+    var localFrom = Model.ScheduledFromUtc?.ToLocalTime();
+    var localTo = Model.ScheduledToUtc?.ToLocalTime();
+}
+
+<article class="fulfillment-entry fulfillment-entry-@Model.Tone">
+    <div class="fulfillment-entry-top">
+        <div class="fulfillment-entry-title">
+            <span class="fulfillment-source-icon"><i class="bi @sourceIcon"></i></span>
+            <div>
+                <a asp-controller="@detailController" asp-action="Details" asp-route-id="@detailId" class="fw-600 text-decoration-none">
+                    @Model.SourceCode
+                </a>
+                <div class="small text-muted">@Model.OrderCode</div>
+            </div>
+        </div>
+        <span class="status-badge @Model.Tone">@Model.StatusText</span>
+    </div>
+
+    <div class="fulfillment-entry-meta">
+        @if (localFrom.HasValue)
+        {
+            <span><i class="bi bi-clock"></i> @localFrom.Value.ToString("dd/MM HH:mm")</span>
+            @if (localTo.HasValue)
+            {
+                <span>@localTo.Value.ToString("HH:mm")</span>
+            }
+        }
+        else
+        {
+            <span><i class="bi bi-calendar-x"></i> Chưa hẹn</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.CustomerName))
+        {
+            <span><i class="bi bi-person"></i> @Model.CustomerName</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.CustomerPhone))
+        {
+            <span><i class="bi bi-telephone"></i> @Model.CustomerPhone</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress))
+    {
+        <div class="fulfillment-address">
+            <i class="bi bi-geo-alt"></i>
+            <span>@Model.ShippingAddress</span>
+        </div>
+    }
+
+    @if (Model.Items.Count > 0)
+    {
+        <div class="fulfillment-items">
+            @foreach (var item in Model.Items)
+            {
+                <div class="fulfillment-item-row">
+                    <span>@item.ProductName</span>
+                    <strong>@item.ScheduledQuantity.DisplayQuantity()</strong>
+                </div>
+                <div class="fulfillment-availability">
+                    <span>Tồn @item.AvailableQuantity.DisplayQuantity()</span>
+                    <span>Đã giao @item.ShippedQuantity.DisplayQuantity()</span>
+                    @if (item.MissingSourceQuantity > 0)
+                    {
+                        <span>Thiếu nguồn @item.MissingSourceQuantity.DisplayQuantity()</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Dependencies.Count > 0)
+    {
+        <div class="fulfillment-dependencies">
+            @foreach (var dependency in Model.Dependencies)
+            {
+                <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@dependency.PurchaseOrderId" class="fulfillment-dependency">
+                    <span>@dependency.PurchaseOrderCode</span>
+                    <span>@dependency.ReceivedQuantity.DisplayQuantity() / @dependency.AllocatedQuantity.DisplayQuantity()</span>
+                    @if (dependency.ExpectedReceiveDateUtc.HasValue)
+                    {
+                        <span>@dependency.ExpectedReceiveDateUtc.Value.ToLocalTime().ToString("dd/MM")</span>
+                    }
+                </a>
+            }
+        </div>
+    }
+
+    <div class="fulfillment-entry-actions">
+        @if (Model.SourceType is "Schedule" or "Order" && Model.OrderId != Guid.Empty)
+        {
+            <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.OrderId" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right"></i>
+                Xuất hàng
+            </a>
+        }
+        <a asp-controller="@detailController" asp-action="Details" asp-route-id="@detailId" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i>
+            Chi tiết
+        </a>
+    </div>
+</article>

@@ -25,7 +25,9 @@ public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
     IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
     IInventoryStockManager inventoryStockManager,
-    IDirectShipManager directShipManager) : IOrderAppService
+    IDirectShipManager directShipManager,
+    IOrderFulfillmentScheduleAppService orderFulfillmentScheduleAppService,
+    IShortageQueryService shortageQueryService) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -155,12 +157,27 @@ public sealed class OrderAppService(IOrderManager orderManager,
             }
         }
 
+        var existingItemIds = order.Items.Select(item => item.Id).ToHashSet();
         await orderManager.AddOrderItemAsync(dto.OrderId, new AddOrderItemDto
         {
             ProductId = dto.ProductId,
             Quantity = dto.Quantity,
             UnitPrice = dto.UnitPrice
         }).ConfigureAwait(false);
+
+        var updatedOrder = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var defaultScheduleResult = await CreateDefaultSchedulesAsync(
+            updatedOrder,
+            updatedOrder?.Items.Where(item => !existingItemIds.Contains(item.Id)).Select(item => item.Id).ToHashSet()).ConfigureAwait(false);
+        if (!defaultScheduleResult.Success)
+        {
+            return new AddOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = defaultScheduleResult.ErrorMessage,
+                OrderId = order.Id
+            };
+        }
 
         return new AddOrderItemResultAppDto
         {
@@ -284,6 +301,17 @@ public sealed class OrderAppService(IOrderManager orderManager,
             {
                 Success = false,
                 ErrorMessage = "Error.OrderItemUnitPriceCannotChange_InDelivery"
+            };
+        }
+
+        var scheduleQuantityResult = await EnsureActiveScheduleQuantityFitsAsync(dto.OrderId, dto.OrderItemId, dto.Quantity).ConfigureAwait(false);
+        if (!scheduleQuantityResult.Success)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = scheduleQuantityResult.ErrorMessage,
+                OrderId = dto.OrderId
             };
         }
 
@@ -589,6 +617,17 @@ public sealed class OrderAppService(IOrderManager orderManager,
         }
 
         var createOrderResult = await orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
+        var createdOrder = await orderManager.GetOrderByIdAsync(createOrderResult.CreatedId).ConfigureAwait(false);
+        var defaultScheduleResult = await CreateDefaultSchedulesAsync(createdOrder, null).ConfigureAwait(false);
+        if (!defaultScheduleResult.Success)
+        {
+            return new CreateOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = defaultScheduleResult.ErrorMessage,
+                CreatedId = createOrderResult.CreatedId
+            };
+        }
 
         return new CreateOrderResultAppDto
         {
@@ -596,6 +635,104 @@ public sealed class OrderAppService(IOrderManager orderManager,
             CreatedId = createOrderResult.CreatedId
         };
     }
+
+    private async Task<CommonActionResultDto> EnsureActiveScheduleQuantityFitsAsync(Guid orderId, Guid orderItemId, decimal newQuantity)
+    {
+        var schedules = await orderFulfillmentScheduleAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var activeScheduledQuantity = schedules
+            .Where(schedule => schedule.IsActive)
+            .SelectMany(schedule => schedule.Items)
+            .Where(item => item.OrderItemId == orderItemId)
+            .Sum(item => item.Quantity);
+        if (activeScheduledQuantity == 0)
+            return CommonActionResultDto.CreateSuccess();
+
+        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(orderId).ConfigureAwait(false);
+        var shippedQuantity = states.FirstOrDefault(state => state.OrderItemId == orderItemId)?.ShippedQuantity ?? 0;
+        var newRemainingQuantity = Math.Max(0, newQuantity - shippedQuantity);
+
+        return activeScheduledQuantity <= newRemainingQuantity
+            ? CommonActionResultDto.CreateSuccess()
+            : CommonActionResultDto.CreateError("Error.OrderFulfillmentScheduleQuantityExceedsOrderItemQuantity");
+    }
+
+    private async Task<CommonActionResultDto> CreateDefaultSchedulesAsync(OrderDto? order, ISet<Guid>? limitedOrderItemIds)
+    {
+        if (order is null)
+            return CommonActionResultDto.CreateSuccess();
+
+        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(order.Id).ConfigureAwait(false);
+        if (limitedOrderItemIds is not null)
+            states = states.Where(state => limitedOrderItemIds.Contains(state.OrderItemId)).ToList();
+
+        if (states.Count == 0)
+            return CommonActionResultDto.CreateSuccess();
+
+        if (order.ExpectedShippingDateUtc.HasValue)
+        {
+            return await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.NotBeforeDate, order.ExpectedShippingDateUtc, states
+                .Select(state => ToScheduleItem(state, Math.Max(0, state.RequiredQuantity - state.ShippedQuantity)))
+                .Where(item => item.Quantity > 0)
+                .ToList()).ConfigureAwait(false);
+        }
+
+        var asapItems = states
+            .Select(state =>
+            {
+                var remaining = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity);
+                return ToScheduleItem(state, Math.Min(remaining, state.AvailableQuantity));
+            })
+            .Where(item => item.Quantity > 0)
+            .ToList();
+        var asapResult = await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.AsSoonAsPossible, null, asapItems).ConfigureAwait(false);
+        if (!asapResult.Success)
+            return asapResult;
+
+        var waitingItems = states
+            .Select(state =>
+            {
+                var remaining = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity);
+                var available = Math.Min(remaining, state.AvailableQuantity);
+                return ToScheduleItem(state, remaining - available);
+            })
+            .Where(item => item.Quantity > 0)
+            .ToList();
+
+        return await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.WhenStockAvailable, null, waitingItems).ConfigureAwait(false);
+    }
+
+    private async Task<CommonActionResultDto> CreateScheduleAsync(
+        Guid orderId,
+        OrderFulfillmentScheduleMode mode,
+        DateTime? scheduledFromUtc,
+        IList<OrderFulfillmentScheduleItemInputAppDto> items)
+    {
+        if (items.Count == 0)
+            return CommonActionResultDto.CreateSuccess();
+
+        var result = await orderFulfillmentScheduleAppService.CreateAsync(new CreateOrderFulfillmentScheduleAppDto
+        {
+            OrderId = orderId,
+            Mode = (int)mode,
+            ScheduledFromUtc = scheduledFromUtc,
+            Items = items
+        }).ConfigureAwait(false);
+
+        return result.Success
+            ? CommonActionResultDto.CreateSuccess()
+            : CommonActionResultDto.CreateError(result.ErrorMessage);
+    }
+
+    private static OrderFulfillmentScheduleItemInputAppDto ToScheduleItem(
+        Domain.Shared.Dtos.Inventory.OrderItemFulfillmentStateDto state,
+        decimal quantity)
+        => new()
+        {
+            OrderItemId = state.OrderItemId,
+            ProductId = state.ProductId,
+            ProductName = state.ProductName,
+            Quantity = quantity
+        };
 
     public async Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto)
     {

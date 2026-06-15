@@ -211,3 +211,26 @@
         grid-template-columns: 1fr;
     }
 }
+
+.fulfillment-order-panel {
+    margin-bottom: 1rem;
+}
+
+.fulfillment-schedule-line {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.fulfillment-schedule-line strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.fulfillment-schedule-data {
+    display: none;
+}
+
+.fulfillment-schedule-item .schedule-item-quantity {
+    min-width: 120px;
+}

@@ -8,6 +8,7 @@ public sealed record PurchaseOrderShortageAllocationDto
     public required decimal AllocatedQty { get; init; }
     public required decimal ReceivedQty { get; init; }
     public DateTime? ExpectedReceiveDateUtc { get; init; }
+    public bool IsDirectShip { get; init; }
 }
 
 [Serializable]
@@ -22,6 +23,25 @@ public sealed record OrderItemShortageDto
     public required decimal ShippedQuantity { get; init; }
     public required decimal AvailableQuantity { get; init; }
     public required decimal ShortageQuantity { get; init; }
+    public string? CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? CustomerAddress { get; init; }
+    public IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders { get; init; } = [];
+}
+
+[Serializable]
+public sealed record OrderItemFulfillmentStateDto
+{
+    public required Guid OrderId { get; init; }
+    public required string OrderCode { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal RequiredQuantity { get; init; }
+    public required decimal ShippedQuantity { get; init; }
+    public required decimal AvailableQuantity { get; init; }
+    public required decimal AllocatedIncomingQuantity { get; init; }
+    public required decimal MissingSourceQuantity { get; init; }
     public string? CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }

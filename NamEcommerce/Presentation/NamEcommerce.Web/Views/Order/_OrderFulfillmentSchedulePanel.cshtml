@@ -1,0 +1,261 @@
+@model OrderFulfillmentSchedulePanelModel
+@{
+    var activeSchedules = Model.Schedules.Where(schedule => schedule.IsActive).ToList();
+    var nextSchedule = activeSchedules
+        .Where(schedule => schedule.ScheduledFromUtc.HasValue)
+        .OrderBy(schedule => schedule.ScheduledFromUtc)
+        .FirstOrDefault();
+    var summaryTone = activeSchedules.Count == 0
+        ? "secondary"
+        : nextSchedule?.ScheduledFromUtc < DateTime.UtcNow.Date
+            ? "danger"
+            : nextSchedule?.ScheduledFromUtc <= DateTime.UtcNow.AddDays(1)
+                ? "warning"
+                : "success";
+}
+
+<section class="workflow-panel active fulfillment-order-panel" data-workflow-panel="fulfillment" role="tabpanel">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Lịch xử lý <span class="status-badge @summaryTone">@activeSchedules.Count lịch hoạt động</span></h5>
+                <div class="text-muted small">
+                    @(nextSchedule?.ScheduledFromUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa có lịch hẹn")
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.CanUpdateSchedules)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-schedule-action="create">
+                        <i class="bi bi-plus-lg"></i>
+                        Thêm lịch
+                    </button>
+                }
+                <a asp-controller="OrderFulfillment" asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-calendar2-week"></i>
+                    Bảng lịch
+                </a>
+            </div>
+        </div>
+        <div class="content-card-body">
+            @if (Model.Schedules.Count == 0)
+            {
+                <div class="workflow-soft-empty">
+                    <i class="bi bi-calendar-x"></i>
+                    <span>Đơn hàng chưa có lịch xử lý.</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Kiểu lịch</th>
+                                <th>Hàng hóa</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var schedule in Model.Schedules)
+                            {
+                                var fromLocal = schedule.ScheduledFromUtc?.ToLocalTime();
+                                var toLocal = schedule.ScheduledToUtc?.ToLocalTime();
+                                <tr class="@(!schedule.IsActive ? "text-muted" : "")">
+                                    <td>
+                                        @if (fromLocal.HasValue)
+                                        {
+                                            <div class="fw-600">@fromLocal.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                            @if (toLocal.HasValue)
+                                            {
+                                                <div class="small text-muted">Đến @toLocal.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span>Chưa hẹn</span>
+                                        }
+                                    </td>
+                                    <td>@GetModeText(schedule.Mode)</td>
+                                    <td>
+                                        @foreach (var item in schedule.Items)
+                                        {
+                                            <div class="fulfillment-schedule-line">
+                                                <span>@item.ProductName</span>
+                                                <strong>@item.Quantity.DisplayQuantity()</strong>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(schedule.Note))
+                                        {
+                                            <div class="small text-muted">@schedule.Note</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="status-badge @(schedule.IsActive ? "success" : "secondary")">
+                                            @(schedule.IsActive ? "Hoạt động" : "Tạm tắt")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="delivery-quick-actions">
+                                            @if (schedule.IsActive)
+                                            {
+                                                <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@schedule.OrderId" class="btn-table-action" title="Tạo phiếu giao" aria-label="Tạo phiếu giao">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                            }
+                                            @if (Model.CanUpdateSchedules)
+                                            {
+                                                <button type="button"
+                                                        class="btn-table-action"
+                                                        data-schedule-action="edit"
+                                                        data-schedule-id="@schedule.Id"
+                                                        data-schedule-mode="@schedule.Mode"
+                                                        data-schedule-from="@fromLocal?.ToString("yyyy-MM-ddTHH:mm")"
+                                                        data-schedule-to="@toLocal?.ToString("yyyy-MM-ddTHH:mm")"
+                                                        data-schedule-note="@schedule.Note"
+                                                        title="Chỉnh sửa"
+                                                        aria-label="Chỉnh sửa">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button"
+                                                        class="btn-table-action @(schedule.IsActive ? "danger" : "")"
+                                                        data-schedule-action="toggle"
+                                                        data-schedule-id="@schedule.Id"
+                                                        data-schedule-active="@(!schedule.IsActive)"
+                                                        title="@(schedule.IsActive ? "Tạm tắt" : "Kích hoạt")"
+                                                        aria-label="@(schedule.IsActive ? "Tạm tắt" : "Kích hoạt")">
+                                                    <i class="bi @(schedule.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                        <div class="fulfillment-schedule-data" data-schedule-id="@schedule.Id">
+                                            @foreach (var item in schedule.Items)
+                                            {
+                                                <span data-order-item-id="@item.OrderItemId" data-quantity="@item.Quantity.DisplayQuantity()"></span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@if (Model.CanUpdateSchedules)
+{
+    @await Html.PartialAsync("~/Views/OrderFulfillment/_ScheduleModal.cshtml", Model)
+}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('fulfillmentScheduleModal');
+    const form = document.getElementById('fulfillmentScheduleForm');
+    if (!modalElement || !form) return;
+
+    const modal = new bootstrap.Modal(modalElement);
+    const title = document.getElementById('fulfillmentScheduleModalTitle');
+    const idInput = document.getElementById('fulfillmentScheduleId');
+    const modeInput = document.getElementById('fulfillmentScheduleMode');
+    const fromInput = document.getElementById('fulfillmentScheduleFrom');
+    const toInput = document.getElementById('fulfillmentScheduleTo');
+    const noteInput = document.getElementById('fulfillmentScheduleNote');
+    const payload = document.getElementById('fulfillmentScheduleItemsPayload');
+    const rows = Array.from(document.querySelectorAll('.fulfillment-schedule-item'));
+
+    document.querySelectorAll('[data-schedule-action="create"]').forEach(button => {
+        button.addEventListener('click', () => {
+            title.textContent = 'Thêm lịch xử lý';
+            form.action = '@Url.Action("CreateSchedule", "OrderFulfillment")';
+            idInput.value = '';
+            modeInput.value = '@((int)OrderFulfillmentScheduleMode.AsSoonAsPossible)';
+            fromInput.value = '';
+            toInput.value = '';
+            noteInput.value = '';
+            rows.forEach(row => row.querySelector('.schedule-item-quantity').value = '');
+            modal.show();
+        });
+    });
+
+    document.querySelectorAll('[data-schedule-action="edit"]').forEach(button => {
+        button.addEventListener('click', () => {
+            title.textContent = 'Chỉnh sửa lịch xử lý';
+            form.action = '@Url.Action("UpdateSchedule", "OrderFulfillment")';
+            idInput.value = button.dataset.scheduleId;
+            modeInput.value = button.dataset.scheduleMode;
+            fromInput.value = button.dataset.scheduleFrom || '';
+            toInput.value = button.dataset.scheduleTo || '';
+            noteInput.value = button.dataset.scheduleNote || '';
+            rows.forEach(row => row.querySelector('.schedule-item-quantity').value = '');
+
+            const data = document.querySelector(`.fulfillment-schedule-data[data-schedule-id="${button.dataset.scheduleId}"]`);
+            data?.querySelectorAll('[data-order-item-id]').forEach(item => {
+                const row = rows.find(r => r.dataset.orderItemId === item.dataset.orderItemId);
+                if (row) row.querySelector('.schedule-item-quantity').value = item.dataset.quantity || '';
+            });
+            modal.show();
+        });
+    });
+
+    document.querySelectorAll('[data-schedule-action="toggle"]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const body = new URLSearchParams({ id: button.dataset.scheduleId, isActive: button.dataset.scheduleActive });
+            const response = await fetch('@Url.Action("SetScheduleActive", "OrderFulfillment")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
+            });
+            const data = await response.json();
+            if (data.success) window.location.reload();
+            else alert(data.message || 'Không thể cập nhật lịch.');
+        });
+    });
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        payload.replaceChildren();
+        let index = 0;
+        rows.forEach(row => {
+            const quantity = row.querySelector('.schedule-item-quantity').value;
+            if (!quantity) return;
+            append(`Items[${index}].OrderItemId`, row.dataset.orderItemId);
+            append(`Items[${index}].ProductId`, row.dataset.productId);
+            append(`Items[${index}].ProductName`, row.dataset.productName);
+            append(`Items[${index}].Quantity`, quantity);
+            index += 1;
+        });
+        if (index === 0) {
+            alert('Vui lòng nhập số lượng cho ít nhất một hàng hóa.');
+            return;
+        }
+        const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+        const data = await response.json();
+        if (data.success) window.location.reload();
+        else alert(data.message || 'Không thể lưu lịch.');
+    });
+
+    function append(name, value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value || '';
+        payload.appendChild(input);
+    }
+});
+</script>
+
+@functions {
+    private static string GetModeText(int mode)
+        => (OrderFulfillmentScheduleMode)mode switch
+        {
+            OrderFulfillmentScheduleMode.AsSoonAsPossible => "Giao sớm nhất",
+            OrderFulfillmentScheduleMode.NotBeforeDate => "Không trước ngày",
+            OrderFulfillmentScheduleMode.WhenStockAvailable => "Khi có hàng",
+            _ => "Không xác định"
+        };
+}

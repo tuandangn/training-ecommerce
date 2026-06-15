@@ -1,0 +1,14 @@
+@model OrderFulfillmentBoardDayModel
+
+<section class="fulfillment-day">
+    <div class="fulfillment-day-header">
+        <h2>@Model.Label</h2>
+        <span>@Model.Entries.Count việc</span>
+    </div>
+    <div class="fulfillment-entry-grid">
+        @foreach (var entry in Model.Entries)
+        {
+            @await Html.PartialAsync("_EntryCard", entry)
+        }
+    </div>
+</section>

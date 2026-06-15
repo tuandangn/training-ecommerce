@@ -1,0 +1,79 @@
+@model OrderFulfillmentSchedulePanelModel
+
+<div class="modal fade" id="fulfillmentScheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content ui-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="fulfillmentScheduleModalTitle">Lịch xử lý đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="fulfillmentScheduleForm" method="post" action="@Url.Action("CreateSchedule", "OrderFulfillment")">
+                <div class="modal-body py-3">
+                    <input type="hidden" name="OrderId" value="@Model.OrderId" />
+                    <input type="hidden" name="Id" id="fulfillmentScheduleId" />
+                    <div id="fulfillmentScheduleItemsPayload"></div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label" for="fulfillmentScheduleMode">Kiểu lịch</label>
+                            <select id="fulfillmentScheduleMode" name="Mode" class="form-select">
+                                <option value="@((int)OrderFulfillmentScheduleMode.AsSoonAsPossible)">Giao sớm nhất</option>
+                                <option value="@((int)OrderFulfillmentScheduleMode.NotBeforeDate)">Không trước ngày</option>
+                                <option value="@((int)OrderFulfillmentScheduleMode.WhenStockAvailable)">Khi có hàng</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label" for="fulfillmentScheduleFrom">Bắt đầu</label>
+                            <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" />
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label" for="fulfillmentScheduleTo">Kết thúc</label>
+                            <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="fulfillmentScheduleNote">Ghi chú</label>
+                            <textarea id="fulfillmentScheduleNote" name="Note" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-3">
+                        <table class="table data-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Hàng hóa</th>
+                                    <th class="text-end">SL đơn</th>
+                                    <th class="text-end">SL lên lịch</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.AvailableItems)
+                                {
+                                    <tr class="fulfillment-schedule-item"
+                                        data-order-item-id="@item.OrderItemId"
+                                        data-product-id="@item.ProductId"
+                                        data-product-name="@item.ProductName">
+                                        <td class="fw-600">@item.ProductName</td>
+                                        <td class="text-end">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
+                                        <td class="text-end">
+                                            <input type="text"
+                                                   class="form-control form-control-sm text-end schedule-item-quantity"
+                                                   data-decimal="quantity"
+                                                   data-decimals="@item.QuantityDecimalPlaces"
+                                                   autocomplete="off" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy"></i>
+                        Lưu lại
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
