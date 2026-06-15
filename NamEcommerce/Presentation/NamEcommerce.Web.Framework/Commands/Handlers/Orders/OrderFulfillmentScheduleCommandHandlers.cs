@@ -83,3 +83,17 @@ public sealed class SetOrderFulfillmentScheduleActiveHandler(IOrderFulfillmentSc
         };
     }
 }
+
+public sealed class DeleteOrderFulfillmentScheduleHandler(IOrderFulfillmentScheduleAppService appService)
+    : IRequestHandler<DeleteOrderFulfillmentScheduleCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(DeleteOrderFulfillmentScheduleCommand request, CancellationToken cancellationToken)
+    {
+        var result = await appService.DeleteAsync(request.Id).ConfigureAwait(false);
+        return new CommonActionResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
+    }
+}

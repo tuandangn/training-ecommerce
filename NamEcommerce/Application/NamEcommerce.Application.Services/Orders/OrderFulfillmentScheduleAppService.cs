@@ -82,6 +82,19 @@ public sealed class OrderFulfillmentScheduleAppService(
         }
     }
 
+    public async Task<CommonActionResultDto> DeleteAsync(Guid id)
+    {
+        try
+        {
+            await scheduleManager.DeleteAsync(id).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
+    }
+
     public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(IReadOnlyCollection<Guid> purchaseOrderItemIds)
     {
         if (purchaseOrderItemIds.Count == 0)
@@ -106,6 +119,12 @@ public sealed class OrderFulfillmentScheduleAppService(
         var orders = GetOpenOrders(filter.Keywords);
         var orderIds = orders.Select(order => order.Id).ToList();
         var statesByOrder = await GetStatesByOrderAsync(orderIds).ConfigureAwait(false);
+        var processingDeliveryOrderIds = GetProcessingDeliveryOrderIds(orderIds);
+        orders = orders
+            .Where(order => processingDeliveryOrderIds.Contains(order.Id)
+                || statesByOrder.GetValueOrDefault(order.Id)?.Any(state => state.RequiredQuantity > state.ShippedQuantity) == true)
+            .ToList();
+        orderIds = orders.Select(order => order.Id).ToList();
         var schedules = await GetSchedulesAsync(orders, filter.IncludeInactive).ConfigureAwait(false);
 
         var entries = new List<OrderFulfillmentBoardEntryAppDto>();
@@ -132,7 +151,7 @@ public sealed class OrderFulfillmentScheduleAppService(
     private IList<Order> GetOpenOrders(string? keywords)
     {
         var query = orderDataReader.DataSource
-            .Where(order => order.OrderStatus == OrderStatus.Pending && order.OrderItems.Any(item => !item.IsDelivered));
+            .Where(order => order.OrderStatus == OrderStatus.Pending);
 
         var orders = query
             .OrderBy(order => order.CreatedOnUtc)
@@ -146,6 +165,18 @@ public sealed class OrderFulfillmentScheduleAppService(
             .Where(order => order.Code.Contains(normalizedKeywords, StringComparison.OrdinalIgnoreCase)
                 || order.ShippingAddress.Value.Contains(normalizedKeywords, StringComparison.OrdinalIgnoreCase))
             .ToList();
+    }
+
+    private HashSet<Guid> GetProcessingDeliveryOrderIds(IReadOnlyCollection<Guid> orderIds)
+    {
+        if (orderIds.Count == 0)
+            return [];
+
+        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering };
+        return deliveryNoteDataReader.DataSource
+            .Where(note => orderIds.Contains(note.OrderId) && statuses.Contains(note.Status))
+            .Select(note => note.OrderId)
+            .ToHashSet();
     }
 
     private async Task<Dictionary<Guid, IList<OrderItemFulfillmentStateDto>>> GetStatesByOrderAsync(IEnumerable<Guid> orderIds)

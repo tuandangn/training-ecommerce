@@ -128,6 +128,14 @@
                                                         aria-label="@(schedule.IsActive ? "Tạm tắt" : "Kích hoạt")">
                                                     <i class="bi @(schedule.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i>
                                                 </button>
+                                                <button type="button"
+                                                        class="btn-table-action danger"
+                                                        data-schedule-action="delete"
+                                                        data-schedule-id="@schedule.Id"
+                                                        title="Xóa lịch"
+                                                        aria-label="Xóa lịch">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
                                             }
                                         </div>
                                         <div class="fulfillment-schedule-data" data-schedule-id="@schedule.Id">
@@ -167,6 +175,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const noteInput = document.getElementById('fulfillmentScheduleNote');
     const payload = document.getElementById('fulfillmentScheduleItemsPayload');
     const rows = Array.from(document.querySelectorAll('.fulfillment-schedule-item'));
+    const dateFields = Array.from(document.querySelectorAll('[data-schedule-date-field]'));
+    const notBeforeDateMode = '@((int)OrderFulfillmentScheduleMode.NotBeforeDate)';
+
+    modeInput.addEventListener('change', syncDateFields);
 
     document.querySelectorAll('[data-schedule-action="create"]').forEach(button => {
         button.addEventListener('click', () => {
@@ -178,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
             toInput.value = '';
             noteInput.value = '';
             rows.forEach(row => row.querySelector('.schedule-item-quantity').value = '');
+            syncDateFields();
             modal.show();
         });
     });
@@ -198,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const row = rows.find(r => r.dataset.orderItemId === item.dataset.orderItemId);
                 if (row) row.querySelector('.schedule-item-quantity').value = item.dataset.quantity || '';
             });
+            syncDateFields();
             modal.show();
         });
     });
@@ -216,8 +230,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    document.querySelectorAll('[data-schedule-action="delete"]').forEach(button => {
+        button.addEventListener('click', async () => {
+            if (!confirm('Xóa lịch xử lý này?')) return;
+
+            const body = new URLSearchParams({ id: button.dataset.scheduleId });
+            const response = await fetch('@Url.Action("DeleteSchedule", "OrderFulfillment")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
+            });
+            const data = await response.json();
+            if (data.success) window.location.reload();
+            else alert(data.message || 'Không thể xóa lịch.');
+        });
+    });
+
     form.addEventListener('submit', async event => {
         event.preventDefault();
+        syncDateFields();
         payload.replaceChildren();
         let index = 0;
         rows.forEach(row => {
@@ -245,6 +276,16 @@ document.addEventListener('DOMContentLoaded', function () {
         input.name = name;
         input.value = value || '';
         payload.appendChild(input);
+    }
+
+    function syncDateFields() {
+        const needsDate = modeInput.value === notBeforeDateMode;
+        dateFields.forEach(field => field.classList.toggle('d-none', !needsDate));
+        fromInput.toggleAttribute('required', needsDate);
+        if (!needsDate) {
+            fromInput.value = '';
+            toInput.value = '';
+        }
     }
 });
 </script>

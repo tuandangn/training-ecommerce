@@ -14,6 +14,7 @@ namespace NamEcommerce.Domain.Services.Orders;
 
 public sealed class OrderFulfillmentScheduleManager(
     IRepository<OrderFulfillmentSchedule> scheduleRepository,
+    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository,
     IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
     IEntityDataReader<Order> orderDataReader,
     IShortageQueryService shortageQueryService,
@@ -91,10 +92,20 @@ public sealed class OrderFulfillmentScheduleManager(
         if (schedule.IsActive)
             await EnsureQuantitiesDoNotExceedRemainingAsync(order, normalizedItems, schedule.Id).ConfigureAwait(false);
 
+        var existingItems = schedule.Items.ToList();
         schedule.SetMode(dto.Mode);
         schedule.SetWindow(dto.ScheduledFromUtc, dto.ScheduledToUtc);
         schedule.SetNote(dto.Note);
         schedule.ReplaceItems(normalizedItems);
+        foreach (var item in existingItems)
+        {
+            await scheduleItemRepository.DeleteAsync(item).ConfigureAwait(false);
+        }
+
+        foreach (var item in schedule.Items)
+        {
+            await scheduleItemRepository.InsertAsync(item).ConfigureAwait(false);
+        }
 
         var updated = await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);
         return new UpdateOrderFulfillmentScheduleResultDto { UpdatedId = updated.Id };
@@ -126,6 +137,15 @@ public sealed class OrderFulfillmentScheduleManager(
         }
 
         await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var schedule = await scheduleDataReader.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new OrderFulfillmentScheduleIsNotFoundException(id);
+
+        await GetEditableOrderAsync(schedule.OrderId).ConfigureAwait(false);
+        await scheduleRepository.DeleteAsync(schedule).ConfigureAwait(false);
     }
 
     public async Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<Guid> orderItemIds)
