@@ -94,7 +94,7 @@
                             <table class="table data-table mb-0" id="orderItemsTable">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3">Sản phẩm</th>
+                                        <th class="ps-3">Hàng hóa</th>
                                         <th class="text-center d-none d-md-table-cell">Số lượng</th>
                                         <th class="text-end">Đơn giá</th>
                                         <th class="text-end d-none d-lg-table-cell">Thành tiền</th>
@@ -152,7 +152,7 @@
                             </table>
                         </div>
                         <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
-                            Chưa có hàng hóa nào được chọn.
+                            Chưa có hàng hóa
                             <div class="mt-1">
                                 <span asp-validation-for="Items" class="text-danger small"></span>
                             </div>
@@ -222,7 +222,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content ui-modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
+                <h5 class="modal-title fw-bold">Thêm hàng hóa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="#" method="post" id="addProductForm">

@@ -103,10 +103,9 @@ export default class QuickCreatePurchaseOrderController {
     async #addOrIncrementProduct(product) {
         const idx = this.#items.findIndex(i => i.productId === product.id);
         if (idx >= 0) {
-            this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity };
+            this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
             this.#renderItems();
             this.#renderSummary();
-            this.#openEditor(idx);
             return;
         }
 
@@ -155,6 +154,8 @@ export default class QuickCreatePurchaseOrderController {
     }
 
     #openEditor(index, openOptions) {
+        this.#closeOffcanvas();
+
         const item = this.#items[index];
         this.#itemEditor.open({
             name: item.productName,
@@ -182,12 +183,17 @@ export default class QuickCreatePurchaseOrderController {
         }, openOptions);
     }
 
+    #closeOffcanvas() {
+        const offcanvas = document.getElementById('productBrowserOffcanvas');
+        bootstrap.Offcanvas.getOrCreateInstance(offcanvas)?.hide();
+    }
+
     #renderItems() {
         const tbody = getEl('itemsBody');
         if (!tbody) return;
 
         if (this.#items.length === 0) {
-            tbody.innerHTML = `<tr id="emptyRow"><td colspan="5" class="text-center text-muted py-3 small">Chưa có hàng hóa nào</td></tr>`;
+            tbody.innerHTML = `<tr id="emptyRow"><td colspan="5" class="text-center text-muted py-3 small">Chưa có hàng hóa</td></tr>`;
             return;
         }
 
