@@ -242,6 +242,7 @@ class FastSale {
         this.clearCart.addEventListener('click', () => {
             this.cart = [];
             this.resetPaymentIntent();
+            this.setFulfillmentMode('notDelivered');
             this.render();
         });
         this.shippingAddress?.addEventListener('input', () => this.resetPaymentIntent());
@@ -302,7 +303,8 @@ class FastSale {
                 quantity: 1,
                 quantityAvailable: product.quantityAvailable,
                 unitPrice: Number(product.unitPrice || 0),
-                quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0)
+                quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
+                pictureUrl: product.pictureUrl
             });
         }
         if (product.quantityAvailable)
@@ -314,7 +316,9 @@ class FastSale {
         this.render();
 
         const idx = this.cart.findIndex(item => item.productId === product.id && item.warehouseId === warehouseId);
-        if (this.itemEditor && idx >= 0) {
+        if (this.itemEditor && !existing) {
+            this.#closeOffcanvas();
+
             const cartItem = this.cart[idx];
             this.itemEditor.open({
                 name: cartItem.name,
@@ -336,6 +340,11 @@ class FastSale {
                 }
             }, { canRemove: false });
         }
+    }
+
+    #closeOffcanvas() {
+        const offcanvas = document.getElementById('productBrowserOffcanvas');
+        bootstrap.Offcanvas.getOrCreateInstance(offcanvas)?.hide();
     }
 
     isProductSelectable(product) {
@@ -447,23 +456,51 @@ class FastSale {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
         this.clearCart.classList.toggle('d-none', this.cart.length === 0);
-
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="ps-3 fw-medium">${this.escape(item.name)}</td>
-                <td style="width: 190px;">
+                <td class="ps-3 fw-medium align-middle">
+                    <div class="d-flex align-items-center gap-3">
+                        ${item.pictureUrl ? `<img src="${item.pictureUrl}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />` : ''}
+                        <div>
+                            <div class="fw-medium product-name">${this.escape(item.name)}</div>
+                            <div class="text-muted small d-md-none">
+                                ${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${item.productId}"
+                        data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                    <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${item.quantityDecimalPlaces ?? 0}" />
+                    <input type="hidden" class="row-qty" name="Items[${index}].Quantity" value="${item.quantity}"
+                        data-val="true" data-val-required="Vui lòng nhập số lượng."
+                        data-val-range="Số lượng phải lớn hơn 0."
+                        data-val-range-min="${(item.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
+                        data-val-number="Số lượng không đúng." />
+                    <input type="hidden" class="row-price" name="Items[${index}].UnitPrice" value="${item.unitPrice}"
+                        data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                        data-val-number="Đơn giá phải là số" />
+                    <span class="small text-danger field-validation-valid"
+                        data-valmsg-for="Items[${index}].ProductId"
+                        data-valmsg-replace="true"></span>
+                </td>
+                <td class="align-middle">
                     ${this.renderWarehouseSelect(item)}
                 </td>
-                <td class="text-center" style="width: 110px;">
-                    <input class="form-control form-control-sm text-end" value="${this.formatQuantity(item.quantity, item.quantityDecimalPlaces)}" data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces}"/>
+                <td class="text-end d-none d-md-table-cell align-middle">
+                    <span class="fw-medium">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)}</span>
                 </td>
-                <td class="text-end" style="width: 140px;">
-                    <input class="form-control form-control-sm text-end" value="${this.formatMoney(item.unitPrice)}" data-decimal="currency" />
+                <td class="text-end align-middle">
+                    <span class="text-muted">${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}</span>
                 </td>
-                <td class="text-end fw-semibold text-nowrap">${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}</td>
-                <td class="text-end pe-3" style="width: 48px;">
-                    <button type="button" class="btn btn-link link-danger p-0 border-0" title="Xóa"><i class="bi bi-trash"></i></button>
+                <td class="text-end fw-semibold text-nowrap d-none d-md-table-cell align-middle">
+                    ${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}
+                </td>
+                <td class="text-center align-middle">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none" aria-label="Xóa hàng hóa">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </td>`;
 
 
@@ -705,14 +742,15 @@ class FastSale {
             return;
         }
 
-        this.showAlert('success', 'Đơn bán đã được tạo thành công.');
-
         if (this.fulfillmentMode === 'notDelivered' && response.orderItems?.length > 0 && this.urls.schedule) {
             this.showScheduleModal(response.orderId, response.orderItems, response.orderUrl);
             return;
         }
 
+        this.showAlert('success', 'Đơn bán đã được tạo thành công.');
+
         if (response.orderUrl) {
+            showPageLoading();
             window.setTimeout(() => { window.location.href = response.orderUrl; }, 500);
         }
     }
@@ -857,6 +895,7 @@ class FastSale {
     formatMoney(value) {
         return DecimalFields.formatCurrency(value || 0);
     }
+
     formatMoneyWithSymbol(value) {
         return DecimalFields.formatCurrencyWithSymbol(value || 0);
     }
@@ -916,23 +955,38 @@ class FastSale {
             div.className = 'd-flex align-items-center justify-content-between gap-3 py-2 border-bottom';
             div.innerHTML = `
                 <span class="fw-medium">${this.escape(item.productName)}</span>
-                <input type="text" class="form-control form-control-sm text-end schedule-qty-input"
-                       style="max-width:120px"
-                       value="${this.formatQuantity(item.quantity, decimalPlaces)}"
-                       data-decimal="quantity" data-decimals="${decimalPlaces}"
-                       placeholder="SL" />`;
+                <div class="d-flex align-items-end flex-column">
+                    <input type="text" class="form-control form-control-sm text-end schedule-qty-input"
+                           style="max-width:120px" data-val="true" name="item${index}_quantity"
+                           value="${this.formatQuantity(item.quantity, decimalPlaces)}"
+                           data-decimal="quantity" data-decimals="${decimalPlaces}"
+                           data-val-range="Số lượng phải nhỏ hơn ${DecimalFields.formatQuantity(cartItem.quantity, cartItem.quantityDecimalPlaces)}" 
+                           data-val-range-max="${cartItem.quantity}"
+                           data-val-number="Số lượng không đúng"
+                           placeholder="Nhập số lượng" />
+                    <span class="small text-danger text-end field-validation-valid"
+                          data-valmsg-for="item${index}_quantity" data-valmsg-replace="true"></span>
+               </div>
+               `;
             itemsTable.appendChild(div);
             return { item, input: div.querySelector('input') };
         });
         DecimalFields.autoWrap(itemsTable);
 
+        $(form).removeData('validator').removeData('unobtrusiveValidation');
+        $.validator.unobtrusive.parse(form);
+
         skipBtn.onclick = () => {
+            showPageLoading();
             bootstrap.Modal.getInstance(modalEl)?.hide();
             if (orderUrl) window.location.href = orderUrl;
+            else location.reload();
         };
 
         form.onsubmit = async (e) => {
             e.preventDefault();
+            if (!$(form).valid())
+                return;
 
             itemsPayload.replaceChildren();
             let index = 0;
@@ -956,13 +1010,15 @@ class FastSale {
                 return;
             }
 
+            showPageLoading();
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             try {
-                const response = await fetch(this.urls.schedule, { method: 'POST', body: new FormData(form) });
-                const data = await response.json();
-                if (!data.success) {
-                    this.showAlert('error', data.message || 'Không thể lưu lịch.');
+                const result = await apiPost(this.urls.schedule, DecimalFields.getFormData(form));
+                if (!result.success) {
+                    hidePageLoading();
+                    if(result.message)
+                        this.showAlert('error', result.message || 'Không thể lưu lịch.');
                     return;
                 }
             } finally {
@@ -971,6 +1027,7 @@ class FastSale {
 
             bootstrap.Modal.getInstance(modalEl)?.hide();
             if (orderUrl) window.location.href = orderUrl;
+            else location.reload();
         };
 
         bootstrap.Modal.getOrCreateInstance(modalEl).show();

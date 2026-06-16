@@ -20,12 +20,12 @@ public sealed class FastSaleModel
     public Guid? DefaultCustomerId { get; init; }
 
     [Display(Name = "Giảm giá")]
-    public decimal OrderDiscount { get; set; }
+    public decimal? OrderDiscount { get; set; }
 
-    [Display(Name = "Địa chỉ giao hàng")]
+    [Display(Name = "Địa chỉ")]
     public string? ShippingAddress { get; set; }
 
-    [Display(Name = "Số điện thoại giao hàng")]
+    [Display(Name = "Số điện thoại")]
     public string? ShippingPhoneNumber { get; set; }
 
     [Display(Name = "Ghi chú")]

@@ -109,7 +109,7 @@ export default class ItemEditOffcanvas {
             this.#refreshTotal();
         }
 
-        this.#deleteBtn.classList.toggle('d-none', !this.#openOptions.canRemove);
+        this.#deleteBtn.classList.toggle('invisible', !this.#openOptions.canRemove);
 
         this.#form.querySelectorAll('.field-validation-error').forEach(element => element.style.display = 'none');
 
@@ -186,7 +186,7 @@ export default class ItemEditOffcanvas {
         }
         this.#decrementBtn?.addEventListener('click', () => this.#adjustQty(-1));
         this.#incrementBtn?.addEventListener('click', () => this.#adjustQty(1));
-        this.#form?.addEventListener('form', (e) => {
+        this.#form?.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!$(this.#form).valid())
                 return;

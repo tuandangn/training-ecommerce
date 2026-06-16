@@ -43,21 +43,23 @@
                             <h5>Thông tin đơn bán</h5>
                         </div>
                         <div class="content-card-body border-bottom pb-4">
-                            <div class="mb-3">
-                                <label asp-for="CustomerId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                <div id="fastSaleCustomerPicker"
-                                     data-id="@Model.DefaultCustomerId"
-                                     data-name="@Model.CustomerName"
-                                     data-phone="@Model.CustomerPhone"
-                                     data-address="@Model.CustomerAddress"
-                                     data-kind="@Model.CustomerKind"
-                                     data-is-system="@Model.CustomerIsSystem.ToString().ToLowerInvariant()"></div>
-                                <input type="text" class="visually-hidden" asp-for="CustomerId" data-default="@Model.DefaultCustomerId" />
-                                <span asp-validation-for="CustomerId" class="small text-danger"></span>
-                            </div>
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div>
+                                        <label asp-for="CustomerId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                        <div id="fastSaleCustomerPicker"
+                                             data-id="@Model.DefaultCustomerId"
+                                             data-name="@Model.CustomerName"
+                                             data-phone="@Model.CustomerPhone"
+                                             data-address="@Model.CustomerAddress"
+                                             data-kind="@Model.CustomerKind"
+                                             data-is-system="@Model.CustomerIsSystem.ToString().ToLowerInvariant()"></div>
+                                        <input type="text" class="visually-hidden" asp-for="CustomerId" data-default="@Model.DefaultCustomerId" />
+                                        <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
                                         <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <select id="fastSaleWarehouse" class="form-select" asp-for="WarehouseId">
                                             <option value="">Chọn kho</option>
@@ -67,8 +69,6 @@
                                             }
                                         </select>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
                                     <div>
                                         <label for="fastSaleDiscount" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.OrderDiscount)</label>
                                         <input asp-for="OrderDiscount" class="form-control" placeholder="Nhập giảm giá"
@@ -100,16 +100,16 @@
                                         <tr>
                                             <th class="ps-3">Hàng hóa</th>
                                             <th>Kho hàng</th>
-                                            <th class="text-end">Số lượng</th>
+                                            <th class="text-end d-none d-md-table-cell">Số lượng</th>
                                             <th class="text-end">Đơn giá</th>
-                                            <th class="text-end">Thành tiền</th>
+                                            <th class="text-end d-none d-md-table-cell">Thành tiền</th>
                                             <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="fastSaleCartBody"></tbody>
                                 </table>
                             </div>
-                            <div id="fastSaleEmptyCart" class="py-4 text-center text-muted">Chưa có hàng hóa.</div>
+                            <div id="fastSaleEmptyCart" class="py-4 text-center text-muted">Chưa có hàng hóa</div>
                         </div>
                         <div class="content-card-footer bg-white py-2">
                             <div class="order-summary" id="tableFooter">
@@ -169,12 +169,12 @@
                         <div class="row">
                             <div class="col-lg-6 mb-3">
                                 <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhap so dien thoai giao hang" disabled />
+                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" disabled />
                                 <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
                             </div>
-                            <div class="col-lg-6">
+                            <div class="col-lg-6 mb-3">
                                 <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ giao hàng" disabled />
+                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" disabled />
                                 <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
                             </div>
                         </div>
@@ -258,7 +258,7 @@
     </div>
 </div>
 
-@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditOffcanvas" />
 <partial name="_ItemEditModal" />
 
 <div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
@@ -316,7 +316,7 @@
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">Lên lịch giao hàng</h5>
             </div>
-            <form id="fastSaleScheduleForm">
+            <form id="fastSaleScheduleForm" method="post">
                 <div class="modal-body py-3">
                     <input type="hidden" name="OrderId" id="fastSaleScheduleOrderId" />
                     <div id="fastSaleScheduleItemsPayload"></div>
@@ -331,11 +331,11 @@
                         </div>
                         <div class="col-12 col-md-6 d-none" id="fastSaleScheduleDateSection">
                             <label class="form-label" for="fastSaleScheduleFrom">Ngày giao</label>
-                            <input id="fastSaleScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" />
+                            <input id="fastSaleScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày giao"/>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="fastSaleScheduleNote">Ghi chú</label>
-                            <textarea id="fastSaleScheduleNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú..."></textarea>
+                            <textarea id="fastSaleScheduleNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
                         </div>
                     </div>
                     <div id="fastSaleScheduleItemsTable" class="mt-3"></div>

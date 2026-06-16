@@ -244,7 +244,7 @@ export default class OrderController {
                     <div>
                         <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
                         <div class="text-muted small d-md-none">
-                            ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrency(unitPrice)} đ
+                            ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrencyWithSymbol(unitPrice)}
                         </div>
                     </div>
                 </div>
@@ -268,10 +268,10 @@ export default class OrderController {
                 <span class="fw-medium">${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)}</span>
             </td>
             <td class="text-end align-middle">
-                <span class="text-muted">${DecimalFields.formatCurrency(unitPrice)} đ</span>
+                <span class="text-muted">${DecimalFields.formatCurrencyWithSymbol(unitPrice)}</span>
             </td>
             <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
-                ${DecimalFields.formatCurrency(item.lineTotal)} đ
+                ${DecimalFields.formatCurrencyWithSymbol(item.lineTotal)}
             </td>
             <td class="text-end pe-4 w-auto align-middle">
                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none orderItemRemove"
