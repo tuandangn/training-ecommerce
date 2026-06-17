@@ -114,7 +114,7 @@
                         {
                             <li>
                                 <span>@product.ProductName</span>
-                                <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces) @product.UnitMeasurement</strong>
+                                <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
                             </li>
                         }
                     </ul>
@@ -150,7 +150,7 @@
         else if (item.SettlementApproval == 1)
         {
             <div class="mobile-status mobile-status-active mt-2">
-                <i class="bi bi-hourglass-split"></i> Chờ admin duyệt thu hụt
+                <i class="bi bi-hourglass-split"></i> Chờ admin duyệt
             </div>
             <div class="mobile-goods-box mt-3">
                 <div class="d-flex justify-content-between">
@@ -164,7 +164,7 @@
         }
         else if (item.SettlementApproval == 2)
         {
-            <div class="mobile-status mobile-status-success mt-2" data-note-id="@item.DeliveryNoteId">
+            <div class="mobile-status mobile-status-success mt-2" data-note-id="@item.DeliveryNoteId" style="font-size:0.9rem">
                 <i class="bi bi-check-circle"></i> Đã duyệt — thu đúng @((item.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol())
             </div>
             @if (!string.IsNullOrWhiteSpace(item.SettlementAdminNote))
@@ -196,7 +196,11 @@
                 <input type="hidden" name="longitude" />
                 <input type="hidden" name="locationAddress" />
                 <input type="hidden" name="acceptanceItemsJson" />
-                <div class="mobile-goods-box mt-0 mb-3">
+                <div class="mb-2">
+                    <label class="form-label" for="receiverName_@(item.DeliveryNoteId)">Người nhận</label>
+                    <input type="text" id="receiverName_@(item.DeliveryNoteId)" name="receiverName" class="form-control" autocomplete="name" value="@(item.CustomerId == CachedValuesService.DefaultCustomerId ? "" : receiverName)" placeholder="Nhập tên người nhận" />
+                </div>
+                <div class="mobile-goods-box mt-0 mb-2">
                     <div class="mobile-goods-head">
                         <span>Hàng giao</span>
                     </div>
@@ -212,7 +216,7 @@
                                      data-decimals="@product.QuantityDecimalPlaces">
                                     <div class="d-flex justify-content-between gap-2">
                                         <span>@product.ProductName</span>
-                                        <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)<span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
+                                        <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
                                     </div>
                                     <div class="row g-2 mt-1">
                                         <div class="col-6">
@@ -224,7 +228,7 @@
                                                    data-val-range="Số lượng trả về lớn hơn hoặc bằng 0 và nhỏ hơn @product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)"
                                                    data-val-range-min="0"
                                                    data-val-range-max="@product.Quantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" name="return_@(product.DeliveryNoteItemId)"
-                                                   id="return_@(product.DeliveryNoteItemId)" placeholder="Nhập số lượng trả về"/>
+                                                   id="return_@(product.DeliveryNoteItemId)" placeholder="Nhập số lượng trả về" />
                                             <span class="small text-danger field-validation-valid"
                                                   data-valmsg-for="return_@(product.DeliveryNoteItemId)" data-valmsg-replace="true"></span>
                                         </div>
@@ -236,15 +240,16 @@
                                 </div>
                             }
                         </div>
+                        <div class="mb-2 d-none reject-reason">
+                            <label class="form-label" for="rejectReason@(item.DeliveryNoteId)">Lý do trả hàng</label>
+                            <input name="rejectReason" class="form-control" disabled id="rejectReason@(item.DeliveryNoteId)" placeholder="Nhập lý do trả hàng" 
+                                data-val="true" data-val-required="Vui lòng nhập lý do trả hàng"/>
+                        </div>
                     }
                     else
                     {
                         <div class="mobile-meta">Chưa có thông tin hàng hóa</div>
                     }
-                </div>
-                <div class="mb-2">
-                    <label class="form-label" for="receiverName_@(item.DeliveryNoteId)">Người nhận</label>
-                    <input type="text" id="receiverName_@(item.DeliveryNoteId)" name="receiverName" class="form-control" autocomplete="name" value="@(item.CustomerId == CachedValuesService.DefaultCustomerId ? "" : receiverName)" placeholder="Nhập tên người nhận"/>
                 </div>
                 @if (item.AmountToCollect > 0)
                 {
@@ -255,7 +260,7 @@
                                    data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập đơn giá"
                                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.001"
                                    data-val-number="Đơn giá phải là số" value="@item.AmountToCollect.DisplayCurrency()"
-                                   id="amount_@(item.DeliveryNoteId)" placeholder="Nhập số tiền thu của khách"/>
+                                   id="amount_@(item.DeliveryNoteId)" placeholder="Nhập số tiền thu của khách" />
                             <span class="input-group-text fw-bold">đ</span>
                         </div>
                         <span class="small text-danger field-validation-valid" data-valmsg-for="cashCollectedAmount" data-valmsg-replace="true"></span>
@@ -265,13 +270,9 @@
                 {
                     <input type="hidden" name="cashCollectedAmount" value="0" />
                 }
-                <div class="mb-2 d-none reject-reason">
-                    <label class="form-label" for="rejectReason@(item.DeliveryNoteId)">Lý do trả hàng</label>
-                    <input name="rejectReason" class="form-control" id="rejectReason@(item.DeliveryNoteId)" placeholder="Nhập lý do trả hàng"/>
-                </div>
                 <div class="mb-2">
                     <label class="form-label" for="proof_@(item.DeliveryNoteId)">Ảnh bằng chứng</label>
-                    <input type="file" id="proof_@(item.DeliveryNoteId)" name="proofFile" class="form-control" accept="image/*" capture="environment" required placeholder="Nhập hình ảnh hàng hóa lúc giao"/>
+                    <input type="file" id="proof_@(item.DeliveryNoteId)" name="proofFile" class="form-control" accept="image/*" capture="environment" required placeholder="Nhập hình ảnh hàng hóa lúc giao" />
                     <div class="mobile-proof-preview" hidden>
                         <img alt="Ảnh bằng chứng đã chọn" />
                     </div>
@@ -287,7 +288,7 @@
                     <i class="bi bi-check-circle me-1"></i>Đã giao
                 </button>
                 <button type="button" class="btn btn-warning mobile-action-button w-100 btn-request-settlement d-none">
-                    <i class="bi bi-send-check me-1"></i>Gửi admin duyệt thu hụt
+                    <i class="bi bi-send-check me-1"></i>Gửi admin duyệt
                 </button>
                 <div class="delivery-complete-status mobile-meta mt-2"></div>
             </form>
@@ -313,18 +314,25 @@
         import { installSettlementForms } from '/modules/DeliverySettlement.js';
 
         document.querySelectorAll('[data-progress-width]').forEach(function (el) {
-            const width = el.dataset.progressWidth;
-            if (!width)
-                return;
-            el.style.width = width.endsWith('%') ? width : `${width}%`;
+        const width = el.dataset.progressWidth;
+        if (!width)
+        return;
+        el.style.width = width.endsWith('%') ? width : `${width}%`;
         });
 
         installDeliveryRunCache({
-            runId: '@Model.Run.Id',
-            cacheUrl: '@Url.Action("Cache", "DeliveryMobile")'
+        runId: '@Model.Run.Id',
+        cacheUrl: '@Url.Action("Cache", "DeliveryMobile")'
         });
         installDeliveryCompletionForms();
         installDeliveryManualSync();
         installSettlementForms();
+
+        document.querySelectorAll('.returned-quantity-input').forEach(el => {
+        el.addEventListener('input', e => {
+        el.form.querySelector('[name="rejectReason"]').disabled = el.value == '0' || !el.value;
+        el.form.querySelector('.reject-reason')?.classList.toggle('d-none', el.value == '0' || !el.value);
+        });
+        });
     </script>
 }

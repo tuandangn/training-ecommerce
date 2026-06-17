@@ -291,10 +291,11 @@ class FastSale {
         product = this.normalizeProduct(product);
         const warehouseId = this.resolveInitialWarehouseId(product);
         const existing = this.cart.find(item => item.productId === product.id && item.warehouseId === warehouseId);
+        let cartItem;
         if (existing) {
             existing.quantity += 1;
         } else {
-            this.cart.push({
+            cartItem = {
                 productId: product.id,
                 name: product.name,
                 warehouseId,
@@ -305,7 +306,8 @@ class FastSale {
                 unitPrice: Number(product.unitPrice || 0),
                 quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
                 pictureUrl: product.pictureUrl
-            });
+            };
+            this.cart.push(cartItem);
         }
         if (product.quantityAvailable)
             this.fromCommand = 'add-available';
@@ -314,12 +316,9 @@ class FastSale {
 
         this.resetPaymentIntent();
         this.render();
+        this.#closeOffcanvas();
 
-        const idx = this.cart.findIndex(item => item.productId === product.id && item.warehouseId === warehouseId);
-        if (this.itemEditor && !existing) {
-            this.#closeOffcanvas();
-
-            const cartItem = this.cart[idx];
+        if (this.itemEditor && cartItem) {
             this.itemEditor.open({
                 name: cartItem.name,
                 quantity: cartItem.quantity,

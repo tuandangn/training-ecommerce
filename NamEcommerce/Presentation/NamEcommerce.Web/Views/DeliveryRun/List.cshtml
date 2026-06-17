@@ -152,7 +152,7 @@
                                     {
                                         <form asp-action="HandOver" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : "Bàn giao")">
+                                            <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : "Bàn giao")">
                                                 <i class="bi bi-truck me-1"></i>Bàn giao
                                             </button>
                                         </form>
