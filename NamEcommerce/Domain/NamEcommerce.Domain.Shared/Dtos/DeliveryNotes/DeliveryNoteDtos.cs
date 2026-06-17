@@ -186,7 +186,7 @@ public sealed record RequestDeliverySettlementDto
     public required Guid DeliveryNoteId { get; init; }
     public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
-    public required string Reason { get; init; }
+    public string? Reason { get; init; }
     /// <summary>Case khách từ chối/thu thiếu không trả hàng — số shipper đề xuất thu.</summary>
     public decimal? ProposedAmountToCollect { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }

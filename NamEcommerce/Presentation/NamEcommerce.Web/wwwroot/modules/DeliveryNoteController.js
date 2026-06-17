@@ -112,22 +112,23 @@ export default class DeliveryNoteController {
     #renderAcceptantItems() {
         const rowsHtml = this.#deliveredState.items?.map(item => {
             const deliveredQty = Number(item.quantity || 0);
-            return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
+            const decimalPlaces = item.quantityDecimalPlaces ?? 0;
+            return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}" data-decimals="${decimalPlaces}">
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end returned-qty" name="returnedQty_${item.id}"
                                     value="0"
-                    data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" data-val="true"
+                    data-decimal="quantity" data-decimals="${decimalPlaces}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
-                    data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty)}." data-val-range-max="${deliveredQty}"
+                    data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}." data-val-range-max="${deliveredQty}"
                     data-val-range-min="0"
                     data-val-number="Số lượng không đúng." />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="returnedQty_${item.id}"
                     data-valmsg-replace="true"></span>
                             </td>
-                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
+                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
                         </tr>`;
         }).join('');
         const container = document.getElementById('acceptanceTableBody');
@@ -169,7 +170,8 @@ export default class DeliveryNoteController {
             const $row = $(this);
             const itemId = String($row.data('item-id'));
             const deliveredQty = Number($row.data('delivered-qty') || 0);
-            const returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2)) || 0;
+            const decimalPlaces = Number($row.data('decimals') ?? 0);
+            const returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces)) || 0;
             const rejectedQty = Math.max(0, Math.min(deliveredQty, returnedQty));
             const normalizedAcceptedQty = Math.max(0, deliveredQty - rejectedQty);
             if (rejectedQty > 0) hasRejectedItems = true;
@@ -239,13 +241,14 @@ export default class DeliveryNoteController {
 
         function updateAcceptedQuantity($row) {
             const deliveredQty = Number($row.data('delivered-qty') || 0);
-            let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2));
+            const decimalPlaces = Number($row.data('decimals') ?? 0);
+            let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces));
             if (!returnedQty) returnedQty = 0;
             if (returnedQty < 0) returnedQty = 0;
             if (returnedQty > deliveredQty) returnedQty = deliveredQty;
 
             const acceptedQty = Math.max(0, deliveredQty - returnedQty);
-            $row.find('.accepted-qty-text').text(DecimalFields.formatQuantity(acceptedQty));
+            $row.find('.accepted-qty-text').text(DecimalFields.formatQuantity(acceptedQty, decimalPlaces));
             updateReturnControls();
         }
 
@@ -254,7 +257,8 @@ export default class DeliveryNoteController {
             $('#acceptanceTableBody tr').each(function () {
                 const $row = $(this);
                 const deliveredQty = Number($row.data('delivered-qty') || 0);
-                let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2));
+                const decimalPlaces = Number($row.data('decimals') ?? 0);
+                let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces));
                 if (!returnedQty) returnedQty = 0;
                 if (Math.min(deliveredQty, returnedQty) > 0) hasRejectedItems = true;
             });

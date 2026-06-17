@@ -88,7 +88,10 @@ function updateAcceptedQuantity(line) {
     if (returned < 0) returned = 0;
     if (returned > quantity) returned = quantity;
     DecimalFields.setValue(input, returned);
-    accepted.textContent = DecimalFields.formatQuantity(Math.max(0, quantity - returned), Number(input.dataset.decimals) ?? 2);
+    const decimalPlaces = parseInt(input.dataset.decimals || '2', 10);
+    accepted.textContent = DecimalFields.formatQuantity(
+        Math.max(0, quantity - returned),
+        Number.isNaN(decimalPlaces) ? 2 : decimalPlaces);
 }
 
 function installReturnedQuantityControls(form) {

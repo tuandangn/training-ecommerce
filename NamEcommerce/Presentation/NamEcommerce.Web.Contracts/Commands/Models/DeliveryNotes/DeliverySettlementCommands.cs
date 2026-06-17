@@ -9,7 +9,7 @@ public sealed class RequestDeliverySettlementCommand : ICommand<CommonActionResu
     public Guid DeliveryNoteId { get; init; }
     public Guid PictureId { get; init; }
     public string? ReceiverName { get; init; }
-    public required string Reason { get; init; }
+    public string? Reason { get; init; }
     public decimal? ProposedAmountToCollect { get; init; }
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }

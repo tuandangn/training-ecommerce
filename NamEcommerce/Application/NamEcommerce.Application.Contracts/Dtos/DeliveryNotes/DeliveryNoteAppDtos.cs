@@ -191,7 +191,7 @@ public sealed record RequestDeliverySettlementAppDto
     public required Guid DeliveryNoteId { get; init; }
     public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
-    public required string Reason { get; init; }
+    public string? Reason { get; init; }
     public decimal? ProposedAmountToCollect { get; init; }
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
     public Guid? RequestedByUserId { get; init; }
@@ -202,8 +202,6 @@ public sealed record RequestDeliverySettlementAppDto
             return (false, "Error.DeliveryNoteRequired");
         if (PictureIds is null || PictureIds.Count == 0)
             return (false, "Error.DeliveryProofRequired");
-        if (string.IsNullOrWhiteSpace(Reason))
-            return (false, "Error.DeliverySettlement.ReasonRequired");
         if (ProposedAmountToCollect is < 0)
             return (false, "Error.AmountToCollectCannotBeNegative");
 

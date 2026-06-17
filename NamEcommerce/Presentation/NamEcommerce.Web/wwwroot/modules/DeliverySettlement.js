@@ -41,7 +41,7 @@ export function installSettlementForms() {
     document.querySelectorAll('.delivery-complete-form[data-settlement="1"]').forEach(form => {
         const fullButton = form.querySelector('.btn-complete-full');
         const requestButton = form.querySelector('.btn-request-settlement');
-        const reasonWrap = form.querySelector('.settlement-reason-wrap');
+        const hint = form.querySelector('.settlement-hint');
         const proposedLabel = form.querySelector('.settlement-proposed');
         if (!requestButton) return;
 
@@ -49,7 +49,7 @@ export function installSettlementForms() {
             const { shortfall, proposed } = computeProposed(form);
             if (fullButton) fullButton.classList.toggle('d-none', shortfall);
             requestButton.classList.toggle('d-none', !shortfall);
-            if (reasonWrap) reasonWrap.classList.toggle('d-none', !shortfall);
+            if (hint) hint.classList.toggle('d-none', !shortfall);
             if (proposedLabel) proposedLabel.textContent = formatMoney(proposed);
         };
 
@@ -58,11 +58,7 @@ export function installSettlementForms() {
 
         requestButton.addEventListener('click', async () => {
             const status = form.querySelector('.delivery-complete-status');
-            const reason = String(form.querySelector('textarea[name="settlementReason"]')?.value || '').trim();
-            if (!reason) {
-                if (status) status.textContent = 'Vui lòng nhập lý do thu hụt.';
-                return;
-            }
+            const rejectReason = String(form.querySelector('input[name="rejectReason"]')?.value || '').trim();
 
             const proof = form.querySelector('input[name="proofFile"]')?.files?.[0];
             if (!proof) {
@@ -74,22 +70,28 @@ export function installSettlementForms() {
             if (status) status.textContent = 'Đang gửi admin duyệt...';
 
             const { proposed } = computeProposed(form);
+            let hasReturnedQuantity = false;
             const items = Array.from(form.querySelectorAll('.delivery-return-line')).map(line => {
                 const input = line.querySelector('.returned-quantity-input');
                 let returned = input ? DecimalFields.getValue(input) : 0;
                 if (returned < 0) returned = 0;
+                if (returned > 0) hasReturnedQuantity = true;
                 return {
                     deliveryNoteItemId: line.dataset.itemId,
                     returnedQuantity: returned,
-                    rejectReason: returned > 0 ? reason : null
+                    rejectReason: returned > 0 ? rejectReason : null
                 };
             });
+            if (hasReturnedQuantity && !rejectReason) {
+                if (status) status.textContent = 'Vui lòng nhập lý do trả hàng.';
+                requestButton.disabled = false;
+                return;
+            }
 
             const formData = new FormData();
             formData.set('deliveryRunId', form.dataset.runId);
             formData.set('deliveryNoteId', form.dataset.noteId);
             formData.set('receiverName', form.querySelector('input[name="receiverName"]')?.value || '');
-            formData.set('reason', reason);
             formData.set('proposedAmountToCollect', proposed);
             formData.set('acceptanceItemsJson', JSON.stringify(items));
             formData.set('proofFile', proof, proof.name);

@@ -139,21 +139,14 @@
                             {
                                 <tr>
                                     <td>@line.ProductName</td>
-                                    <td class="text-end">@line.Quantity.DisplayQuantity()</td>
-                                    <td class="text-end">@line.AcceptedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end @(line.RejectedQuantity > 0 ? "text-danger fw-bold" : "text-muted")">@line.RejectedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@line.Quantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                    <td class="text-end">@line.AcceptedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                    <td class="text-end @(line.RejectedQuantity > 0 ? "text-danger fw-bold" : "text-muted")">@line.RejectedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
                                     <td class="small text-muted">@line.RejectReason</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                </div>
-            }
-            @if (!string.IsNullOrWhiteSpace(Model.SettlementReason))
-            {
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do người giao báo</label>
-                    <div class="bg-light p-2 rounded border">@Model.SettlementReason</div>
                 </div>
             }
             @if (canApproveSettlement)
@@ -514,7 +507,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                                     <tr>
                                         <td class="fw-medium text-dark ps-3">@item.ProductName</td>
                                         <td class="text-muted small">@item.WarehouseName</td>
-                                        <td class="text-end fw-bold">@item.Quantity.DisplayQuantity()</td>
+                                        <td class="text-end fw-bold">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
                                         @if (hasReturned)
                                         {
                                             <td class="text-end">
@@ -527,25 +520,25 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                                                     if (item.ReturnedQuantity >= item.Quantity)
                                                     {
                                                         <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả">
-                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.DisplayQuantity()
+                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.DisplayQuantity(item.QuantityDecimalPlaces)
                                                         </span>
                                                     }
                                                     else if (item.ReturnedQuantity > 0)
                                                     {
                                                         <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
-                                                            @item.ReturnedQuantity.DisplayQuantity()
+                                                            @item.ReturnedQuantity.DisplayQuantity(item.QuantityDecimalPlaces)
                                                         </span>
                                                     }
                                                     if (item.PendingReturnQuantity > 0)
                                                     {
                                                         <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
-                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity()
+                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity(item.QuantityDecimalPlaces)
                                                         </div>
                                                     }
                                                     if (item.CompensatedReturnQuantity > 0)
                                                     {
                                                         <div class="small text-warning mt-1" data-bs-toggle="tooltip" title="Duoc cong vao lan giao sau">
-                                                            <i class="bi bi-arrow-repeat"></i> @item.CompensatedReturnQuantity.DisplayQuantity()
+                                                            <i class="bi bi-arrow-repeat"></i> @item.CompensatedReturnQuantity.DisplayQuantity(item.QuantityDecimalPlaces)
                                                         </div>
                                                     }
                                                 }

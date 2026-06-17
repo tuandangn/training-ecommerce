@@ -157,10 +157,6 @@
                     <span>Số đề xuất thu</span>
                     <strong>@((item.ProposedAmountToCollect ?? item.AmountToCollect).DisplayCurrencyWithSymbol())</strong>
                 </div>
-                @if (!string.IsNullOrWhiteSpace(item.SettlementReason))
-                {
-                    <div class="mobile-meta mt-2">Lý do: @item.SettlementReason</div>
-                }
             </div>
             <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-outline-secondary mobile-action-button w-100 mt-3">
                 <i class="bi bi-arrow-clockwise me-1"></i>Làm mới để kiểm tra duyệt
@@ -211,7 +207,7 @@
                             {
                                 <div class="delivery-return-line py-2"
                                      data-item-id="@product.DeliveryNoteItemId"
-                                     data-quantity="@product.Quantity"
+                                     data-quantity="@product.Quantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
                                      data-unit-price="@product.UnitPrice.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
                                      data-decimals="@product.QuantityDecimalPlaces">
                                     <div class="d-flex justify-content-between gap-2">
@@ -222,10 +218,12 @@
                                         <div class="col-6">
                                             <label class="form-label mobile-meta mb-1" for="return_@(product.DeliveryNoteItemId)">Trả về</label>
                                             <input class="form-control form-control-sm returned-quantity-input text-end"
+                                                   inputmode="decimal"
                                                    data-decimal="quantity" data-decimals="@product.QuantityDecimalPlaces"
                                                    data-val="true" data-val-required="Vui lòng nhập số lượng trả về"
                                                    data-val-range="Số lượng trả về lớn hơn hoặc bằng 0 và nhỏ hơn @product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)"
-                                                   data-val-range-max="@product.Quantity.ToString("#")" name="return_@(product.DeliveryNoteItemId)" 
+                                                   data-val-range-min="0"
+                                                   data-val-range-max="@product.Quantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" name="return_@(product.DeliveryNoteItemId)"
                                                    id="return_@(product.DeliveryNoteItemId)" placeholder="Nhập số lượng trả về"/>
                                             <span class="small text-danger field-validation-valid"
                                                   data-valmsg-for="return_@(product.DeliveryNoteItemId)" data-valmsg-replace="true"></span>
