@@ -254,6 +254,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         }).ConfigureAwait(false);
         var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
+        var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(product => product.Id, product => product.QuantityDecimalPlaces);
 
         var model = new DeliveryNoteDetailsModel
         {
@@ -312,6 +315,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     WarehouseName = ResolveWarehouseName(i.WarehouseId, warehouseNamesById),
                     ProductName = i.ProductName,
                     Quantity = i.Quantity,
+                    QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId),
                     UnitPrice = i.UnitPrice,
                     SubTotal = i.SubTotal,
                     ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
@@ -322,6 +326,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         };
 
         var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        var decimalPlacesByNoteItemId = model.Items.ToDictionary(item => item.Id, item => item.QuantityDecimalPlaces);
         model.SettlementItems = deliveryNote.SettlementItems
             .Select(settlementItem =>
             {
@@ -333,7 +338,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     AcceptedQuantity = settlementItem.AcceptedQuantity,
                     RejectedQuantity = settlementItem.RejectedQuantity,
                     UnitPrice = noteItem?.UnitPrice ?? 0m,
-                    RejectReason = settlementItem.RejectReason
+                    RejectReason = settlementItem.RejectReason,
+                    QuantityDecimalPlaces = decimalPlacesByNoteItemId.GetValueOrDefault(settlementItem.DeliveryNoteItemId)
                 };
             })
             .ToList();

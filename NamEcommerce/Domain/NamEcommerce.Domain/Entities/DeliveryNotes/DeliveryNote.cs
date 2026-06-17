@@ -330,7 +330,7 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     internal void RequestSettlementApproval(
         decimal proposedAmountToCollect,
-        string reason,
+        string? reason,
         IReadOnlyList<Guid> proofPictureIds,
         string? receiverName,
         IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)> acceptanceLines,
@@ -343,12 +343,10 @@ public sealed record DeliveryNote : AppAggregateEntity
             throw new NamEcommerceDomainException("Error.DeliverySettlement.AlreadyPending");
         if (proofPictureIds is null || proofPictureIds.Count == 0 || proofPictureIds[0] == Guid.Empty)
             throw new DeliveryProofRequiredException();
-        if (string.IsNullOrWhiteSpace(reason))
-            throw new NamEcommerceDomainException("Error.DeliverySettlement.ReasonRequired");
 
         SettlementApproval = DeliverySettlementApprovalStatus.PendingApproval;
         ProposedAmountToCollect = Math.Max(0m, proposedAmountToCollect);
-        SettlementReason = reason.Trim();
+        SettlementReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
         ApprovedAmountToCollect = null;
         ApprovedAgreedCustomerCharge = null;
         ApprovedAgreedChargeReason = null;

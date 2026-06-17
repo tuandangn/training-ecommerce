@@ -154,7 +154,7 @@ public sealed class DeliveryMobileController(
         Guid deliveryRunId,
         Guid deliveryNoteId,
         string? receiverName,
-        string reason,
+        string? reason,
         decimal? proposedAmountToCollect,
         double? latitude,
         double? longitude,
