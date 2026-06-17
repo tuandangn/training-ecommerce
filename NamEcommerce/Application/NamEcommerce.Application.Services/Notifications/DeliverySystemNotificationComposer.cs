@@ -54,8 +54,8 @@ public static class DeliverySystemNotificationComposer
             note,
             SystemNotificationType.DeliverySettlementApprovalRequested,
             SystemNotificationSeverity.Warning,
-            $"Phiếu {note.Code} chờ duyệt thu hụt",
-            BuildDeliveryNoteMessage(note, $"Người giao báo thu hụt (đề xuất thu {note.ProposedAmountToCollect ?? 0:#,##0}). Cần admin duyệt số tiền."),
+            $"Phiếu {note.Code} chờ duyệt số tiền thu",
+            BuildDeliveryNoteMessage(note, $"Người giao đề xuất thu {note.ProposedAmountToCollect ?? 0:#,##0}. Cần admin duyệt số tiền."),
             DeliveryNotesManagePermission);
 
     public static CreateSystemNotificationAppDto DeliveryRunCreated(DeliveryRunAppDto run)

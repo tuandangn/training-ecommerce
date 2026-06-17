@@ -541,10 +541,10 @@
     <value>Bằng chứng giao hàng là bắt buộc.</value>
   </data>
   <data name="Error.DeliverySettlement.NotPending" xml:space="preserve">
-    <value>Phiếu xuất này không ở trạng thái chờ duyệt thu hụt.</value>
+    <value>Phiếu xuất này không ở trạng thái chờ duyệt số tiền thu.</value>
   </data>
   <data name="Error.DeliverySettlement.AlreadyPending" xml:space="preserve">
-    <value>Phiếu xuất này đã có yêu cầu duyệt thu hụt đang chờ.</value>
+    <value>Phiếu xuất này đã có yêu cầu duyệt số tiền thu đang chờ.</value>
   </data>
   <data name="Error.DeliverySettlement.ReasonRequired" xml:space="preserve">
     <value>Vui lòng nhập lý do.</value>
