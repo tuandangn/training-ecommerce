@@ -17,7 +17,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     {
     }
 
-    internal DeliveryNote(string code, Guid orderId, Guid customerId, Guid? warehouseId, decimal amountToCollect, decimal surcharge) : base(Guid.NewGuid())
+    internal DeliveryNote(string code, Guid orderId, Guid customerId, decimal amountToCollect, decimal surcharge) : base(Guid.NewGuid())
     {
         Code = code;
         OrderId = orderId;
@@ -25,7 +25,6 @@ public sealed record DeliveryNote : AppAggregateEntity
         Surcharge = surcharge;
         AmountToCollect = amountToCollect;
         Status = DeliveryNoteStatus.Draft;
-        WarehouseId = warehouseId;
         CreatedOnUtc = DateTime.UtcNow;
         _items = [];
     }
@@ -38,9 +37,6 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     public Guid OrderId { get; private set; }
     public string? OrderCode { get; set; }
-
-    public Guid? WarehouseId { get; private set; }
-    public string? WarehouseName { get; internal set; }
 
     public Guid? AssignedDeliveryUserId { get; private set; }
     public string? AssignedDeliveryUsername { get; private set; }

@@ -25,7 +25,6 @@ public sealed record DeliveryNoteListItemModel
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
 
-    public Guid? WarehouseId { get; init; }
     public string? WarehouseName { get; set; }
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryFullName { get; init; }

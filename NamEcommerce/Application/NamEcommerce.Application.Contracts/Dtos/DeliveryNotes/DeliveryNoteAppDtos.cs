@@ -11,7 +11,6 @@ public sealed record DeliveryNoteAppDto
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
 
-    public Guid? WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
@@ -96,7 +95,6 @@ public sealed record DeliveryNoteItemAppDto
 public sealed record CreateDeliveryNoteAppDto
 {
     public required Guid OrderId { get; init; }
-    public required Guid? WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
@@ -110,8 +108,6 @@ public sealed record CreateDeliveryNoteAppDto
     {
         if (OrderId == Guid.Empty)
             return (false, "Error.OrderRequired");
-        if (WarehouseId == Guid.Empty)
-            return (false, "Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
             return (false, "Error.ShippingAddressRequired");
         if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))

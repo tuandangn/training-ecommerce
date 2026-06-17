@@ -488,7 +488,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 Note = model.Note,
                 ShowPrice = model.ShowPrice,
-                WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
                 ShippingPhoneNumber = model.ShippingPhoneNumber,
                 Surcharge = request.Surcharge,
@@ -497,7 +496,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Items = request.SelectedItems.Select(selectedItem => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
                 {
                     OrderItemId = selectedItem.OrderItemId,
-                    WarehouseId = selectedItem.WarehouseId == Guid.Empty ? request.WarehouseId : selectedItem.WarehouseId,
+                    WarehouseId = selectedItem.WarehouseId,
                     Quantity = selectedItem.Quantity
                 }).ToList()
             }).ConfigureAwait(false);
@@ -594,7 +593,6 @@ public class CreateFromPreparationRequest
     public List<SelectedItemModel> SelectedItems { get; set; } = [];
     public bool ShowPrice { get; set; }
     public bool CompensateReturnedQuantityInNextDelivery { get; set; }
-    public Guid WarehouseId { get; set; }
     public string? Note { get; set; }
     public decimal Surcharge { get; set; }
     public string? SurchargeReason { get; set; }

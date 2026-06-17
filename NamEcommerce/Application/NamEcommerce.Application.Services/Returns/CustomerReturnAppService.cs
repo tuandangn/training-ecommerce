@@ -225,7 +225,7 @@ public sealed class CustomerReturnAppService(
         {
             Code = dn.Code,
             DeliveredOnUtc = dn.DeliveredOnUtc ?? dn.CreatedOnUtc,
-            WarehouseId = dn.WarehouseId
+            WarehouseId = null
         }).ToList();
 
         return Task.FromResult(result);

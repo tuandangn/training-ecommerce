@@ -215,7 +215,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 SourceType = dn.SourceType,
                 IsDirectShip = dn.IsDirectShip,
                 DeliveryConfirmationStatus = dn.DeliveryConfirmationStatus,
-                WarehouseId = dn.WarehouseId,
+                WarehouseId = dn.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty,
                 WarehouseName = dn.WarehouseName,
                 CreatedOn = dn.CreatedOnUtc.ToLocalTime(),
                 UpdatedOn = dn.UpdatedOnUtc?.ToLocalTime(),

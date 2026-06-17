@@ -111,12 +111,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var deliveryNote in deliveryNotes)
         {
-            deliveryNote.WarehouseName = BuildWarehouseSummary(deliveryNote.Items.Select(item => item.WarehouseName), ResolveWarehouseName(deliveryNote.WarehouseId ?? Guid.Empty, warehouseNamesById));
-            if (string.IsNullOrWhiteSpace(deliveryNote.WarehouseName) && deliveryNote.WarehouseId.HasValue)
-            {
-                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId.Value).ConfigureAwait(false);
-                deliveryNote.WarehouseName = warehouse?.Name;
-            }
+            deliveryNote.WarehouseName = BuildWarehouseSummary(deliveryNote.Items.Select(item => item.WarehouseName), null);
         }
 
         var data = PagedDataModel.Create(deliveryNotes, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount);
@@ -304,7 +299,6 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
             SettlementReason = deliveryNote.SettlementReason,
             SettlementAdminNote = deliveryNote.SettlementAdminNote,
-            WarehouseId = deliveryNote.WarehouseId,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
             AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
@@ -350,7 +344,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             .ToList();
 
         model.AvailableWarehouses = availableWarehouses;
-        model.WarehouseName = BuildWarehouseSummary(model.Items.Select(item => item.WarehouseName), ResolveWarehouseName(deliveryNote.WarehouseId ?? Guid.Empty, warehouseNamesById));
+        model.WarehouseName = BuildWarehouseSummary(model.Items.Select(item => item.WarehouseName), null);
 
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {
@@ -367,7 +361,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             model.ReturnedToWarehouseName = await _mediator.Send(new GetDeliveryNoteReturnWarehouseQuery
             {
                 DeliveryNoteId = id,
-                DeliveryNoteWarehouseId = deliveryNote.WarehouseId ?? Guid.Empty
+                DeliveryNoteWarehouseId = deliveryNote.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty
             }).ConfigureAwait(false);
         }
 

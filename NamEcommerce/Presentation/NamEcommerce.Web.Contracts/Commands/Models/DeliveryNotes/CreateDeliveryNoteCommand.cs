@@ -9,7 +9,6 @@ public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResul
     public Guid OrderId { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
     public string? ShippingPhoneNumber { get; set; }
-    public Guid? WarehouseId { get; set; }
     public bool ShowPrice { get; set; }
     public string? Note { get; set; }
     public decimal Surcharge { get; set; }

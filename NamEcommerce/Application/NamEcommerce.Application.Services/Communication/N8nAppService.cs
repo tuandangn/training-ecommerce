@@ -39,7 +39,7 @@ public sealed class N8nAppService(HttpClient httpClient, IDeliveryNoteAppService
             amountToCollect = deliveryNote.AmountToCollect,
             surcharge = deliveryNote.Surcharge,
             surchargeReason = deliveryNote.SurchargeReason,
-            warehouseId = deliveryNote.WarehouseId,
+            warehouseId = deliveryNote.Items.FirstOrDefault()?.WarehouseId,
             warehouseName = deliveryNote.WarehouseName
         };
         var requestContent = new StringContent(JsonSerializer.Serialize(infoJson), Encoding.UTF8, "application/json");

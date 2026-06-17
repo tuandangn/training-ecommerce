@@ -84,7 +84,7 @@ public sealed class DirectShipAppService(
         return items.Select(d => new PendingDirectShipDeliveryAppDto
         {
             Id = d.Id,
-            WarehouseId = d.WarehouseId,
+            WarehouseId = d.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty,
             Code = d.Code,
             OrderId = d.OrderId,
             OrderCode = d.OrderCode,

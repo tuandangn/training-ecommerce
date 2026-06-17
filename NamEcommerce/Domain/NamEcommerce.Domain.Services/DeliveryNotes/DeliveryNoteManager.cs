@@ -107,7 +107,7 @@ public sealed class DeliveryNoteManager(
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.WarehouseId, dto.AmountToCollect, dto.Surcharge)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.AmountToCollect, dto.Surcharge)
         {
             ShippingAddress = dto.ShippingAddress,
             ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
@@ -118,7 +118,6 @@ public sealed class DeliveryNoteManager(
             Note = dto.Note,
             CustomerInfo = new CustomerInfo(order.CustomerInfo.FullName, order.CustomerInfo.PhoneNumber, order.CustomerInfo.Address),
             OrderCode = order.Code,
-            WarehouseName = dto.WarehouseName,
             CreatedByUserId = order.CreatedByUserId
         };
 
@@ -333,7 +332,7 @@ public sealed class DeliveryNoteManager(
             ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, dto.WarehouseId, 0, 0)
+        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, 0, 0)
         {
             SourceType = DeliveryNoteSourceType.ToVendorReturn,
             CreatedByUserId = vendorReturn.CreatedByUserId
@@ -374,7 +373,7 @@ public sealed class DeliveryNoteManager(
             ? order.CustomerInfo.PhoneNumber
             : dto.ContactPhone.Trim();
 
-        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.DirectShipWarehouseId, 0, 0)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, 0, 0)
         {
             OrderCode = order.Code,
             CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress),
@@ -466,7 +465,7 @@ public sealed class DeliveryNoteManager(
                 .GroupBy(item => new
                 {
                     item.ProductId,
-                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item)
+                    WarehouseId = ResolveItemWarehouseId(item)
                 })
                 .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
                 .ToList();
@@ -505,10 +504,10 @@ public sealed class DeliveryNoteManager(
             {
                 await stockManager.ReceiveStockUpToAsync(
                     item.ProductId,
-                    ResolveItemWarehouseId(deliveryNote, item),
+                    ResolveItemWarehouseId(item),
                     deliveryNote.Items
                         .Where(i => i.ProductId == item.ProductId
-                            && ResolveItemWarehouseId(deliveryNote, i) == ResolveItemWarehouseId(deliveryNote, item))
+                            && ResolveItemWarehouseId(i) == ResolveItemWarehouseId(item))
                         .Sum(i => i.Quantity),
                     $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
                     Guid.Empty,
@@ -518,7 +517,7 @@ public sealed class DeliveryNoteManager(
                 await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
                 {
                     ProductId = item.ProductId,
-                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item),
+                    WarehouseId = ResolveItemWarehouseId(item),
                     Quantity = item.Quantity,
                     UnitCost = item.CostAtDispatch,
                     MovementType = InventoryCostMovementType.CustomerReturn,
@@ -648,15 +647,12 @@ public sealed class DeliveryNoteManager(
         }).ConfigureAwait(false);
     }
 
-    private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
+    private static Guid ResolveItemWarehouseId(DeliveryNoteItem item)
     {
-        if (item.WarehouseId != Guid.Empty)
-            return item.WarehouseId;
-
-        if (!deliveryNote.WarehouseId.HasValue)
+        if (item.WarehouseId == Guid.Empty)
             throw new WarehouseIsNotSuitableException(Guid.Empty);
 
-        return deliveryNote.WarehouseId.Value;
+        return item.WarehouseId;
     }
 
     private async Task ReleaseReservedStockIfPresentAsync(
@@ -1129,7 +1125,6 @@ public sealed class DeliveryNoteManager(
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
             OrderId = deliveryNote.OrderId,
-            WarehouseId = deliveryNote.WarehouseId,
             OrderCode = deliveryNote.OrderCode,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,

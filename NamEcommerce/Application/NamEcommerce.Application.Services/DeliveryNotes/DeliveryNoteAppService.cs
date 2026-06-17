@@ -56,35 +56,15 @@ public sealed class DeliveryNoteAppService(
             };
         }
 
-        WarehouseAppDto? warehouse = null;
-        if (dto.WarehouseId.HasValue)
+        foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
         {
-            warehouse = await warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
-            if (warehouse is null)
+            if (await warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
             {
                 return new CreateDeliveryNoteResultAppDto
                 {
                     Success = false,
                     ErrorMessage = "Error.WarehouseIsNotFound"
                 };
-            }
-        }
-
-        foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
-        {
-            if (warehouseId == dto.WarehouseId)
-                continue;
-
-            if (await warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
-            {
-                if (warehouse is null)
-                {
-                    return new CreateDeliveryNoteResultAppDto
-                    {
-                        Success = false,
-                        ErrorMessage = "Error.WarehouseIsNotFound"
-                    };
-                }
             }
         }
 
@@ -176,8 +156,6 @@ public sealed class DeliveryNoteAppService(
             ShippingPhoneNumber = dto.ShippingPhoneNumber,
             ShowPrice = dto.ShowPrice,
             Note = dto.Note,
-            WarehouseId = dto.WarehouseId,
-            WarehouseName = warehouse?.Name,
             Surcharge = dto.Surcharge,
             SurchargeReason = dto.SurchargeReason,
             AmountToCollect = dto.AmountToCollect,

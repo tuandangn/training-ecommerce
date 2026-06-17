@@ -18,7 +18,6 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.HasIndex(d => d.Code).IsUnique();
 
         builder.Property(d => d.OrderId).IsRequired();
-        builder.Property(d => d.WarehouseId);
         builder.Property(d => d.OrderCode);
         builder.Property(d => d.AssignedDeliveryUserId).IsRequired(false);
         builder.Property(d => d.AssignedDeliveryUsername).HasMaxLength(200).IsRequired(false);

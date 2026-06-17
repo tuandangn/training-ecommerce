@@ -329,7 +329,7 @@ public sealed class DirectShipManager(
         {
             var warehouseId = item.WarehouseId;
             if (warehouseId == Guid.Empty)
-                warehouseId = deliveryNote.WarehouseId ?? throw new WarehouseIsNotSuitableException(Guid.Empty);
+                throw new WarehouseIsNotSuitableException(Guid.Empty);
             await inventoryStockManager.ReleaseReservedStockAsync(item.ProductId, warehouseId, item.Quantity, deliveryNote.Id, userId);
             await TransferStockWithCostAsync(
                 item.ProductId,
@@ -424,7 +424,6 @@ public sealed class DirectShipManager(
             Code = d.Code,
             OrderId = d.OrderId,
             OrderCode = d.OrderCode,
-            WarehouseId = d.WarehouseId,
             CustomerId = d.CustomerId,
             CustomerName = d.CustomerInfo.FullName,
             CustomerPhone = d.CustomerInfo.PhoneNumber,
@@ -454,7 +453,7 @@ public sealed class DirectShipManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
-                WarehouseId = i.WarehouseId == Guid.Empty ? (d.WarehouseId ?? Guid.Empty) : i.WarehouseId,
+                WarehouseId = i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

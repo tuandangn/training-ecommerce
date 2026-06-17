@@ -295,7 +295,6 @@ public sealed class FastSaleAppService(
         var deliveryNote = await deliveryNoteManager.CreateFromOrderAsync(new CreateDeliveryNoteDto
         {
             OrderId = orderId,
-            WarehouseId = ResolveHeaderWarehouseId(dto),
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS : dto.ShippingAddress,
             ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber) ? order.ShippingPhoneNumber : dto.ShippingPhoneNumber,
             ShowPrice = true,
@@ -319,9 +318,6 @@ public sealed class FastSaleAppService(
 
     private static Guid ResolveItemWarehouseId(QuickSaleItemAppDto item, CreateQuickSaleAppDto dto)
         => item.WarehouseId == Guid.Empty ? dto.WarehouseId : item.WarehouseId;
-
-    private static Guid ResolveHeaderWarehouseId(CreateQuickSaleAppDto dto)
-        => dto.Items.Select(item => ResolveItemWarehouseId(item, dto)).FirstOrDefault(id => id != Guid.Empty);
 
     private static IReadOnlyCollection<Guid> GetWarehouseIdsToValidate(
         CreateQuickSaleAppDto dto,

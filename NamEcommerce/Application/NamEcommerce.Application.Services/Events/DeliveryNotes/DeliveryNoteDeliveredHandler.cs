@@ -102,7 +102,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             .GroupBy(item => new
             {
                 item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? (deliveryNote.WarehouseId ?? Guid.Empty) : item.WarehouseId
+                WarehouseId = item.WarehouseId
             })
             .Select(group => new
             {
@@ -132,7 +132,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? (deliveryNote.WarehouseId ?? Guid.Empty) : item.WarehouseId,
+                WarehouseId = item.WarehouseId,
                 Quantity = item.Quantity,
                 MovementType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
                     ? InventoryCostMovementType.VendorReturn

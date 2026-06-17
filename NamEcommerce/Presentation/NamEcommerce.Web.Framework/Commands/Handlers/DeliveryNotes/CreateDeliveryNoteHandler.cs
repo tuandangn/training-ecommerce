@@ -32,7 +32,6 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             OrderId = request.OrderId,
             ShippingAddress = request.ShippingAddress,
             ShippingPhoneNumber = request.ShippingPhoneNumber,
-            WarehouseId = request.WarehouseId,
             ShowPrice = request.ShowPrice,
             Note = request.Note,
             AmountToCollect = request.AmountToCollect,
@@ -41,7 +40,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             Items = selectedItems.Select(i => new CreateDeliveryNoteItemAppDto
             {
                 OrderItemId = i.OrderItemId,
-                WarehouseId = i.WarehouseId == Guid.Empty ? (request.WarehouseId ?? Guid.Empty) : i.WarehouseId,
+                WarehouseId = i.WarehouseId,
                 Quantity = i.Quantity
             }).ToList()
         };
