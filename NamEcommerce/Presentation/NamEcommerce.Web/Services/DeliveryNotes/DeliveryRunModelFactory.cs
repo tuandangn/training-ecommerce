@@ -1,6 +1,7 @@
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -16,6 +17,7 @@ public sealed class DeliveryRunModelFactory(
     IUserAppService userAppService,
     IProductAppService productAppService,
     IUnitMeasurementAppService unitMeasurementAppService,
+    IWarehouseAppService warehouseAppService,
     AppConfig appConfig) : IDeliveryRunModelFactory
 {
     public async Task<DeliveryRunListModel> PrepareDeliveryRunListModelAsync(DeliveryRunSearchModel searchModel)
@@ -72,6 +74,10 @@ public sealed class DeliveryRunModelFactory(
         var unitMeasurementIds = products.Select(product => product.UnitMeasurementId).OfType<Guid>().Distinct().ToList();
         var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
 
+        var warehouseIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.WarehouseId)).OfType<Guid>().Distinct().ToList();
+        var warehouses = (await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false))
+            .Where(warehouse => warehouseIds.Contains(warehouse.Id)).ToList();
+
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
@@ -79,10 +85,13 @@ public sealed class DeliveryRunModelFactory(
             {
                 var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
                 var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                var warehouse = warehouses.FirstOrDefault(warehouse => warehouse.Id == noteItem.WarehouseId);
                 return new DeliveryRunProductItemModel
                 {
                     DeliveryNoteItemId = noteItem.Id,
+                    ProductId = noteItem.ProductId,
                     ProductName = noteItem.ProductName,
+                    WarehouseName = warehouse?.Name,
                     Quantity = noteItem.Quantity,
                     UnitPrice = noteItem.UnitPrice,
                     SubTotal = noteItem.SubTotal,
@@ -104,6 +113,7 @@ public sealed class DeliveryRunModelFactory(
                     settlementItems.Add(new DeliveryRunSettlementProductItemModel
                     {
                         DeliveryNoteItemId = noteItem.Id,
+                        ProductId = noteItem.ProductId,
                         ProductName = noteItem.ProductName,
                         Quantity = noteItem.Quantity,
                         AcceptedQuantity = settlementItem.AcceptedQuantity,

@@ -28,6 +28,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -106,28 +107,20 @@ public sealed class DeliveryNoteManager(
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            orderId: order.Id,
-            customerId: order.CustomerId,
-            customerName: order.CustomerInfo.FullName,
-            customerPhone: order.CustomerInfo.PhoneNumber,
-            customerAddress: order.CustomerInfo.Address,
-            shippingAddress: dto.ShippingAddress,
-            shippingPhoneNumber: string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.WarehouseId, dto.AmountToCollect, dto.Surcharge)
+        {
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
                 ? order.ShippingPhoneNumber ?? order.CustomerInfo.PhoneNumber
                 : dto.ShippingPhoneNumber,
-            warehouseId: dto.WarehouseId,
-            showPrice: dto.ShowPrice,
-            note: dto.Note,
-            surcharge: dto.Surcharge,
-            amountToCollect: dto.AmountToCollect,
-            surchargeReason: dto.SurchargeReason,
-            createdByUserId: order.CreatedByUserId
-        );
-        deliveryNote.OrderCode = order.Code;
-        deliveryNote.WarehouseName = dto.WarehouseName;
+            ShowPrice = dto.ShowPrice,
+            SurchargeReason = dto.SurchargeReason,
+            Note = dto.Note,
+            CustomerInfo = new CustomerInfo(order.CustomerInfo.FullName, order.CustomerInfo.PhoneNumber, order.CustomerInfo.Address),
+            OrderCode = order.Code,
+            WarehouseName = dto.WarehouseName,
+            CreatedByUserId = order.CreatedByUserId
+        };
 
         foreach (var itemDto in dto.Items)
         {
@@ -340,23 +333,17 @@ public sealed class DeliveryNoteManager(
             ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            warehouseId: dto.WarehouseId,
-            note: null,
-            createdByUserId: vendorReturn.CreatedByUserId);
-
-        deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
+        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, dto.WarehouseId, 0, 0)
+        {
+            SourceType = DeliveryNoteSourceType.ToVendorReturn,
+            CreatedByUserId = vendorReturn.CreatedByUserId
+        };
 
         foreach (var item in dto.Items)
             deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
 
-        // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
         foreach (var item in deliveryNote.Items)
-        {
             item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-        }
 
         // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
         // DeliveryNoteDeliveredStockHandler sẽ dispatch stock; DeliveryNoteDeliveredEventHandler có guard
@@ -377,7 +364,7 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal> {[orderItem.Id] = dto.Quantity }, includeDirectShipOutstanding: false);
+        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal> { [orderItem.Id] = dto.Quantity }, includeDirectShipOutstanding: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -387,24 +374,12 @@ public sealed class DeliveryNoteManager(
             ? order.CustomerInfo.PhoneNumber
             : dto.ContactPhone.Trim();
 
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            orderId: order.Id,
-            customerId: order.CustomerId,
-            customerName: contactName,
-            customerPhone: contactPhone,
-            customerAddress: dto.ShippingAddress,
-            shippingAddress: dto.ShippingAddress,
-            shippingPhoneNumber: contactPhone,
-            warehouseId: dto.DirectShipWarehouseId,
-            showPrice: false,
-            note: null,
-            surcharge: 0,
-            amountToCollect: 0,
-            surchargeReason: null,
-            createdByUserId: null)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.DirectShipWarehouseId, 0, 0)
         {
-            OrderCode = order.Code
+            OrderCode = order.Code,
+            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress),
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = contactPhone
         };
 
         deliveryNote.AddItem(
@@ -674,7 +649,15 @@ public sealed class DeliveryNoteManager(
     }
 
     private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
-        => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
+    {
+        if (item.WarehouseId != Guid.Empty)
+            return item.WarehouseId;
+
+        if (!deliveryNote.WarehouseId.HasValue)
+            throw new WarehouseIsNotSuitableException(Guid.Empty);
+
+        return deliveryNote.WarehouseId.Value;
+    }
 
     private async Task ReleaseReservedStockIfPresentAsync(
         Guid productId,

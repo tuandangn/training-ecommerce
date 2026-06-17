@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Metadata;
-using System.Linq;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
@@ -14,50 +13,18 @@ public sealed record DeliveryNote : AppAggregateEntity
 {
     public const string CODE_PREFIX = "PX";
 
-    public DeliveryNote(Guid id) : base(id)
+    private DeliveryNote(Guid id) : base(id)
     {
-        Code = string.Empty;
-        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
-        ShippingAddress = string.Empty;
-        ShippingPhoneNumber = string.Empty;
-        _items = [];
     }
 
-    internal DeliveryNote(string code, Guid warehouseId, string? note, Guid? createdByUserId) : base(Guid.NewGuid())
-    {
-        Code = code;
-        WarehouseId = warehouseId;
-        Note = note;
-        CreatedByUserId = createdByUserId;
-        Status = DeliveryNoteStatus.Draft;
-        CreatedOnUtc = DateTime.UtcNow;
-        OrderId = Guid.Empty;
-        CustomerId = Guid.Empty;
-        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
-        ShippingAddress = string.Empty;
-        ShippingPhoneNumber = string.Empty;
-        _items = [];
-    }
-
-    internal DeliveryNote(string code, Guid orderId,
-        Guid customerId, string customerName, string customerPhone, string? customerAddress,
-        string shippingAddress, string? shippingPhoneNumber, Guid warehouseId, bool showPrice, string? note,
-        decimal surcharge, decimal amountToCollect, string? surchargeReason,
-        Guid? createdByUserId) : base(Guid.NewGuid())
+    internal DeliveryNote(string code, Guid orderId, Guid customerId, Guid? warehouseId, decimal amountToCollect, decimal surcharge) : base(Guid.NewGuid())
     {
         Code = code;
         OrderId = orderId;
         CustomerId = customerId;
-        CustomerInfo = new CustomerInfo(customerName, customerPhone, customerAddress);
-        ShippingAddress = shippingAddress;
-        ShippingPhoneNumber = string.IsNullOrWhiteSpace(shippingPhoneNumber) ? null : shippingPhoneNumber.Trim();
-        ShowPrice = showPrice;
-        Note = note;
         Surcharge = surcharge;
         AmountToCollect = amountToCollect;
-        SurchargeReason = surchargeReason;
         Status = DeliveryNoteStatus.Draft;
-        CreatedByUserId = createdByUserId;
         WarehouseId = warehouseId;
         CreatedOnUtc = DateTime.UtcNow;
         _items = [];
@@ -65,14 +32,14 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     public string Code { get; private set; }
     public DeliveryNoteStatus Status { get; private set; }
-    public Guid? CreatedByUserId { get; private set; }
-    public bool ShowPrice { get; private set; }
-    public string? Note { get; private set; }
+    public Guid? CreatedByUserId { get; internal set; }
+    public bool ShowPrice { get; internal set; }
+    public string? Note { get; internal set; }
 
     public Guid OrderId { get; private set; }
     public string? OrderCode { get; set; }
 
-    public Guid WarehouseId { get; private set; }
+    public Guid? WarehouseId { get; private set; }
     public string? WarehouseName { get; internal set; }
 
     public Guid? AssignedDeliveryUserId { get; private set; }
@@ -81,10 +48,10 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DateTime? AssignedDeliveryOnUtc { get; private set; }
 
     public Guid CustomerId { get; private set; }
-    public CustomerInfo CustomerInfo { get; private set; }
+    public CustomerInfo CustomerInfo { get; internal set; }
     public NormalizableString ShippingAddress { get; internal set; }
     public string? ShippingPhoneNumber { get; internal set; }
-    
+
     public decimal Surcharge { get; internal set; }
     public string? SurchargeReason { get; internal set; }
     public decimal AmountToCollect { get; internal set; }
@@ -103,7 +70,7 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     private readonly List<DeliveryNoteItem> _items;
     public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
-    
+
     public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
 
     public bool IsDirectShip { get; private set; }
@@ -169,8 +136,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect));
     }
 
-    internal void MarkCreated()
-        => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+    internal void MarkCreated() => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
 
     internal void UpdateShippingInfo(string shippingAddress, string? shippingPhoneNumber)
     {
@@ -318,13 +284,11 @@ public sealed record DeliveryNote : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
 
         if (wasConfirmed)
+        {
             RaiseDomainEvent(new DeliveryNoteDelivering(Id));
-        RaiseDomainEvent(new DeliveryNoteDelivered(
-            Id,
-            OrderId,
-            CustomerId,
-            AmountToCollect,
-            debtAmount ?? AmountToCollect + rejectedGoodsAmount));
+        }
+        var totalAmountToCollect = debtAmount ?? AmountToCollect + rejectedGoodsAmount;
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect,totalAmountToCollect));
         return true;
     }
 

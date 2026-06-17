@@ -102,7 +102,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             .GroupBy(item => new
             {
                 item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+                WarehouseId = item.WarehouseId == Guid.Empty ? (deliveryNote.WarehouseId ?? Guid.Empty) : item.WarehouseId
             })
             .Select(group => new
             {
@@ -114,6 +114,8 @@ public sealed class DeliveryNoteDeliveredStockHandler(
 
         foreach (var group in dispatchGroups)
         {
+            if (group.WarehouseId == Guid.Empty)
+                continue;
             await stockManager.DispatchStockUpToAsync(
                 group.ProductId,
                 group.WarehouseId,
@@ -130,7 +132,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId,
+                WarehouseId = item.WarehouseId == Guid.Empty ? (deliveryNote.WarehouseId ?? Guid.Empty) : item.WarehouseId,
                 Quantity = item.Quantity,
                 MovementType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
                     ? InventoryCostMovementType.VendorReturn

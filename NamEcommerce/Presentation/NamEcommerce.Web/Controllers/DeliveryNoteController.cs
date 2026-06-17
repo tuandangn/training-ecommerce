@@ -112,7 +112,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 ShippingAddress = model.ShippingAddress,
                 ShippingPhoneNumber = model.ShippingPhoneNumber,
-                WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
                 Note = model.Note,
                 Surcharge = model.Surcharge,
@@ -554,7 +553,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 continue;
             }
 
-            var warehouseId = item.WarehouseId == Guid.Empty ? model.WarehouseId : item.WarehouseId;
+            var warehouseId = item.WarehouseId;
             if (warehouseId == Guid.Empty || item.Quantity <= 0)
                 continue;
 

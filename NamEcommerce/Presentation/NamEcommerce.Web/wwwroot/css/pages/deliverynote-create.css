@@ -20,7 +20,7 @@
                 }
 
         .delivery-stock-state {
-            min-width: 170px;
+            /*min-width: 170px;*/
         }
 
         .delivery-stock-status {
@@ -82,14 +82,14 @@
             }
 
         .warehouse-allocation-list {
-            display: grid;
+            display: flex;
+            flex-direction:column;
             gap: 0.45rem;
-            min-width: 260px;
+            /*min-width: 260px;*/
         }
 
         .warehouse-allocation-line {
-            display: grid;
-            grid-template-columns: minmax(120px, 1fr) 88px 94px;
+            display: flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.45rem 0.55rem;
@@ -130,6 +130,7 @@
         .warehouse-allocation-input {
             height: 34px;
             font-weight: 700;
+            width:85px;
         }
 
         .allocation-total-text {

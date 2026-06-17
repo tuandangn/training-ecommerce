@@ -18,7 +18,7 @@ public sealed class DeliveryNoteDetailsModel
     public string ShippingAddress { get; set; } = string.Empty;
     public string? ShippingPhoneNumber { get; set; }
 
-    public Guid WarehouseId { get; set; }
+    public Guid? WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
     public EntityOptionListModel? AvailableWarehouses { get; set; }
     public Guid? AssignedDeliveryUserId { get; set; }

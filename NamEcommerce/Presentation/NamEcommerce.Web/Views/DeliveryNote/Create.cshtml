@@ -91,14 +91,14 @@
                         <table class="table data-table delivery-stock-table mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-center ps-4 ui-w-50">
+                                    <th class="text-center ps-3 ui-w-50">
                                         <input type="checkbox" id="selectAll" class="form-check-input" checked />
                                     </th>
                                     <th>Mặt hàng</th>
-                                    <th class="text-end">Đã đặt</th>
+                                    <th class="text-end">Đơn giá</th>
                                     <th class="text-end">Đã giao</th>
                                     <th>Phân bổ kho</th>
-                                    <th class="text-end pe-4 ui-w-130">Tổng xuất</th>
+                                    <th class="text-end pe-3 ui-w-130">Tổng xuất</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -106,16 +106,17 @@
                                 {
                                     for (int i = 0; i < Model.Items.Count; i++)
                                     {
-                                        var requiredQuantityValue = Model.Items[i].RemainingQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                                        var availableQuantityValue = Model.Items[i].AvailableQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        var item = Model.Items[i];
+                                        var requiredQuantityValue = item.RemainingQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        var availableQuantityValue = item.AvailableQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
                                         <tr class="item-row"
                                             data-item-index="@i"
-                                            data-product-id="@Model.Items[i].ProductId"
+                                            data-product-id="@item.ProductId"
                                             data-required-quantity="@requiredQuantityValue"
                                             data-available-quantity="@availableQuantityValue"
-                                            data-decimalplaces="@Model.Items[i].QuantityDecimalPlaces"
+                                            data-decimalplaces="@item.QuantityDecimalPlaces"
                                             data-stock-loaded="false">
-                                            <td class="align-middle text-center ps-4">
+                                            <td class="align-middle text-center ps-3">
                                                 <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
                                                 <input type="hidden" asp-for="Items[i].OrderItemId" />
                                                 <input type="hidden" asp-for="Items[i].ProductId" class="item-product-id" />
@@ -128,23 +129,26 @@
                                                 <input type="hidden" asp-for="Items[i].UnitPrice" class="item-price" />
                                                 <input type="hidden" asp-for="Items[i].QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
-                                            <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
-                                            <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
+                                            <td class="align-middle">
+                                                <span class="fw-medium d-block">@item.ProductName</span>
+                                            </td>
+                                            <td class="text-end align-middle text-dark">@item.UnitPrice.DisplayCurrency()</td>
+                                            <td class="text-end align-middle text-success">@item.PreviouslyDeliveredQuantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
                                             <td class="align-middle">
                                                 <div class="delivery-stock-state stock-availability-state">
                                                     <span class="delivery-stock-status is-neutral">
                                                         <i class="bi bi-box-seam stock-status-icon"></i>
-                                                        <span class="stock-availability-label">Đang chờ tồn kho</span>
+                                                        <span class="stock-availability-label">Đang lấy dữ liệu</span>
                                                     </span>
-                                                    <span class="delivery-stock-note stock-availability-note">Tự phân bổ theo kho ưu tiên, sau đó tới các kho còn hàng</span>
                                                 </div>
                                                 <div class="warehouse-allocation-list mt-2"></div>
                                             </td>
-                                            <td class="pe-4">
-                                                <input type="hidden" asp-for="Items[i].Quantity" class="quantity-input" value="@Model.Items[i].Quantity.DisplayQuantity()" />
-                                                <div class="allocation-total-text text-end fw-bold">0</div>
-                                                <div class="allocation-total-note text-end small text-muted">/ @Model.Items[i].RemainingQuantity.DisplayQuantity()</div>
+                                            <td class="text-end pe-3">
+                                                <input type="hidden" asp-for="Items[i].Quantity" class="quantity-input" value="@item.Quantity.DisplayQuantity()" />
+                                                <span class="allocation-total-text text-end fw-bold">0</span>
+                                                <span class="allocation-total-note text-end small text-muted">
+                                                    / @item.RemainingQuantity.DisplayQuantity(item.QuantityDecimalPlaces)
+                                                </span>
                                             </td>
                                         </tr>
                                     }
@@ -196,13 +200,6 @@
                         <textarea asp-for="ShippingAddress" class="form-control" rows="2"></textarea>
                         <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <select asp-for="WarehouseId" asp-items="Model.AvailableWarehouses!.ToSelectList(Model.WarehouseId)" class="form-select">
-                            <option value="">-- Chọn kho xuất --</option>
-                        </select>
-                        <span asp-validation-for="WarehouseId" class="text-danger small"></span>
-                    </div>
                     <div class="mb-0">
                         <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="Note" class="form-control" rows="2"></textarea>
@@ -235,7 +232,7 @@
                         </div>
                         <div class="col-xl-6">
                             <label asp-for="SurchargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2" for="SurchargeReason"></label>
-                            <input asp-for="SurchargeReason" class="form-control" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)"/>
+                            <input asp-for="SurchargeReason" class="form-control" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)" />
                         </div>
                     </div>
 
@@ -260,21 +257,13 @@
                             <span class="input-group-text bg-primary text-white border-primary">đ</span>
                         </div>
                         <span asp-validation-for="AmountToCollect" class="text-danger small"></span>
+                        <span class="text-muted small" id="calculationInfo"></span>
                         @if (Model.IsRetailWalkInCustomer)
                         {
                             <div class="alert alert-warning small mt-2 mb-0 py-2">
                                 <i class="bi bi-exclamation-triangle me-1"></i> Đơn khách lẻ phải thu đủ khi giao, không được để công nợ.
                             </div>
                         }
-                    </div>
-                    <div class="form-check form-switch mt-3 mb-0 p-3 bg-light rounded border d-none">
-                        <input class="form-check-input ms-0" type="checkbox" asp-for="CompensateReturnedQuantityInNextDelivery" role="switch" id="compensateReturnedSwitch">
-                        <label class="form-check-label ms-2 fw-medium" asp-for="CompensateReturnedQuantityInNextDelivery" for="compensateReturnedSwitch">
-                            Sẽ bù vào lần xuất hàng sau
-                        </label>
-                        <div class="small text-muted mt-2">
-                            Bật tùy chọn này nếu muốn bù số lượng khách trả lại trong các lần giao tiếp theo.
-                        </div>
                     </div>
                 </div>
                 <div class="content-card-footer d-grid d-md-none">
@@ -329,11 +318,11 @@
                 const surcharge = parseFloat(DecimalFields.stripFormatting($surchargeInput.val())) || 0;
                 const showPrice = $showPriceSwitch.is(':checked');
 
-                let amountToCollect = surcharge;
+                let amountToCollect = 0;
                 let infoText = 'Tự động tính theo phụ phí';
 
                 if (showPrice) {
-                    amountToCollect = totalSelected + surcharge;
+                    amountToCollect = totalSelected;
                     infoText = `Tổng tiền hàng (${formatCurrency(totalSelected, true)}) + Phụ phí (${formatCurrency(surcharge, true)})`;
                     $selectedTotalContainer.show();
                     $selectedTotalText.text(formatCurrency(totalSelected, true));
@@ -344,7 +333,7 @@
                 }
 
                 if (amountAlreadyPaidForOrder > 0) {
-                    amountToCollect = Math.max(0, amountToCollect - amountAlreadyPaidForOrder);
+                    amountToCollect = Math.max(0, amountToCollect - amountAlreadyPaidForOrder) + surcharge;
                     infoText += ` − Đã thanh toán (${formatCurrency(amountAlreadyPaidForOrder, true)})`;
                 }
                 $moneySummary.toggleClass('d-none', amountToCollect <= 0);
@@ -800,9 +789,9 @@
                 calculateAmount();
             });
 
-            $('#surchargeInput, #showPriceSwitch').on('change input', function() {
-                calculateAmount();
-            });
+            const onPricesChanged = debounce(() => calculateAmount(), 400);
+            $('#surchargeInput, #showPriceSwitch').on('input', onPricesChanged);
+            $('#surchargeInput, #showPriceSwitch').on('change', onPricesChanged.flush);
 
             $warehouseSelect.on('change', loadStockAvailability);
 

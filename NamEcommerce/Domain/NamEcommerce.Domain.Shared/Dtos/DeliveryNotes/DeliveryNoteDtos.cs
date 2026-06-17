@@ -11,7 +11,7 @@ public sealed record DeliveryNoteDto
     
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
-    public required Guid WarehouseId { get; init; }
+    public required Guid? WarehouseId { get; init; }
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
     public string? AssignedDeliveryFullName { get; init; }
@@ -99,17 +99,16 @@ public sealed record DeliveryNoteItemDto
 public sealed record CreateDeliveryNoteDto
 {
     public required Guid OrderId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? WarehouseName { get; init; }
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
-    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
-    public required IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
+    public IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
 
     public void Verify()
     {

@@ -98,7 +98,6 @@ class FastSale {
         this.createQr = document.getElementById('fastSaleCreateQr');
         this.confirmQr = document.getElementById('fastSaleConfirmQr');
         this.complete = document.getElementById('fastSaleComplete');
-        this.clearCart = document.getElementById('fastSaleClearCart');
         this.customer = document.getElementById('CustomerId');
         this.shippingPhoneNumber = document.getElementById('ShippingPhoneNumber');
         this.shippingAddress = document.getElementById('ShippingAddress');
@@ -239,12 +238,6 @@ class FastSale {
         this.createQr.addEventListener('click', () => this.createPaymentIntent());
         this.confirmQr.addEventListener('click', () => this.confirmPaymentIntent());
         this.complete.addEventListener('click', () => this.completeSale());
-        this.clearCart.addEventListener('click', () => {
-            this.cart = [];
-            this.resetPaymentIntent();
-            this.setFulfillmentMode('notDelivered');
-            this.render();
-        });
         this.shippingAddress?.addEventListener('input', () => this.resetPaymentIntent());
         this.shippingPhoneNumber?.addEventListener('input', () => this.resetPaymentIntent());
     }
@@ -454,7 +447,6 @@ class FastSale {
     renderCart() {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
-        this.clearCart.classList.toggle('d-none', this.cart.length === 0);
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `

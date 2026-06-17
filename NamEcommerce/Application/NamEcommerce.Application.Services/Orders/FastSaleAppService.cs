@@ -299,7 +299,6 @@ public sealed class FastSaleAppService(
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS : dto.ShippingAddress,
             ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber) ? order.ShippingPhoneNumber : dto.ShippingPhoneNumber,
             ShowPrice = true,
-            CompensateReturnedQuantityInNextDelivery = false,
             Surcharge = 0,
             AmountToCollect = total,
             Items = orderItems.Select((item, index) => new CreateDeliveryNoteItemDto

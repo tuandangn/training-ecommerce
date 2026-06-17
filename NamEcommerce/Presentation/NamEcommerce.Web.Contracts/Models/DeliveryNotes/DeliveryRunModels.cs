@@ -143,7 +143,9 @@ public sealed record DeliveryRunItemModel
 public sealed record DeliveryRunProductItemModel
 {
     public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
+    public string? WarehouseName { get; init; }
     public decimal Quantity { get; init; }
     public string? UnitMeasurement { get; set; }
     public decimal UnitPrice { get; init; }
@@ -154,6 +156,7 @@ public sealed record DeliveryRunProductItemModel
 public sealed record DeliveryRunSettlementProductItemModel
 {
     public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public decimal Quantity { get; init; }
     public decimal AcceptedQuantity { get; init; }

@@ -144,12 +144,7 @@ public sealed class DirectShipManager(
             .ConfigureAwait(false);
     }
 
-    public async Task HandleSoCancelledForReceivedDirectShipAsync(
-        Guid orderId,
-        Guid returnWarehouseId,
-        Guid userId,
-        string? reason,
-        CancellationToken ct = default)
+    public async Task HandleSoCancelledForReceivedDirectShipAsync(Guid orderId, Guid returnWarehouseId, Guid userId, string? reason, CancellationToken ct = default)
     {
         var deliveryNoteIds = deliveryNoteReader.DataSource
             .Where(d => d.OrderId == orderId
@@ -327,20 +322,18 @@ public sealed class DirectShipManager(
             throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Cancelled);
     }
 
-    private async Task ReturnDirectShipStockAsync(
-        DeliveryNote deliveryNote,
-        Guid returnWarehouseId,
-        string reason,
-        Guid userId = default)
+    private async Task ReturnDirectShipStockAsync(DeliveryNote deliveryNote, Guid returnWarehouseId, string reason, Guid userId = default)
     {
         var returnWarehouse = await ResolveReturnWarehouseAsync(returnWarehouseId).ConfigureAwait(false);
-
         foreach (var item in deliveryNote.Items)
         {
-            await inventoryStockManager.ReleaseReservedStockAsync(item.ProductId, deliveryNote.WarehouseId, item.Quantity, deliveryNote.Id, userId);
+            var warehouseId = item.WarehouseId;
+            if (warehouseId == Guid.Empty)
+                warehouseId = deliveryNote.WarehouseId ?? throw new WarehouseIsNotSuitableException(Guid.Empty);
+            await inventoryStockManager.ReleaseReservedStockAsync(item.ProductId, warehouseId, item.Quantity, deliveryNote.Id, userId);
             await TransferStockWithCostAsync(
                 item.ProductId,
-                deliveryNote.WarehouseId,
+                warehouseId,
                 returnWarehouse.Id,
                 item.Quantity,
                 deliveryNote.Id,
@@ -461,7 +454,7 @@ public sealed class DirectShipManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
-                WarehouseId = i.WarehouseId == Guid.Empty ? d.WarehouseId : i.WarehouseId,
+                WarehouseId = i.WarehouseId == Guid.Empty ? (d.WarehouseId ?? Guid.Empty) : i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

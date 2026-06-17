@@ -26,7 +26,7 @@ public sealed class GetDeliveryNotesByCustomerHandler : IRequestHandler<GetDeliv
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
             DeliveredOn = DateTimeHelper.ToLocalTime(deliveryNote.DeliveredOnUtc),
-            WarehouseId = deliveryNote.WarehouseId,
+            WarehouseId = deliveryNote.WarehouseId ?? Guid.Empty,
         }).ToList();
     }
 }

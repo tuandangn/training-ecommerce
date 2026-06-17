@@ -32,7 +32,7 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
             .GroupBy(item => new
             {
                 item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+                WarehouseId = item.WarehouseId == Guid.Empty ? (deliveryNote.WarehouseId ?? Guid.Empty) : item.WarehouseId
             })
             .Select(group => new { group.Key.ProductId, group.Key.WarehouseId, Quantity = group.Sum(item => item.Quantity) })
             .ToList();
@@ -59,6 +59,8 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
         //reserve warehouse stock
         foreach (var group in warehouseGroups)
         {
+            if (group.WarehouseId == Guid.Empty)
+                continue;
             await inventoryStockManager.ReserveStockAsync(
                 group.ProductId,
                 group.WarehouseId,

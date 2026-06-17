@@ -2,6 +2,7 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
+using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Notifications;
@@ -55,14 +56,18 @@ public sealed class DeliveryNoteAppService(
             };
         }
 
-        var warehouse = await warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId).ConfigureAwait(false);
-        if (warehouse is null)
+        WarehouseAppDto? warehouse = null;
+        if (dto.WarehouseId.HasValue)
         {
-            return new CreateDeliveryNoteResultAppDto
+            warehouse = await warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
             {
-                Success = false,
-                ErrorMessage = "Error.WarehouseIsNotFound"
-            };
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.WarehouseIsNotFound"
+                };
+            }
         }
 
         foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
@@ -170,10 +175,9 @@ public sealed class DeliveryNoteAppService(
             ShippingAddress = dto.ShippingAddress,
             ShippingPhoneNumber = dto.ShippingPhoneNumber,
             ShowPrice = dto.ShowPrice,
-            CompensateReturnedQuantityInNextDelivery = dto.CompensateReturnedQuantityInNextDelivery,
             Note = dto.Note,
             WarehouseId = dto.WarehouseId,
-            WarehouseName = warehouse.Name,
+            WarehouseName = warehouse?.Name,
             Surcharge = dto.Surcharge,
             SurchargeReason = dto.SurchargeReason,
             AmountToCollect = dto.AmountToCollect,

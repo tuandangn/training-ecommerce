@@ -113,7 +113,7 @@
                 {
                     var productParts = stop.ProductItems
                         .Take(2)
-                        .Select(product => $"<span>{product.ProductName} <span class=\"small text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span></span>")
+                        .Select(product => $"<div class=\"bg-light p-2 me-2 mb-2\">{product.ProductName} <span class=\"text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span> <span class=\"text-muted\">(kho {product.WarehouseName}</span>)</div>")
                         .ToList();
                     var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join("", productParts);
                     var remainingProductCount = stop.ProductItems.Count - productParts.Count;
@@ -132,25 +132,25 @@
                                 }
                             </div>
                         }
-                        <div class="mobile-stop-address">@stop.ShippingAddress</div>
+                        <div class="mobile-stop-address mb-2" style="@(isWaitingHandover ? "font-size:1rem;font-weight:600;" : "")">@stop.ShippingAddress</div>
                         <div class="mobile-stop-goods">
                             <div>@Html.Raw(productSummary)</div>
                             @if (remainingProductCount > 0)
                             {
-                                <strong>+{remainingProductCount} mặt hàng</strong>
+                                <strong>+@(remainingProductCount) mặt hàng</strong>
                             }
                         </div>
                     </div>
                 }
                 @if (!isWaitingHandover && run.Items.Count > 2)
                 {
-                    <div class="mobile-meta mt-2">Còn @(run.Items.Count - 2) điểm giao khác</div>
+                    <div class="mobile-meta">Còn @(run.Items.Count - 2) điểm giao khác</div>
                 }
             </div>
 
             @if (run.HandedOverOnUtc.HasValue)
             {
-                <div class="mobile-meta mt-3">
+                <div class="mobile-meta">
                     <i class="bi bi-clock-history me-1"></i>Bàn giao @run.HandedOverOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")
                 </div>
             }

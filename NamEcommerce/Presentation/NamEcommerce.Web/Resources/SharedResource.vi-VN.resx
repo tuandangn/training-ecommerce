@@ -993,4 +993,7 @@
   <data name="Error.DeliveryRunItemsRequired" xml:space="preserve">
     <value>Vui lòng chọn phiếu giao hàng</value>
   </data>
+  <data name="Error.DeliveryNoteItemDataIsInvalid" xml:space="preserve">
+    <value>Dữ liệu hàng hóa có sai sót</value>
+  </data>
 </root>
