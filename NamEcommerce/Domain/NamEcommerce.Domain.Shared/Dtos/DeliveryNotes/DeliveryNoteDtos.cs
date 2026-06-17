@@ -55,7 +55,25 @@ public sealed record DeliveryNoteDto
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
 
+    public DeliverySettlementApprovalStatus SettlementApproval { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public decimal? ApprovedAmountToCollect { get; init; }
+    public decimal? ApprovedAgreedCustomerCharge { get; init; }
+    public string? ApprovedAgreedChargeReason { get; init; }
+    public string? SettlementReason { get; init; }
+    public string? SettlementAdminNote { get; init; }
+
     public IList<DeliveryNoteItemDto> Items { get; init; } = [];
+    public IList<DeliveryNoteSettlementItemDto> SettlementItems { get; init; } = [];
+}
+
+[Serializable]
+public sealed record DeliveryNoteSettlementItemDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
 }
 
 [Serializable]
@@ -160,6 +178,30 @@ public sealed record MarkDeliveryNoteDeliveredDto
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }
     public DeliveryCompletionMetadataDto? CompletionMetadata { get; init; }
+}
+
+[Serializable]
+public sealed record RequestDeliverySettlementDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
+    public string? ReceiverName { get; init; }
+    public required string Reason { get; init; }
+    /// <summary>Case khách từ chối/thu thiếu không trả hàng — số shipper đề xuất thu.</summary>
+    public decimal? ProposedAmountToCollect { get; init; }
+    public DeliveryAcceptanceDto? Acceptance { get; init; }
+    public Guid? RequestedByUserId { get; init; }
+}
+
+[Serializable]
+public sealed record ApproveDeliverySettlementDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required decimal ApprovedAmountToCollect { get; init; }
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public string? AdminNote { get; init; }
+    public Guid? ApprovedByUserId { get; init; }
 }
 
 [Serializable]

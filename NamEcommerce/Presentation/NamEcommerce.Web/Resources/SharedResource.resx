@@ -540,6 +540,21 @@
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Delivery proof is required.</value>
   </data>
+  <data name="Error.DeliverySettlement.NotPending" xml:space="preserve">
+    <value>This delivery note is not awaiting settlement approval.</value>
+  </data>
+  <data name="Error.DeliverySettlement.AlreadyPending" xml:space="preserve">
+    <value>A settlement approval request is already pending for this delivery note.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ReasonRequired" xml:space="preserve">
+    <value>A reason is required.</value>
+  </data>
+  <data name="Error.DeliverySettlement.NotApproved" xml:space="preserve">
+    <value>This delivery note has not been approved yet.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ApprovalRequired" xml:space="preserve">
+    <value>Collecting less than the amount due requires admin approval first.</value>
+  </data>
   <data name="Error.ExpenseTitleRequired" xml:space="preserve">
     <value>Expense title is required.</value>
   </data>
@@ -968,5 +983,11 @@
   </data>
   <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
     <value>Customer</value>
+  </data>
+  <data name="Error.DeliveryUserRequired" xml:space="preserve">
+    <value>Shipper is required</value>
+  </data>
+  <data name="Error.DeliveryRunItemsRequired" xml:space="preserve">
+    <value>Delivery notes are required</value>
   </data>
 </root>

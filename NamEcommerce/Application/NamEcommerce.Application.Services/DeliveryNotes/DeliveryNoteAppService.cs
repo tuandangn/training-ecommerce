@@ -394,6 +394,119 @@ public sealed class DeliveryNoteAppService(
         }
     }
 
+    public async Task<CommonActionResultDto> RequestSettlementApprovalAsync(RequestDeliverySettlementAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return CommonActionResultDto.CreateError(errorMessage);
+
+        try
+        {
+            await deliveryNoteManager.RequestSettlementApprovalAsync(new RequestDeliverySettlementDto
+            {
+                DeliveryNoteId = dto.DeliveryNoteId,
+                PictureIds = dto.PictureIds,
+                ReceiverName = dto.ReceiverName,
+                Reason = dto.Reason,
+                ProposedAmountToCollect = dto.ProposedAmountToCollect,
+                RequestedByUserId = dto.RequestedByUserId,
+                Acceptance = MapAcceptance(dto.Acceptance)
+            }).ConfigureAwait(false);
+
+            var note = await deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+            if (note is not null)
+                await systemNotificationAppService.CreateAsync(
+                    DeliverySystemNotificationComposer.DeliverySettlementApprovalRequested(note.ToDto())).ConfigureAwait(false);
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+    }
+
+    public async Task<CommonActionResultDto> ApproveSettlementAsync(ApproveDeliverySettlementAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return CommonActionResultDto.CreateError(errorMessage);
+
+        try
+        {
+            await deliveryNoteManager.ApproveSettlementAsync(new ApproveDeliverySettlementDto
+            {
+                DeliveryNoteId = dto.DeliveryNoteId,
+                ApprovedAmountToCollect = dto.ApprovedAmountToCollect,
+                AgreedCustomerCharge = dto.AgreedCustomerCharge,
+                AgreedCustomerChargeReason = dto.AgreedCustomerChargeReason,
+                AdminNote = dto.AdminNote,
+                ApprovedByUserId = dto.ApprovedByUserId
+            }).ConfigureAwait(false);
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+    }
+
+    public async Task<CommonActionResultDto> RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId)
+    {
+        try
+        {
+            await deliveryNoteManager.RejectSettlementAsync(id, reason, approvedByUserId).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+    }
+
+    public async Task<CommonActionResultDto> CompleteApprovedSettlementAsync(
+        Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataAppDto? completionMetadata)
+    {
+        try
+        {
+            await deliveryNoteManager.CompleteApprovedSettlementAsync(id, pictureIds, completionMetadata is null
+                ? null
+                : new DeliveryCompletionMetadataDto
+                {
+                    Latitude = completionMetadata.Latitude,
+                    Longitude = completionMetadata.Longitude,
+                    LocationAddress = completionMetadata.LocationAddress,
+                    Note = completionMetadata.Note,
+                    Source = completionMetadata.Source,
+                    IdempotencyKey = completionMetadata.IdempotencyKey
+                }).ConfigureAwait(false);
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+    }
+
+    private static DeliveryAcceptanceDto? MapAcceptance(DeliveryAcceptanceAppDto? acceptance)
+        => acceptance is null
+            ? null
+            : new DeliveryAcceptanceDto
+            {
+                AgreedCustomerCharge = acceptance.AgreedCustomerCharge,
+                AgreedCustomerChargeReason = acceptance.AgreedCustomerChargeReason,
+                CompensateInNextDelivery = acceptance.CompensateInNextDelivery,
+                Items = acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
+                {
+                    DeliveryNoteItemId = item.DeliveryNoteItemId,
+                    AcceptedQuantity = item.AcceptedQuantity,
+                    RejectedQuantity = item.RejectedQuantity,
+                    RejectReason = item.RejectReason
+                }).ToList()
+            };
+
     public async Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id)
     {
         var result = await deliveryNoteManager.GetByIdAsync(id).ConfigureAwait(false);

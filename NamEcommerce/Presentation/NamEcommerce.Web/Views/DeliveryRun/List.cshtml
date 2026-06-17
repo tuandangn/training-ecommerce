@@ -69,8 +69,7 @@
                     <th class="text-end">Tiền cần thu</th>
                     <th class="text-center">Offline</th>
                     <th class="text-center">Trạng thái</th>
-                    <th class="d-none d-md-table-cell">Ngày tạo</th>
-                    <th class="ui-w-220"></th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -95,7 +94,8 @@
 
                         <tr>
                             <td class="ps-4">
-                                <a asp-action="Details" asp-route-id="@run.Id" class="fw-bold text-decoration-none">@run.Code</a>
+                                <a asp-action="Details" asp-route-id="@run.Id" class="fw-bold text-decoration-none text-nowrap">@run.Code</a>
+                                <span class="text-muted small d-block">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                             </td>
                             <td>
                                 <div class="fw-medium">@run.AssignedDeliveryFullName</div>
@@ -108,7 +108,7 @@
                                 <div class="fw-medium">@run.ItemCount</div>
                                 <div class="small text-muted">@run.DeliveredItemCount/@run.ItemCount đã giao</div>
                             </td>
-                            <td class="text-end fw-medium">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                            <td class="text-end fw-medium text-nowrap">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                             <td class="text-center">
                                 @if (offlineReady)
                                 {
@@ -128,7 +128,6 @@
                                     <i class="bi @statusTuple.Item2 me-1"></i>@run.StatusName
                                 </span>
                             </td>
-                            <td class="d-none d-md-table-cell text-muted">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
                                 <div class="d-flex justify-content-end gap-2">
                                     <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-outline-secondary" title="Chi tiết">

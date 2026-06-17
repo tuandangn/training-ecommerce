@@ -149,6 +149,119 @@ public sealed class DeliveryMobileController(
         return Json(new { success = result.Success, message = result.ErrorMessage });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> RequestSettlement(
+        Guid deliveryRunId,
+        Guid deliveryNoteId,
+        string? receiverName,
+        string reason,
+        decimal? proposedAmountToCollect,
+        double? latitude,
+        double? longitude,
+        string? locationAddress,
+        string? acceptanceItemsJson,
+        IFormFile? proofFile)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return Json(new { success = false, message = "Error.UserNotFound" });
+
+        DeliveryMobileRunModel run;
+        try
+        {
+            run = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Json(new { success = false, message = "Error.Forbidden" });
+        }
+        catch
+        {
+            return Json(new { success = false, message = "Error.DeliveryRunNotFound" });
+        }
+        if (!run.Run.Items.Any(item => item.DeliveryNoteId == deliveryNoteId))
+            return Json(new { success = false, message = "Error.DeliveryNoteNotFound" });
+
+        if (proofFile is null || proofFile.Length == 0)
+            return Json(new { success = false, message = "Error.DeliveryProofRequired" });
+        if (proofFile.Length > appConfig.UploadFileMaxSizeInBytes)
+            return Json(new { success = false, message = "Error.UploadFileTooLarge" });
+        if (!IsAllowedImage(proofFile.ContentType))
+            return Json(new { success = false, message = "Error.InvalidImageType" });
+
+        await using var stream = proofFile.OpenReadStream();
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
+
+        var upload = await mediator.Send(new UploadPictureCommand
+        {
+            Data = memoryStream.ToArray(),
+            MimeType = proofFile.ContentType,
+            FileName = proofFile.FileName,
+            Extension = Path.GetExtension(proofFile.FileName)
+        });
+        if (!upload.Success || !upload.PictureId.HasValue)
+            return Json(new { success = false, message = upload.ErrorMessage ?? "Error.UploadPictureFailed" });
+
+        var result = await mediator.Send(new RequestDeliverySettlementCommand
+        {
+            DeliveryRunId = deliveryRunId,
+            DeliveryNoteId = deliveryNoteId,
+            PictureId = upload.PictureId.Value,
+            ReceiverName = receiverName,
+            Reason = reason,
+            ProposedAmountToCollect = proposedAmountToCollect,
+            Latitude = latitude,
+            Longitude = longitude,
+            LocationAddress = locationAddress,
+            RequestedByUserId = currentUser.Id,
+            Items = ParseAcceptanceItems(acceptanceItemsJson)
+        });
+
+        return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ConfirmApprovedDelivery(
+        Guid deliveryRunId,
+        Guid deliveryNoteId,
+        string? idempotencyKey,
+        double? latitude,
+        double? longitude,
+        string? locationAddress)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return Json(new { success = false, message = "Error.UserNotFound" });
+
+        try
+        {
+            var run = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName);
+            if (!run.Run.Items.Any(item => item.DeliveryNoteId == deliveryNoteId))
+                return Json(new { success = false, message = "Error.DeliveryNoteNotFound" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Json(new { success = false, message = "Error.Forbidden" });
+        }
+        catch
+        {
+            return Json(new { success = false, message = "Error.DeliveryRunNotFound" });
+        }
+
+        var result = await mediator.Send(new CompleteApprovedDeliveryCommand
+        {
+            DeliveryRunId = deliveryRunId,
+            DeliveryNoteId = deliveryNoteId,
+            Latitude = latitude,
+            Longitude = longitude,
+            LocationAddress = locationAddress,
+            IdempotencyKey = idempotencyKey
+        });
+
+        return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
     private static bool IsAllowedImage(string contentType)
         => contentType is "image/jpeg" or "image/jpg" or "image/png" or "image/webp" or "image/gif";
 

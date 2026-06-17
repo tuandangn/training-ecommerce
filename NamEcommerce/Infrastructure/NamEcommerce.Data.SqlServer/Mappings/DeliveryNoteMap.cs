@@ -119,6 +119,24 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.SurchargeReason).HasMaxLength(500).IsRequired(false);
         builder.Property(d => d.AmountToCollect).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
 
+        builder.Property(d => d.SettlementApproval)
+            .IsRequired()
+            .HasDefaultValue(DeliverySettlementApprovalStatus.NotRequired)
+            .HasConversion<int>();
+        builder.Property(d => d.ProposedAmountToCollect).HasColumnType("decimal(18,2)").IsRequired(false);
+        builder.Property(d => d.ApprovedAmountToCollect).HasColumnType("decimal(18,2)").IsRequired(false);
+        builder.Property(d => d.ApprovedAgreedCustomerCharge).HasColumnType("decimal(18,2)").IsRequired(false);
+        builder.Property(d => d.ApprovedAgreedChargeReason).HasMaxLength(500).IsRequired(false);
+        builder.Property(d => d.SettlementReason).HasMaxLength(500).IsRequired(false);
+        builder.Property(d => d.SettlementAdminNote).HasMaxLength(500).IsRequired(false);
+        builder.Property(d => d.SettlementRequestedByUserId).IsRequired(false);
+        builder.Property(d => d.SettlementRequestedOnUtc).IsRequired(false);
+        builder.Property(d => d.SettlementApprovedByUserId).IsRequired(false);
+        builder.Property(d => d.SettlementApprovedOnUtc).IsRequired(false);
+
+        builder.HasMany(d => d.SettlementItems).WithOne().HasForeignKey(i => i.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(d => d.SettlementItems).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+
         // Computed từ items — không persist
         builder.Ignore(d => d.TotalAmount);
         builder.Ignore(d => d.TotalDiscountAmount);

@@ -13,6 +13,8 @@ using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Shared.Common;
 using System.Text.Json;
 
 namespace NamEcommerce.Web.Controllers;
@@ -23,17 +25,20 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
     private readonly ICustomerPortalQrCodeService _customerPortalQrCodeService;
+    private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public DeliveryNoteController(
         IDeliveryNoteModelFactory deliveryNoteModelFactory,
         IMediator mediator,
         IDeliveryNoteAppService deliveryNoteAppService,
-        ICustomerPortalQrCodeService customerPortalQrCodeService)
+        ICustomerPortalQrCodeService customerPortalQrCodeService,
+        ICurrentUserAccessor currentUserAccessor)
     {
         _deliveryNoteModelFactory = deliveryNoteModelFactory;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
         _customerPortalQrCodeService = customerPortalQrCodeService;
+        _currentUserAccessor = currentUserAccessor;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -301,37 +306,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         return this.JsonError(LocalizeError(result.ErrorMessage!));
     }
 
-    public async Task<IActionResult> GetAcceptantItems(Guid id)
-    {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
-        if (deliveryNote is null)
-            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
-
-        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
-        {
-            DeliveryNoteId = id
-        }).ConfigureAwait(false);
-        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
-        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
-        var items = deliveryNote.Items.Select(i =>
-        {
-            returnedQuantities.TryGetValue(i.Id, out var summary);
-            return new DeliveryNoteItemModel
-            {
-                Id = i.Id,
-                ProductName = i.ProductName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                SubTotal = i.SubTotal,
-                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
-                PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
-                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
-                QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
-            };
-        }).ToList();
-        return this.JsonOk(items);
-    }
     private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
     {
         if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
@@ -348,6 +322,92 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         {
             return [];
         }
+    }
+
+    public async Task<IActionResult> GetDeliveryNoteAcceptantItemsInfo(Guid id)
+    {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        {
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
+
+        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+
+        var acceptantItems = deliveryNote.Items.Select(i =>
+        {
+            returnedQuantities.TryGetValue(i.Id, out var summary);
+            return new DeliveryNoteItemModel
+            {
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                SubTotal = i.SubTotal,
+                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
+                PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
+                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
+                QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
+            };
+        }).ToList();
+
+        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> ApproveSettlement(
+        Guid deliveryNoteId, decimal approvedAmountToCollect,
+        decimal agreedCustomerCharge, string? agreedCustomerChargeReason, string? adminNote)
+    {
+        if (!User.IsInRole(SystemUserRoleNames.Admin))
+            return Forbid();
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var result = await _mediator.Send(new ApproveDeliverySettlementCommand
+        {
+            DeliveryNoteId = deliveryNoteId,
+            ApprovedAmountToCollect = approvedAmountToCollect,
+            AgreedCustomerCharge = agreedCustomerCharge,
+            AgreedCustomerChargeReason = agreedCustomerChargeReason,
+            AdminNote = adminNote,
+            ApprovedByUserId = currentUser?.Id
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.GenericError");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> RejectSettlement(Guid deliveryNoteId, string reason)
+    {
+        if (!User.IsInRole(SystemUserRoleNames.Admin))
+            return Forbid();
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var result = await _mediator.Send(new RejectDeliverySettlementCommand
+        {
+            DeliveryNoteId = deliveryNoteId,
+            Reason = reason,
+            ApprovedByUserId = currentUser?.Id
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.GenericError");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
     }
 
     [HttpPost]

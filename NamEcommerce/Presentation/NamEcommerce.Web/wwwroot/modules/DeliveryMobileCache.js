@@ -1,3 +1,5 @@
+import DecimalFields from '/modules/DecimalFields.js';
+
 const deviceIdKey = 'nam-delivery-device-id';
 const dbName = 'nam-delivery-mobile';
 const dbVersion = 1;
@@ -82,11 +84,11 @@ function updateAcceptedQuantity(line) {
         return;
     }
 
-    let returned = parseQuantity(input.value);
+    let returned = DecimalFields.getValue(input);
     if (returned < 0) returned = 0;
     if (returned > quantity) returned = quantity;
-    input.value = returned;
-    accepted.textContent = formatQuantity(Math.max(0, quantity - returned));
+    DecimalFields.setValue(input, returned);
+    accepted.textContent = DecimalFields.formatQuantity(Math.max(0, quantity - returned), Number(input.dataset.decimals) ?? 2);
 }
 
 function installReturnedQuantityControls(form) {
@@ -98,16 +100,16 @@ function installReturnedQuantityControls(form) {
 
 function prepareAcceptancePayload(form, status) {
     const lines = Array.from(form.querySelectorAll('.delivery-return-line'));
-    const rejectReason = String(form.querySelector('textarea[name="rejectReason"]')?.value || '').trim();
+    const rejectReason = String(form.querySelector('input[name="rejectReason"]')?.value || '').trim();
     let hasReturnedQuantity = false;
     const items = lines.map(line => {
         const quantity = parseQuantity(line.dataset.quantity);
         const input = line.querySelector('.returned-quantity-input');
-        let returned = parseQuantity(input?.value);
+        let returned = input ? DecimalFields.getValue(input) : 0;
         if (returned < 0) returned = 0;
         if (returned > quantity) returned = quantity;
         if (returned > 0) hasReturnedQuantity = true;
-        if (input) input.value = returned;
+        if (input) DecimalFields.setValue(input, returned);
         updateAcceptedQuantity(line);
         return {
             deliveryNoteItemId: line.dataset.itemId,
@@ -150,7 +152,8 @@ async function savePendingCompletion(form) {
     }
 
     const fields = {};
-    new FormData(form).forEach((value, key) => {
+    const formData = DecimalFields.getFormData(form);
+    formData.forEach((value, key) => {
         if (key !== 'proofFile') {
             fields[key] = value;
         }
@@ -294,7 +297,7 @@ export function installDeliveryCompletionForms() {
             try {
                 const response = await fetch(form.action, {
                     method: 'POST',
-                    body: new FormData(form)
+                    body: DecimalFields.getFormData(form)
                 });
                 const result = await response.json();
                 if (result?.success) {

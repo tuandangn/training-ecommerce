@@ -291,6 +291,11 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            SettlementApproval = deliveryNote.SettlementApproval,
+            ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
+            ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
+            SettlementReason = deliveryNote.SettlementReason,
+            SettlementAdminNote = deliveryNote.SettlementAdminNote,
             WarehouseId = deliveryNote.WarehouseId,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
@@ -315,6 +320,23 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 };
             }).ToList()
         };
+
+        var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        model.SettlementItems = deliveryNote.SettlementItems
+            .Select(settlementItem =>
+            {
+                noteItemsById.TryGetValue(settlementItem.DeliveryNoteItemId, out var noteItem);
+                return new DeliveryNoteSettlementLineModel
+                {
+                    ProductName = noteItem?.ProductName ?? string.Empty,
+                    Quantity = noteItem?.Quantity ?? (settlementItem.AcceptedQuantity + settlementItem.RejectedQuantity),
+                    AcceptedQuantity = settlementItem.AcceptedQuantity,
+                    RejectedQuantity = settlementItem.RejectedQuantity,
+                    UnitPrice = noteItem?.UnitPrice ?? 0m,
+                    RejectReason = settlementItem.RejectReason
+                };
+            })
+            .ToList();
 
         model.AvailableWarehouses = availableWarehouses;
         model.WarehouseName = BuildWarehouseSummary(

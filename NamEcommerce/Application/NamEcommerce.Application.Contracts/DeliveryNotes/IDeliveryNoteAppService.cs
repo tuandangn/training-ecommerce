@@ -20,6 +20,14 @@ public interface IDeliveryNoteAppService
     Task<AssignDeliveryUserResultAppDto> AssignDeliveryUserAsync(AssignDeliveryUserAppDto dto);
 
     Task<CommonActionResultDto> UpdateShippingAsync(UpdateDeliveryNoteShippingAppDto dto);
+
+    Task<CommonActionResultDto> RequestSettlementApprovalAsync(RequestDeliverySettlementAppDto dto);
+
+    Task<CommonActionResultDto> ApproveSettlementAsync(ApproveDeliverySettlementAppDto dto);
+
+    Task<CommonActionResultDto> RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId);
+
+    Task<CommonActionResultDto> CompleteApprovedSettlementAsync(Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataAppDto? completionMetadata);
     
     Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id);
     

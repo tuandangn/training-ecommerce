@@ -124,7 +124,22 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? DeliveryCompletionSource { get; private set; }
     public string? DeliveryCompletionIdempotencyKey { get; private set; }
     public decimal? DeliveryCashCollectedAmount { get; private set; }
-    
+
+    public DeliverySettlementApprovalStatus SettlementApproval { get; private set; } = DeliverySettlementApprovalStatus.NotRequired;
+    public decimal? ProposedAmountToCollect { get; private set; }
+    public decimal? ApprovedAmountToCollect { get; private set; }
+    public decimal? ApprovedAgreedCustomerCharge { get; private set; }
+    public string? ApprovedAgreedChargeReason { get; private set; }
+    public string? SettlementReason { get; private set; }
+    public string? SettlementAdminNote { get; private set; }
+    public Guid? SettlementRequestedByUserId { get; private set; }
+    public DateTime? SettlementRequestedOnUtc { get; private set; }
+    public Guid? SettlementApprovedByUserId { get; private set; }
+    public DateTime? SettlementApprovedOnUtc { get; private set; }
+
+    private readonly List<DeliveryNoteSettlementItem> _settlementItems = [];
+    public IReadOnlyCollection<DeliveryNoteSettlementItem> SettlementItems => _settlementItems.AsReadOnly();
+
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
@@ -229,6 +244,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+
         if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
             throw new DeliveryProofRequiredException();
 
@@ -308,6 +326,86 @@ public sealed record DeliveryNote : AppAggregateEntity
             AmountToCollect,
             debtAmount ?? AmountToCollect + rejectedGoodsAmount));
         return true;
+    }
+
+    internal void RequestSettlementApproval(
+        decimal proposedAmountToCollect,
+        string reason,
+        IReadOnlyList<Guid> proofPictureIds,
+        string? receiverName,
+        IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)> acceptanceLines,
+        Guid? requestedByUserId,
+        DateTime requestedOnUtc)
+    {
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.AlreadyPending");
+        if (proofPictureIds is null || proofPictureIds.Count == 0 || proofPictureIds[0] == Guid.Empty)
+            throw new DeliveryProofRequiredException();
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.ReasonRequired");
+
+        SettlementApproval = DeliverySettlementApprovalStatus.PendingApproval;
+        ProposedAmountToCollect = Math.Max(0m, proposedAmountToCollect);
+        SettlementReason = reason.Trim();
+        ApprovedAmountToCollect = null;
+        ApprovedAgreedCustomerCharge = null;
+        ApprovedAgreedChargeReason = null;
+        SettlementAdminNote = null;
+        SettlementApprovedByUserId = null;
+        SettlementApprovedOnUtc = null;
+        DeliveryProofPictureId = proofPictureIds[0];
+        DeliveryProofPictureIds = proofPictureIds.ToList().AsReadOnly();
+        DeliveryReceiverName = string.IsNullOrWhiteSpace(receiverName) ? DeliveryReceiverName : receiverName;
+        SettlementRequestedByUserId = requestedByUserId;
+        SettlementRequestedOnUtc = requestedOnUtc;
+
+        _settlementItems.Clear();
+        foreach (var line in acceptanceLines)
+            _settlementItems.Add(new DeliveryNoteSettlementItem(Id, line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementApprovalRequested(Id, OrderId, Code));
+    }
+
+    internal void ApproveSettlement(
+        decimal approvedCashToCollect,
+        decimal agreedCustomerCharge,
+        string? agreedChargeReason,
+        string? adminNote,
+        Guid? approvedByUserId,
+        DateTime approvedOnUtc)
+    {
+        if (SettlementApproval != DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+        if (approvedCashToCollect < 0 || agreedCustomerCharge < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+
+        SettlementApproval = DeliverySettlementApprovalStatus.Approved;
+        ApprovedAmountToCollect = approvedCashToCollect;
+        ApprovedAgreedCustomerCharge = agreedCustomerCharge;
+        ApprovedAgreedChargeReason = string.IsNullOrWhiteSpace(agreedChargeReason) ? null : agreedChargeReason.Trim();
+        SettlementAdminNote = string.IsNullOrWhiteSpace(adminNote) ? null : adminNote.Trim();
+        SettlementApprovedByUserId = approvedByUserId;
+        SettlementApprovedOnUtc = approvedOnUtc;
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementApproved(Id, OrderId, Code, approvedCashToCollect));
+    }
+
+    internal void RejectSettlement(string reason, Guid? approvedByUserId, DateTime approvedOnUtc)
+    {
+        if (SettlementApproval != DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.ReasonRequired");
+
+        SettlementApproval = DeliverySettlementApprovalStatus.Rejected;
+        SettlementAdminNote = reason.Trim();
+        SettlementApprovedByUserId = approvedByUserId;
+        SettlementApprovedOnUtc = approvedOnUtc;
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementRejected(Id, OrderId, Code, reason.Trim()));
     }
 
     internal void Cancel()

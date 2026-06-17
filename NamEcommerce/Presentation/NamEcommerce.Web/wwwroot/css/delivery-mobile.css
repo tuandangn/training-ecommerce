@@ -184,7 +184,7 @@
         }
         .mobile-stop-goods {
             margin-top: 6px;
-            color: var(--mobile-muted);
+            /*color: var(--mobile-muted);*/
             font-size: 13px;
         }
         .mobile-stop-goods strong {

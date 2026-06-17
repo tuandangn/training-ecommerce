@@ -118,6 +118,7 @@ public sealed record DeliveryRunItemModel
     public required Guid DeliveryNoteId { get; init; }
     public required string DeliveryNoteCode { get; init; }
     public string? OrderCode { get; init; }
+    public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? ShippingPhoneNumber { get; init; }
@@ -128,6 +129,13 @@ public sealed record DeliveryRunItemModel
     public Guid? DeliveryProofPictureId { get; init; }
     public int? DeliveryNoteStatus { get; init; }
     public DateTime? DeliveredOnUtc { get; init; }
+
+    public int SettlementApproval { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public decimal? ApprovedAmountToCollect { get; init; }
+    public string? SettlementReason { get; init; }
+    public string? SettlementAdminNote { get; init; }
+
     public IList<DeliveryRunProductItemModel> ProductItems { get; init; } = [];
 }
 
@@ -136,6 +144,7 @@ public sealed record DeliveryRunProductItemModel
     public required Guid DeliveryNoteItemId { get; init; }
     public required string ProductName { get; init; }
     public decimal Quantity { get; init; }
+    public string? UnitMeasurement { get; set; }
     public decimal UnitPrice { get; init; }
     public decimal SubTotal { get; init; }
     public int QuantityDecimalPlaces { get; init; } = 2;

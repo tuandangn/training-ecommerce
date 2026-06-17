@@ -216,6 +216,14 @@ public sealed class DeliveryNoteManager(
         if (dto.CompletionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
 
+        // Shipper (mobile) không được tự hoàn tất khi thu hụt — phải qua duyệt admin trước.
+        var isMobileShipper = string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
+        var hasShortfall = acceptance.RejectedGoodsAmount > 0
+            || (dto.CompletionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect;
+        if (isMobileShipper && hasShortfall
+            && deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.ApprovalRequired");
+
         // Snapshot chỉ cập nhật khi phiếu chưa xuất kho (Confirmed → Delivered trực tiếp).
         // Nếu đang ở Delivering, CostAtDispatch đã được set đúng trước khi xuất kho ở MarkDeliveringAsync.
         // Đọc lại sau khi xuất sẽ trả về 0 vì balance cost ledger đã về 0.
@@ -549,6 +557,106 @@ public sealed class DeliveryNoteManager(
         }
     }
 
+    public async Task RequestSettlementApprovalAsync(RequestDeliverySettlementDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
+
+        decimal proposed = acceptance.RejectedGoodsAmount > 0
+            ? Math.Max(0m, deliveryNote.AmountToCollect - acceptance.RejectedGoodsAmount)
+            : deliveryNote.AmountToCollect;
+        if (dto.ProposedAmountToCollect.HasValue)
+            proposed = Math.Min(proposed, Math.Max(0m, dto.ProposedAmountToCollect.Value));
+
+        var lines = acceptance.Lines.Select(line =>
+            (line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+
+        deliveryNote.RequestSettlementApproval(
+            proposed, dto.Reason, dto.PictureIds, dto.ReceiverName, lines,
+            dto.RequestedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task ApproveSettlementAsync(ApproveDeliverySettlementDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        deliveryNote.ApproveSettlement(
+            dto.ApprovedAmountToCollect, dto.AgreedCustomerCharge, dto.AgreedCustomerChargeReason,
+            dto.AdminNote, dto.ApprovedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        deliveryNote.RejectSettlement(reason, approvedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        // Auto: nhập lại kho + restore reservation + hủy phiếu (luồng Cancel hiện có).
+        await CancelAsync(id).ConfigureAwait(false);
+    }
+
+    public async Task CompleteApprovedSettlementAsync(
+        Guid id,
+        IReadOnlyList<Guid> pictureIds,
+        DeliveryCompletionMetadataDto? completionMetadata)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+        if (deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotApproved");
+
+        var acceptance = new DeliveryAcceptanceDto
+        {
+            AgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge ?? 0m,
+            AgreedCustomerChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            CompensateInNextDelivery = false,
+            Items = deliveryNote.SettlementItems.Select(item => new DeliveryAcceptanceItemDto
+            {
+                DeliveryNoteItemId = item.DeliveryNoteItemId,
+                AcceptedQuantity = item.AcceptedQuantity,
+                RejectedQuantity = item.RejectedQuantity,
+                RejectReason = item.RejectReason
+            }).ToList()
+        };
+
+        var proofPictureIds = pictureIds is { Count: > 0 }
+            ? pictureIds
+            : deliveryNote.DeliveryProofPictureIds.ToList();
+
+        await MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
+        {
+            DeliveryNoteId = id,
+            PictureIds = proofPictureIds,
+            ReceiverName = deliveryNote.DeliveryReceiverName,
+            Acceptance = acceptance,
+            CompletionMetadata = new DeliveryCompletionMetadataDto
+            {
+                Latitude = completionMetadata?.Latitude,
+                Longitude = completionMetadata?.Longitude,
+                LocationAddress = completionMetadata?.LocationAddress,
+                Note = completionMetadata?.Note,
+                Source = completionMetadata?.Source,
+                IdempotencyKey = completionMetadata?.IdempotencyKey,
+                CashCollectedAmount = deliveryNote.ApprovedAmountToCollect ?? 0m
+            }
+        }).ConfigureAwait(false);
+    }
+
     private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
         => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
 
@@ -812,7 +920,7 @@ public sealed class DeliveryNoteManager(
         var deliveredChargeAmount = acceptedGoodsAmount + deliveryNote.Surcharge + agreedCustomerCharge;
         var amountToCollect = deliveryNote.ShowPrice
             ? deliveredChargeAmount
-            : deliveryNote.AmountToCollect + agreedCustomerCharge;
+            : deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
         var debtAmount = deliveredChargeAmount + rejectedGoodsAmount;
         return new DeliveryAcceptanceResolution(
             Math.Max(0m, amountToCollect),
@@ -1059,6 +1167,20 @@ public sealed class DeliveryNoteManager(
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            SettlementApproval = deliveryNote.SettlementApproval,
+            ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
+            ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
+            ApprovedAgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge,
+            ApprovedAgreedChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            SettlementReason = deliveryNote.SettlementReason,
+            SettlementAdminNote = deliveryNote.SettlementAdminNote,
+            SettlementItems = deliveryNote.SettlementItems.Select(s => new DeliveryNoteSettlementItemDto
+            {
+                DeliveryNoteItemId = s.DeliveryNoteItemId,
+                AcceptedQuantity = s.AcceptedQuantity,
+                RejectedQuantity = s.RejectedQuantity,
+                RejectReason = s.RejectReason
+            }).ToList(),
             Items = deliveryNote.Items.Select(i => new DeliveryNoteItemDto
             {
                 Id = i.Id,

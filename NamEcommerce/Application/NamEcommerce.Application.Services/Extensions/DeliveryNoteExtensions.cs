@@ -49,6 +49,20 @@ public static class DeliveryNoteExtensions
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            SettlementApproval = (int)deliveryNote.SettlementApproval,
+            ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
+            ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
+            ApprovedAgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge,
+            ApprovedAgreedChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            SettlementReason = deliveryNote.SettlementReason,
+            SettlementAdminNote = deliveryNote.SettlementAdminNote,
+            SettlementItems = deliveryNote.SettlementItems.Select(s => new DeliveryNoteSettlementItemAppDto
+            {
+                DeliveryNoteItemId = s.DeliveryNoteItemId,
+                AcceptedQuantity = s.AcceptedQuantity,
+                RejectedQuantity = s.RejectedQuantity,
+                RejectReason = s.RejectReason
+            }).ToList(),
             Items = deliveryNote.Items.Select(i => new DeliveryNoteItemAppDto
             {
                 Id = i.Id,

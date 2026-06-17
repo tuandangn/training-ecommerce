@@ -52,7 +52,8 @@ export default class DeliveryNoteController {
     #deliveredContainer;
     #deliveredModal;
     #deliveredForm;
-    #ACCEPTANT_ITEMS_URL = '/DeliveryNote/GetAcceptantItems/';
+
+    #acceptant_items_info_url = '/DeliveryNote/GetDeliveryNoteAcceptantItemsInfo/';
 
     #deliveredState = {};
 
@@ -78,12 +79,12 @@ export default class DeliveryNoteController {
             setId: async (id) => {
                 if (!id) throw new Error('Id is required');
                 this.#resetDeliveredControls();
-                const items = await this.#loadAcceptantItems(id);
+                const { acceptantItems: items, amountToCollect } = await this.#loadAcceptantItemsInfo(id);
                 if (!Array.isArray(items) || items.length == 0) {
                     window.NotificationCenter.error('Không thể tải dữ liệu.');
                     return;
                 }
-                this.#setDeliveredState({ id, items });
+                this.#setDeliveredState({ id, items, amountToCollect });
                 this.#deliveredModal.show();
             }
         }
@@ -97,6 +98,10 @@ export default class DeliveryNoteController {
     #renderDelivered() {
         this.#deliveredContainer.querySelector('#deliveryNoteId').value = this.#deliveredState.id;
         this.#renderAcceptantItems();
+
+        const cashCollectedAmount = document.getElementById('cashCollectedAmount');
+        cashCollectedAmount.value = DecimalFields.formatCurrency(this.#deliveredState.amountToCollect);
+        cashCollectedAmount.closest('div').classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
 
         this.#deliveryTableEvents();
 
@@ -130,8 +135,8 @@ export default class DeliveryNoteController {
         DecimalFields.autoWrap(container);
     }
 
-    async #loadAcceptantItems(id) {
-        const result = await apiGet(this.#ACCEPTANT_ITEMS_URL + id);
+    async #loadAcceptantItemsInfo(id) {
+        const result = await apiGet(this.#acceptant_items_info_url + id);
         if (!result.success)
             return;
         return result.data;
@@ -315,7 +320,7 @@ export default class DeliveryNoteController {
         return {
             setData: async (id, code, warehouse) => {
                 if (!id) throw new Error('Id is required');
-                const items = await this.#loadAcceptantItems(id);
+                const { acceptantItems: items } = await this.#loadAcceptantItemsInfo(id);
                 if (!Array.isArray(items) || items.length == 0) {
                     window.NotificationCenter.error('Không thể tải dữ liệu.');
                     return;

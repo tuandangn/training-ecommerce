@@ -26,6 +26,17 @@ public interface IDeliveryNoteManager
         DeliveryAcceptanceDto? acceptance = null);
     
     Task CancelAsync(Guid id);
+
+    Task RequestSettlementApprovalAsync(RequestDeliverySettlementDto dto);
+
+    Task ApproveSettlementAsync(ApproveDeliverySettlementDto dto);
+
+    Task RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId);
+
+    Task CompleteApprovedSettlementAsync(
+        Guid id,
+        IReadOnlyList<Guid> pictureIds,
+        DeliveryCompletionMetadataDto? completionMetadata);
     
     /// <summary>
     /// Tự động tạo DeliveryNote ở trạng thái Delivered ngay khi VendorReturn được Confirm.

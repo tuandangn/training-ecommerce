@@ -1,3 +1,4 @@
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Users;
@@ -13,6 +14,8 @@ public sealed class DeliveryRunModelFactory(
     IDeliveryRunAppService deliveryRunAppService,
     IDeliveryNoteAppService deliveryNoteAppService,
     IUserAppService userAppService,
+    IProductAppService productAppService,
+    IUnitMeasurementAppService unitMeasurementAppService,
     AppConfig appConfig) : IDeliveryRunModelFactory
 {
     public async Task<DeliveryRunListModel> PrepareDeliveryRunListModelAsync(DeliveryRunSearchModel searchModel)
@@ -63,6 +66,12 @@ public sealed class DeliveryRunModelFactory(
                 currentNotes[item.DeliveryNoteId] = note;
         }
 
+        var productIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.ProductId)).Distinct().ToList();
+        var products = await productAppService.GetProductsByIdsAsync(productIds).ConfigureAwait(false);
+
+        var unitMeasurementIds = products.Select(product => product.UnitMeasurementId).OfType<Guid>().Distinct().ToList();
+        var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
+
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
@@ -75,6 +84,7 @@ public sealed class DeliveryRunModelFactory(
                 DeliveryNoteId = item.DeliveryNoteId,
                 DeliveryNoteCode = item.DeliveryNoteCode,
                 OrderCode = note?.OrderCode ?? item.OrderCode,
+                CustomerId = note?.CustomerId ?? Guid.Empty,
                 CustomerName = note?.CustomerName ?? item.CustomerName,
                 CustomerPhone = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
                     ? item.ShippingPhoneNumber
@@ -87,14 +97,25 @@ public sealed class DeliveryRunModelFactory(
                 CashCollectedAmount = note?.DeliveryCashCollectedAmount,
                 ReceiverName = note?.DeliveryReceiverName,
                 DeliveryProofPictureId = note?.DeliveryProofPictureId,
-                ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
+                SettlementApproval = note?.SettlementApproval ?? 0,
+                ProposedAmountToCollect = note?.ProposedAmountToCollect,
+                ApprovedAmountToCollect = note?.ApprovedAmountToCollect,
+                SettlementReason = note?.SettlementReason,
+                SettlementAdminNote = note?.SettlementAdminNote,
+                ProductItems = note?.Items.Select(item =>
                 {
-                    DeliveryNoteItemId = product.Id,
-                    ProductName = product.ProductName,
-                    Quantity = product.Quantity,
-                    UnitPrice = product.UnitPrice,
-                    SubTotal = product.SubTotal,
-                    QuantityDecimalPlaces = 2
+                    var product = products.FirstOrDefault(product => product.Id == item.ProductId);
+                    var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                    return new DeliveryRunProductItemModel
+                    {
+                        DeliveryNoteItemId = item.Id,
+                        ProductName = item.ProductName,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        SubTotal = item.SubTotal,
+                        QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                        UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                    };
                 }).ToList() ?? []
             };
         }).ToList();

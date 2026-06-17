@@ -40,6 +40,28 @@ public sealed record DeliveryNoteCancelled(
     Guid DeliveryNoteId,
     bool WasReservingStock) : DomainEvent;
 
+// ── Settlement Approval Events ───────────────────────────────────────────────
+
+/// <summary>Shipper gửi duyệt thu hụt (trả hàng / khách từ chối thanh toán) — chờ admin.</summary>
+public sealed record DeliverySettlementApprovalRequested(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    string Code) : DomainEvent;
+
+/// <summary>Admin duyệt thu hụt — shipper được thu đúng số đã duyệt.</summary>
+public sealed record DeliverySettlementApproved(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    string Code,
+    decimal ApprovedAmountToCollect) : DomainEvent;
+
+/// <summary>Admin từ chối — hàng mang về, phiếu hủy.</summary>
+public sealed record DeliverySettlementRejected(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    string Code,
+    string Reason) : DomainEvent;
+
 // ── Direct-Ship Events ──────────────────────────────────────────────────────
 
 /// <summary>

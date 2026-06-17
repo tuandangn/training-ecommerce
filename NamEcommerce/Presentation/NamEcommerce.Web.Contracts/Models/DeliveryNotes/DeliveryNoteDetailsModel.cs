@@ -59,9 +59,27 @@ public sealed class DeliveryNoteDetailsModel
     public string? RejectionReason { get; set; }
     public string? ReturnedToWarehouseName { get; set; }
 
+    public int SettlementApproval { get; set; }
+    public decimal? ProposedAmountToCollect { get; set; }
+    public decimal? ApprovedAmountToCollect { get; set; }
+    public string? SettlementReason { get; set; }
+    public string? SettlementAdminNote { get; set; }
+    public IList<DeliveryNoteSettlementLineModel> SettlementItems { get; set; } = [];
+
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();
     public DeliveryRunInfoModel? DeliveryRunInfo { get; set; }
+}
+
+public sealed class DeliveryNoteSettlementLineModel
+{
+    public string ProductName { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal AcceptedQuantity { get; set; }
+    public decimal RejectedQuantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public string? RejectReason { get; set; }
+    public int QuantityDecimalPlaces { get; set; } = 2;
 }
 
 public sealed class DeliveryRunInfoModel

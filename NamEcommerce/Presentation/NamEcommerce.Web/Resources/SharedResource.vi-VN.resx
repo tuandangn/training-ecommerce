@@ -540,6 +540,21 @@
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Bằng chứng giao hàng là bắt buộc.</value>
   </data>
+  <data name="Error.DeliverySettlement.NotPending" xml:space="preserve">
+    <value>Phiếu xuất này không ở trạng thái chờ duyệt thu hụt.</value>
+  </data>
+  <data name="Error.DeliverySettlement.AlreadyPending" xml:space="preserve">
+    <value>Phiếu xuất này đã có yêu cầu duyệt thu hụt đang chờ.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ReasonRequired" xml:space="preserve">
+    <value>Vui lòng nhập lý do.</value>
+  </data>
+  <data name="Error.DeliverySettlement.NotApproved" xml:space="preserve">
+    <value>Phiếu xuất này chưa được admin duyệt.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ApprovalRequired" xml:space="preserve">
+    <value>Thu ít hơn số phải thu cần admin duyệt trước.</value>
+  </data>
   <data name="Error.ExpenseTitleRequired" xml:space="preserve">
     <value>Tên khoản chi không được để trống.</value>
   </data>
@@ -664,7 +679,7 @@
     <value>Chỉ cập nhật tiền thu cho phiếu đã giao.</value>
   </data>
   <data name="Error.DeliveryRunRequired" xml:space="preserve">
-    <value>Vui lòng chọn chuyến giao.</value>
+    <value>Vui lòng chọn chuyến giao</value>
   </data>
   <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
     <value>Phiếu giao hàng không thuộc chuyến giao này.</value>
@@ -919,10 +934,10 @@
     <value>Kho giao thẳng</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
-    <value>Chưa có kho ảo giao thẳng (Direct-Ship Transit). Vui lòng tạo kho loại "Kho ảo giao thẳng" trước khi nhận hàng.</value>
+    <value>Chưa có kho ảo giao thẳng. Vui lòng tạo kho loại "Kho ảo giao thẳng" trước khi nhận hàng.</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseAlreadyExists" xml:space="preserve">
-    <value>Kho ảo giao thẳng (Direct-Ship) đã tồn tại. Hệ thống chỉ cho phép một kho loại này.</value>
+    <value>Kho ảo giao thẳng đã tồn tại. Hệ thống chỉ cho phép một kho loại này.</value>
   </data>
   <data name="Error.VirtualWarehouseCannotDelete" xml:space="preserve">
     <value>Kho hàng ảo không thể xóa</value>
@@ -968,5 +983,11 @@
   </data>
   <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
     <value>Khách</value>
+  </data>
+  <data name="Error.DeliveryUserRequired" xml:space="preserve">
+    <value>Vui lòng chọn người giao hàng</value>
+  </data>
+  <data name="Error.DeliveryRunItemsRequired" xml:space="preserve">
+    <value>Vui lòng chọn phiếu giao hàng</value>
   </data>
 </root>

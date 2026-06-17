@@ -71,8 +71,8 @@
                         </div>
                         <div class="order-summary-row total">
                             <span class="label">Còn lại</span>
-                            <span class="value @(s.RemainingDebt > 0 ? "text-danger" : "text-success")">
-                                @if (s.RemainingDebt <= 0)
+                            <span class="value @(s.RemainingDebt > 0 && s.DebtCount > 0 ? "text-danger" : "text-success")">
+                                @if (s.RemainingDebt <= 0 && s.DebtTotal > 0)
                                 {
                                     <i class="bi bi-check-circle-fill me-1"></i>
                                 }
