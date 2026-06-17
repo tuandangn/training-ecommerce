@@ -75,6 +75,44 @@ public sealed class DeliveryRunModelFactory(
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+            var productItems = note?.Items.Select(noteItem =>
+            {
+                var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
+                var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                return new DeliveryRunProductItemModel
+                {
+                    DeliveryNoteItemId = noteItem.Id,
+                    ProductName = noteItem.ProductName,
+                    Quantity = noteItem.Quantity,
+                    UnitPrice = noteItem.UnitPrice,
+                    SubTotal = noteItem.SubTotal,
+                    QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                    UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                };
+            }).ToList() ?? [];
+            var settlementItems = new List<DeliveryRunSettlementProductItemModel>();
+            if (note is not null)
+            {
+                var noteItemsById = note.Items.ToDictionary(noteItem => noteItem.Id);
+                foreach (var settlementItem in note.SettlementItems)
+                {
+                    if (!noteItemsById.TryGetValue(settlementItem.DeliveryNoteItemId, out var noteItem))
+                        continue;
+
+                    var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
+                    var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                    settlementItems.Add(new DeliveryRunSettlementProductItemModel
+                    {
+                        DeliveryNoteItemId = noteItem.Id,
+                        ProductName = noteItem.ProductName,
+                        Quantity = noteItem.Quantity,
+                        AcceptedQuantity = settlementItem.AcceptedQuantity,
+                        RejectedQuantity = settlementItem.RejectedQuantity,
+                        QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                        UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                    });
+                }
+            }
 
             return new DeliveryRunItemModel
             {
@@ -102,21 +140,8 @@ public sealed class DeliveryRunModelFactory(
                 ApprovedAmountToCollect = note?.ApprovedAmountToCollect,
                 SettlementReason = note?.SettlementReason,
                 SettlementAdminNote = note?.SettlementAdminNote,
-                ProductItems = note?.Items.Select(item =>
-                {
-                    var product = products.FirstOrDefault(product => product.Id == item.ProductId);
-                    var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
-                    return new DeliveryRunProductItemModel
-                    {
-                        DeliveryNoteItemId = item.Id,
-                        ProductName = item.ProductName,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        SubTotal = item.SubTotal,
-                        QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
-                        UnitMeasurement = unitMeasurement?.Name ?? string.Empty
-                    };
-                }).ToList() ?? []
+                ProductItems = productItems,
+                SettlementItems = settlementItems
             };
         }).ToList();
         var progress = GetProgressInfo((DeliveryRunStatus)run.Status, itemModels);

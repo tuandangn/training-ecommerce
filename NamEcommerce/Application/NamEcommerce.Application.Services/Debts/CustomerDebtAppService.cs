@@ -116,6 +116,9 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         return (PagedDataAppDto<CustomerPaymentAppDto>)PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
     }
 
+    public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
+        => _debtManager.GetTotalPaidByOrderAsync(orderId);
+
     public async Task<CreateInitialCustomerDebtResultAppDto> CreateInitialDebtAsync(CreateInitialCustomerDebtAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

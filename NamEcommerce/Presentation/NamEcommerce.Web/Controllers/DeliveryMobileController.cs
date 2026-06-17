@@ -7,6 +7,7 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
 using System.Text.Json;
 
@@ -39,6 +40,12 @@ public sealed class DeliveryMobileController(
         try
         {
             var model = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
+            if ((DeliveryRunStatus)model.Run.Status == DeliveryRunStatus.ReadyForHandover)
+            {
+                NotifyError("Chuyến giao đang chờ bàn giao, chưa thể mở chi tiết.");
+                return RedirectToAction(nameof(Index));
+            }
+
             return View(model);
         }
         catch (UnauthorizedAccessException)
@@ -74,6 +81,36 @@ public sealed class DeliveryMobileController(
 
         var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId));
         return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReceiveRun(Guid id, string? deviceId)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return RedirectToAction("Login", "User");
+
+        try
+        {
+            await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch
+        {
+            NotifyError("Error.DeliveryRunNotFound");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId));
+        if (result.Success)
+            NotifySuccess("Đã nhận chuyến. Quản kho có thể bàn giao khi sẵn sàng.");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.DeliveryRunCannotCache");
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]

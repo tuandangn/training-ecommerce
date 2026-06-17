@@ -397,6 +397,9 @@ public sealed class CustomerDebtManager(
         return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, total);
     }
 
+    public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
+        => Task.FromResult(paymentReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.Amount));
+
     private static CustomerDebtDto MapToDto(CustomerDebt debt)
     {
         return new CustomerDebtDto

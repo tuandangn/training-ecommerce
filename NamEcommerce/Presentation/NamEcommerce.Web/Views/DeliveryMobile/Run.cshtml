@@ -150,13 +150,43 @@
         else if (item.SettlementApproval == 1)
         {
             <div class="mobile-status mobile-status-active mt-2">
-                <i class="bi bi-hourglass-split"></i> Chờ admin duyệt
+                <i class="bi bi-hourglass-split"></i> Chờ admin duyệt số tiền thu
             </div>
             <div class="mobile-goods-box mt-3">
-                <div class="d-flex justify-content-between">
-                    <span>Số đề xuất thu</span>
+                <div class="mobile-goods-head">
+                    <span>Hàng hóa chờ duyệt</span>
                     <strong>@((item.ProposedAmountToCollect ?? item.AmountToCollect).DisplayCurrencyWithSymbol())</strong>
                 </div>
+                @if (item.SettlementItems.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Hàng hóa</th>
+                                    <th class="text-end">SL giao</th>
+                                    <th class="text-end">Khách nhận</th>
+                                    <th class="text-end">Trả về</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in item.SettlementItems)
+                                {
+                                    <tr>
+                                        <td>@line.ProductName</td>
+                                        <td class="text-end">@line.Quantity.DisplayQuantity(line.QuantityDecimalPlaces) @line.UnitMeasurement</td>
+                                        <td class="text-end">@line.AcceptedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                        <td class="text-end @(line.RejectedQuantity > 0 ? "text-danger fw-bold" : "text-muted")">@line.RejectedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="mobile-meta">Chưa có thông tin hàng hóa</div>
+                }
             </div>
             <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-outline-secondary mobile-action-button w-100 mt-3">
                 <i class="bi bi-arrow-clockwise me-1"></i>Làm mới để kiểm tra duyệt
@@ -288,7 +318,7 @@
                     <i class="bi bi-check-circle me-1"></i>Đã giao
                 </button>
                 <button type="button" class="btn btn-warning mobile-action-button w-100 btn-request-settlement d-none">
-                    <i class="bi bi-send-check me-1"></i>Gửi admin duyệt
+                    <i class="bi bi-send-check me-1"></i>Gửi admin duyệt số tiền thu
                 </button>
                 <div class="delivery-complete-status mobile-meta mt-2"></div>
             </form>

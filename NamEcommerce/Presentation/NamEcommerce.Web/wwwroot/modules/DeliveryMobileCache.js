@@ -46,12 +46,24 @@ function updateCacheStatus(text, className) {
 
 export function installDeliveryIndexCache() {
     const payloadElement = document.getElementById('delivery-index-payload');
-    if (!payloadElement?.textContent) {
-        return;
+    if (payloadElement?.textContent) {
+        localStorage.setItem('delivery-runs:index', payloadElement.textContent);
+        localStorage.setItem('delivery-runs:index:cached-on', new Date().toISOString());
     }
 
-    localStorage.setItem('delivery-runs:index', payloadElement.textContent);
-    localStorage.setItem('delivery-runs:index:cached-on', new Date().toISOString());
+    document.querySelectorAll('[data-receive-run-form]').forEach(form => {
+        form.addEventListener('submit', () => {
+            const deviceInput = form.querySelector('input[name="deviceId"]');
+            if (deviceInput) {
+                deviceInput.value = getDeviceId();
+            }
+
+            const button = form.querySelector('button[type="submit"]');
+            if (button) {
+                button.disabled = true;
+            }
+        });
+    });
 }
 
 function getCurrentPosition() {

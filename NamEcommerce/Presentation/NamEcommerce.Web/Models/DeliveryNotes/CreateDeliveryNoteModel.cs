@@ -56,6 +56,12 @@ public sealed class CreateDeliveryNoteModel
     [Display(Name = "Số tiền phải thu (mặc định = tổng tiền + phụ phí)")]
     public decimal AmountToCollect { get; set; }
 
+    [ValidateNever]
+    public decimal AmountAlreadyPaidForOrder { get; set; }
+
+    [ValidateNever]
+    public bool IsRetailWalkInCustomer { get; set; }
+
     public IList<CreateDeliveryNoteItemModel> Items { get; set; } = [];
 }
 

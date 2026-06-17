@@ -724,9 +724,8 @@ class FastSale {
         }
 
         if (this.paymentTiming == 'unpaid' && this.selectedCustomer?.id == this.defaultCustomer) {
-            if (! await confirm('Chưa thanh toán', 'Khách hàng hiện tại là khách lẻ. Bạn có chắc chắn muốn tạo đơn chưa thanh toán cho khách này không?')) {
-                return;
-            }
+            this.showAlert('warning', 'Khách lẻ phải thanh toán đủ, không thể bán chịu.');
+            return;
         }
 
         const payload = this.buildSalePayload();

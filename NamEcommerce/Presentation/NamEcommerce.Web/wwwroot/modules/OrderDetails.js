@@ -44,7 +44,6 @@ function parseDecimalInput(input) {
             if (!id || !action) return;
 
             try {
-                showPageLoading();
                 let result;
                 if (action === 'confirm') {
                     result = await deliveryNoteController.confirm(id);
@@ -61,8 +60,8 @@ function parseDecimalInput(input) {
                         .setData(id, button.dataset.deliveryCode || '', button.dataset.deliveryWarehouseId || '');
                     return;
                 }
-
                 if (result?.success) {
+                    showPageLoading();
                     location.reload();
                 }
             } catch (err) {

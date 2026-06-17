@@ -260,6 +260,12 @@
                             <span class="input-group-text bg-primary text-white border-primary">đ</span>
                         </div>
                         <span asp-validation-for="AmountToCollect" class="text-danger small"></span>
+                        @if (Model.IsRetailWalkInCustomer)
+                        {
+                            <div class="alert alert-warning small mt-2 mb-0 py-2">
+                                <i class="bi bi-exclamation-triangle me-1"></i> Đơn khách lẻ phải thu đủ khi giao, không được để công nợ.
+                            </div>
+                        }
                     </div>
                     <div class="form-check form-switch mt-3 mb-0 p-3 bg-light rounded border d-none">
                         <input class="form-check-input ms-0" type="checkbox" asp-for="CompensateReturnedQuantityInNextDelivery" role="switch" id="compensateReturnedSwitch">
@@ -301,6 +307,7 @@
             const $warehouseSelect = $('#WarehouseId');
             const stockAvailabilityUrl = '@Url.Action("GetCreateStockAvailability", "DeliveryNote")';
             let stockAvailabilityRequestId = 0;
+            const amountAlreadyPaidForOrder = parseFloat('@Model.AmountAlreadyPaidForOrder.ToString(System.Globalization.CultureInfo.InvariantCulture)') || 0;
 
             function formatCurrency(amount, withSymbol) {
                 if (withSymbol)
@@ -334,6 +341,11 @@
                 } else {
                     $selectedTotalContainer.hide();
                     $productsPrice.addClass('d-none');
+                }
+
+                if (amountAlreadyPaidForOrder > 0) {
+                    amountToCollect = Math.max(0, amountToCollect - amountAlreadyPaidForOrder);
+                    infoText += ` − Đã thanh toán (${formatCurrency(amountAlreadyPaidForOrder, true)})`;
                 }
                 $moneySummary.toggleClass('d-none', amountToCollect <= 0);
 

@@ -174,7 +174,6 @@ public sealed class DeliveryRunManager(
         if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m)
             throw new NamEcommerceDomainException("Error.CashHandoverAmountMustMatchCollectedAmount");
 
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var confirmedOnUtc = DateTime.UtcNow;
         run.ConfirmCashHandover(
@@ -187,7 +186,6 @@ public sealed class DeliveryRunManager(
         await RecordCodPaymentsAsync(run, deliveredNotes, currentUser?.Id, confirmedOnUtc, dto.Note)
             .ConfigureAwait(false);
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedDto dto)

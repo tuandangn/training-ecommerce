@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -103,6 +104,11 @@ public sealed class FastSaleAppService(
         var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             return QuickSaleResultAppDto.CreateError("Error.CustomerIsNotFound");
+
+        // Khách lẻ (tài khoản dùng chung) không được bán chịu — phải thanh toán đủ.
+        if (paymentTiming == QuickSalePaymentTiming.Unpaid
+            && customer.Kind == CustomerKind.RetailWalkIn && customer.IsSystem)
+            return QuickSaleResultAppDto.CreateError("Error.RetailOrderCannotLeaveDebt");
 
         var warehouseIds = GetWarehouseIdsToValidate(dto, fulfillmentMode);
         foreach (var warehouseId in warehouseIds)

@@ -137,6 +137,7 @@ public sealed record DeliveryRunItemModel
     public string? SettlementAdminNote { get; init; }
 
     public IList<DeliveryRunProductItemModel> ProductItems { get; init; } = [];
+    public IList<DeliveryRunSettlementProductItemModel> SettlementItems { get; init; } = [];
 }
 
 public sealed record DeliveryRunProductItemModel
@@ -147,6 +148,17 @@ public sealed record DeliveryRunProductItemModel
     public string? UnitMeasurement { get; set; }
     public decimal UnitPrice { get; init; }
     public decimal SubTotal { get; init; }
+    public int QuantityDecimalPlaces { get; init; } = 2;
+}
+
+public sealed record DeliveryRunSettlementProductItemModel
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal AcceptedQuantity { get; init; }
+    public decimal RejectedQuantity { get; init; }
+    public string? UnitMeasurement { get; set; }
     public int QuantityDecimalPlaces { get; init; } = 2;
 }
 

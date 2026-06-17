@@ -7,8 +7,10 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
+using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -32,6 +34,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     private readonly IDeliveryRunAppService _deliveryRunAppService;
     private readonly IWebHelper _webHelper;
     private readonly IMediator _mediator;
+    private readonly ICachedValuesService _cachedValuesService;
     private readonly AppConfig _appConfig;
 
     public DeliveryNoteModelFactory(
@@ -44,6 +47,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         IDeliveryRunAppService deliveryRunAppService,
         IWebHelper webHelper,
         IMediator mediator,
+        ICachedValuesService cachedValuesService,
         AppConfig appConfig)
     {
         _deliveryNoteAppService = deliveryNoteAppService;
@@ -55,6 +59,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         _deliveryRunAppService = deliveryRunAppService;
         _webHelper = webHelper;
         _mediator = mediator;
+        _cachedValuesService = cachedValuesService;
         _appConfig = appConfig;
     }
 
@@ -156,6 +161,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             : order.ShippingPhoneNumber;
 
         model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+
+        model.AmountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
+        model.IsRetailWalkInCustomer = order.CustomerId == _cachedValuesService.DefaultCustomerId;
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         var activeDeliveryNotes = deliveryNotes

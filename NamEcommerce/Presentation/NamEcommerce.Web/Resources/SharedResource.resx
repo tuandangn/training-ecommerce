@@ -669,6 +669,9 @@
   <data name="Error.CashCollectedAmountCannotExceedAmountToCollect" xml:space="preserve">
     <value>Collected cash amount cannot exceed the delivery note amount to collect.</value>
   </data>
+  <data name="Error.RetailOrderCannotLeaveDebt" xml:space="preserve">
+    <value>Retail walk-in orders must be paid in full; debt is not allowed. Please collect the full outstanding amount.</value>
+  </data>
   <data name="Error.DeliveryCashCollectedAmountRequired" xml:space="preserve">
     <value>Please enter the cash collected by the shipper for delivered notes before confirming cash handover.</value>
   </data>
