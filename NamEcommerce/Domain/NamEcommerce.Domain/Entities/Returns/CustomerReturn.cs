@@ -73,7 +73,7 @@ public sealed record CustomerReturn : AppAggregateEntity
         if (returnUnitPrice < 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.ReturnUnitPriceCannotBeNegative");
 
-        var item = new CustomerReturnItem(Guid.NewGuid(), Id, productId, productName,
+        var item = new CustomerReturnItem(Id, productId, productName,
             deliveryNoteItemId, requestedQuantity, acceptedQuantity, originalUnitPrice, returnUnitPrice);
         _items.Add(item);
     }

@@ -34,15 +34,19 @@ public sealed class DeliveryNoteDeliveredHandler(
         if (debtAmount <= 0)
             return;
 
-        var createDebtDto = new CreateCustomerDebtDto
+        // Trừ khoản đã thanh toán trước (vd: quick sale thu tiền ngay trước khi event xử lý).
+        var alreadyPaid = await _debtManager.GetTotalPaidByDeliveryNoteAsync(notification.DeliveryNoteId).ConfigureAwait(false);
+        var netDebtAmount = Math.Max(0m, debtAmount - alreadyPaid);
+        if (netDebtAmount > 0)
         {
-            CustomerId = notification.CustomerId,
-            DeliveryNoteId = notification.DeliveryNoteId,
-            TotalAmount = debtAmount,
-            DueDateUtc = null
-        };
-
-        await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);
+            await _debtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
+            {
+                CustomerId = notification.CustomerId,
+                DeliveryNoteId = notification.DeliveryNoteId,
+                TotalAmount = netDebtAmount,
+                DueDateUtc = null
+            }).ConfigureAwait(false);
+        }
 
         var surcharge = deliveryNote.Surcharge;
         var chargeAmount = debtAmount - surcharge;

@@ -91,6 +91,13 @@ public sealed class CancelDeliveryRunHandler(IDeliveryRunAppService deliveryRunA
         => DeliveryRunActionResultMapper.Map(await deliveryRunAppService.CancelAsync(request.Id).ConfigureAwait(false));
 }
 
+public sealed class ConfirmDeliveryRunWarehousePickHandler(IDeliveryRunAppService deliveryRunAppService)
+    : IRequestHandler<ConfirmDeliveryRunWarehousePickCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(ConfirmDeliveryRunWarehousePickCommand request, CancellationToken cancellationToken)
+        => DeliveryRunActionResultMapper.Map(await deliveryRunAppService.ConfirmWarehousePickAsync(request.Id, request.WarehouseId).ConfigureAwait(false));
+}
+
 file static class DeliveryRunActionResultMapper
 {
     public static CommonActionResultModel Map(CommonActionResultDto result)

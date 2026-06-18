@@ -45,4 +45,6 @@ public interface ICustomerDebtManager
         int pageSize = 15);
 
     Task<decimal> GetTotalPaidByOrderAsync(Guid orderId);
+
+    Task<decimal> GetTotalPaidByDeliveryNoteAsync(Guid deliveryNoteId);
 }

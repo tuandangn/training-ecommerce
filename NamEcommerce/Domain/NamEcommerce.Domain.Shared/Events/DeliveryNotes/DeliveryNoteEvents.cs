@@ -42,6 +42,13 @@ public sealed record DeliveryNoteCancelled(
 
 // ── Settlement Approval Events ───────────────────────────────────────────────
 
+/// <summary>Admin cập nhật trực tiếp số tiền cần thu trên phiếu chưa giao.</summary>
+public sealed record DeliveryNoteAmountToCollectUpdated(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    string Code,
+    decimal NewAmount) : DomainEvent;
+
 /// <summary>Shipper gửi duyệt thu hụt (trả hàng / khách từ chối thanh toán) — chờ admin.</summary>
 public sealed record DeliverySettlementApprovalRequested(
     Guid DeliveryNoteId,

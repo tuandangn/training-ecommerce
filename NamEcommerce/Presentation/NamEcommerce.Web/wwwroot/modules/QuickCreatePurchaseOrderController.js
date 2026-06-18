@@ -16,7 +16,9 @@ export default class QuickCreatePurchaseOrderController {
     #vendorId = null;
     #items = [];
     #itemEditor;
+
     #browser;
+    #mobileBrowser;
 
     constructor() {
         const offcanvasEl = getEl('itemEditOffcanvas');
@@ -40,10 +42,14 @@ export default class QuickCreatePurchaseOrderController {
                 this.#vendorId = vendor?.id ?? null;
                 getEl('VendorId').value = this.#vendorId ?? '';
                 if (vendor) this.#refreshPricesForVendor(vendor.id);
+                this.#browser?.setVendor(vendor?.id ?? null);
+                this.#mobileBrowser?.setVendor(vendor?.id ?? null);
             },
             onRemove: () => {
                 this.#vendorId = null;
                 getEl('VendorId').value = '';
+                this.#browser?.setVendor(null);
+                this.#mobileBrowser?.setVendor(null);
             }
         });
     }
@@ -54,9 +60,15 @@ export default class QuickCreatePurchaseOrderController {
             const browser = new ProductBrowser(
                 productBrowserEl,
                 (product) => this.#addOrIncrementProduct(product),
-                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', initialShow: true }
+                {
+                    purchase: true,
+                    colClass: productBrowserEl.dataset.colClass ?? 'col-12',
+                    initialShow: true,
+                    checkProduct: this.#isValidProduct
+                }
             );
             browser.init();
+            this.#browser = browser;
         }
 
         const mobileProductBrowserEl = getEl('productBrowserMobile');
@@ -68,9 +80,15 @@ export default class QuickCreatePurchaseOrderController {
                     bootstrap.Offcanvas.getOrCreateInstance(offCanvas)?.hide();
                     this.#addOrIncrementProduct(product);
                 },
-                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', notCollapsed: true }
+                {
+                    purchase: true,
+                    colClass: productBrowserEl.dataset.colClass ?? 'col-12',
+                    notCollapsed: true,
+                    checkProduct: this.#isValidProduct
+                }
             );
             browser.init();
+            this.#mobileBrowser = browser;
         }
     }
 
@@ -100,7 +118,16 @@ export default class QuickCreatePurchaseOrderController {
         getEl('btnSubmit')?.addEventListener('click', () => this.#submit());
     }
 
+    #isValidProduct(product) {
+        return product.vendorCount > 0;
+    }
+
     async #addOrIncrementProduct(product) {
+        if (!this.#isValidProduct(product)) {
+            toast('Hàng hóa không phù hợp', 'Vui lòng chọn hàng hóa khác.', 'warning');
+            return;
+        }
+
         const idx = this.#items.findIndex(i => i.productId === product.id);
         if (idx >= 0) {
             this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
@@ -274,6 +301,8 @@ export default class QuickCreatePurchaseOrderController {
             return;
         }
 
+        showPageLoading();
+
         const receiveImmediately = getEl('receiveImmediately')?.checked ?? true;
         const isPaid = receiveImmediately && (getEl('isPaid')?.checked ?? false);
 
@@ -318,8 +347,14 @@ export default class QuickCreatePurchaseOrderController {
             const result = await apiPost('/PurchaseOrder/QuickCreate', command);
             if (result.success) {
                 window.location.href = `/PurchaseOrder/Details/${result.data?.purchaseOrderId}`;
+                return;
             }
-        } finally {
+            hidePageLoading();
+        }
+        catch {
+            hidePageLoading();
+        }
+        finally {
             if (btn) { btn.disabled = false; btn.textContent = 'Lưu đơn nhập'; }
         }
     }

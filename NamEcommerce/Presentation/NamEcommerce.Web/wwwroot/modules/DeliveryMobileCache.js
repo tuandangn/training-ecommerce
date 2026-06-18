@@ -127,7 +127,7 @@ function prepareAcceptancePayload(form, status) {
         if (input) DecimalFields.setValue(input, returned);
         updateAcceptedQuantity(line);
         return {
-            deliveryNoteItemId: line.dataset.itemId,
+            productId: line.dataset.productId,
             returnedQuantity: returned,
             rejectReason: returned > 0 ? rejectReason : null
         };

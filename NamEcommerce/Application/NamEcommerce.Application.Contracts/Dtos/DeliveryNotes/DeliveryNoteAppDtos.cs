@@ -55,6 +55,9 @@ public sealed record DeliveryNoteAppDto
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
 
+    public DateTime? AmountToCollectOverriddenAt { get; init; }
+    public string? AmountToCollectOverrideNote { get; init; }
+
     public int SettlementApproval { get; init; }
     public decimal? ProposedAmountToCollect { get; init; }
     public decimal? ApprovedAmountToCollect { get; init; }
@@ -74,6 +77,24 @@ public sealed record DeliveryNoteSettlementItemAppDto
     public required decimal AcceptedQuantity { get; init; }
     public required decimal RejectedQuantity { get; init; }
     public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record AdminUpdateAmountToCollectAppDto
+{
+    public Guid DeliveryNoteId { get; init; }
+    public decimal NewAmount { get; init; }
+    public string? Note { get; init; }
+    public Guid? AdminUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (NewAmount < 0)
+            return (false, "Error.AmountToCollectCannotBeNegative");
+        return (true, null);
+    }
 }
 
 [Serializable]

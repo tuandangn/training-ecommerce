@@ -101,20 +101,28 @@
             <span>@item.ShippingAddress</span>
         </div>
 
+        @if (!isDelivered && item.AmountToCollectOverriddenAt.HasValue)
+        {
+            <div class="mobile-alert-warning mt-2">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Admin đã cập nhật tiền cần thu: <strong>@item.AmountToCollect.DisplayCurrencyWithSymbol()</strong>
+            </div>
+        }
+
         @if (isDelivered)
         {
             <div class="mobile-goods-box">
                 <div class="mobile-goods-head">
                     <span>Hàng đã giao</span>
                 </div>
-                @if (item.ProductItems.Any())
+                @if (item.ProductLines.Any())
                 {
                     <ul class="mobile-goods-list">
-                        @foreach (var product in item.ProductItems)
+                        @foreach (var product in item.ProductLines)
                         {
                             <li>
                                 <span>@product.ProductName</span>
-                                <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
+                                <strong>@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
                             </li>
                         }
                     </ul>
@@ -147,7 +155,7 @@
                 </a>
             }
         }
-        else if (item.SettlementApproval == 1)
+        else if (item.SettlementApproval == (int) DeliverySettlementApprovalStatus.PendingApproval)
         {
             <div class="mobile-status mobile-status-active mt-2">
                 <i class="bi bi-hourglass-split"></i> Chờ admin duyệt số tiền thu
@@ -157,7 +165,7 @@
                     <span>Hàng hóa chờ duyệt</span>
                     <strong>@((item.ProposedAmountToCollect ?? item.AmountToCollect).DisplayCurrencyWithSymbol())</strong>
                 </div>
-                @if (item.SettlementItems.Any())
+                @if (item.SettlementProductLines.Any())
                 {
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0">
@@ -170,7 +178,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var line in item.SettlementItems)
+                                @foreach (var line in item.SettlementProductLines)
                                 {
                                     <tr>
                                         <td>@line.ProductName</td>
@@ -192,10 +200,10 @@
                 <i class="bi bi-arrow-clockwise me-1"></i>Làm mới để kiểm tra duyệt
             </a>
         }
-        else if (item.SettlementApproval == 2)
+        else if (item.SettlementApproval == (int)DeliverySettlementApprovalStatus.Approved)
         {
             <div class="mobile-status mobile-status-success mt-2" data-note-id="@item.DeliveryNoteId" style="font-size:0.9rem">
-                <i class="bi bi-check-circle"></i> Đã duyệt — thu đúng @((item.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol())
+                <i class="bi bi-check-circle"></i> Đã duyệt - thu đúng @((item.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol())
             </div>
             @if (!string.IsNullOrWhiteSpace(item.SettlementAdminNote))
             {
@@ -206,10 +214,10 @@
                 <i class="bi bi-check-circle me-1"></i>Đã thu @((item.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol()) · Xác nhận đã giao
             </button>
         }
-        else if (noteStatus == DeliveryNoteStatus.Cancelled || item.SettlementApproval == 3)
+        else if (noteStatus == DeliveryNoteStatus.Cancelled || item.SettlementApproval == (int)DeliverySettlementApprovalStatus.Rejected)
         {
             <div class="mobile-status mobile-status-muted mt-2">
-                <i class="bi bi-x-circle"></i> Bị từ chối — mang hàng về kho
+                <i class="bi bi-x-circle"></i> Bị từ chối - mang hàng về kho
             </div>
             @if (!string.IsNullOrWhiteSpace(item.SettlementAdminNote))
             {
@@ -234,37 +242,39 @@
                     <div class="mobile-goods-head">
                         <span>Hàng giao</span>
                     </div>
-                    @if (item.ProductItems.Any())
+                    @if (item.ProductLines.Any())
                     {
                         <div class="mobile-goods-list">
-                            @foreach (var product in item.ProductItems)
+                            @foreach (var product in item.ProductLines)
                             {
+                                var productUnitPrice = item.ProductItems.FirstOrDefault(productItem => productItem.ProductId == product.ProductId)?.UnitPrice ?? 0m;
+                                var returnInputName = $"return_{item.DeliveryNoteId:N}_{product.ProductId:N}";
                                 <div class="delivery-return-line py-2"
-                                     data-item-id="@product.DeliveryNoteItemId"
-                                     data-quantity="@product.Quantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                                     data-unit-price="@product.UnitPrice.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
+                                     data-product-id="@product.ProductId"
+                                     data-quantity="@product.TotalQuantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                     data-unit-price="@productUnitPrice.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
                                      data-decimals="@product.QuantityDecimalPlaces">
                                     <div class="d-flex justify-content-between gap-2">
                                         <span>@product.ProductName</span>
-                                        <strong>@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
+                                        <strong>@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) <span class="text-muted fw-normal">@product.UnitMeasurement</span></strong>
                                     </div>
                                     <div class="row g-2 mt-1">
                                         <div class="col-6">
-                                            <label class="form-label mobile-meta mb-1" for="return_@(product.DeliveryNoteItemId)">Trả về</label>
+                                            <label class="form-label mobile-meta mb-1" for="@returnInputName">Trả về</label>
                                             <input class="form-control form-control-sm returned-quantity-input text-end"
                                                    inputmode="decimal"
                                                    data-decimal="quantity" data-decimals="@product.QuantityDecimalPlaces"
                                                    data-val="true" data-val-required="Vui lòng nhập số lượng trả về"
-                                                   data-val-range="Số lượng trả về lớn hơn hoặc bằng 0 và nhỏ hơn @product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)"
+                                                   data-val-range="Số lượng trả về lớn hơn hoặc bằng 0 và nhỏ hơn hoặc bằng @product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces)"
                                                    data-val-range-min="0"
-                                                   data-val-range-max="@product.Quantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" name="return_@(product.DeliveryNoteItemId)"
-                                                   id="return_@(product.DeliveryNoteItemId)" placeholder="Nhập số lượng trả về" />
+                                                   data-val-range-max="@product.TotalQuantity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" name="@returnInputName"
+                                                   id="@returnInputName" placeholder="Nhập số lượng trả về" />
                                             <span class="small text-danger field-validation-valid"
-                                                  data-valmsg-for="return_@(product.DeliveryNoteItemId)" data-valmsg-replace="true"></span>
+                                                  data-valmsg-for="@returnInputName" data-valmsg-replace="true"></span>
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label mobile-meta mb-1">Khách nhận</label>
-                                            <div class="form-control form-control-sm bg-light accepted-quantity-text text-end">@product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)</div>
+                                            <div class="form-control form-control-sm bg-light accepted-quantity-text text-end">@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces)</div>
                                         </div>
                                     </div>
                                 </div>
@@ -312,7 +322,7 @@
                     <textarea name="note" class="form-control" rows="2" id="note_@(item.DeliveryNoteId)" placeholder="Nhập ghi chú"></textarea>
                 </div>
                 <div class="mobile-meta mb-2 d-none settlement-hint">
-                    Đề xuất thu: <strong class="settlement-proposed">—</strong> · Cần admin duyệt trước khi thu.
+                    Đề xuất thu: <strong class="settlement-proposed">-</strong> · Cần admin duyệt trước khi thu.
                 </div>
                 <button type="submit" class="btn btn-success mobile-action-button w-100 btn-complete-full">
                     <i class="bi bi-check-circle me-1"></i>Đã giao

@@ -140,10 +140,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         };
         model.OrderId = order.Id;
         model.OrderCode = order.Code;
-        //*TODO*
         model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
         model.ExpectedShippingDate = DateTimeHelper.ToLocalTime(order.ExpectedShippingDateUtc);
         model.OrderNote = order.Note;
+        model.CustomerId = order.CustomerId;
         model.CustomerName = order.CustomerName ?? string.Empty;
         model.CustomerAddress = order.CustomerAddress;
         model.CustomerPhoneNumber = order.CustomerPhone ?? string.Empty;
@@ -242,7 +242,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     public async Task<DeliveryNoteDetailsModel> PrepareDeliveryNoteDetailsModelAsync(Guid id)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
-        if (deliveryNote == null)
+        if (deliveryNote is null)
             throw new ArgumentException("Delivery note not found");
 
         var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
@@ -323,6 +323,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 };
             }).ToList()
         };
+        model.AmountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
 
         var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
         var decimalPlacesByNoteItemId = model.Items.ToDictionary(item => item.Id, item => item.QuantityDecimalPlaces);

@@ -38,6 +38,15 @@ public sealed class RejectDeliverySettlementCommand : ICommand<CommonActionResul
 }
 
 [Serializable]
+public sealed class AdminUpdateAmountToCollectCommand : ICommand<CommonActionResultModel>
+{
+    public Guid DeliveryNoteId { get; init; }
+    public decimal NewAmount { get; init; }
+    public string? Note { get; init; }
+    public Guid? AdminUserId { get; init; }
+}
+
+[Serializable]
 public sealed class CompleteApprovedDeliveryCommand : ICommand<CommonActionResultModel>
 {
     public Guid DeliveryRunId { get; init; }

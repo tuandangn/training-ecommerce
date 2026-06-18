@@ -18,11 +18,7 @@ namespace NamEcommerce.Domain.Entities.Outbox;
 [Serializable]
 public sealed record OutboxMessage : AppEntity
 {
-    internal OutboxMessage(
-        Guid id,
-        string type,
-        string payload,
-        DateTime occurredOnUtc) : base(id)
+    internal OutboxMessage(string type, string payload, DateTime occurredOnUtc) : base(Guid.Empty)
     {
         ArgumentException.ThrowIfNullOrEmpty(type);
         ArgumentException.ThrowIfNullOrEmpty(payload);
@@ -70,7 +66,7 @@ public sealed record OutboxMessage : AppEntity
     /// Factory method tạo OutboxMessage mới — chỉ <c>IOutbox</c> implementation gọi method này.
     /// </summary>
     internal static OutboxMessage Create(string type, string payload, DateTime occurredOnUtc)
-        => new(Guid.NewGuid(), type, payload, occurredOnUtc);
+        => new(type, payload, occurredOnUtc);
 
     /// <summary>
     /// Đánh dấu message đã được dispatch thành công.

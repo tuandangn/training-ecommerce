@@ -18,6 +18,8 @@ public sealed class CreateDeliveryNoteModel
     [ValidateNever]
     public string? OrderNote { get; set; }
     [ValidateNever]
+    public Guid CustomerId { get; set; }
+    [ValidateNever]
     public string CustomerName { get; set; } = string.Empty;
     [ValidateNever]
     public string CustomerPhoneNumber { get; set; } = string.Empty;

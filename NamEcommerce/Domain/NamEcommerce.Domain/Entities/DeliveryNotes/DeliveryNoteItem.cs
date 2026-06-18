@@ -4,7 +4,7 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 
 public sealed record DeliveryNoteItem : AppEntity
 {
-    public DeliveryNoteItem(Guid id) : base(id)
+    private DeliveryNoteItem(Guid id) : base(id)
     {
         ProductName = string.Empty;
     }
@@ -14,7 +14,7 @@ public sealed record DeliveryNoteItem : AppEntity
     {
     }
 
-    internal DeliveryNoteItem(Guid deliveryNoteId, Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice, Guid warehouseId) : base(Guid.NewGuid())
+    internal DeliveryNoteItem(Guid deliveryNoteId, Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice, Guid warehouseId) : base(Guid.Empty)
     {
         DeliveryNoteId = deliveryNoteId;
         OrderItemId = orderItemId;

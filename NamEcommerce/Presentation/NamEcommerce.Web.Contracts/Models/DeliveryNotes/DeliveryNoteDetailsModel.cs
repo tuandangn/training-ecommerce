@@ -51,6 +51,7 @@ public sealed class DeliveryNoteDetailsModel
     public decimal TotalAmount { get; set; }
     public decimal Surcharge { get; set; }
     public string? SurchargeReason { get; set; }
+    public decimal AmountAlreadyPaidForOrder { get; set; }
     public decimal AmountToCollect { get; set; }
     public string? CustomerPortalUrl { get; set; }
     public string? CustomerPortalQrCodeSvg { get; set; }

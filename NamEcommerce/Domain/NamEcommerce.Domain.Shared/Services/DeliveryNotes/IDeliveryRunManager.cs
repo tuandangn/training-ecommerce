@@ -9,6 +9,7 @@ public interface IDeliveryRunManager
     Task<DeliveryRunDto> CreateAsync(CreateDeliveryRunDto dto);
     Task AcknowledgeDriverCacheAsync(Guid id, string? deviceId);
     Task IssuePaperManifestAsync(Guid id);
+    Task ConfirmWarehousePickAsync(Guid id, Guid warehouseId);
     Task HandOverAsync(Guid id);
     Task CloseAsync(Guid id);
     Task ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverDto dto);

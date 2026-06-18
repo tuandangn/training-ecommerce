@@ -119,6 +119,20 @@ public sealed class DeliveryRunManager(
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
     }
 
+    public async Task ConfirmWarehousePickAsync(Guid id, Guid warehouseId)
+    {
+        var run = await runRepository.GetByIdAsync(id).ConfigureAwait(false)
+                  ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
+
+        var warehouseIds = GetRunWarehouseIds(run);
+        if (!warehouseIds.Contains(warehouseId))
+            throw new NamEcommerceDomainException("Error.DeliveryRunWarehouseNotInRun");
+
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        run.ConfirmWarehousePick(warehouseId, currentUser?.Id, currentUser?.FullName, DateTime.UtcNow);
+        await runRepository.UpdateAsync(run).ConfigureAwait(false);
+    }
+
     public async Task HandOverAsync(Guid id)
     {
         await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
@@ -126,12 +140,23 @@ public sealed class DeliveryRunManager(
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
-        run.HandOver(currentUser?.Id, DateTime.UtcNow);
+        run.HandOver(GetRunWarehouseIds(run), currentUser?.Id, DateTime.UtcNow);
         foreach (var item in run.Items)
             await deliveryNoteManager.MarkDeliveringAsync(item.DeliveryNoteId).ConfigureAwait(false);
 
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
         await transaction.CommitAsync().ConfigureAwait(false);
+    }
+
+    private List<Guid> GetRunWarehouseIds(DeliveryRun run)
+    {
+        var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
+        return deliveryNoteReader.DataSource
+            .Where(note => noteIds.Contains(note.Id))
+            .SelectMany(note => note.Items)
+            .Select(item => item.WarehouseId)
+            .Distinct()
+            .ToList();
     }
 
     public async Task CloseAsync(Guid id)

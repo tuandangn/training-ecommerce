@@ -48,6 +48,8 @@ public static class DeliveryNoteExtensions
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,
+            AmountToCollectOverrideNote = deliveryNote.AmountToCollectOverrideNote,
             SettlementApproval = (int)deliveryNote.SettlementApproval,
             ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
             ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,

@@ -77,7 +77,7 @@ export function installSettlementForms() {
                 if (returned < 0) returned = 0;
                 if (returned > 0) hasReturnedQuantity = true;
                 return {
-                    deliveryNoteItemId: line.dataset.itemId,
+                    productId: line.dataset.productId,
                     returnedQuantity: returned,
                     rejectReason: returned > 0 ? rejectReason : null
                 };

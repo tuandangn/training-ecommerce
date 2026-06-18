@@ -46,6 +46,8 @@ public sealed class DeliveryNoteManager(
     IEntityDataReader<CustomerPayment> customerPaymentReader,
     IEntityDataReader<Customer> customerReader,
     ICustomerReturnManager customerReturnManager,
+    IEntityDataReader<DeliveryRun> deliveryRunReader,
+    IRepository<DeliveryRun> deliveryRunRepository,
     EntityCodeGenerator entityCodeGenerator) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
@@ -710,7 +712,7 @@ public sealed class DeliveryNoteManager(
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
     {
-        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(id).ConfigureAwait(false);
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
@@ -912,11 +914,11 @@ public sealed class DeliveryNoteManager(
         }
 
         var agreedCustomerCharge = acceptance?.AgreedCustomerCharge ?? 0m;
-        var deliveredChargeAmount = acceptedGoodsAmount + deliveryNote.Surcharge + agreedCustomerCharge;
-        var amountToCollect = deliveryNote.ShowPrice
-            ? deliveredChargeAmount
-            : deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
-        var debtAmount = deliveredChargeAmount + rejectedGoodsAmount;
+        // Dùng AmountToCollect gốc làm cơ sở để bảo toàn OrderDiscount.
+        // acceptedGoodsAmount (qty × unitPrice) không trừ discount nên không thể dùng trực tiếp.
+        var amountToCollect = deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
+        // debtAmount = toàn bộ nghĩa vụ khách phải trả (phần reject sẽ được bù bởi credit note).
+        var debtAmount = deliveryNote.AmountToCollect + agreedCustomerCharge;
         return new DeliveryAcceptanceResolution(
             Math.Max(0m, amountToCollect),
             Math.Max(0m, debtAmount),
@@ -1103,6 +1105,44 @@ public sealed class DeliveryNoteManager(
                 g => g.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
     }
 
+    public async Task AdminUpdateAmountToCollectAsync(Guid deliveryNoteId, decimal newAmount, string? note, Guid? adminUserId)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(deliveryNoteId);
+
+        var run = deliveryRunReader.DataSource
+            .FirstOrDefault(r =>
+                r.Status != DeliveryRunStatus.Cancelled &&
+                r.Status != DeliveryRunStatus.Closed &&
+                r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+
+        if (run is null)
+        {
+            // check if there's a closed/cancelled run — also block in that case
+            var closedRun = deliveryRunReader.DataSource
+                .FirstOrDefault(r =>
+                    (r.Status == DeliveryRunStatus.Closed || r.Status == DeliveryRunStatus.Cancelled) &&
+                    r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+            if (closedRun is not null)
+                throw new NamEcommerceDomainException("Error.DeliveryRun.CannotUpdateAmountWhenRunClosedOrCancelled");
+        }
+
+        // entity guard: status Delivered/Cancelled throws
+        deliveryNote.UpdateAmountToCollect(newAmount, note);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        if (run is null)
+            return;
+
+        var trackedRun = await deliveryRunRepository.GetByIdAsync(run.Id).ConfigureAwait(false);
+        if (trackedRun is null)
+            return;
+
+        trackedRun.UpdateItemAmountToCollect(deliveryNoteId, newAmount);
+        await deliveryRunRepository.UpdateAsync(trackedRun).ConfigureAwait(false);
+    }
+
     private sealed record DeliveryAcceptanceLine(
         Guid DeliveryNoteItemId,
         decimal AcceptedQuantity,
@@ -1161,6 +1201,8 @@ public sealed class DeliveryNoteManager(
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,
+            AmountToCollectOverrideNote = deliveryNote.AmountToCollectOverrideNote,
             SettlementApproval = deliveryNote.SettlementApproval,
             ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
             ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,

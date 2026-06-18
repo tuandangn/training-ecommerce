@@ -21,7 +21,7 @@ public sealed class CompleteMobileDeliveryNoteCommand : ICommand<CommonActionRes
 [Serializable]
 public sealed class CompleteMobileDeliveryNoteItemCommand
 {
-    public Guid DeliveryNoteItemId { get; init; }
+    public Guid ProductId { get; init; }
     public decimal ReturnedQuantity { get; init; }
     public string? RejectReason { get; init; }
 }

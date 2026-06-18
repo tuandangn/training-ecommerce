@@ -20,8 +20,9 @@
     var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.Cashier);
     var offlineReady = Model.DriverCachedOnUtc.HasValue || Model.PaperManifestIssued;
+    var allWarehousesPicked = Model.PickingManifest.Count == 0 || Model.PickingManifest.All(g => g.Confirmed);
     var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
-    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady && !Model.IsDeliveryCompleted;
+    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady && allWarehousesPicked && !Model.IsDeliveryCompleted;
     var canClose = canManageDeliveryRun
         && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
         && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
@@ -80,7 +81,8 @@
             {
                 <form asp-action="HandOver" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
+                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)"
+                            title="@(!offlineReady ? "Cần cache app hoặc in phiếu giấy trước" : !allWarehousesPicked ? "Cần xác nhận lấy đủ hàng ở tất cả kho trước khi bàn giao" : null)">
                         <i class="bi bi-truck me-1"></i>Bàn giao
                     </button>
                 </form>
@@ -109,7 +111,7 @@
     {
         <div class="alert alert-warning d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle fs-5"></i>
-            <div>Cần người giao mở app để cache chuyến, hoặc quản kho in phiếu giấy dự phòng trước khi bàn giao.</div>
+            <div>Đang chờ người giao hàng nhận chuyến</div>
         </div>
     }
     <div class="content-card-body-flush px-3">
@@ -174,8 +176,11 @@
                             <input type="hidden" name="id" value="@Model.Id" />
                             <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="number" name="amount" class="form-control" min="0" step="1000" value="@expectedCashAmount" placeholder="Nhập số tiền nhận" />
-                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền" />
+                                <input name="amount" class="form-control text-end" data-decimal="currency" value="@expectedCashAmount.DisplayCurrency()" placeholder="Nhập số tiền nhận"                                     
+                                    data-val="true" data-val-required="Vui lòng nhập số tiền nhận"
+                                   data-val-range="Số tiền nhận phải lớn hơn 0" data-val-range-min="0.001"
+                                   data-val-number="Số tiền nhận phải là số" />
+                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền"/>
                                 <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                                     <i class="bi bi-cash-coin me-1"></i>Xác nhận
                                 </button>
@@ -236,6 +241,67 @@
             </div>
         </div>
     </div>
+    @if (Model.PickingManifest.Count > 0 && status == DeliveryRunStatus.ReadyForHandover)
+    {
+        var confirmedCount = Model.PickingManifest.Count(g => g.Confirmed);
+        var totalCount = Model.PickingManifest.Count;
+        <div class="content-card-header d-flex align-items-center justify-content-between">
+            <h5 class="mb-0">Phiếu lấy hàng theo kho</h5>
+            <span class="badge @(confirmedCount == totalCount ? "bg-success" : "bg-warning text-dark")">
+                Đã lấy @confirmedCount/@totalCount kho
+            </span>
+        </div>
+        <div class="content-card-body-flush px-3 pb-3">
+            <div class="row g-3">
+                @foreach (var group in Model.PickingManifest)
+                {
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 @(group.Confirmed ? "border-success" : "")">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0">
+                                        <i class="bi bi-building me-1"></i>@group.WarehouseName
+                                    </h6>
+                                    @if (group.Confirmed)
+                                    {
+                                        <div class="small text-success mt-1">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Đã xác nhận@(string.IsNullOrWhiteSpace(group.ConfirmedByFullName) ? "" : $" bởi {group.ConfirmedByFullName}")
+                                            @if (group.ConfirmedOnUtc.HasValue)
+                                            {
+                                                <span class="text-muted"> — @group.ConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                @if (canManageDeliveryRun && !group.Confirmed)
+                                {
+                                    <form asp-action="ConfirmWarehousePick" method="post">
+                                        <input type="hidden" name="id" value="@Model.Id" />
+                                        <input type="hidden" name="warehouseId" value="@group.WarehouseId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-check2 me-1"></i>Đã lấy đủ
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    @foreach (var product in group.Products)
+                                    {
+                                        <tr>
+                                            <td class="ps-0">@product.ProductName</td>
+                                            <td class="text-end text-nowrap fw-medium">@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) @product.UnitMeasurement</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
     <div class="content-card-header">
         <h5>Phiếu giao hàng</h5>
     </div>

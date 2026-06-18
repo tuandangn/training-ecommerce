@@ -42,3 +42,6 @@ public sealed record UpdateDeliveryRunDeliveredNoteCashCollectedCommand(
 
 [Serializable]
 public sealed record CancelDeliveryRunCommand(Guid Id) : ICommand<CommonActionResultModel>;
+
+[Serializable]
+public sealed record ConfirmDeliveryRunWarehousePickCommand(Guid Id, Guid WarehouseId) : ICommand<CommonActionResultModel>;

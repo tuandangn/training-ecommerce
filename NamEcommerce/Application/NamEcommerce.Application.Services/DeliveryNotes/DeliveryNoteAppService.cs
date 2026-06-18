@@ -267,9 +267,11 @@ public sealed class DeliveryNoteAppService(
             }).ConfigureAwait(false);
 
             if (isCompletedByAdminOnBehalf)
+            {
                 await systemNotificationAppService.CreateAsync(
-                    DeliveryNoteSystemNotificationComposer.ShipperNotResponded(
-                        note!.Id, note.Code, note.AssignedDeliveryFullName)).ConfigureAwait(false);
+                    DeliveryNoteSystemNotificationComposer.ShipperNotResponded(note!.Id, note.Code, note.AssignedDeliveryFullName)
+                ).ConfigureAwait(false);
+            }
 
             return new MarkDeliveryNoteDeliveredResultAppDto
             {
@@ -488,6 +490,31 @@ public sealed class DeliveryNoteAppService(
                     RejectReason = item.RejectReason
                 }).ToList()
             };
+
+    public async Task<CommonActionResultDto> AdminUpdateAmountToCollectAsync(AdminUpdateAmountToCollectAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new CommonActionResultDto { Success = false, ErrorMessage = errorMessage };
+
+        try
+        {
+            await deliveryNoteManager.AdminUpdateAmountToCollectAsync(
+                dto.DeliveryNoteId, dto.NewAmount, dto.Note, dto.AdminUserId).ConfigureAwait(false);
+
+            var note = await deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+            if (note is not null)
+                await systemNotificationAppService.CreateAsync(
+                    DeliverySystemNotificationComposer.DeliveryNoteAmountToCollectUpdated(note.ToDto(), dto.NewAmount))
+                    .ConfigureAwait(false);
+
+            return new CommonActionResultDto { Success = true };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new CommonActionResultDto { Success = false, ErrorMessage = ex.ErrorCode };
+        }
+    }
 
     public async Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id)
     {

@@ -8,7 +8,7 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 /// </summary>
 public sealed record DeliveryNoteSettlementItem : AppEntity
 {
-    public DeliveryNoteSettlementItem(Guid id) : base(id)
+    private DeliveryNoteSettlementItem(Guid id) : base(id)
     {
     }
 

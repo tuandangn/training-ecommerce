@@ -29,6 +29,8 @@ public interface IDeliveryNoteAppService
 
     Task<CommonActionResultDto> CompleteApprovedSettlementAsync(Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataAppDto? completionMetadata);
     
+    Task<CommonActionResultDto> AdminUpdateAmountToCollectAsync(AdminUpdateAmountToCollectAppDto dto);
+
     Task<DeliveryNoteAppDto?> GetByIdAsync(Guid id);
     
     Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId);

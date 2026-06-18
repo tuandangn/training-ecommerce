@@ -687,6 +687,15 @@
   <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
     <value>The delivery note does not belong to this delivery run.</value>
   </data>
+  <data name="Error.DeliveryRunPickingIncomplete" xml:space="preserve">
+    <value>Not all warehouses have been confirmed. Please confirm each warehouse before handing over.</value>
+  </data>
+  <data name="Error.DeliveryRunWarehouseNotInRun" xml:space="preserve">
+    <value>The warehouse does not belong to this delivery run.</value>
+  </data>
+  <data name="Error.DeliveryRunCannotConfirmPick" xml:space="preserve">
+    <value>Cannot confirm warehouse pick.</value>
+  </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>

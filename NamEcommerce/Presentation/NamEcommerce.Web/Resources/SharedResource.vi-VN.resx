@@ -687,6 +687,15 @@
   <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
     <value>Phiếu giao hàng không thuộc chuyến giao này.</value>
   </data>
+  <data name="Error.DeliveryRunPickingIncomplete" xml:space="preserve">
+    <value>Chưa xác nhận lấy đủ hàng ở tất cả kho. Vui lòng xác nhận từng kho trước khi bàn giao.</value>
+  </data>
+  <data name="Error.DeliveryRunWarehouseNotInRun" xml:space="preserve">
+    <value>Kho không thuộc chuyến giao này.</value>
+  </data>
+  <data name="Error.DeliveryRunCannotConfirmPick" xml:space="preserve">
+    <value>Không thể xác nhận lấy hàng cho kho này.</value>
+  </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
   </data>

@@ -54,6 +54,9 @@ public sealed record DeliveryNoteDto
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
 
+    public DateTime? AmountToCollectOverriddenAt { get; init; }
+    public string? AmountToCollectOverrideNote { get; init; }
+
     public DeliverySettlementApprovalStatus SettlementApproval { get; init; }
     public decimal? ProposedAmountToCollect { get; init; }
     public decimal? ApprovedAmountToCollect { get; init; }

@@ -88,6 +88,9 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? DeliveryCompletionIdempotencyKey { get; private set; }
     public decimal? DeliveryCashCollectedAmount { get; private set; }
 
+    public DateTime? AmountToCollectOverriddenAt { get; private set; }
+    public string? AmountToCollectOverrideNote { get; private set; }
+
     public DeliverySettlementApprovalStatus SettlementApproval { get; private set; } = DeliverySettlementApprovalStatus.NotRequired;
     public decimal? ProposedAmountToCollect { get; private set; }
     public decimal? ApprovedAmountToCollect { get; private set; }
@@ -133,6 +136,21 @@ public sealed record DeliveryNote : AppAggregateEntity
     }
 
     internal void MarkCreated() => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+
+    internal void UpdateAmountToCollect(decimal amount, string? note)
+    {
+        if (Status is DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled)
+            throw new NamEcommerceDomainException("Error.DeliveryNote.CannotUpdateAmountWhenCompleted");
+        if (amount < 0)
+            throw new NamEcommerceDomainException("Error.AmountToCollectCannotBeNegative");
+
+        AmountToCollect = amount;
+        AmountToCollectOverriddenAt = DateTime.UtcNow;
+        AmountToCollectOverrideNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteAmountToCollectUpdated(Id, OrderId, Code, amount));
+    }
 
     internal void UpdateShippingInfo(string shippingAddress, string? shippingPhoneNumber)
     {

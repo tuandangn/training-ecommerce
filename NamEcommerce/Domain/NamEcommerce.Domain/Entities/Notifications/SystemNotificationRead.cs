@@ -5,9 +5,9 @@ namespace NamEcommerce.Domain.Entities.Notifications;
 [Serializable]
 public sealed record SystemNotificationRead : AppEntity
 {
-    private SystemNotificationRead() : base(Guid.NewGuid()) { }
+    private SystemNotificationRead() : base(Guid.Empty) { }
 
-    internal SystemNotificationRead(Guid notificationId, Guid userId, DateTime readOnUtc) : base(Guid.NewGuid())
+    internal SystemNotificationRead(Guid notificationId, Guid userId, DateTime readOnUtc) : base(Guid.Empty)
     {
         if (notificationId == Guid.Empty)
             throw new ArgumentException("NotificationId is required.", nameof(notificationId));

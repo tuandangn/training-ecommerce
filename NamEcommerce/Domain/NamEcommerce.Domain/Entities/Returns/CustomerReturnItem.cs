@@ -7,10 +7,10 @@ public sealed record CustomerReturnItem : AppEntity
 {
     private CustomerReturnItem() : base(Guid.Empty) { }
 
-    internal CustomerReturnItem(Guid id, Guid customerReturnId, Guid productId, string productName,
+    internal CustomerReturnItem(Guid customerReturnId, Guid productId, string productName,
         Guid? deliveryNoteItemId, decimal requestedQuantity, decimal acceptedQuantity,
         decimal? originalUnitPrice, decimal returnUnitPrice)
-        : base(id)
+        : base(Guid.Empty)
     {
         CustomerReturnId = customerReturnId;
         ProductId = productId;

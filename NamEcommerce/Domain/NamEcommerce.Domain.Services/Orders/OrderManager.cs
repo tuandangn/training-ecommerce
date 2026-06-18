@@ -36,7 +36,9 @@ public sealed class OrderManager(
     IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
     IInventoryStockManager stockManager,
     ICurrentUserAccessor currentUserAccessor,
-    EntityCodeGenerator entityCodeGenerator) : IOrderManager
+    EntityCodeGenerator entityCodeGenerator,
+    IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
+    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository) : IOrderManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -190,6 +192,14 @@ public sealed class OrderManager(
             throw new OrderCannotUpdateOrderItemsException();
         if (HasReceivedAllocations(dto.OrderItemId))
             throw new OrderCannotUpdateOrderItemsException();
+
+        var scheduleItemsToDelete = scheduleDataReader.DataSource
+            .Where(s => s.OrderId == order.Id)
+            .SelectMany(s => s.Items)
+            .Where(item => item.OrderItemId == dto.OrderItemId)
+            .ToList();
+        foreach (var scheduleItem in scheduleItemsToDelete)
+            await scheduleItemRepository.DeleteAsync(scheduleItem).ConfigureAwait(false);
 
         order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
