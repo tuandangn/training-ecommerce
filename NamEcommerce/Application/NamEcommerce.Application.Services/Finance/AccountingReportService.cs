@@ -300,10 +300,11 @@ public sealed class AccountingReportService : IAccountingReportService
             inventory += cost * stock.QuantityOnHand;
         }
 
-        // Hàng đang giao (Delivering) đã bị trừ khỏi kho vật lý nhưng chưa ghi nhận COGS
+        // Hàng đang giao/chờ đối soát đã bị trừ khỏi kho vật lý nhưng chưa ghi nhận COGS
         // → vẫn là tài sản của doanh nghiệp cho đến khi Delivered
         var inTransitNoteIds = _deliveryNotes.DataSource
-            .Where(dn => dn.Status == DeliveryNoteStatus.Delivering)
+            .Where(dn => dn.Status == DeliveryNoteStatus.Delivering
+                      || dn.Status == DeliveryNoteStatus.PendingConfirmation)
             .Select(dn => dn.Id)
             .ToHashSet();
         if (inTransitNoteIds.Count > 0)

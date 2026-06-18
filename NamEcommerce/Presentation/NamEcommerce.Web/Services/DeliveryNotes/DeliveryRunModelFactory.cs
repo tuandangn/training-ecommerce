@@ -385,12 +385,15 @@ public sealed class DeliveryRunModelFactory(
             item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Delivered &&
             item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Cancelled);
         var isCompleted = items.Count > 0 && openCount == 0;
+        var pendingConfirmationCount = items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation);
         var hasStarted = deliveredCount > 0 ||
+            pendingConfirmationCount > 0 ||
             items.Any(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivering);
         var statusName = status switch
         {
             DeliveryRunStatus.Cancelled => "Đã hủy",
             _ when isCompleted => "Đã giao xong",
+            _ when pendingConfirmationCount > 0 => "Chờ đối soát",
             _ when hasStarted || status == DeliveryRunStatus.HandedToDriver => "Đang giao",
             DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
             DeliveryRunStatus.Closed => "Đã đóng",

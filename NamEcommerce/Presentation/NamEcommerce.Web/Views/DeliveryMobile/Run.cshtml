@@ -67,6 +67,7 @@
 {
     var noteStatus = item.DeliveryNoteStatus.HasValue ? (DeliveryNoteStatus)item.DeliveryNoteStatus.Value : (DeliveryNoteStatus?)null;
     var isDelivered = noteStatus == DeliveryNoteStatus.Delivered;
+    var isPendingConfirmation = noteStatus == DeliveryNoteStatus.PendingConfirmation;
     var receiverName = string.IsNullOrWhiteSpace(item.ReceiverName) ? item.CustomerName : item.ReceiverName;
     var shippingPhoneNumber = string.IsNullOrWhiteSpace(item.ShippingPhoneNumber) ? item.CustomerPhone : item.ShippingPhoneNumber;
 
@@ -152,6 +153,24 @@
                 <a href="/Picture/@item.DeliveryProofPictureId.Value" target="_blank" class="mobile-proof-image">
                     <img src="/Picture/@item.DeliveryProofPictureId.Value" alt="Ảnh bằng chứng giao hàng" />
                     <span>Ảnh bằng chứng</span>
+                </a>
+            }
+        }
+        else if (isPendingConfirmation)
+        {
+            <div class="mobile-status mobile-status-active mt-2">
+                <i class="bi bi-hourglass-split"></i>
+                ÄÃ£ gá»­i Ä‘á»‘i soÃ¡t - chá» kho/admin xÃ¡c nháº­n
+                @if (item.CashCollectedAmount.HasValue)
+                {
+                    <span>Â· Thu @item.CashCollectedAmount.Value.DisplayCurrencyWithSymbol()</span>
+                }
+            </div>
+            @if (item.DeliveryProofPictureId.HasValue)
+            {
+                <a href="/Picture/@item.DeliveryProofPictureId.Value" target="_blank" class="mobile-proof-image">
+                    <img src="/Picture/@item.DeliveryProofPictureId.Value" alt="Ảnh bằng chứng" />
+                    <span>áº¢nh báº±ng chá»©ng</span>
                 </a>
             }
         }

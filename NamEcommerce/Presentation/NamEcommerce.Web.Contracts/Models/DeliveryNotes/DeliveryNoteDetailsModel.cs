@@ -106,6 +106,7 @@ public sealed class DeliveryNoteItemModel
 
     /// <summary>Tổng đã trả (Confirmed).</summary>
     public decimal ReturnedQuantity { get; set; }
+    public string? RejectReason { get; set; }
 
     /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
     public decimal PendingReturnQuantity { get; set; }

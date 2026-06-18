@@ -438,6 +438,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             DeliveryNoteStatus.Draft => "Bản nháp",
             DeliveryNoteStatus.Confirmed => "Đã xác nhận",
             DeliveryNoteStatus.Delivering => "Đang giao",
+            DeliveryNoteStatus.PendingConfirmation => "Chờ đối soát",
             DeliveryNoteStatus.Delivered => "Đã giao",
             DeliveryNoteStatus.Cancelled => "Đã hủy",
             _ => status.ToString()

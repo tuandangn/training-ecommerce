@@ -8,6 +8,7 @@
             DeliveryNoteStatus.Draft => ("secondary", "Bản nháp", "bi-pencil"),
             DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận", "bi-check-all"),
             DeliveryNoteStatus.Delivering => ("warning", "Đang giao", "bi-truck"),
+            DeliveryNoteStatus.PendingConfirmation => ("warning", "Chờ đối soát", "bi-hourglass-split"),
             DeliveryNoteStatus.Delivered => ("success", "Đã giao", "bi-check-circle-fill"),
             DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy", "bi-x-circle"),
             _ => ("secondary", "Không rõ", "bi-question-circle")

@@ -14,6 +14,8 @@ public interface IDeliveryNoteManager
     
     Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto);
 
+    Task MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredDto dto);
+
     Task AssignDeliveryUserAsync(AssignDeliveryUserDto dto);
 
     Task UpdateShippingAsync(UpdateDeliveryNoteShippingDto dto);

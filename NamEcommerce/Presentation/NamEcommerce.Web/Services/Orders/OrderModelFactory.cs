@@ -947,6 +947,18 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     Stage = OrderDetailsModel.WorkflowStage.Delivery
                 });
             }
+            else if (status == DeliveryNoteStatus.PendingConfirmation)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
+                    Title = "Chờ đối soát",
+                    Description = deliveryNote.Code,
+                    Icon = "bi-hourglass-split",
+                    Tone = "warning",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
             else if (status == DeliveryNoteStatus.Cancelled)
             {
                 var isRejected = deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected;
@@ -1207,6 +1219,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             DeliveryNoteStatus.Draft => "Bản nháp",
             DeliveryNoteStatus.Confirmed => "Đã xác nhận",
             DeliveryNoteStatus.Delivering => "Đang giao",
+            DeliveryNoteStatus.PendingConfirmation => "Chờ đối soát",
             DeliveryNoteStatus.Delivered => "Đã giao",
             DeliveryNoteStatus.Cancelled => "Đã hủy",
             _ => status.ToString()
@@ -1218,6 +1231,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             DeliveryNoteStatus.Draft => "secondary",
             DeliveryNoteStatus.Confirmed => "info",
             DeliveryNoteStatus.Delivering => "warning",
+            DeliveryNoteStatus.PendingConfirmation => "warning",
             DeliveryNoteStatus.Delivered => "success",
             DeliveryNoteStatus.Cancelled => "danger",
             _ => "secondary"

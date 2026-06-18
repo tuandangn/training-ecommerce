@@ -15,7 +15,7 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
         if (!acceptance.Success)
             return new CommonActionResultModel { Success = false, ErrorMessage = acceptance.ErrorMessage };
 
-        var result = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
+        var result = await deliveryNoteAppService.MarkPendingConfirmationAsync(new MarkDeliveryNoteDeliveredAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
             PictureIds = [request.PictureId],

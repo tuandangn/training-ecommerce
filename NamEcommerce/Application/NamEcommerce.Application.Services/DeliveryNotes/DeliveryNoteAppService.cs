@@ -296,6 +296,53 @@ public sealed class DeliveryNoteAppService(
         }
     }
 
+    public async Task<MarkDeliveryNoteDeliveredResultAppDto> MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredAppDto dto)
+    {
+        try
+        {
+            await deliveryNoteManager.MarkPendingConfirmationAsync(new MarkDeliveryNoteDeliveredDto
+            {
+                DeliveryNoteId = dto.DeliveryNoteId,
+                PictureIds = dto.PictureIds,
+                ReceiverName = dto.ReceiverName,
+                Acceptance = MapAcceptance(dto.Acceptance),
+                CompletionMetadata = dto.CompletionMetadata is null
+                    ? null
+                    : new DeliveryCompletionMetadataDto
+                    {
+                        Latitude = dto.CompletionMetadata.Latitude,
+                        Longitude = dto.CompletionMetadata.Longitude,
+                        LocationAddress = dto.CompletionMetadata.LocationAddress,
+                        Note = dto.CompletionMetadata.Note,
+                        Source = dto.CompletionMetadata.Source,
+                        IdempotencyKey = dto.CompletionMetadata.IdempotencyKey,
+                        CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
+                    }
+            }).ConfigureAwait(false);
+
+            return new MarkDeliveryNoteDeliveredResultAppDto
+            {
+                Success = true
+            };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new MarkDeliveryNoteDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.ErrorCode
+            };
+        }
+        catch (Exception ex)
+        {
+            return new MarkDeliveryNoteDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
     public async Task<AssignDeliveryUserResultAppDto> AssignDeliveryUserAsync(AssignDeliveryUserAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();

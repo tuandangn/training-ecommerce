@@ -221,7 +221,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         decimal rejectedGoodsAmount = 0,
         decimal? debtAmount = null)
     {
-        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+        if (Status != DeliveryNoteStatus.Delivering
+            && Status != DeliveryNoteStatus.Confirmed
+            && Status != DeliveryNoteStatus.PendingConfirmation)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
         if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
@@ -248,6 +250,46 @@ public sealed record DeliveryNote : AppAggregateEntity
             CustomerId,
             AmountToCollect,
             debtAmount ?? AmountToCollect + rejectedGoodsAmount));
+    }
+
+    internal void MarkPendingConfirmation(
+        IReadOnlyList<Guid> pictureIds,
+        string? receiverName,
+        double? latitude = null,
+        double? longitude = null,
+        string? locationAddress = null,
+        string? completionNote = null,
+        string? completionSource = null,
+        string? idempotencyKey = null,
+        decimal? cashCollectedAmount = null,
+        IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)>? acceptanceLines = null)
+    {
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.PendingConfirmation);
+
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+
+        if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
+            throw new DeliveryProofRequiredException();
+
+        var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
+
+        Status = DeliveryNoteStatus.PendingConfirmation;
+        DeliveryProofPictureId = pictureIds[0];
+        DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
+        DeliveryReceiverName = receiverName;
+        SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey, cashCollectedAmount);
+        _settlementItems.Clear();
+        if (acceptanceLines is not null)
+        {
+            foreach (var line in acceptanceLines)
+                _settlementItems.Add(new DeliveryNoteSettlementItem(Id, line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+        }
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        if (wasConfirmed)
+            RaiseDomainEvent(new DeliveryNoteDelivering(Id));
     }
 
     internal bool HasSameDeliveryCompletionRequest(string? idempotencyKey)
@@ -389,7 +431,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status == DeliveryNoteStatus.Delivered)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
 
-        var wasReservingStock = Status == DeliveryNoteStatus.Confirmed || Status == DeliveryNoteStatus.Delivering;
+        var wasReservingStock = Status == DeliveryNoteStatus.Confirmed
+            || Status == DeliveryNoteStatus.Delivering
+            || Status == DeliveryNoteStatus.PendingConfirmation;
 
         Status = DeliveryNoteStatus.Cancelled;
         UpdatedOnUtc = DateTime.UtcNow;

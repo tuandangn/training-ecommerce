@@ -28,6 +28,7 @@ public sealed class ShortageQueryService(
     [
         DeliveryNoteStatus.Confirmed,
         DeliveryNoteStatus.Delivering,
+        DeliveryNoteStatus.PendingConfirmation,
         DeliveryNoteStatus.Delivered
     ];
 

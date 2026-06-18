@@ -99,6 +99,12 @@ export default class DeliveryNoteController {
         this.#deliveredContainer.querySelector('#deliveryNoteId').value = this.#deliveredState.id;
         this.#renderAcceptantItems();
 
+        const hasRejectedItems = this.#deliveredState.items?.some(item => Number(item.returnedQuantity || 0) > 0) ?? false;
+        const rejectReason = this.#deliveredState.items?.find(item => Number(item.returnedQuantity || 0) > 0 && item.rejectReason)?.rejectReason ?? '';
+        $('#rejectReason').val(rejectReason);
+        $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
+        $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
+
         const cashCollectedAmount = document.getElementById('cashCollectedAmount');
         cashCollectedAmount.value = DecimalFields.formatCurrency(this.#deliveredState.amountToCollect);
         cashCollectedAmount.closest('div').classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
@@ -112,13 +118,15 @@ export default class DeliveryNoteController {
     #renderAcceptantItems() {
         const rowsHtml = this.#deliveredState.items?.map(item => {
             const deliveredQty = Number(item.quantity || 0);
+            const returnedQty = Math.max(0, Math.min(deliveredQty, Number(item.returnedQuantity || 0)));
             const decimalPlaces = item.quantityDecimalPlaces ?? 0;
+            const acceptedQty = Math.max(0, deliveredQty - returnedQty);
             return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}" data-decimals="${decimalPlaces}">
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
                             <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end returned-qty" name="returnedQty_${item.id}"
-                                    value="0"
+                                    value="${DecimalFields.formatQuantity(returnedQty, decimalPlaces)}"
                     data-decimal="quantity" data-decimals="${decimalPlaces}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}." data-val-range-max="${deliveredQty}"
@@ -128,7 +136,7 @@ export default class DeliveryNoteController {
                     data-valmsg-for="returnedQty_${item.id}"
                     data-valmsg-replace="true"></span>
                             </td>
-                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
+                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(acceptedQty, decimalPlaces)}</td>
                         </tr>`;
         }).join('');
         const container = document.getElementById('acceptanceTableBody');

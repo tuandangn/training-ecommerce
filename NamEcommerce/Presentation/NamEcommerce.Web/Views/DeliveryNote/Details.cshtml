@@ -7,6 +7,7 @@
         (int)DeliveryNoteStatus.Draft => ("bg-secondary text-white", "Bản nháp", "bi-pencil"),
         (int)DeliveryNoteStatus.Confirmed => ("bg-info text-white", "Đã xác nhận", "bi-check-all"),
         (int)DeliveryNoteStatus.Delivering => ("bg-warning text-white", "Đang giao", "bi-truck"),
+        (int)DeliveryNoteStatus.PendingConfirmation => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
         (int)DeliveryNoteStatus.Delivered => ("bg-success text-white", "Đã giao", "bi-check-circle-fill"),
         (int)DeliveryNoteStatus.Cancelled => ("bg-danger text-white", "Đã hủy", "bi-x-circle"),
         _ => ("bg-secondary text-white", "Không rõ", "bi-question-circle")
@@ -18,11 +19,12 @@
     var canAssignDeliveryUser = !isDirectShip
         && Model.Status != (int)DeliveryNoteStatus.Delivered
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
-    var canLeaveWarehouse = isDirectShip || isCounterPickup;
-    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering && canLeaveWarehouse;
+    var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
+    var canLeaveWarehouse = isDirectShip || isCounterPickup || isDeliveryUserAssigned;
+    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.PendingConfirmation
+        || (Model.Status == (int)DeliveryNoteStatus.Delivering && canLeaveWarehouse);
     var canUpdateShippingInfo = Model.Status != (int)DeliveryNoteStatus.Delivered
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
-    var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
@@ -508,9 +510,9 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                             <i class="bi bi-truck me-1"></i>Đang giao
                         </button>
                     }
-                    @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                    @if (Model.Status == (int)DeliveryNoteStatus.PendingConfirmation || Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
                     {
-                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@canOpenDeliveredWorkflow">
+                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)">
                             <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                         </button>
                     }
@@ -737,7 +739,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
     </div>
 }
 
-@if (Model.Status == (int)DeliveryNoteStatus.Confirmed || Model.Status == (int)DeliveryNoteStatus.Delivering)
+@if (Model.Status == (int)DeliveryNoteStatus.Confirmed || Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.PendingConfirmation)
 {
     <partial name="_DeliveryNote.ConfirmDelivered" />
     <partial name="_DeliveryNote.ConfirmReject" model="Model.AvailableWarehouses" />

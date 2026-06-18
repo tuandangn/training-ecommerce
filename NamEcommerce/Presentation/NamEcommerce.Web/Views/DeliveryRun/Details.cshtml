@@ -347,6 +347,10 @@
                                 {
                                     <span class="status-badge warning small"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt số tiền thu</span>
                                 }
+                                else if (item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
+                                {
+                                    <span class="status-badge warning small"><i class="bi bi-hourglass-split me-1"></i>Chờ đối soát</span>
+                                }
                                 else if (!isDelivered)
                                 {
                                     <span class="text-muted">Chưa giao</span>

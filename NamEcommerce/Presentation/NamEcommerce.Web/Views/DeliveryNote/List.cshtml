@@ -62,13 +62,16 @@
                                 10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
                                 20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
                                 30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
+                                35 => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
                                 40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
                                 50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
                                 _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
                             };
                             var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
                             var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
-                            var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
+                            var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+                                || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering
+                                || canLeaveWarehouse;
 
                             <tr>
                                 <td class="ps-4">
@@ -157,7 +160,7 @@
                                                     </a>
                                                 </li>
                                             }
-                                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
+                                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation)
                                             {
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
@@ -220,13 +223,16 @@
                     10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
                     20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
                     30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
+                    35 => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
                     40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
                     50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
                     _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
                 };
                 var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
                 var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
-                var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
+                var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+                    || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering
+                    || canLeaveWarehouse;
 
                 <article class="list-card">
                     <div class="list-card-header">
@@ -307,7 +313,7 @@
                                     <i class="bi bi-truck me-1"></i>Đang giao
                                 </a>
                             }
-                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
+                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation)
                             {
                                 <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-outline-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đã giao
@@ -349,7 +355,7 @@
     }
 </div>
 
-@if (Model.Data.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering))
+@if (Model.Data.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering || note.Status == (int)DeliveryNoteStatus.PendingConfirmation))
 {
     <partial name="_DeliveryNote.ConfirmDelivered" />
     <partial name="_DeliveryNote.ConfirmReject" model="@Model.AvailableWarehouses" />

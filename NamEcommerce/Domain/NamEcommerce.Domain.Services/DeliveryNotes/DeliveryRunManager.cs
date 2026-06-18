@@ -310,13 +310,14 @@ public sealed class DeliveryRunManager(
                 continue;
 
             CustomerDebtDto? debt = null;
-            if (note.AmountToCollect > 0)
+            var debtAmount = note.TotalAmount + note.Surcharge + (note.ApprovedAgreedCustomerCharge ?? 0m);
+            if (debtAmount > 0)
             {
                 debt = await customerDebtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
                 {
                     CustomerId = note.CustomerId,
                     DeliveryNoteId = note.Id,
-                    TotalAmount = note.AmountToCollect
+                    TotalAmount = debtAmount
                 }).ConfigureAwait(false);
             }
 

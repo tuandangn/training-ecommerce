@@ -163,6 +163,7 @@
                                     var (dsStatusBadge, dsStatusText) = deliveryStatus switch
                                     {
                                         DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
+                                        DeliveryNoteStatus.PendingConfirmation => ("warning", "Chờ đối soát"),
                                         DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
                                         DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
                                         _ => dsAlloc.Status switch

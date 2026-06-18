@@ -17,6 +17,8 @@ public interface IDeliveryNoteAppService
     
     Task<MarkDeliveryNoteDeliveredResultAppDto> MarkDeliveredAsync(MarkDeliveryNoteDeliveredAppDto dto);
 
+    Task<MarkDeliveryNoteDeliveredResultAppDto> MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredAppDto dto);
+
     Task<AssignDeliveryUserResultAppDto> AssignDeliveryUserAsync(AssignDeliveryUserAppDto dto);
 
     Task<CommonActionResultDto> UpdateShippingAsync(UpdateDeliveryNoteShippingAppDto dto);

@@ -366,7 +366,9 @@
     </div>
 }
 
-@if (Model.DeliveryWorkflow.Notes.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering))
+@if (Model.DeliveryWorkflow.Notes.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed
+        || note.Status == (int)DeliveryNoteStatus.Delivering
+        || note.Status == (int)DeliveryNoteStatus.PendingConfirmation))
 {
     <partial name="_DeliveryNote.ConfirmDelivered" />
 }

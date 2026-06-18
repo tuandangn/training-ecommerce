@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
@@ -323,7 +325,17 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        if (pictureIds is null || pictureIds.Count == 0)
+        var effectivePictureIds = pictureIds?
+            .Where(pictureId => pictureId != Guid.Empty)
+            .ToList() ?? [];
+        if (effectivePictureIds.Count == 0
+            && deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+            && deliveryNote.DeliveryProofPictureId.HasValue)
+        {
+            effectivePictureIds.Add(deliveryNote.DeliveryProofPictureId.Value);
+        }
+
+        if (effectivePictureIds.Count == 0)
             return this.JsonError(message: LocalizeError("Error.DeliveryProofRequired"));
 
         var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
@@ -336,7 +348,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             CompensateInNextDelivery = compensateInNextDelivery,
             CashCollectedAmount = cashCollectedAmount,
             Items = acceptanceItems,
-            PictureIds = pictureIds
+            PictureIds = effectivePictureIds
         });
 
         if (result.Success)
@@ -378,9 +390,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
+        Dictionary<Guid, DeliveryNoteSettlementItemAppDto> settlementItemsByDeliveryNoteItemId = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+            ? deliveryNote.SettlementItems.ToDictionary(item => item.DeliveryNoteItemId)
+            : [];
+
         var acceptantItems = deliveryNote.Items.Select(i =>
         {
             returnedQuantities.TryGetValue(i.Id, out var summary);
+            settlementItemsByDeliveryNoteItemId.TryGetValue(i.Id, out var settlementItem);
             return new DeliveryNoteItemModel
             {
                 Id = i.Id,
@@ -388,7 +405,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
-                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
+                ReturnedQuantity = settlementItem?.RejectedQuantity ?? summary?.ConfirmedQuantity ?? 0m,
+                RejectReason = settlementItem?.RejectReason,
                 PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
                 CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
                 QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
