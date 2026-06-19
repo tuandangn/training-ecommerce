@@ -82,16 +82,16 @@ public sealed class DeliveryNoteManager(
 
         EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
-        if (dto.AmountToCollect > 0)
+        var productCollectedAmount = dto.AmountToCollect - dto.Surcharge;
+        if (productCollectedAmount > 0)
         {
-            var existingCollect = deliveryNoteReader.DataSource
-                .Where(dn => dn.OrderId == dto.OrderId && dn.Status != DeliveryNoteStatus.Cancelled)
-                .Sum(dn => dn.AmountToCollect);
+            var deliveryNotes = deliveryNoteReader.DataSource
+                .Where(dn => dn.OrderId == dto.OrderId && dn.Status != DeliveryNoteStatus.Cancelled).ToList();
             var paidForOrder = customerPaymentReader.DataSource
                 .Where(p => p.OrderId == dto.OrderId)
-                .Sum(p => p.Amount);
-            var remaining = order.OrderTotal + dto.Surcharge - existingCollect - paidForOrder;
-            if (dto.AmountToCollect > remaining)
+                .Sum(p => p.Amount) - deliveryNotes.Sum(dn => dn.Surcharge);
+            var remaining = order.OrderTotal - paidForOrder;
+            if (productCollectedAmount > remaining)
                 throw new AmountToCollectExceedsOrderRemainingException(dto.AmountToCollect, Math.Max(0m, remaining));
         }
 
@@ -122,7 +122,6 @@ public sealed class DeliveryNoteManager(
             OrderCode = order.Code,
             CreatedByUserId = order.CreatedByUserId
         };
-
         foreach (var itemDto in dto.Items)
         {
             var orderItem = orderItemsById[itemDto.OrderItemId];

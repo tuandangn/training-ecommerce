@@ -245,8 +245,8 @@
                         @if (Model.AmountAlreadyPaidForOrder > 0)
                         {
                             <div class="d-flex justify-content-between mb-2 @(Model.ShowPrice ? "" : "d-none")" id="paidAmount">
-                                <span class="text-muted small">Đã thanh toán:</span>
-                                <span class="fw-bold text-success" id="breakdown-items">@Model.AmountAlreadyPaidForOrder.DisplayCurrencyWithSymbol()</span>
+                                <span class="text-muted small">Đã thanh toán<span id="breakdown-paid-total"> (tổng @Model.AmountAlreadyPaidForOrder.DisplayCurrencyWithSymbol())</span>:</span>
+                                <span class="fw-bold text-success" id="breakdown-paid">0 đ</span>
                             </div>
                         }
                         <div class="d-flex justify-content-between mb-2 @(Model.AmountAlreadyPaidForOrder > 0 ? "" : "pt-2 border-top")">
@@ -297,6 +297,7 @@
 
             const $breakdownItems = $('#breakdown-items');
             const $breakdownSurcharge = $('#breakdown-surcharge');
+            const $breakdownPaid = $('#breakdown-paid');
             const $breakdownTotal = $('#breakdown-total');
 
             const $moneySummary = $('#moneySummary');
@@ -357,6 +358,8 @@
                 $breakdownItems.text(formatCurrency(totalSelected, true));
                 $breakdownSurcharge.text(formatCurrency(surcharge, true));
                 $breakdownTotal.text(formatCurrency(amountToCollect, true));
+                $breakdownPaid.text(formatCurrency(Math.min(amountAlreadyPaidForOrder, totalSelected), true));
+                $('#breakdown-paid-total').toggleClass('d-none', Math.min(amountAlreadyPaidForOrder, totalSelected) == amountAlreadyPaidForOrder);
             }
 
             function parseQuantity(value) {

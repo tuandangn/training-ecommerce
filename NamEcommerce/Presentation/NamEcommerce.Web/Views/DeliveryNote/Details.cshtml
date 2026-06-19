@@ -353,8 +353,10 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                             @if (Model.AmountAlreadyPaidForOrder > 0)
                             {
                                 <div class="d-flex justify-content-between mb-2" id="paidAmount">
-                                    <span class="text-muted small">Đã thanh toán:</span>
-                                    <span class="fw-bold text-success" id="breakdown-items">@Model.AmountAlreadyPaidForOrder.DisplayCurrencyWithSymbol()</span>
+                                    <span class="text-muted small">Đã thanh toán
+                                        <span class="@(Model.AmountAlreadyPaidForOrder == Model.TotalAmount ? "d-none" : "")"> (tổng @Model.AmountAlreadyPaidForOrder.DisplayCurrency())</span>:
+                                    </span>
+                                    <span class="fw-bold text-success" id="breakdown-items">@(Math.Min(Model.TotalAmount, Model.AmountAlreadyPaidForOrder).DisplayCurrencyWithSymbol())</span>
                                 </div>
                             }
                         }
