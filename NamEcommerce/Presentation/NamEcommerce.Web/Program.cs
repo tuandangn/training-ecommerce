@@ -406,6 +406,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         opts.LoginPath = "/User/Login";
         opts.LogoutPath = "/User/Logout";
+        opts.AccessDeniedPath = "/User/AccessDenied";
     });
     services.AddMemoryCache();
     services.AddScoped<IPermissionCacheService, PermissionCacheService>();

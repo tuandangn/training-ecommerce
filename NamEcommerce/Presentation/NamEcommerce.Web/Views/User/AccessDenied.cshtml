@@ -1,0 +1,37 @@
+﻿@using NamEcommerce.Web.Models.Users
+@model LoginModel
+@{
+    Layout = "_Layout.Anonymous";
+    ViewData[ViewConstants.PageTitle] = "Từ chối truy cập";
+}
+<div class="d-flex align-items-center justify-content-center ui-login-shell">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center p-5">
+
+                        <div class="mb-4">
+                            <i class="bi bi-shield-lock display-1 text-warning"></i>
+                        </div>
+                        <h2 class="fw-bold mb-3">Không có quyền truy cập</h2>
+                        <p class="text-muted mb-4">
+                            Tài khoản của bạn hiện không có quyền truy cập vào trang hoặc chức năng này.
+                            Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ quản trị viên để được hỗ trợ.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-outline-secondary" onclick="history.back()">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Quay lại
+                            </button>
+                            <a asp-action="Index" asp-controller="Home" class="btn btn-primary">
+                                <i class="bi bi-house-door me-2"></i>
+                                Quay về trang chủ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
