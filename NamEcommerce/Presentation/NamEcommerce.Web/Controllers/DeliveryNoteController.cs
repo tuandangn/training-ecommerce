@@ -277,7 +277,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Approve)]
     public async Task<IActionResult> Confirm(Guid id)
     {
         var result = await _mediator.Send(new ConfirmDeliveryNoteCommand

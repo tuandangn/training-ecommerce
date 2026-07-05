@@ -24,12 +24,14 @@ public static class SystemPermissions
         public const string Create = "Orders.Create";
         public const string Edit = "Orders.Edit";
         public const string Cancel = "Orders.Cancel";
-        public const string FastSale = "Orders.FastSale";
+        public const string QuickCreate = "Orders.QuickCreate";
     }
 
     public static class DeliveryNotes
     {
         public const string View = "DeliveryNotes.View";
+        public const string Create = "DeliveryNotes.Create";
+        public const string Approve = "DeliveryNotes.Approve";
         public const string Manage = "DeliveryNotes.Manage";
     }
 
@@ -51,7 +53,10 @@ public static class SystemPermissions
     {
         public const string View = "PurchaseOrders.View";
         public const string Create = "PurchaseOrders.Create";
+        public const string Edit = "PurchaseOrders.Edit";
+        public const string Approve = "PurchaseOrders.Approve";
         public const string Cancel = "PurchaseOrders.Cancel";
+        public const string QuickCreate = "PurchaseOrders.QuickCreate";
     }
 
     public static class GoodsReceipts
@@ -123,13 +128,13 @@ public static class SystemPermissions
         Catalog.VendorsView, Catalog.VendorsManage,
         Catalog.UnitMeasurementsManage,
 
-        Orders.View, Orders.Create, Orders.Edit, Orders.Cancel, Orders.FastSale,
+        Orders.View, Orders.Create, Orders.Edit, Orders.Cancel, Orders.QuickCreate,
 
-        DeliveryNotes.View, DeliveryNotes.Manage,
+        DeliveryNotes.View, DeliveryNotes.Manage, DeliveryNotes.Approve,
         DeliveryRuns.View, DeliveryRuns.Manage, DeliveryRuns.ConfirmCashHandover, DeliveryRuns.MobileAccess,
         DirectShip.View, DirectShip.Manage,
 
-        PurchaseOrders.View, PurchaseOrders.Create, PurchaseOrders.Cancel,
+        PurchaseOrders.View, PurchaseOrders.Create, PurchaseOrders.Edit, PurchaseOrders.Cancel, PurchaseOrders.Approve, PurchaseOrders.QuickCreate,
         GoodsReceipts.Manage,
         VendorReturns.Manage,
 

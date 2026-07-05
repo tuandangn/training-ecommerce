@@ -83,7 +83,13 @@ public sealed class SystemPermissionsSeeder(
     {
         yield return (SystemUserRoleNames.Admin,
         [
-            SystemPermissions.Dashboard.System
+            SystemPermissions.Dashboard.System,
+            SystemPermissions.DeliveryNotes.Approve,
+            SystemPermissions.Orders.Edit,
+            SystemPermissions.PurchaseOrders.Approve,
+            SystemPermissions.Orders.QuickCreate,
+            SystemPermissions.PurchaseOrders.QuickCreate,
+            SystemPermissions.PurchaseOrders.Edit
         ]);
 
         yield return (SystemUserRoleNames.SalesStaff,
@@ -92,8 +98,7 @@ public sealed class SystemPermissionsSeeder(
             SystemPermissions.Catalog.ProductsView,
             SystemPermissions.Orders.View,
             SystemPermissions.Orders.Create,
-            SystemPermissions.Orders.Edit,
-            SystemPermissions.Orders.FastSale,
+            SystemPermissions.Orders.QuickCreate,
             SystemPermissions.DeliveryNotes.View,
             SystemPermissions.DirectShip.View,
             SystemPermissions.Inventory.View,
@@ -109,7 +114,6 @@ public sealed class SystemPermissionsSeeder(
             SystemPermissions.Catalog.VendorsView,
             SystemPermissions.Orders.View,
             SystemPermissions.DeliveryNotes.View,
-            SystemPermissions.DeliveryNotes.Manage,
             SystemPermissions.DeliveryRuns.View,
             SystemPermissions.DeliveryRuns.Manage,
             SystemPermissions.DirectShip.View,
@@ -139,7 +143,7 @@ public sealed class SystemPermissionsSeeder(
         yield return (SystemUserRoleNames.Cashier,
         [
             SystemPermissions.Orders.View,
-            SystemPermissions.Orders.FastSale,
+            SystemPermissions.Orders.QuickCreate,
             SystemPermissions.DeliveryNotes.View,
             SystemPermissions.DeliveryRuns.View,
             SystemPermissions.DeliveryRuns.ConfirmCashHandover,

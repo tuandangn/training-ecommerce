@@ -18,7 +18,7 @@ public sealed class MenuNavigationComponent(IAuthorizationService authorizationS
 
             CanViewOrders = await CanAsync(user, SystemPermissions.Orders.View),
             CanViewOrderFulfillmentSchedule = await CanAsync(user, SystemPermissions.Orders.View),
-            CanUseFastSale = await CanAsync(user, SystemPermissions.Orders.FastSale),
+            CanUseFastSale = await CanAsync(user, SystemPermissions.Orders.QuickCreate),
             CanUsePreparation = await CanAsync(user, SystemPermissions.Inventory.Preparation),
             CanManageCustomerReturns = await CanAsync(user, SystemPermissions.CustomerReturns.Manage),
             CanViewCustomers = await CanAsync(user, SystemPermissions.Customers.View),

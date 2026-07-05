@@ -8,7 +8,7 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed partial class OrderController : BaseAuthorizedController
 {
-    [Authorize(Policy = SystemPermissions.Orders.FastSale)]
+    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> QuickCreate()
     {
         var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
@@ -46,6 +46,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateCashSale([FromBody] CreateCashQuickSaleCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -53,6 +54,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateBankTransferSale([FromBody] CreateBankTransferQuickSaleCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -60,6 +62,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateUnpaidSale([FromBody] CreateUnpaidQuickSaleCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
