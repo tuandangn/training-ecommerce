@@ -14,46 +14,46 @@ public sealed class MenuNavigationComponent(IAuthorizationService authorizationS
         var user = HttpContext.User;
         var model = new MenuNavigationModel
         {
-            CanViewDashboard = user.Identity?.IsAuthenticated == true,
+            CanViewDashboard = await CanAsync(user, SystemPermissions.Dashboard.System),
 
-            CanViewOrders = await CanAsync(user, SystemPermissions.Orders.View).ConfigureAwait(false),
-            CanViewOrderFulfillmentSchedule = await CanAsync(user, SystemPermissions.Orders.View).ConfigureAwait(false),
-            CanUseFastSale = await CanAsync(user, SystemPermissions.Orders.FastSale).ConfigureAwait(false),
-            CanUsePreparation = await CanAsync(user, SystemPermissions.Inventory.Preparation).ConfigureAwait(false),
-            CanManageCustomerReturns = await CanAsync(user, SystemPermissions.CustomerReturns.Manage).ConfigureAwait(false),
-            CanViewCustomers = await CanAsync(user, SystemPermissions.Customers.View).ConfigureAwait(false),
+            CanViewOrders = await CanAsync(user, SystemPermissions.Orders.View),
+            CanViewOrderFulfillmentSchedule = await CanAsync(user, SystemPermissions.Orders.View),
+            CanUseFastSale = await CanAsync(user, SystemPermissions.Orders.FastSale),
+            CanUsePreparation = await CanAsync(user, SystemPermissions.Inventory.Preparation),
+            CanManageCustomerReturns = await CanAsync(user, SystemPermissions.CustomerReturns.Manage),
+            CanViewCustomers = await CanAsync(user, SystemPermissions.Customers.View),
 
-            CanViewPurchaseOrders = await CanAsync(user, SystemPermissions.PurchaseOrders.View).ConfigureAwait(false),
-            CanCreatePurchaseOrders = await CanAsync(user, SystemPermissions.PurchaseOrders.Create).ConfigureAwait(false),
-            CanViewDirectShip = await CanAsync(user, SystemPermissions.DirectShip.View).ConfigureAwait(false),
-            CanManageVendorReturns = await CanAsync(user, SystemPermissions.VendorReturns.Manage).ConfigureAwait(false),
-            CanViewVendors = await CanAsync(user, SystemPermissions.Catalog.VendorsView).ConfigureAwait(false),
+            CanViewPurchaseOrders = await CanAsync(user, SystemPermissions.PurchaseOrders.View),
+            CanCreatePurchaseOrders = await CanAsync(user, SystemPermissions.PurchaseOrders.Create),
+            CanViewDirectShip = await CanAsync(user, SystemPermissions.DirectShip.View),
+            CanManageVendorReturns = await CanAsync(user, SystemPermissions.VendorReturns.Manage),
+            CanViewVendors = await CanAsync(user, SystemPermissions.Catalog.VendorsView),
 
-            CanViewInventory = await CanAsync(user, SystemPermissions.Inventory.View).ConfigureAwait(false),
-            CanViewDeliveryNotes = await CanAsync(user, SystemPermissions.DeliveryNotes.View).ConfigureAwait(false),
-            CanViewDeliveryRuns = await CanAsync(user, SystemPermissions.DeliveryRuns.View).ConfigureAwait(false),
-            CanManageGoodsReceipts = await CanAsync(user, SystemPermissions.GoodsReceipts.Manage).ConfigureAwait(false),
-            CanAdjustInventory = await CanAsync(user, SystemPermissions.Inventory.Adjust).ConfigureAwait(false),
+            CanViewInventory = await CanAsync(user, SystemPermissions.Inventory.View),
+            CanViewDeliveryNotes = await CanAsync(user, SystemPermissions.DeliveryNotes.View),
+            CanViewDeliveryRuns = await CanAsync(user, SystemPermissions.DeliveryRuns.View),
+            CanManageGoodsReceipts = await CanAsync(user, SystemPermissions.GoodsReceipts.Manage),
+            CanAdjustInventory = await CanAsync(user, SystemPermissions.Inventory.Adjust),
 
-            CanUseDeliveryMobile = await CanAsync(user, SystemPermissions.DeliveryRuns.MobileAccess).ConfigureAwait(false),
+            CanUseDeliveryMobile = await CanAsync(user, SystemPermissions.DeliveryRuns.MobileAccess),
 
-            CanViewCustomerDebts = await CanAsync(user, SystemPermissions.Debts.CustomerDebtsView).ConfigureAwait(false),
-            CanViewVendorDebts = await CanAsync(user, SystemPermissions.Debts.VendorDebtsView).ConfigureAwait(false),
-            CanManageCustomerRefunds = await CanAsync(user, SystemPermissions.Debts.CustomerRefundsManage).ConfigureAwait(false),
-            CanViewFinancialReports = await CanAsync(user, SystemPermissions.Finance.ReportsFinancial).ConfigureAwait(false),
-            CanViewDirectShipReports = await CanAsync(user, SystemPermissions.Finance.ReportsDirectShip).ConfigureAwait(false),
-            CanViewExpenses = await CanAsync(user, SystemPermissions.Finance.ExpensesView).ConfigureAwait(false),
+            CanViewCustomerDebts = await CanAsync(user, SystemPermissions.Debts.CustomerDebtsView),
+            CanViewVendorDebts = await CanAsync(user, SystemPermissions.Debts.VendorDebtsView),
+            CanManageCustomerRefunds = await CanAsync(user, SystemPermissions.Debts.CustomerRefundsManage),
+            CanViewFinancialReports = await CanAsync(user, SystemPermissions.Finance.ReportsFinancial),
+            CanViewDirectShipReports = await CanAsync(user, SystemPermissions.Finance.ReportsDirectShip),
+            CanViewExpenses = await CanAsync(user, SystemPermissions.Finance.ExpensesView),
 
-            CanViewProducts = await CanAsync(user, SystemPermissions.Catalog.ProductsView).ConfigureAwait(false),
-            CanViewCategories = await CanAsync(user, SystemPermissions.Catalog.CategoriesView).ConfigureAwait(false),
-            CanManageWarehouses = await CanAsync(user, SystemPermissions.Warehouses.Manage).ConfigureAwait(false),
-            CanManageUnitMeasurements = await CanAsync(user, SystemPermissions.Catalog.UnitMeasurementsManage).ConfigureAwait(false),
+            CanViewProducts = await CanAsync(user, SystemPermissions.Catalog.ProductsView),
+            CanViewCategories = await CanAsync(user, SystemPermissions.Catalog.CategoriesView),
+            CanManageWarehouses = await CanAsync(user, SystemPermissions.Warehouses.Manage),
+            CanManageUnitMeasurements = await CanAsync(user, SystemPermissions.Catalog.UnitMeasurementsManage),
 
-            CanManageUserRoles = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles).ConfigureAwait(false),
-            CanManageCustomerPortal = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles).ConfigureAwait(false),
-            CanManageUsers = await CanAsync(user, SystemPermissions.Users.Manage).ConfigureAwait(false),
+            CanManageUserRoles = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles),
+            CanManageCustomerPortal = await CanAsync(user, AuthorizationPolicyNames.ManageUserRoles),
+            CanManageUsers = await CanAsync(user, SystemPermissions.Users.Manage),
 
-            CanViewAccounting = await CanAsync(user, SystemPermissions.Finance.Accounting).ConfigureAwait(false),
+            CanViewAccounting = await CanAsync(user, SystemPermissions.Finance.Accounting),
         };
 
         return View(model);
@@ -61,7 +61,7 @@ public sealed class MenuNavigationComponent(IAuthorizationService authorizationS
 
     private async Task<bool> CanAsync(ClaimsPrincipal user, string policy)
     {
-        var result = await authorizationService.AuthorizeAsync(user, policy).ConfigureAwait(false);
+        var result = await authorizationService.AuthorizeAsync(user, policy);
         return result.Succeeded;
     }
 }

@@ -24,6 +24,8 @@ public interface IUserAppService
 
     Task<bool> IsUserInRoleAsync(Guid userId, string roleName);
 
+    Task<IEnumerable<string>> GetRoleNamesByUserIdAsync(Guid userId);
+
     Task<UpdateUserRolesResultAppDto> UpdateUserRolesAsync(UpdateUserRolesAppDto dto);
 
     Task<UserManagementResultAppDto> LockUserAsync(Guid userId);

@@ -1,10 +1,11 @@
 ﻿using NamEcommerce.Application.Contracts.Dtos.Users;
 using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Web.Services.Users;
 
-public sealed class CurrentUserService(ICurrentUserAccessor currentUserAccessor, IHttpContextAccessor httpContextAccessor) : ICurrentUserService
+public sealed class CurrentUserService(ICurrentUserAccessor currentUserAccessor, IUserAppService userAppService) : ICurrentUserService
 {
     public async ValueTask<CurrentUserInfoAppDto?> GetCurrentUserInfoAsync()
     {
@@ -15,12 +16,17 @@ public sealed class CurrentUserService(ICurrentUserAccessor currentUserAccessor,
         return new CurrentUserInfoAppDto(currentUser.Id, currentUser.Username, currentUser.FullName);
     }
 
-    public ValueTask<bool> IsAuthenticatedAsync()
+    public async Task<bool> IsAdmin()
     {
-        var httpContext = httpContextAccessor.HttpContext;
-        if (httpContext is null)
-            return ValueTask.FromResult(false);
+        var currentUser = await GetCurrentUserInfoAsync();
+        if (currentUser is null)
+            return false;
+        return await userAppService.IsUserInRoleAsync(currentUser!.Id, SystemUserRoleNames.Admin);
+    }
 
-        return ValueTask.FromResult(httpContext.User?.Identity?.IsAuthenticated ?? false);
+    public async ValueTask<bool> IsAuthenticatedAsync()
+    {
+        var currentUser = await GetCurrentUserInfoAsync();
+        return currentUser != null;
     }
 }

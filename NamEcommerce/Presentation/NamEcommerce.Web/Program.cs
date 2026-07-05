@@ -95,22 +95,6 @@ using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
-using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.CustomerPortal;
-using NamEcommerce.Domain.Entities.Customers;
-using NamEcommerce.Domain.Entities.Debts;
-using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.Finance;
-using NamEcommerce.Domain.Entities.GoodsReceipts;
-using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.Media;
-using NamEcommerce.Domain.Entities.Notifications;
-using NamEcommerce.Domain.Entities.Orders;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Entities.Returns;
-using NamEcommerce.Domain.Entities.StockAdjustment;
-using NamEcommerce.Domain.Entities.StockTransfer;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
@@ -222,6 +206,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
     services.AddScoped(typeof(IGetByIdService<>), typeof(EntityDataReader<>));
     services.AddScoped<IOutbox, OutboxAccessor>();
+
+    services.AddScoped<DefaultPageForRoleFilter>();
 
     // Outbox processor (background service) — đọc OutboxMessages chưa processed và publish qua MediatR.
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
@@ -410,6 +396,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     });
     services.AddMemoryCache();
     services.AddScoped<IPermissionCacheService, PermissionCacheService>();
+    services.AddScoped<IAuthorizationAppService, AuthorizationAppService>();
     services.AddScoped<IUserNotificationPermissionService, UserNotificationPermissionService>();
     services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     services.AddScoped<IAuthorizationHandler, ManageUserRolesAuthorizationHandler>();

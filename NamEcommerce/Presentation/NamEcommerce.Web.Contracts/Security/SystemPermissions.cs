@@ -2,6 +2,11 @@ namespace NamEcommerce.Web.Contracts.Security;
 
 public static class SystemPermissions
 {
+    public static class Dashboard
+    {
+        public const string System = "Dashboard.System.View";
+    }
+
     public static class Catalog
     {
         public const string CategoriesView = "Catalog.Categories.View";
@@ -111,6 +116,8 @@ public static class SystemPermissions
 
     public static IReadOnlyList<string> GetAll() =>
     [
+        Dashboard.System,
+
         Catalog.CategoriesView, Catalog.CategoriesManage,
         Catalog.ProductsView, Catalog.ProductsManage,
         Catalog.VendorsView, Catalog.VendorsManage,

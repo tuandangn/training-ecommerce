@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Models;
+using NamEcommerce.Web.Mvc.Filters;
 using NamEcommerce.Web.Services.Dashboard;
 using System.Diagnostics;
 
@@ -16,6 +17,7 @@ public sealed class HomeController : BaseController
     }
 
     [Authorize]
+    [ServiceFilter(typeof(DefaultPageForRoleFilter))]
     public async Task<IActionResult> Index()
     {
         var model = await _dashboardModelFactory.PrepareDashboardModelAsync().ConfigureAwait(false);

@@ -49,6 +49,9 @@ public sealed class SystemPermissionsSeeder(
             .Select(rp => (rp.RoleId, rp.PermissionId))
             .ToHashSet();
 
+        if (existingRolePermissions.Count > 0)
+            return;
+
         foreach (var (roleName, permissionNames) in DefaultRolePermissions())
         {
             var role = roles.FirstOrDefault(r =>
@@ -78,6 +81,11 @@ public sealed class SystemPermissionsSeeder(
 
     private static IEnumerable<(string Role, string[] Permissions)> DefaultRolePermissions()
     {
+        yield return (SystemUserRoleNames.Admin,
+        [
+            SystemPermissions.Dashboard.System
+        ]);
+
         yield return (SystemUserRoleNames.SalesStaff,
         [
             SystemPermissions.Catalog.CategoriesView,

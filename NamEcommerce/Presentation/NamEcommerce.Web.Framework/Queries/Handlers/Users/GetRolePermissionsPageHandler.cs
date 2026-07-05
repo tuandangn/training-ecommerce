@@ -13,6 +13,7 @@ public sealed class GetRolePermissionsPageHandler(
 {
     private static readonly Dictionary<string, string> GroupLabels = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["Dashboard"] = "Bảng điều khiển",
         ["Catalog"] = "Hàng hóa & Danh mục",
         ["Orders"] = "Bán hàng",
         ["DeliveryNotes"] = "Xuất kho",
@@ -32,6 +33,7 @@ public sealed class GetRolePermissionsPageHandler(
 
     private static readonly Dictionary<string, string> PermissionLabels = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["Dashboard.System.View"] = "Xem bảng điều khiển",
         ["Catalog.Categories.View"] = "Xem danh mục",
         ["Catalog.Categories.Manage"] = "Quản lý danh mục",
         ["Catalog.Products.View"] = "Xem hàng hóa",
