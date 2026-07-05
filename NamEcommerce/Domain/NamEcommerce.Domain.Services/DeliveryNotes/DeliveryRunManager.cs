@@ -123,6 +123,8 @@ public sealed class DeliveryRunManager(
     {
         var run = await runRepository.GetByIdAsync(id).ConfigureAwait(false)
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
+        if (!run.DriverCachedOnUtc.HasValue)
+            throw new NamEcommerceDomainException("Error.DeliveryRunDriverNotAccepted");
 
         var warehouseIds = GetRunWarehouseIds(run);
         if (!warehouseIds.Contains(warehouseId))

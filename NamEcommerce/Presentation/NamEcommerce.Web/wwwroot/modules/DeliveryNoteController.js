@@ -76,7 +76,7 @@ export default class DeliveryNoteController {
         this.#deliveredContainer.initialized = true;
 
         return {
-            setId: async (id) => {
+            setId: async (id, options = {}) => {
                 if (!id) throw new Error('Id is required');
                 this.#resetDeliveredControls();
                 const { acceptantItems: items, amountToCollect } = await this.#loadAcceptantItemsInfo(id);
@@ -84,7 +84,13 @@ export default class DeliveryNoteController {
                     window.NotificationCenter.error('Không thể tải dữ liệu.');
                     return;
                 }
-                this.#setDeliveredState({ id, items, amountToCollect });
+                this.#setDeliveredState({
+                    id,
+                    items,
+                    amountToCollect,
+                    receiverName: options.receiverName || '',
+                    cashCollectedAmount: options.cashCollectedAmount
+                });
                 this.#deliveredModal.show();
             }
         }
@@ -105,8 +111,11 @@ export default class DeliveryNoteController {
         $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
         $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
 
+        $('#receiverName').val(this.#deliveredState.receiverName || '');
+
         const cashCollectedAmount = document.getElementById('cashCollectedAmount');
-        cashCollectedAmount.value = DecimalFields.formatCurrency(this.#deliveredState.amountToCollect);
+        const cashAmount = this.#deliveredState.cashCollectedAmount ?? this.#deliveredState.amountToCollect;
+        cashCollectedAmount.value = DecimalFields.formatCurrency(cashAmount);
         cashCollectedAmount.closest('div').classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
 
         this.#deliveryTableEvents();

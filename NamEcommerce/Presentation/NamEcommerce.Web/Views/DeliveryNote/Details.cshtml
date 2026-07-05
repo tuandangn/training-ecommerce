@@ -22,7 +22,10 @@
     var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
     var canLeaveWarehouse = isDirectShip || isCounterPickup || isDeliveryUserAssigned;
     var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.PendingConfirmation
-        || (Model.Status == (int)DeliveryNoteStatus.Delivering && canLeaveWarehouse);
+        || Model.Status == (int)DeliveryNoteStatus.Delivering
+        || (Model.Status == (int)DeliveryNoteStatus.Confirmed && canLeaveWarehouse);
+    var needsDeliveryRunOverrideConfirmation = Model.DeliveryRunInfo != null
+        && (Model.DeliveryRunInfo.HandedOverOnUtc.HasValue || Model.DeliveryRunInfo.Status == (int)DeliveryRunStatus.HandedToDriver);
     var canUpdateShippingInfo = Model.Status != (int)DeliveryNoteStatus.Delivered
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
@@ -514,7 +517,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                     }
                     @if (Model.Status == (int)DeliveryNoteStatus.PendingConfirmation || Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
                     {
-                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)">
+                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" data-needs-run-override="@needsDeliveryRunOverrideConfirmation.ToString().ToLowerInvariant()" data-receiver-name="@Model.DeliveryReceiverName" data-cash-collected-amount="@((Model.DeliveryCashCollectedAmount ?? Model.AmountToCollect).ToString(System.Globalization.CultureInfo.InvariantCulture))" disabled="@(!canOpenDeliveredWorkflow)">
                             <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                         </button>
                     }
@@ -743,7 +746,13 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
 
 @if (Model.Status == (int)DeliveryNoteStatus.Confirmed || Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.PendingConfirmation)
 {
-    <partial name="_DeliveryNote.ConfirmDelivered" />
+    var confirmDeliveredViewData = new ViewDataDictionary(ViewData)
+    {
+        ["DeliveryNoteStatus"] = Model.Status,
+        ["DeliveryProofPictureId"] = Model.DeliveryProofPictureId,
+        ["DeliveryReceiverName"] = Model.DeliveryReceiverName
+    };
+    <partial name="_DeliveryNote.ConfirmDelivered" view-data="confirmDeliveredViewData" />
     <partial name="_DeliveryNote.ConfirmReject" model="Model.AvailableWarehouses" />
 }
 
@@ -834,13 +843,16 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
             // Mark Delivered Flow
             $('.btn-delivered').click(function(e) {
                 e.preventDefault();
-                var hasDeliveryUser = $(this).data('has-delivery-user') === 'true';
-                if (hasDeliveryUser) {
-                    if (!confirm('Phiếu đã được phân công người giao hàng. Bạn có chắc chắn muốn xác nhận đã giao không?')) {
+                var needsRunOverride = $(this).data('needs-run-override') === true || $(this).data('needs-run-override') === 'true';
+                if (needsRunOverride) {
+                    if (!confirm('Phiếu đã được bàn giao cho shipper. Xác nhận đã giao sẽ bỏ qua bước đối soát từ shipper, bạn có muốn tiếp tục không?')) {
                         return;
                     }
                 }
-                deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId('@Model.Id');
+                deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId('@Model.Id', {
+                    receiverName: $(this).data('receiver-name') || '',
+                    cashCollectedAmount: $(this).data('cash-collected-amount')
+                });
             });
 
 

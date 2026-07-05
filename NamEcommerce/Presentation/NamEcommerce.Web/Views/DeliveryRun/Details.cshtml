@@ -19,10 +19,11 @@
         || User.IsInRole(SystemUserRoleNames.WarehouseManager);
     var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.Cashier);
-    var offlineReady = Model.DriverCachedOnUtc.HasValue || Model.PaperManifestIssued;
+    var driverAccepted = Model.DriverCachedOnUtc.HasValue;
+    var offlineReady = driverAccepted || Model.PaperManifestIssued;
     var allWarehousesPicked = Model.PickingManifest.Count == 0 || Model.PickingManifest.All(g => g.Confirmed);
     var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
-    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady && allWarehousesPicked && !Model.IsDeliveryCompleted;
+    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && driverAccepted && offlineReady && allWarehousesPicked && !Model.IsDeliveryCompleted;
     var canClose = canManageDeliveryRun
         && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
         && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
@@ -35,6 +36,8 @@
     var canReviewCashCollected = canConfirmDeliveryRunCashHandover
         && !Model.CashHandoverConfirmedOnUtc.HasValue
         && status != DeliveryRunStatus.Cancelled;
+    var canReconcileDeliveryRunItems = canManageDeliveryRun && status != DeliveryRunStatus.Cancelled;
+    var showItemActions = canReviewCashCollected || canReconcileDeliveryRunItems;
     var deliveryProgressPercent = Model.Items.Count == 0
         ? 0
         : (int)Math.Round((decimal)Model.DeliveredItemCount * 100 / Model.Items.Count);
@@ -82,7 +85,7 @@
                 <form asp-action="HandOver" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
                     <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)"
-                            title="@(!offlineReady ? "Cần cache app hoặc in phiếu giấy trước" : !allWarehousesPicked ? "Cần xác nhận lấy đủ hàng ở tất cả kho trước khi bàn giao" : null)">
+                            title="@(!driverAccepted ? "Cần người giao nhận chuyến trước" : !allWarehousesPicked ? "Cần xác nhận lấy đủ hàng ở tất cả kho trước khi bàn giao" : null)">
                         <i class="bi bi-truck me-1"></i>Bàn giao
                     </button>
                 </form>
@@ -107,7 +110,7 @@
             }
         </div>
     </div>
-    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady && !Model.IsDeliveryCompleted)
+    @if (status == DeliveryRunStatus.ReadyForHandover && !driverAccepted && !Model.IsDeliveryCompleted)
     {
         <div class="alert alert-warning d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle fs-5"></i>
@@ -247,7 +250,7 @@
         var totalCount = Model.PickingManifest.Count;
         <div class="content-card-header d-flex align-items-center justify-content-between">
             <h5 class="mb-0">Phiếu lấy hàng theo kho</h5>
-            <span class="badge @(confirmedCount == totalCount ? "bg-success" : "bg-warning text-dark")">
+            <span class="badge @(confirmedCount == totalCount ? "bg-success" : "bg-warning")">
                 Đã lấy @confirmedCount/@totalCount kho
             </span>
         </div>
@@ -279,7 +282,8 @@
                                     <form asp-action="ConfirmWarehousePick" method="post">
                                         <input type="hidden" name="id" value="@Model.Id" />
                                         <input type="hidden" name="warehouseId" value="@group.WarehouseId" />
-                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" disabled="@(!driverAccepted)"
+                                                title="@(!driverAccepted ? "Cần người giao nhận chuyến trước khi kho lấy hàng" : null)">
                                             <i class="bi bi-check2 me-1"></i>Đã lấy đủ
                                         </button>
                                     </form>
@@ -316,7 +320,7 @@
                         <th>Địa chỉ giao</th>
                         <th class="text-end">Tiền COD</th>
                         <th class="text-end">Shipper thu</th>
-                        @if (canReviewCashCollected)
+                        @if (showItemActions)
                         {
                             <th class="text-end">Cập nhật</th>
                         }
@@ -368,10 +372,31 @@
                                     @(0m.DisplayCurrencyWithSymbol())
                                 }
                             </td>
-                            @if (canReviewCashCollected)
+                            @if (showItemActions)
                             {
                                 <td class="text-end">
-                                    @if (isDelivered)
+                                    @if (canReconcileDeliveryRunItems && item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
+                                    {
+                                        <form asp-action="ReconcileDeliveryNote" method="post" class="d-flex justify-content-end gap-2">
+                                            <input type="hidden" name="id" value="@Model.Id" />
+                                            <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+                                            @if (item.AmountToCollect > 0)
+                                            {
+                                                <input type="number" name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140" min="0" max="@item.AmountToCollect" step="1000" value="@(item.CashCollectedAmount ?? item.AmountToCollect)" />
+                                                <button type="submit" class="btn btn-sm btn-primary text-nowrap">
+                                                    <i class="bi bi-cash-coin me-1"></i>Xác nhận đã thu
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <input type="hidden" name="cashCollectedAmount" value="0" />
+                                                <button type="submit" class="btn btn-sm btn-success text-nowrap">
+                                                    <i class="bi bi-check-circle me-1"></i>Xác nhận đã giao
+                                                </button>
+                                            }
+                                        </form>
+                                    }
+                                    else if (canReviewCashCollected && isDelivered)
                                     {
                                         <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-2">
                                             <input type="hidden" name="id" value="@Model.Id" />

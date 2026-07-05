@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Security;
@@ -11,6 +14,8 @@ namespace NamEcommerce.Web.Controllers;
 [Authorize(Policy = SystemPermissions.DeliveryRuns.View)]
 public sealed class DeliveryRunController(
     IDeliveryRunModelFactory deliveryRunModelFactory,
+    IDeliveryNoteAppService deliveryNoteAppService,
+    IDeliveryRunAppService deliveryRunAppService,
     IMediator mediator) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -156,6 +161,55 @@ public sealed class DeliveryRunController(
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
             NotifyError(result.ErrorMessage ?? "Error.DeliveryRunCannotConfirmCashHandover");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
+    public async Task<IActionResult> ReconcileDeliveryNote(Guid id, Guid deliveryNoteId, decimal? cashCollectedAmount)
+    {
+        var run = await deliveryRunAppService.GetByIdAsync(id).ConfigureAwait(false);
+        if (run is null || run.Items.All(item => item.DeliveryNoteId != deliveryNoteId))
+        {
+            NotifyError("Error.DeliveryRunDeliveryNoteNotInRun");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+        {
+            NotifyError("Error.DeliveryNoteNotFound");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (deliveryNote.Status != (int)DeliveryNoteStatus.PendingConfirmation)
+        {
+            NotifyError("Error.DeliveryNoteMustBePendingConfirmation");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        IReadOnlyList<Guid> pictureIds = deliveryNote.DeliveryProofPictureId.HasValue
+            ? [deliveryNote.DeliveryProofPictureId.Value]
+            : [];
+
+        var result = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
+        {
+            DeliveryNoteId = deliveryNoteId,
+            PictureIds = pictureIds,
+            ReceiverName = deliveryNote.DeliveryReceiverName,
+            Acceptance = null,
+            CompletionMetadata = new DeliveryCompletionMetadataAppDto
+            {
+                Source = "WarehouseReconciliation",
+                CashCollectedAmount = cashCollectedAmount ?? deliveryNote.DeliveryCashCollectedAmount ?? 0m
+            }
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            NotifySuccess("Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.DeliveryNoteMarkDeliveredFailed");
 
         return RedirectToAction(nameof(Details), new { id });
     }

@@ -229,6 +229,7 @@ public sealed class DeliveryNoteAppService(
             var isCompletedByAdminOnBehalf = note is not null
                 && note.AssignedDeliveryUserId.HasValue
                 && note.Status != DeliveryNoteStatus.Delivered
+                && note.Status != DeliveryNoteStatus.PendingConfirmation
                 && !string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
 
             await deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
