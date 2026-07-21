@@ -7,7 +7,7 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 [Serializable]
 public sealed record DeliveryRun : AppAggregateEntity
 {
-    public DeliveryRun(Guid id) : base(id)
+    private DeliveryRun(Guid id) : base(id)
     {
         Code = string.Empty;
         AssignedDeliveryUsername = string.Empty;
@@ -56,6 +56,9 @@ public sealed record DeliveryRun : AppAggregateEntity
     private readonly List<DeliveryRunItem> _items;
     public IReadOnlyCollection<DeliveryRunItem> Items => _items.AsReadOnly();
 
+    private readonly List<DeliveryRunWarehousePick> _warehousePicks = [];
+    public IReadOnlyCollection<DeliveryRunWarehousePick> WarehousePicks => _warehousePicks.AsReadOnly();
+
     internal void AddItem(Guid deliveryNoteId, string deliveryNoteCode, string? orderCode, string customerName, string? shippingPhoneNumber,
         string shippingAddress, decimal amountToCollect)
     {
@@ -65,6 +68,16 @@ public sealed record DeliveryRun : AppAggregateEntity
             throw new NamEcommerceDomainException("Error.DeliveryRunDuplicateDeliveryNote");
 
         _items.Add(new DeliveryRunItem(Id, deliveryNoteId, deliveryNoteCode, orderCode, customerName, shippingPhoneNumber, shippingAddress, amountToCollect));
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    internal void UpdateItemAmountToCollect(Guid deliveryNoteId, decimal amount)
+    {
+        var item = _items.FirstOrDefault(i => i.DeliveryNoteId == deliveryNoteId);
+        if (item is null)
+            return;
+
+        item.UpdateAmountToCollect(amount);
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
@@ -88,7 +101,20 @@ public sealed record DeliveryRun : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
-    internal void HandOver(Guid? handedOverByUserId, DateTime handedOverOnUtc)
+    internal void ConfirmWarehousePick(Guid warehouseId, Guid? confirmedByUserId, string? confirmedByFullName, DateTime confirmedOnUtc)
+    {
+        if (Status != DeliveryRunStatus.ReadyForHandover)
+            throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmPick");
+        if (warehouseId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.WarehouseRequired");
+        if (_warehousePicks.Any(pick => pick.WarehouseId == warehouseId))
+            return;
+
+        _warehousePicks.Add(new DeliveryRunWarehousePick(Id, warehouseId, confirmedByUserId, confirmedByFullName, confirmedOnUtc));
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    internal void HandOver(IReadOnlyCollection<Guid> requiredWarehouseIds, Guid? handedOverByUserId, DateTime handedOverOnUtc)
     {
         if (Status != DeliveryRunStatus.ReadyForHandover)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotHandOver");
@@ -96,6 +122,10 @@ public sealed record DeliveryRun : AppAggregateEntity
             throw new NamEcommerceDomainException("Error.DeliveryRunItemsRequired");
         if (!DriverCachedOnUtc.HasValue && !PaperManifestIssued)
             throw new NamEcommerceDomainException("Error.DeliveryRunCacheOrManifestRequired");
+
+        var confirmedWarehouseIds = _warehousePicks.Select(pick => pick.WarehouseId).ToHashSet();
+        if (requiredWarehouseIds.Any(warehouseId => !confirmedWarehouseIds.Contains(warehouseId)))
+            throw new NamEcommerceDomainException("Error.DeliveryRunPickingIncomplete");
 
         Status = DeliveryRunStatus.HandedToDriver;
         HandedOverByUserId = handedOverByUserId;

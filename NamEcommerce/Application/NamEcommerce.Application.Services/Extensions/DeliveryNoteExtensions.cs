@@ -14,7 +14,6 @@ public static class DeliveryNoteExtensions
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode,
             CustomerId = deliveryNote.CustomerId,
-            WarehouseId = deliveryNote.WarehouseId,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
             AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
@@ -24,6 +23,7 @@ public static class DeliveryNoteExtensions
             CustomerAddress = deliveryNote.CustomerAddress,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
+            CanUpdateShippingInfo = deliveryNote.CanUpdateShippingInfo,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = (int)deliveryNote.Status,
@@ -49,6 +49,22 @@ public static class DeliveryNoteExtensions
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,
+            AmountToCollectOverrideNote = deliveryNote.AmountToCollectOverrideNote,
+            SettlementApproval = (int)deliveryNote.SettlementApproval,
+            ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
+            ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
+            ApprovedAgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge,
+            ApprovedAgreedChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            SettlementReason = deliveryNote.SettlementReason,
+            SettlementAdminNote = deliveryNote.SettlementAdminNote,
+            SettlementItems = deliveryNote.SettlementItems.Select(s => new DeliveryNoteSettlementItemAppDto
+            {
+                DeliveryNoteItemId = s.DeliveryNoteItemId,
+                AcceptedQuantity = s.AcceptedQuantity,
+                RejectedQuantity = s.RejectedQuantity,
+                RejectReason = s.RejectReason
+            }).ToList(),
             Items = deliveryNote.Items.Select(i => new DeliveryNoteItemAppDto
             {
                 Id = i.Id,
@@ -61,7 +77,11 @@ public static class DeliveryNoteExtensions
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
                 CostAtDispatch = i.CostAtDispatch
-            }).ToList()
+            }).ToList(),
+            CanApprove = deliveryNote.CanApprove,
+            CanMarkDelivering = deliveryNote.CanMarkDelivering,
+            CanMarkDelivered = deliveryNote.CanMarkDelivered,
+            CanReject = deliveryNote.CanReject,
         };
     }
 }

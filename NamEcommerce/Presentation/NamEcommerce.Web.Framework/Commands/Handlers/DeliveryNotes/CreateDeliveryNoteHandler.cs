@@ -32,9 +32,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             OrderId = request.OrderId,
             ShippingAddress = request.ShippingAddress,
             ShippingPhoneNumber = request.ShippingPhoneNumber,
-            WarehouseId = request.WarehouseId,
             ShowPrice = request.ShowPrice,
-            CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery,
             Note = request.Note,
             AmountToCollect = request.AmountToCollect,
             Surcharge = request.Surcharge,
@@ -42,12 +40,12 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             Items = selectedItems.Select(i => new CreateDeliveryNoteItemAppDto
             {
                 OrderItemId = i.OrderItemId,
-                WarehouseId = i.WarehouseId == Guid.Empty ? request.WarehouseId : i.WarehouseId,
+                WarehouseId = i.WarehouseId,
                 Quantity = i.Quantity
             }).ToList()
         };
-
         var result = await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
+
         return new CreateDeliveryNoteResultModel
         {
             Success = result.Success,

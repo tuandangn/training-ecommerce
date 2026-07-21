@@ -7,4 +7,6 @@ public interface ICurrentUserService
     ValueTask<CurrentUserInfoAppDto?> GetCurrentUserInfoAsync();
 
     ValueTask<bool> IsAuthenticatedAsync();
+
+    Task<bool> IsAdminAsync();
 }

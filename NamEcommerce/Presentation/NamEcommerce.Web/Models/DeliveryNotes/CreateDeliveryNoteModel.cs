@@ -18,22 +18,18 @@ public sealed class CreateDeliveryNoteModel
     [ValidateNever]
     public string? OrderNote { get; set; }
     [ValidateNever]
+    public Guid CustomerId { get; set; }
+    [ValidateNever]
     public string CustomerName { get; set; } = string.Empty;
     [ValidateNever]
     public string CustomerPhoneNumber { get; set; } = string.Empty;
     public string? CustomerAddress { get; set; }
     
     [Display(Name = "Địa chỉ giao hàng (*)", Prompt = "Nhập địa chỉ giao hàng")]
-    [Required(ErrorMessage = "Địa chỉ giao hàng là bắt buộc.")]
     public string ShippingAddress { get; set; } = string.Empty;
 
     [Display(Name = "Số điện thoại giao hàng (*)", Prompt = "Nhập số điện thoại giao hàng")]
-    [Required(ErrorMessage = "Số điện thoại giao hàng là bắt buộc.")]
     public string ShippingPhoneNumber { get; set; } = string.Empty;
-
-    [Display(Name = "Kho xuất hàng (*)")]
-    [Required(ErrorMessage = "Kho xuất hàng là bắt buộc.")]
-    public Guid WarehouseId { get; set; }
 
     [ValidateNever]
     public EntityOptionListModel? AvailableWarehouses { get; set; }
@@ -55,6 +51,12 @@ public sealed class CreateDeliveryNoteModel
 
     [Display(Name = "Số tiền phải thu (mặc định = tổng tiền + phụ phí)")]
     public decimal AmountToCollect { get; set; }
+
+    [ValidateNever]
+    public decimal AmountAlreadyPaidForOrder { get; set; }
+
+    [ValidateNever]
+    public bool IsRetailWalkInCustomer { get; set; }
 
     public IList<CreateDeliveryNoteItemModel> Items { get; set; } = [];
 }

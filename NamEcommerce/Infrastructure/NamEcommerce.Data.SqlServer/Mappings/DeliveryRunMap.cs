@@ -46,6 +46,29 @@ public sealed class DeliveryRunMap : IEntityTypeConfiguration<DeliveryRun>
             .HasForeignKey(item => item.DeliveryRunId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(run => run.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+
+        builder.HasMany(run => run.WarehousePicks)
+            .WithOne()
+            .HasForeignKey(pick => pick.DeliveryRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(run => run.WarehousePicks).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+    }
+}
+
+public sealed class DeliveryRunWarehousePickMap : IEntityTypeConfiguration<DeliveryRunWarehousePick>
+{
+    public void Configure(EntityTypeBuilder<DeliveryRunWarehousePick> builder)
+    {
+        builder.ToTable(nameof(DeliveryRunWarehousePick), DbScheme);
+        builder.HasKey(pick => pick.Id);
+
+        builder.Property(pick => pick.DeliveryRunId).IsRequired();
+        builder.Property(pick => pick.WarehouseId).IsRequired();
+        builder.Property(pick => pick.ConfirmedByUserId).IsRequired(false);
+        builder.Property(pick => pick.ConfirmedByFullName).HasMaxLength(200).IsRequired(false);
+        builder.Property(pick => pick.ConfirmedOnUtc).IsRequired();
+
+        builder.HasIndex(pick => new { pick.DeliveryRunId, pick.WarehouseId }).IsUnique();
     }
 }
 

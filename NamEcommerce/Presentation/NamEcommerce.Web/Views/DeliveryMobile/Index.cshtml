@@ -4,7 +4,49 @@
 @{
     Layout = "_DeliveryMobileLayout";
     ViewData["Title"] = "Giao hàng";
-    var cachePayload = JsonSerializer.Serialize(Model.Runs, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    var cachePayload = JsonSerializer.Serialize(Model.Runs.Select(run =>
+    {
+        var isWaitingHandover = (DeliveryRunStatus)run.Status == DeliveryRunStatus.ReadyForHandover;
+        return new
+        {
+            run.Id,
+            run.Code,
+            run.Status,
+            run.StatusName,
+            run.ItemCount,
+            run.DeliveredItemCount,
+            run.IsDeliveryCompleted,
+            AmountToCollect = isWaitingHandover ? 0m : run.AmountToCollect,
+            run.DriverCachedOnUtc,
+            run.PaperManifestIssued,
+            run.HandedOverOnUtc,
+            run.CreatedOnUtc,
+            Items = run.Items.Select(item => new
+            {
+                item.Id,
+                item.DeliveryNoteId,
+                item.DeliveryNoteCode,
+                item.OrderCode,
+                CustomerId = isWaitingHandover ? Guid.Empty : item.CustomerId,
+                CustomerName = isWaitingHandover ? null : item.CustomerName,
+                CustomerPhone = isWaitingHandover ? null : item.CustomerPhone,
+                ShippingPhoneNumber = isWaitingHandover ? null : item.ShippingPhoneNumber,
+                item.ShippingAddress,
+                AmountToCollect = isWaitingHandover ? 0m : item.AmountToCollect,
+                CashCollectedAmount = isWaitingHandover ? null : item.CashCollectedAmount,
+                ReceiverName = isWaitingHandover ? null : item.ReceiverName,
+                item.DeliveryNoteStatus,
+                ProductItems = item.ProductItems.Select(product => new
+                {
+                    product.DeliveryNoteItemId,
+                    product.ProductName,
+                    product.Quantity,
+                    product.UnitMeasurement,
+                    product.QuantityDecimalPlaces
+                }).ToList()
+            }).ToList()
+        };
+    }).ToList(), new JsonSerializerOptions(JsonSerializerDefaults.Web));
 }
 
 <div class="mobile-topbar">
@@ -37,6 +79,8 @@
             : status == DeliveryRunStatus.ReadyForHandover && run.DeliveredItemCount == 0
                 ? "bi-box-seam"
                 : "bi-truck";
+        var isWaitingHandover = status == DeliveryRunStatus.ReadyForHandover;
+        var visibleStops = isWaitingHandover ? run.Items : run.Items.Take(2);
 
         <article class="mobile-card">
             <div class="d-flex justify-content-between align-items-start gap-3">
@@ -55,63 +99,129 @@
                     <div class="mobile-stat-label">Phiếu giao</div>
                     <div class="mobile-stat-value">@run.ItemCount</div>
                 </div>
-                <div class="mobile-stat">
-                    <div class="mobile-stat-label">Cần thu</div>
-                    <div class="mobile-stat-value">@run.AmountToCollect.DisplayCurrencyWithSymbol()</div>
-                </div>
-            </div>
-
-            <div class="mobile-stop-list">
-                @foreach (var stop in run.Items.Take(2))
+                @if (!isWaitingHandover)
                 {
-                    var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
-                    var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
-                    var productParts = stop.ProductItems
-                        .Take(2)
-                        .Select(product => product.ProductName)
-                        .ToList();
-                    var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join(", ", productParts);
-                    var remainingProductCount = stop.ProductItems.Count - productParts.Count;
-                    var totalQuantity = stop.ProductItems.Sum(product => product.Quantity);
-                    if (remainingProductCount > 0)
-                    {
-                        productSummary = $"{productSummary} +{remainingProductCount} mặt hàng";
-                    }
-
-                    <div class="mobile-stop">
-                        <div class="mobile-stop-header">
-                            <strong>@receiverName</strong>
-                            @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
-                            {
-                                <a href="tel:@shippingPhoneNumber" class="mobile-phone-link">@shippingPhoneNumber</a>
-                            }
-                        </div>
-                        <div class="mobile-stop-address">@stop.ShippingAddress</div>
-                        <div class="mobile-stop-goods">
-                            <span>@productSummary</span>
-                            @if (totalQuantity > 0)
-                            {
-                                <strong>@totalQuantity.DisplayQuantity()</strong>
-                            }
-                        </div>
+                    <div class="mobile-stat">
+                        <div class="mobile-stat-label">Cần thu</div>
+                        <div class="mobile-stat-value">@run.AmountToCollect.DisplayCurrencyWithSymbol()</div>
                     </div>
                 }
-                @if (run.Items.Count > 2)
-                {
-                    <div class="mobile-meta mt-2">Còn @(run.Items.Count - 2) điểm giao khác</div>
-                }
             </div>
+
+            @if (isWaitingHandover)
+            {
+                <div class="mobile-stop-list">
+                    @foreach (var stop in visibleStops)
+                    {
+                        var productParts = stop.ProductItems
+                            .Take(2)
+                            .Select(product => $"<div class=\"bg-light p-2 me-2 mb-2\">{product.ProductName} <span class=\"text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span> <span class=\"text-muted\">(kho {product.WarehouseName})</span></div>")
+                            .ToList();
+                        var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join("", productParts);
+                        var remainingProductCount = stop.ProductItems.Count - productParts.Count;
+                        var totalQuantity = stop.ProductItems.Sum(product => product.Quantity);
+
+                        <div class="mobile-stop pb-0">
+                            @if (!isWaitingHandover)
+                            {
+                                var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
+                                var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
+                                <div class="mobile-stop-header">
+                                    <strong>@receiverName</strong>
+                                    @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
+                                    {
+                                        <a href="tel:@shippingPhoneNumber" class="mobile-phone-link">@shippingPhoneNumber</a>
+                                    }
+                                </div>
+                            }
+                            <div class="mobile-stop-address mb-2" style="@(isWaitingHandover ? "font-size:1rem;font-weight:600;" : "")">@stop.ShippingAddress</div>
+                            <div class="mobile-stop-goods">
+                                <div>@Html.Raw(productSummary)</div>
+                                @if (remainingProductCount > 0)
+                                {
+                                    <strong>+@(remainingProductCount) mặt hàng</strong>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (!isWaitingHandover && run.Items.Count > 2)
+                    {
+                        <div class="mobile-meta">Còn @(run.Items.Count - 2) điểm giao khác</div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="mobile-stop-list">
+                    @foreach (var stop in visibleStops)
+                    {
+                        var productGroups = stop.ProductItems.GroupBy(item => item.ProductId).ToList();
+                        var productParts = productGroups.Take(2)
+                            .Select(group =>
+                            {
+                                var product = group.First();
+                                return new { product.ProductName, Quantity = group.Sum(p => p.Quantity), product.QuantityDecimalPlaces, product.UnitMeasurement };
+                            })
+                            .Select(product => $"<div class=\"bg-light p-2 me-2 mb-2\">{product.ProductName} <span class=\"text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span></div>")
+                            .ToList();
+                        var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join("", productParts);
+                        var remainingProductCount = productGroups.Count - productParts.Count;
+                        var totalQuantity = stop.ProductItems.Sum(product => product.Quantity);
+
+                        <div class="mobile-stop pb-0">
+                            @if (!isWaitingHandover)
+                            {
+                                var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
+                                var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
+                                <div class="mobile-stop-header">
+                                    <strong>@receiverName</strong>
+                                    @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
+                                    {
+                                        <a href="tel:@shippingPhoneNumber" class="mobile-phone-link">@shippingPhoneNumber</a>
+                                    }
+                                </div>
+                            }
+                            <div class="mobile-stop-address mb-2" style="@(isWaitingHandover ? "font-size:1rem;font-weight:600;" : "")">@stop.ShippingAddress</div>
+                            <div class="mobile-stop-goods">
+                                <div>@Html.Raw(productSummary)</div>
+                                @if (remainingProductCount > 0)
+                                {
+                                    <strong>+@(remainingProductCount) mặt hàng</strong>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (!isWaitingHandover && run.Items.Count > 2)
+                    {
+                        <div class="mobile-meta">Còn @(run.Items.Count - 2) điểm giao khác</div>
+                    }
+                </div>
+            }
 
             @if (run.HandedOverOnUtc.HasValue)
             {
-                <div class="mobile-meta mt-3">
+                <div class="mobile-meta">
                     <i class="bi bi-clock-history me-1"></i>Bàn giao @run.HandedOverOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")
                 </div>
             }
 
-            <a asp-action="Run" asp-route-id="@run.Id" class="btn btn-primary mobile-action-button w-100 mt-3">
-                <i class="bi bi-arrow-right-circle me-1"></i>Mở chuyến
-            </a>
+            @if (isWaitingHandover)
+            {
+                <form asp-action="ReceiveRun" method="post" class="mt-3" data-receive-run-form>
+                    <input type="hidden" name="id" value="@run.Id" />
+                    <input type="hidden" name="deviceId" />
+                    <button type="submit" class="btn btn-primary mobile-action-button w-100" disabled="@run.DriverCachedOnUtc.HasValue">
+                        <i class="bi @(run.DriverCachedOnUtc.HasValue ? "bi-check-circle" : "bi-box-arrow-in-down") me-1"></i>
+                        @(run.DriverCachedOnUtc.HasValue ? "Đã nhận chuyến" : "Nhận chuyến")
+                    </button>
+                </form>
+            }
+            else
+            {
+                <a asp-action="Run" asp-route-id="@run.Id" class="btn btn-primary mobile-action-button w-100 mt-3">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Mở chuyến
+                </a>
+            }
         </article>
     }
 }

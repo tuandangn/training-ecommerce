@@ -13,11 +13,11 @@ public sealed class DataSeederRunner(IEnumerable<IDataSeeder> seeders, IUnitOfWo
             {
                 await seeder.SeedAsync(cancellationToken).ConfigureAwait(false);
                 await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
-                logger.LogInformation("Seeder {Seeder} completed.", name);
+                logger.LogInformation("Seeder {0} completed.", name);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Seeder {Seeder} failed.", name);
+                logger.LogError(ex, "Seeder {0} failed.", name);
                 throw;
             }
         }

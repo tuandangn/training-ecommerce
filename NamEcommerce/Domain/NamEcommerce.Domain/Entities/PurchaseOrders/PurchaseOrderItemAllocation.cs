@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -8,12 +9,16 @@ namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 [Serializable]
 public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
 {
-    internal PurchaseOrderItemAllocation(Guid purchaseOrderItemId, Guid orderItemId, decimal allocatedQuantity)
+    private PurchaseOrderItemAllocation(Guid id) : base(id)
+    {
+    }
+
+    internal PurchaseOrderItemAllocation(SecondaryItemId purchaseOrderItemId, SecondaryItemId orderItemId, decimal allocatedQuantity)
         : base(Guid.NewGuid())
     {
-        if (purchaseOrderItemId == Guid.Empty)
+        if (!purchaseOrderItemId.IsValid())
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemIsNotFound");
-        if (orderItemId == Guid.Empty)
+        if (!orderItemId.IsValid())
             throw new PurchaseOrderItemDataIsInvalidException("Error.OrderItemIsNotFound");
         if (allocatedQuantity <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
@@ -26,8 +31,8 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    public Guid PurchaseOrderItemId { get; private set; }
-    public Guid OrderItemId { get; private set; }
+    public SecondaryItemId PurchaseOrderItemId { get; private set; }
+    public SecondaryItemId OrderItemId { get; private set; }
     public decimal AllocatedQuantity { get; private set; }
     public decimal ReceivedQuantity { get; private set; }
     public AllocationStatus Status { get; private set; }
@@ -36,7 +41,6 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     public string? DirectShipAddress { get; private set; }
     public string? DirectShipContactName { get; private set; }
     public string? DirectShipContactPhone { get; private set; }
-    /// <summary>Số càng cao càng ưu tiên khi NCC giao thiếu.</summary>
     public int DirectShipPriority { get; private set; }
 
     public DateTime CreatedOnUtc { get; private set; }

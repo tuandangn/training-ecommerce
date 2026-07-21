@@ -14,6 +14,8 @@ public interface IDeliveryNoteManager
     
     Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto);
 
+    Task MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredDto dto);
+
     Task AssignDeliveryUserAsync(AssignDeliveryUserDto dto);
 
     Task UpdateShippingAsync(UpdateDeliveryNoteShippingDto dto);
@@ -26,6 +28,17 @@ public interface IDeliveryNoteManager
         DeliveryAcceptanceDto? acceptance = null);
     
     Task CancelAsync(Guid id);
+
+    Task RequestSettlementApprovalAsync(RequestDeliverySettlementDto dto);
+
+    Task ApproveSettlementAsync(ApproveDeliverySettlementDto dto);
+
+    Task RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId);
+
+    Task CompleteApprovedSettlementAsync(
+        Guid id,
+        IReadOnlyList<Guid> pictureIds,
+        DeliveryCompletionMetadataDto? completionMetadata);
     
     /// <summary>
     /// Tự động tạo DeliveryNote ở trạng thái Delivered ngay khi VendorReturn được Confirm.
@@ -50,4 +63,6 @@ public interface IDeliveryNoteManager
     Task<IDictionary<Guid, decimal>> GetDeliveredQuantitiesAsync(IEnumerable<Guid> orderItemIds);
 
     Task<IDictionary<Guid, List<DeliveryNoteLinkDto>>> GetDeliveryNoteLinksAsync(IEnumerable<Guid> orderItemIds);
+
+    Task AdminUpdateAmountToCollectAsync(Guid deliveryNoteId, decimal newAmount, string? note, Guid? adminUserId);
 }

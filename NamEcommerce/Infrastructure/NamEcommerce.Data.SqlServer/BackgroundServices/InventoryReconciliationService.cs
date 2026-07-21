@@ -1,9 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
 
 namespace NamEcommerce.Data.SqlServer.BackgroundServices;
 

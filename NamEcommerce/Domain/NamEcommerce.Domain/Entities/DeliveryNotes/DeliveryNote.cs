@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Metadata;
-using System.Linq;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
@@ -14,66 +13,30 @@ public sealed record DeliveryNote : AppAggregateEntity
 {
     public const string CODE_PREFIX = "PX";
 
-    public DeliveryNote(Guid id) : base(id)
+    private DeliveryNote(Guid id) : base(id)
     {
-        Code = string.Empty;
-        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
-        ShippingAddress = string.Empty;
-        ShippingPhoneNumber = string.Empty;
-        _items = [];
     }
 
-    internal DeliveryNote(string code, Guid warehouseId, string? note, Guid? createdByUserId) : base(Guid.NewGuid())
-    {
-        Code = code;
-        WarehouseId = warehouseId;
-        Note = note;
-        CreatedByUserId = createdByUserId;
-        Status = DeliveryNoteStatus.Draft;
-        CreatedOnUtc = DateTime.UtcNow;
-        OrderId = Guid.Empty;
-        CustomerId = Guid.Empty;
-        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
-        ShippingAddress = string.Empty;
-        ShippingPhoneNumber = string.Empty;
-        _items = [];
-    }
-
-    internal DeliveryNote(string code, Guid orderId,
-        Guid customerId, string customerName, string customerPhone, string? customerAddress,
-        string shippingAddress, string? shippingPhoneNumber, Guid warehouseId, bool showPrice, string? note,
-        decimal surcharge, decimal amountToCollect, string? surchargeReason,
-        Guid? createdByUserId) : base(Guid.NewGuid())
+    internal DeliveryNote(string code, Guid orderId, Guid customerId, decimal amountToCollect, decimal surcharge) : base(Guid.NewGuid())
     {
         Code = code;
         OrderId = orderId;
         CustomerId = customerId;
-        CustomerInfo = new CustomerInfo(customerName, customerPhone, customerAddress);
-        ShippingAddress = shippingAddress;
-        ShippingPhoneNumber = string.IsNullOrWhiteSpace(shippingPhoneNumber) ? null : shippingPhoneNumber.Trim();
-        ShowPrice = showPrice;
-        Note = note;
         Surcharge = surcharge;
         AmountToCollect = amountToCollect;
-        SurchargeReason = surchargeReason;
         Status = DeliveryNoteStatus.Draft;
-        CreatedByUserId = createdByUserId;
-        WarehouseId = warehouseId;
         CreatedOnUtc = DateTime.UtcNow;
         _items = [];
     }
 
     public string Code { get; private set; }
     public DeliveryNoteStatus Status { get; private set; }
-    public Guid? CreatedByUserId { get; private set; }
-    public bool ShowPrice { get; private set; }
-    public string? Note { get; private set; }
+    public Guid? CreatedByUserId { get; internal set; }
+    public bool ShowPrice { get; internal set; }
+    public string? Note { get; internal set; }
 
     public Guid OrderId { get; private set; }
     public string? OrderCode { get; set; }
-
-    public Guid WarehouseId { get; private set; }
-    public string? WarehouseName { get; internal set; }
 
     public Guid? AssignedDeliveryUserId { get; private set; }
     public string? AssignedDeliveryUsername { get; private set; }
@@ -81,10 +44,10 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DateTime? AssignedDeliveryOnUtc { get; private set; }
 
     public Guid CustomerId { get; private set; }
-    public CustomerInfo CustomerInfo { get; private set; }
+    public CustomerInfo CustomerInfo { get; internal set; }
     public NormalizableString ShippingAddress { get; internal set; }
     public string? ShippingPhoneNumber { get; internal set; }
-    
+
     public decimal Surcharge { get; internal set; }
     public string? SurchargeReason { get; internal set; }
     public decimal AmountToCollect { get; internal set; }
@@ -103,7 +66,7 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     private readonly List<DeliveryNoteItem> _items;
     public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
-    
+
     public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
 
     public bool IsDirectShip { get; private set; }
@@ -124,11 +87,36 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? DeliveryCompletionSource { get; private set; }
     public string? DeliveryCompletionIdempotencyKey { get; private set; }
     public decimal? DeliveryCashCollectedAmount { get; private set; }
-    
+
+    public DateTime? AmountToCollectOverriddenAt { get; private set; }
+    public string? AmountToCollectOverrideNote { get; private set; }
+
+    public DeliverySettlementApprovalStatus SettlementApproval { get; private set; } = DeliverySettlementApprovalStatus.NotRequired;
+    public decimal? ProposedAmountToCollect { get; private set; }
+    public decimal? ApprovedAmountToCollect { get; private set; }
+    public decimal? ApprovedAgreedCustomerCharge { get; private set; }
+    public string? ApprovedAgreedChargeReason { get; private set; }
+    public string? SettlementReason { get; private set; }
+    public string? SettlementAdminNote { get; private set; }
+    public Guid? SettlementRequestedByUserId { get; private set; }
+    public DateTime? SettlementRequestedOnUtc { get; private set; }
+    public Guid? SettlementApprovedByUserId { get; private set; }
+    public DateTime? SettlementApprovedOnUtc { get; private set; }
+
+    private readonly List<DeliveryNoteSettlementItem> _settlementItems = [];
+    public IReadOnlyCollection<DeliveryNoteSettlementItem> SettlementItems => _settlementItems.AsReadOnly();
+
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    #region Events
+    #region Method
+
+    public bool CanApprove() => !IsDirectShip && Status is DeliveryNoteStatus.Draft;
+    public bool CanMarkDelivering() => !IsDirectShip && Status is DeliveryNoteStatus.Confirmed && !AssignedDeliveryUserId.HasValue;
+    public bool CanMarkDelivered() => Status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering);
+    public bool CanReject() => IsDirectShip;
+
+    public bool CanEditShippingInfo() => Status is not (DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled);
 
     internal void AddItem(Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice)
     {
@@ -154,8 +142,22 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect, AmountToCollect));
     }
 
-    internal void MarkCreated()
-        => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+    internal void MarkCreated() => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+
+    internal void UpdateAmountToCollect(decimal amount, string? note)
+    {
+        if (Status is DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled)
+            throw new NamEcommerceDomainException("Error.DeliveryNote.CannotUpdateAmountWhenCompleted");
+        if (amount < 0)
+            throw new NamEcommerceDomainException("Error.AmountToCollectCannotBeNegative");
+
+        AmountToCollect = amount;
+        AmountToCollectOverriddenAt = DateTime.UtcNow;
+        AmountToCollectOverrideNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteAmountToCollectUpdated(Id, OrderId, Code, amount));
+    }
 
     internal void UpdateShippingInfo(string shippingAddress, string? shippingPhoneNumber)
     {
@@ -226,8 +228,13 @@ public sealed record DeliveryNote : AppAggregateEntity
         decimal rejectedGoodsAmount = 0,
         decimal? debtAmount = null)
     {
-        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+        if (Status != DeliveryNoteStatus.Delivering
+            && Status != DeliveryNoteStatus.Confirmed
+            && Status != DeliveryNoteStatus.PendingConfirmation)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
 
         if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
             throw new DeliveryProofRequiredException();
@@ -250,6 +257,46 @@ public sealed record DeliveryNote : AppAggregateEntity
             CustomerId,
             AmountToCollect,
             debtAmount ?? AmountToCollect + rejectedGoodsAmount));
+    }
+
+    internal void MarkPendingConfirmation(
+        IReadOnlyList<Guid> pictureIds,
+        string? receiverName,
+        double? latitude = null,
+        double? longitude = null,
+        string? locationAddress = null,
+        string? completionNote = null,
+        string? completionSource = null,
+        string? idempotencyKey = null,
+        decimal? cashCollectedAmount = null,
+        IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)>? acceptanceLines = null)
+    {
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.PendingConfirmation);
+
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+
+        if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
+            throw new DeliveryProofRequiredException();
+
+        var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
+
+        Status = DeliveryNoteStatus.PendingConfirmation;
+        DeliveryProofPictureId = pictureIds[0];
+        DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
+        DeliveryReceiverName = receiverName;
+        SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey, cashCollectedAmount);
+        _settlementItems.Clear();
+        if (acceptanceLines is not null)
+        {
+            foreach (var line in acceptanceLines)
+                _settlementItems.Add(new DeliveryNoteSettlementItem(Id, line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+        }
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        if (wasConfirmed)
+            RaiseDomainEvent(new DeliveryNoteDelivering(Id));
     }
 
     internal bool HasSameDeliveryCompletionRequest(string? idempotencyKey)
@@ -300,14 +347,90 @@ public sealed record DeliveryNote : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
 
         if (wasConfirmed)
+        {
             RaiseDomainEvent(new DeliveryNoteDelivering(Id));
-        RaiseDomainEvent(new DeliveryNoteDelivered(
-            Id,
-            OrderId,
-            CustomerId,
-            AmountToCollect,
-            debtAmount ?? AmountToCollect + rejectedGoodsAmount));
+        }
+        var totalAmountToCollect = debtAmount ?? AmountToCollect + rejectedGoodsAmount;
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect,totalAmountToCollect));
         return true;
+    }
+
+    internal void RequestSettlementApproval(
+        decimal proposedAmountToCollect,
+        string? reason,
+        IReadOnlyList<Guid> proofPictureIds,
+        string? receiverName,
+        IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)> acceptanceLines,
+        Guid? requestedByUserId,
+        DateTime requestedOnUtc)
+    {
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.AlreadyPending");
+        if (proofPictureIds is null || proofPictureIds.Count == 0 || proofPictureIds[0] == Guid.Empty)
+            throw new DeliveryProofRequiredException();
+
+        SettlementApproval = DeliverySettlementApprovalStatus.PendingApproval;
+        ProposedAmountToCollect = Math.Max(0m, proposedAmountToCollect);
+        SettlementReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        ApprovedAmountToCollect = null;
+        ApprovedAgreedCustomerCharge = null;
+        ApprovedAgreedChargeReason = null;
+        SettlementAdminNote = null;
+        SettlementApprovedByUserId = null;
+        SettlementApprovedOnUtc = null;
+        DeliveryProofPictureId = proofPictureIds[0];
+        DeliveryProofPictureIds = proofPictureIds.ToList().AsReadOnly();
+        DeliveryReceiverName = string.IsNullOrWhiteSpace(receiverName) ? DeliveryReceiverName : receiverName;
+        SettlementRequestedByUserId = requestedByUserId;
+        SettlementRequestedOnUtc = requestedOnUtc;
+
+        _settlementItems.Clear();
+        foreach (var line in acceptanceLines)
+            _settlementItems.Add(new DeliveryNoteSettlementItem(Id, line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementApprovalRequested(Id, OrderId, Code));
+    }
+
+    internal void ApproveSettlement(
+        decimal approvedCashToCollect,
+        decimal agreedCustomerCharge,
+        string? agreedChargeReason,
+        string? adminNote,
+        Guid? approvedByUserId,
+        DateTime approvedOnUtc)
+    {
+        if (SettlementApproval != DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+        if (approvedCashToCollect < 0 || agreedCustomerCharge < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+
+        SettlementApproval = DeliverySettlementApprovalStatus.Approved;
+        ApprovedAmountToCollect = approvedCashToCollect;
+        ApprovedAgreedCustomerCharge = agreedCustomerCharge;
+        ApprovedAgreedChargeReason = string.IsNullOrWhiteSpace(agreedChargeReason) ? null : agreedChargeReason.Trim();
+        SettlementAdminNote = string.IsNullOrWhiteSpace(adminNote) ? null : adminNote.Trim();
+        SettlementApprovedByUserId = approvedByUserId;
+        SettlementApprovedOnUtc = approvedOnUtc;
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementApproved(Id, OrderId, Code, approvedCashToCollect));
+    }
+
+    internal void RejectSettlement(string reason, Guid? approvedByUserId, DateTime approvedOnUtc)
+    {
+        if (SettlementApproval != DeliverySettlementApprovalStatus.PendingApproval)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.ReasonRequired");
+
+        SettlementApproval = DeliverySettlementApprovalStatus.Rejected;
+        SettlementAdminNote = reason.Trim();
+        SettlementApprovedByUserId = approvedByUserId;
+        SettlementApprovedOnUtc = approvedOnUtc;
+        UpdatedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new DeliverySettlementRejected(Id, OrderId, Code, reason.Trim()));
     }
 
     internal void Cancel()
@@ -315,7 +438,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status == DeliveryNoteStatus.Delivered)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
 
-        var wasReservingStock = Status == DeliveryNoteStatus.Confirmed || Status == DeliveryNoteStatus.Delivering;
+        var wasReservingStock = Status == DeliveryNoteStatus.Confirmed
+            || Status == DeliveryNoteStatus.Delivering
+            || Status == DeliveryNoteStatus.PendingConfirmation;
 
         Status = DeliveryNoteStatus.Cancelled;
         UpdatedOnUtc = DateTime.UtcNow;

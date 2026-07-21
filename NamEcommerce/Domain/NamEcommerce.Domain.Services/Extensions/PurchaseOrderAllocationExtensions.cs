@@ -8,8 +8,10 @@ public static class PurchaseOrderAllocationExtensions
     public static PurchaseOrderItemAllocationDto ToDto(this PurchaseOrderItemAllocation allocation)
         => new(allocation.Id)
         {
-            PurchaseOrderItemId = allocation.PurchaseOrderItemId,
-            OrderItemId = allocation.OrderItemId,
+            PurchaseOrderId = allocation.PurchaseOrderItemId.PrimaryId,
+            PurchaseOrderItemId = allocation.PurchaseOrderItemId.SecondaryId,
+            OrderId = allocation.OrderItemId.PrimaryId,
+            OrderItemId = allocation.OrderItemId.SecondaryId,
             AllocatedQuantity = allocation.AllocatedQuantity,
             ReceivedQuantity = allocation.ReceivedQuantity,
             Status = allocation.Status,

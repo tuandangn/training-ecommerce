@@ -9,7 +9,6 @@
         || Model.CanViewCustomers;
     var showPurchases = Model.CanViewPurchaseOrders
         || Model.CanCreatePurchaseOrders
-        || Model.CanViewDirectShip
         || Model.CanManageVendorReturns;
     var showInventory = Model.CanViewInventory
         || Model.CanViewDeliveryNotes
@@ -18,10 +17,7 @@
         || Model.CanAdjustInventory;
     var showDebt = Model.CanViewCustomerDebts
         || Model.CanViewVendorDebts
-        || Model.CanManageCustomerRefunds
-        || Model.CanViewFinancialReports
-        || Model.CanViewDirectShipReports
-        || Model.CanViewExpenses;
+        || Model.CanManageCustomerRefunds;
     var showCatalog = Model.CanViewProducts
         || Model.CanViewCategories
         || Model.CanManageWarehouses
@@ -86,31 +82,19 @@
     @if (showPurchases)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "VendorReturn", "DirectShipDelivery") ? "" : "collapsed")" 
-                data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "VendorReturn", "DirectShipDelivery") ? "true" : "false")">
+            <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "VendorReturn") ? "" : "collapsed")"
+               data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "VendorReturn") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Nhập hàng
             </a>
-            <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "VendorReturn", "DirectShipDelivery") ? "show" : "")" id="collapsePurchases">
+            <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "VendorReturn") ? "show" : "")" id="collapsePurchases">
                 <ul class="nav flex-column sub-menu">
                     @if (Model.CanViewPurchaseOrders)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Create") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Details") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Create") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "QuickCreate") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Details") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="ShortageAggregation">Hàng cần nhập</a>
-                        </li>
-                    }
-                    @if (Model.CanCreatePurchaseOrders)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "QuickCreate") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="QuickCreate">Nhập nhanh</a>
-                        </li>
-                    }
-                    @if (Model.CanViewDirectShip)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DirectShipDelivery") ? "active" : "")" asp-controller="DirectShipDelivery" asp-action="Pending">Hàng giao thẳng</a>
                         </li>
                     }
                     @if (Model.CanManageVendorReturns)
@@ -123,14 +107,13 @@
             </div>
         </li>
     }
-
     @if (showInventory)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("Inventory", "DeliveryNote", "DeliveryRun", "GoodsReceipt", "StockAdjustment") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseInventory" aria-expanded="@(WebHelper.IsHasController("Inventory", "DeliveryNote", "DeliveryRun", "GoodsReceipt", "StockAdjustment") ? "true" : "false")">
+            <a class="nav-link @(WebHelper.IsHasController("Inventory", "DeliveryNote", "GoodsReceipt", "StockAdjustment") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseInventory" aria-expanded="@(WebHelper.IsHasController("Inventory", "DeliveryNote", "GoodsReceipt", "StockAdjustment") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Tồn kho
             </a>
-            <div class="collapse @(WebHelper.IsHasController("Inventory", "DeliveryNote", "DeliveryRun", "GoodsReceipt", "StockAdjustment") ? "show" : "")" id="collapseInventory">
+            <div class="collapse @(WebHelper.IsHasController("Inventory", "DeliveryNote", "GoodsReceipt", "StockAdjustment") ? "show" : "")" id="collapseInventory">
                 <ul class="nav flex-column sub-menu">
                     @if (Model.CanViewInventory)
                     {
@@ -142,12 +125,6 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryNote") ? "active" : "")" asp-controller="DeliveryNote" asp-action="List">Xuất kho</a>
-                        </li>
-                    }
-                    @if (Model.CanViewDeliveryRuns)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryRun") ? "active" : "")" asp-controller="DeliveryRun" asp-action="List">Chuyến giao</a>
                         </li>
                     }
                     @if (Model.CanManageGoodsReceipts)
@@ -166,23 +143,47 @@
             </div>
         </li>
     }
-
-    @if (Model.CanUseDeliveryMobile)
+    @if (Model.CanUseDeliveryMobile || Model.CanViewDirectShip || Model.CanViewDeliveryRuns)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryMobile") ? "active" : "")" asp-controller="DeliveryMobile" asp-action="Index">
+            <a class="nav-link @(WebHelper.IsHasController("DeliveryMobile", "DirectShipDelivery", "DeliveryRun") ? "" : "collapsed")"
+               data-bs-toggle="collapse" href="#collapseDelivery" aria-expanded="@(WebHelper.IsHasController("DeliveryMobile", "DirectShipDelivery", "DeliveryRun") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Giao hàng
             </a>
+            <div class="collapse @(WebHelper.IsHasController("DeliveryMobile", "DirectShipDelivery", "DeliveryRun") ? "show" : "")" id="collapseDelivery">
+                <ul class="nav flex-column sub-menu">
+                    @if (Model.CanViewDirectShip)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DirectShipDelivery") ? "active" : "")" asp-controller="DirectShipDelivery" asp-action="Pending">Hàng giao thẳng</a>
+                        </li>
+                    }
+                    @if (Model.CanViewDeliveryRuns)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryRun") ? "active" : "")" asp-controller="DeliveryRun" asp-action="List">Chuyến giao</a>
+                        </li>
+                    }
+                    @if (Model.CanUseDeliveryMobile)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryMobile") ? "active" : "")" asp-controller="DeliveryMobile" asp-action="Index">
+                                Shipper giao hàng
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
         </li>
     }
-
     @if (showDebt)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund", "Report", "Expense") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseDebt" aria-expanded="@(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund", "Report", "Expense") ? "true" : "false")">
+            <a class="nav-link @(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseDebt"
+                aria-expanded="@(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Công nợ
             </a>
-            <div class="collapse @(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund", "Report", "Expense") ? "show" : "")" id="collapseDebt">
+            <div class="collapse @(WebHelper.IsHasController("VendorDebt", "CustomerDebt", "CustomerRefund") ? "show" : "")" id="collapseDebt">
                 <ul class="nav flex-column sub-menu">
                     @if (Model.CanViewCustomerDebts)
                     {
@@ -202,6 +203,49 @@
                             <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerRefund") ? "active" : "")" asp-controller="CustomerRefund" asp-action="List">Hoàn tiền khách</a>
                         </li>
                     }
+                </ul>
+            </div>
+        </li>
+    }
+    @if (Model.CanViewAccounting || Model.CanViewExpenses || Model.CanViewFinancialReports || Model.CanViewDirectShipReports)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(WebHelper.IsHasController("Accounting", "Expense", "Report") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseAccounting" 
+               aria-expanded="@(WebHelper.IsHasController("Accounting", "Expense", "Report") ? "true" : "false")">
+                <i class="bi bi-circle-fill ui-nav-dot"></i> Kế toán
+            </a>
+            <div class="collapse @(WebHelper.IsHasController("Accounting", "Expense", "Report") ? "show" : "")" id="collapseAccounting">
+                <ul class="nav flex-column sub-menu">
+                    @if (Model.CanViewAccounting)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashBook") ? "active" : "")" asp-controller="Accounting" asp-action="CashBook">Sổ quỹ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "IncomeStatement") ? "active" : "")" asp-controller="Accounting" asp-action="IncomeStatement">B02 — Kết quả HĐKD</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashFlow") ? "active" : "")" asp-controller="Accounting" asp-action="CashFlow">B03 — Lưu chuyển tiền</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BalanceSheet") ? "active" : "")" asp-controller="Accounting" asp-action="BalanceSheet">B01 — Cân đối kế toán</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "FixedAssets") ? "active" : "")" asp-controller="Accounting" asp-action="FixedAssets">Tài sản cố định</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BankAccounts") ? "active" : "")" asp-controller="Accounting" asp-action="BankAccounts">Tài khoản ngân hàng</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "Setup") ? "active" : "")" asp-controller="Accounting" asp-action="Setup">Khai báo kế toán</a>
+                        </li>
+                    }
+                    @if (Model.CanViewExpenses)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")" asp-controller="Expense" asp-action="Index">Quản lý Chi phí</a>
+                        </li>
+                    }
                     @if (Model.CanViewFinancialReports)
                     {
                         <li class="nav-item">
@@ -214,22 +258,15 @@
                             <a class="nav-link @(WebHelper.IsMatchRouteInfo("Report", "DirectShip") ? "active" : "")" asp-controller="Report" asp-action="DirectShip">Báo cáo Direct-Ship</a>
                         </li>
                     }
-                    @if (Model.CanViewExpenses)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")" asp-controller="Expense" asp-action="Index">Quản lý Chi phí</a>
-                        </li>
-                    }
                 </ul>
             </div>
         </li>
     }
-
     @if (showCatalog)
     {
         <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement", "Vendor") ? "" : "collapsed")" 
-                data-bs-toggle="collapse" href="#collapseCatalog" aria-expanded="@(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement", "Vendor") ? "true" : "false")">
+            <a class="nav-link @(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement", "Vendor") ? "" : "collapsed")"
+               data-bs-toggle="collapse" href="#collapseCatalog" aria-expanded="@(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement", "Vendor") ? "true" : "false")">
                 <i class="bi bi-circle-fill ui-nav-dot"></i> Hàng hóa
             </a>
             <div class="collapse @(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement", "Vendor") ? "show" : "")" id="collapseCatalog">
@@ -268,7 +305,31 @@
             </div>
         </li>
     }
-
+    @if (Model.CanManageUserRoles)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(WebHelper.IsHasController("UserManagement") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSystem" 
+                aria-expanded="@(WebHelper.IsHasController("UserManagement") ? "true" : "false")">
+                <i class="bi bi-circle-fill ui-nav-dot"></i> Hệ thống
+            </a>
+            <div class="collapse @(WebHelper.IsHasController("UserManagement") ? "show" : "")" id="collapseSystem">
+                <ul class="nav flex-column sub-menu">
+                    <li class="nav-item">
+                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Roles") || WebHelper.IsMatchRouteInfo("UserManagement", "EditRoles") ? "active" : "")" asp-controller="UserManagement" asp-action="Roles">Phân vai trò</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "RolePermissions") ? "active" : "")" asp-controller="UserManagement" asp-action="RolePermissions">Phân quyền</a>
+                    </li>
+                    @if (Model.CanManageUsers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Users") || WebHelper.IsMatchRouteInfo("UserManagement", "CreateUser") || WebHelper.IsMatchRouteInfo("UserManagement", "ChangePassword") ? "active" : "")" asp-controller="UserManagement" asp-action="Users">Tài khoản</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </li>
+    }
     @if (Model.CanManageCustomerPortal)
     {
         <li class="nav-item">
@@ -300,65 +361,6 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "Settings") ? "active" : "")" asp-controller="CustomerPortal" asp-action="Settings">Cài đặt</a>
-                    </li>
-                </ul>
-            </div>
-        </li>
-    }
-
-    @if (Model.CanManageUserRoles)
-    {
-        <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("UserManagement") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSystem" aria-expanded="@(WebHelper.IsHasController("UserManagement") ? "true" : "false")">
-                <i class="bi bi-circle-fill ui-nav-dot"></i> Hệ thống
-            </a>
-            <div class="collapse @(WebHelper.IsHasController("UserManagement") ? "show" : "")" id="collapseSystem">
-                <ul class="nav flex-column sub-menu">
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Roles") || WebHelper.IsMatchRouteInfo("UserManagement", "EditRoles") ? "active" : "")" asp-controller="UserManagement" asp-action="Roles">Phân vai trò</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "RolePermissions") ? "active" : "")" asp-controller="UserManagement" asp-action="RolePermissions">Phân quyền</a>
-                    </li>
-                    @if (Model.CanManageUsers)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Users") || WebHelper.IsMatchRouteInfo("UserManagement", "CreateUser") || WebHelper.IsMatchRouteInfo("UserManagement", "ChangePassword") ? "active" : "")" asp-controller="UserManagement" asp-action="Users">Tài khoản</a>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </li>
-    }
-
-    @if (Model.CanViewAccounting)
-    {
-        <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsHasController("Accounting") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseAccounting" aria-expanded="@(WebHelper.IsHasController("Accounting") ? "true" : "false")">
-                <i class="bi bi-circle-fill ui-nav-dot"></i> Kế toán
-            </a>
-            <div class="collapse @(WebHelper.IsHasController("Accounting") ? "show" : "")" id="collapseAccounting">
-                <ul class="nav flex-column sub-menu">
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashBook") ? "active" : "")" asp-controller="Accounting" asp-action="CashBook">Sổ quỹ</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "IncomeStatement") ? "active" : "")" asp-controller="Accounting" asp-action="IncomeStatement">B02 — Kết quả HĐKD</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashFlow") ? "active" : "")" asp-controller="Accounting" asp-action="CashFlow">B03 — Lưu chuyển tiền</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BalanceSheet") ? "active" : "")" asp-controller="Accounting" asp-action="BalanceSheet">B01 — Cân đối kế toán</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "FixedAssets") ? "active" : "")" asp-controller="Accounting" asp-action="FixedAssets">Tài sản cố định</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BankAccounts") ? "active" : "")" asp-controller="Accounting" asp-action="BankAccounts">Tài khoản ngân hàng</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "Setup") ? "active" : "")" asp-controller="Accounting" asp-action="Setup">Khai báo kế toán</a>
                     </li>
                 </ul>
             </div>

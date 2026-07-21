@@ -86,7 +86,15 @@ public sealed class CustomerDebtManager(
         // 1. Check if debt already exists for this delivery note
         var existing = debtReader.DataSource.FirstOrDefault(d => d.DeliveryNoteId == dto.DeliveryNoteId);
         if (existing != null)
+        {
+            if (dto.TotalAmount > existing.TotalAmount)
+            {
+                existing.UpdateTotalAmount(dto.TotalAmount);
+                await debtRepository.UpdateAsync(existing).ConfigureAwait(false);
+            }
+
             return MapToDto(existing);
+        }
 
         var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId, default).ConfigureAwait(false);
@@ -396,6 +404,12 @@ public sealed class CustomerDebtManager(
         
         return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, total);
     }
+
+    public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
+        => Task.FromResult(paymentReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.Amount));
+
+    public Task<decimal> GetTotalPaidByDeliveryNoteAsync(Guid deliveryNoteId)
+        => Task.FromResult(paymentReader.DataSource.Where(p => p.DeliveryNoteId == deliveryNoteId).Sum(p => p.Amount));
 
     private static CustomerDebtDto MapToDto(CustomerDebt debt)
     {

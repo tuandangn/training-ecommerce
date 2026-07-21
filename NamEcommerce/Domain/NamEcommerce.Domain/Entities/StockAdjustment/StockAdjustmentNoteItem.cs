@@ -5,6 +5,16 @@ namespace NamEcommerce.Domain.Entities.StockAdjustment;
 [Serializable]
 public sealed record StockAdjustmentNoteItem : AppEntity
 {
+    internal StockAdjustmentNoteItem(Guid noteId, Guid productId, string productName,
+        decimal systemQuantity, decimal physicalQuantity) : base(Guid.Empty)
+    {
+        NoteId = noteId;
+        ProductId = productId;
+        ProductName = productName;
+        SystemQuantity = systemQuantity;
+        PhysicalQuantity = physicalQuantity;
+    }
+
     public Guid NoteId { get; private set; }
     public Guid ProductId { get; private set; }
     public string ProductName { get; private set; }
@@ -21,15 +31,5 @@ public sealed record StockAdjustmentNoteItem : AppEntity
     public StockAdjustmentNoteItem(Guid id) : base(id)
     {
         ProductName = string.Empty;
-    }
-
-    internal StockAdjustmentNoteItem(Guid noteId, Guid productId, string productName,
-        decimal systemQuantity, decimal physicalQuantity) : base(Guid.NewGuid())
-    {
-        NoteId = noteId;
-        ProductId = productId;
-        ProductName = productName;
-        SystemQuantity = systemQuantity;
-        PhysicalQuantity = physicalQuantity;
     }
 }

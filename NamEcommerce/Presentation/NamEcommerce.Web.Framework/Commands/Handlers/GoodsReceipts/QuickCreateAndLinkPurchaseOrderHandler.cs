@@ -7,13 +7,9 @@ using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.GoodsReceipts;
 
-/// <summary>
-/// Tạo nhanh một PurchaseOrder từ items của GoodsReceipt rồi link luôn.
-/// </summary>
 public sealed class QuickCreateAndLinkPurchaseOrderHandler
     : IRequestHandler<QuickCreateAndLinkPurchaseOrderCommand, QuickCreateAndLinkPurchaseOrderResultModel>
 {
-    private const int ApprovedPurchaseOrderStatus = 30;
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
     private readonly ISender _sender;
 
@@ -124,10 +120,9 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
         }
 
         var purchaseOrderId = createResult.CreatedId.Value;
-        var approveResult = await _sender.Send(new ChangePurchaseOrderStatusCommand
+        var approveResult = await _sender.Send(new ApprovesPurchaseOrderCommand
         {
-            PurchaseOrderId = purchaseOrderId,
-            Status = ApprovedPurchaseOrderStatus
+            PurchaseOrderId = purchaseOrderId
         }, cancellationToken).ConfigureAwait(false);
         if (!approveResult.Success)
         {
@@ -138,9 +133,7 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
             };
         }
 
-        var linkResult = await _sender.Send(
-            new SetGoodsReceiptToPurchaseOrderCommand(request.GoodsReceiptId, purchaseOrderId),
-            cancellationToken).ConfigureAwait(false);
+        var linkResult = await _sender.Send(new SetGoodsReceiptToPurchaseOrderCommand(request.GoodsReceiptId, purchaseOrderId), cancellationToken).ConfigureAwait(false);
 
         return new QuickCreateAndLinkPurchaseOrderResultModel
         {

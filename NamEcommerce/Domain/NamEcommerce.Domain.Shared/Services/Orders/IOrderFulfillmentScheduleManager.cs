@@ -1,3 +1,4 @@
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 
 namespace NamEcommerce.Domain.Shared.Services.Orders;
@@ -11,5 +12,5 @@ public interface IOrderFulfillmentScheduleManager
     Task<UpdateOrderFulfillmentScheduleResultDto> UpdateAsync(UpdateOrderFulfillmentScheduleDto dto);
     Task SetActiveAsync(SetOrderFulfillmentScheduleActiveDto dto);
     Task DeleteAsync(Guid id);
-    Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<Guid> orderItemIds);
+    Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<SecondaryItemId> orderItemIds);
 }

@@ -108,13 +108,9 @@ public sealed class CustomerAppService : ICustomerAppService
         });
     }
 
-    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(
-        string? keywords,
-        int pageIndex,
-        int pageSize,
-        bool includeSystem = false)
+    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false)
     {
-        var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize, includeSystem).ConfigureAwait(false);
+        var paged = await _customerManager.GetCustomersAsync(pageIndex, pageSize, keywords, includeSystem).ConfigureAwait(false);
         var items = paged.Items.Where(c => !c.IsSystem).Select(MapToAppDto).ToList();
 
         foreach(var systemCustomer in paged.Items.Where(c => c.IsSystem).OrderByDescending(c => c.FullName))

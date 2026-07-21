@@ -52,7 +52,8 @@ export default class DeliveryNoteController {
     #deliveredContainer;
     #deliveredModal;
     #deliveredForm;
-    #ACCEPTANT_ITEMS_URL = '/DeliveryNote/GetAcceptantItems/';
+
+    #acceptant_items_info_url = '/DeliveryNote/GetDeliveryNoteAcceptantItemsInfo/';
 
     #deliveredState = {};
 
@@ -75,15 +76,21 @@ export default class DeliveryNoteController {
         this.#deliveredContainer.initialized = true;
 
         return {
-            setId: async (id) => {
+            setId: async (id, options = {}) => {
                 if (!id) throw new Error('Id is required');
                 this.#resetDeliveredControls();
-                const items = await this.#loadAcceptantItems(id);
+                const { acceptantItems: items, amountToCollect } = await this.#loadAcceptantItemsInfo(id);
                 if (!Array.isArray(items) || items.length == 0) {
                     window.NotificationCenter.error('Không thể tải dữ liệu.');
                     return;
                 }
-                this.#setDeliveredState({ id, items });
+                this.#setDeliveredState({
+                    id,
+                    items,
+                    amountToCollect,
+                    receiverName: options.receiverName || '',
+                    cashCollectedAmount: options.cashCollectedAmount
+                });
                 this.#deliveredModal.show();
             }
         }
@@ -98,6 +105,19 @@ export default class DeliveryNoteController {
         this.#deliveredContainer.querySelector('#deliveryNoteId').value = this.#deliveredState.id;
         this.#renderAcceptantItems();
 
+        const hasRejectedItems = this.#deliveredState.items?.some(item => Number(item.returnedQuantity || 0) > 0) ?? false;
+        const rejectReason = this.#deliveredState.items?.find(item => Number(item.returnedQuantity || 0) > 0 && item.rejectReason)?.rejectReason ?? '';
+        $('#rejectReason').val(rejectReason);
+        $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
+        $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
+
+        $('#receiverName').val(this.#deliveredState.receiverName || '');
+
+        const cashCollectedAmount = document.getElementById('cashCollectedAmount');
+        const cashAmount = this.#deliveredState.cashCollectedAmount ?? this.#deliveredState.amountToCollect;
+        cashCollectedAmount.value = DecimalFields.formatCurrency(cashAmount);
+        cashCollectedAmount.closest('div').classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
+
         this.#deliveryTableEvents();
 
         $(this.#deliveredForm).removeData('validator').removeData('unobtrusiveValidation');
@@ -107,22 +127,25 @@ export default class DeliveryNoteController {
     #renderAcceptantItems() {
         const rowsHtml = this.#deliveredState.items?.map(item => {
             const deliveredQty = Number(item.quantity || 0);
-            return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
+            const returnedQty = Math.max(0, Math.min(deliveredQty, Number(item.returnedQuantity || 0)));
+            const decimalPlaces = item.quantityDecimalPlaces ?? 0;
+            const acceptedQty = Math.max(0, deliveredQty - returnedQty);
+            return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}" data-decimals="${decimalPlaces}">
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end returned-qty" name="returnedQty_${item.id}"
-                                    value="0"
-                    data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" data-val="true"
+                                    value="${DecimalFields.formatQuantity(returnedQty, decimalPlaces)}"
+                    data-decimal="quantity" data-decimals="${decimalPlaces}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
-                    data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty)}." data-val-range-max="${deliveredQty}"
+                    data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}." data-val-range-max="${deliveredQty}"
                     data-val-range-min="0"
                     data-val-number="Số lượng không đúng." />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="returnedQty_${item.id}"
                     data-valmsg-replace="true"></span>
                             </td>
-                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
+                            <td class="text-end accepted-qty-text fw-semibold pe-3">${DecimalFields.formatQuantity(acceptedQty, decimalPlaces)}</td>
                         </tr>`;
         }).join('');
         const container = document.getElementById('acceptanceTableBody');
@@ -130,8 +153,8 @@ export default class DeliveryNoteController {
         DecimalFields.autoWrap(container);
     }
 
-    async #loadAcceptantItems(id) {
-        const result = await apiGet(this.#ACCEPTANT_ITEMS_URL + id);
+    async #loadAcceptantItemsInfo(id) {
+        const result = await apiGet(this.#acceptant_items_info_url + id);
         if (!result.success)
             return;
         return result.data;
@@ -164,7 +187,8 @@ export default class DeliveryNoteController {
             const $row = $(this);
             const itemId = String($row.data('item-id'));
             const deliveredQty = Number($row.data('delivered-qty') || 0);
-            const returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2)) || 0;
+            const decimalPlaces = Number($row.data('decimals') ?? 0);
+            const returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces)) || 0;
             const rejectedQty = Math.max(0, Math.min(deliveredQty, returnedQty));
             const normalizedAcceptedQty = Math.max(0, deliveredQty - rejectedQty);
             if (rejectedQty > 0) hasRejectedItems = true;
@@ -234,13 +258,14 @@ export default class DeliveryNoteController {
 
         function updateAcceptedQuantity($row) {
             const deliveredQty = Number($row.data('delivered-qty') || 0);
-            let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2));
+            const decimalPlaces = Number($row.data('decimals') ?? 0);
+            let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces));
             if (!returnedQty) returnedQty = 0;
             if (returnedQty < 0) returnedQty = 0;
             if (returnedQty > deliveredQty) returnedQty = deliveredQty;
 
             const acceptedQty = Math.max(0, deliveredQty - returnedQty);
-            $row.find('.accepted-qty-text').text(DecimalFields.formatQuantity(acceptedQty));
+            $row.find('.accepted-qty-text').text(DecimalFields.formatQuantity(acceptedQty, decimalPlaces));
             updateReturnControls();
         }
 
@@ -249,7 +274,8 @@ export default class DeliveryNoteController {
             $('#acceptanceTableBody tr').each(function () {
                 const $row = $(this);
                 const deliveredQty = Number($row.data('delivered-qty') || 0);
-                let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), 2));
+                const decimalPlaces = Number($row.data('decimals') ?? 0);
+                let returnedQty = parseFloat(DecimalFields.stripFormatting($row.find('.returned-qty').val(), decimalPlaces));
                 if (!returnedQty) returnedQty = 0;
                 if (Math.min(deliveredQty, returnedQty) > 0) hasRejectedItems = true;
             });
@@ -315,7 +341,7 @@ export default class DeliveryNoteController {
         return {
             setData: async (id, code, warehouse) => {
                 if (!id) throw new Error('Id is required');
-                const items = await this.#loadAcceptantItems(id);
+                const { acceptantItems: items } = await this.#loadAcceptantItemsInfo(id);
                 if (!Array.isArray(items) || items.length == 0) {
                     window.NotificationCenter.error('Không thể tải dữ liệu.');
                     return;

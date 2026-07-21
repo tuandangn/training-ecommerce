@@ -757,29 +757,36 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="text-muted small mb-3">Phân bổ cho đơn: <strong id="markDsOrderCode"></strong></p>
-                    <input type="hidden" id="markDsAllocationId" />
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="markDsAddress" placeholder="Nhập địa chỉ giao hàng" />
+                        <form asp-action="MarkAsDirectShip" asp-controller="DirectShipDelivery" method="post">
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">Phân bổ cho đơn: <strong id="markDsOrderCode"></strong></p>
+                        <input type="text" id="markDsAllocationId" name="allocationId" class="visually-hidden" data-val="true" data-val-required="Vui lòng chọn phân bổ"/>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tên người nhận</label>
+                            <input type="text" class="form-control" id="markDsContactName" name="contactName" placeholder="Tên người nhận" 
+                                   data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="contactName" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="markDsPhone" name="contactPhone" placeholder="Số điện thoại" 
+                                data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}" data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="contactPhone" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="markDsAddress" name="address" placeholder="Địa chỉ giao hàng" 
+                                data-val="true" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="address" data-valmsg-replace="true"></span>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="markDsPhone" placeholder="Nhập số điện thoại" />
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary" id="btnMarkDsSubmit">
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
+                        </button>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold">Tên người nhận</label>
-                        <input type="text" class="form-control" id="markDsContactName" placeholder="Nhập tên người nhận (tùy chọn)" />
-                    </div>
-                    <div class="alert alert-danger d-none mt-2" id="markDsError"></div>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary" id="btnMarkDsSubmit">
-                        <i class="bi bi-check-lg me-1"></i>Xác nhận
-                    </button>
-                </div>
+                </form>
             </div>
         </div>
     </div>
@@ -844,7 +851,10 @@
                             const message = this.dataset.confirmText || 'Bạn có chắc chắn muốn thay đổi trạng thái?';
                             confirm('Xác nhận', message)
                                 .then(confirmed => {
-                                    if (confirmed) this.submit();
+                                    if (confirmed) {
+                                        showPageLoading();
+                                        this.submit();
+                                    }
                                 });
                         });
                     });
@@ -945,6 +955,7 @@
                         return;
                     }
 
+                    showPageLoading();
                     const originalHtml = this.innerHTML;
                     this.disabled = true;
                     this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${markDirectShipText.saving}`;
@@ -965,9 +976,11 @@
                             location.reload();
                             return;
                         }
+                        hidePageLoading();
                         errorBanner.textContent = data.message || markDirectShipText.unexpected;
                         errorBanner.classList.remove('d-none');
                     } catch {
+                        hidePageLoading();
                         errorBanner.textContent = markDirectShipText.network;
                         errorBanner.classList.remove('d-none');
                     } finally {
@@ -1007,12 +1020,12 @@
                 // Handle Add Product Form Submission
                 const addProductForm = document.getElementById('addProductForm');
                 if (addProductForm) {
-                addProductForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                if(!$(this).valid())
-                return;
-                await submitAddProductForm();
-                });
+                    addProductForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        if(!$(this).valid())
+                            return;
+                        await submitAddProductForm();
+                    });
                 }
 
                 // Initialize Receive Item Modal
@@ -1190,8 +1203,8 @@
                     errorBox.classList.add('d-none');
                     try {
                         const [resp1, resp2] = await Promise.all([
-                            fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal }),
-                            fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderItemId=${poItemId}`, { signal })
+                            fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal }),
+                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal })
                         ]);
                         if (!resp1.ok || !resp2.ok) throw new Error('Lỗi tải dữ liệu');
                         const [eligible, nonDs] = await Promise.all([resp1.json(), resp2.json()]);
@@ -1367,80 +1380,81 @@
 
                 // Handle Edit Item Button
                 document.querySelectorAll('.btnEditItem').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const modal = document.getElementById('editProductModal');
-                if (!modal) return;
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const modal = document.getElementById('editProductModal');
+                        if (!modal) return;
+                        document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
+                        document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
+                        document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
+                        const editQtyInput = document.getElementById('editItemQuantity');
+                        editQtyInput.value = this.getAttribute('data-quantity') || '';
+                        const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
+                        editQtyInput.dataset.decimals = String(editDecimalPlaces);
+                        editQtyInput.dataset.decimalBound = '';
+                        document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
+                        document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
+                        document.getElementById('editProductError')?.classList.add('d-none');
+                        window.DecimalFields?.autoWrap?.(modal);
 
-                document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
-                document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
-                document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
-                const editQtyInput = document.getElementById('editItemQuantity');
-                editQtyInput.value = this.getAttribute('data-quantity') || '';
-                const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
-                editQtyInput.dataset.decimals = String(editDecimalPlaces);
-                editQtyInput.dataset.decimalBound = '';
-                document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
-                document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
-                document.getElementById('editProductError')?.classList.add('d-none');
-                window.DecimalFields?.autoWrap?.(modal);
-
-                new bootstrap.Modal(modal).show();
-                });
+                        new bootstrap.Modal(modal).show();
+                    });
                 });
 
                 document.getElementById('editProductForm')?.addEventListener('submit', async function(e) {
-                e.preventDefault();
+                    e.preventDefault();
 
-                const errorEl = document.getElementById('editProductError');
-                const submitBtn = document.getElementById('btnEditItemSubmit');
-                errorEl?.classList.add('d-none');
+                    const errorEl = document.getElementById('editProductError');
+                    const submitBtn = document.getElementById('btnEditItemSubmit');
+                    errorEl?.classList.add('d-none');
 
-                const payload = {
-                purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
-                purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
-                quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
-                unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
-                note: document.getElementById('editItemNote')?.value || null
-                };
+                    const payload = {
+                        purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
+                        purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
+                        quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
+                        unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
+                        note: document.getElementById('editItemNote')?.value || null
+                    };
 
-                if (!payload.quantity || payload.quantity <= 0) {
-                showEditProductError('Số lượng phải lớn hơn 0.');
-                return;
-                }
-                if (payload.unitCost < 0) {
-                showEditProductError('Đơn giá không được âm.');
-                return;
-                }
+                    if (!payload.quantity || payload.quantity <= 0) {
+                        showEditProductError('Số lượng phải lớn hơn 0.');
+                        return;
+                    }
+                    if (payload.unitCost < 0) {
+                        showEditProductError('Đơn giá không được âm.');
+                        return;
+                    }
 
-                submitBtn.disabled = true;
-                const originalHtml = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+                    submitBtn.disabled = true;
+                    const originalHtml = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+                    showPageLoading();
 
-                try {
-                const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
-                setTimeout(() => location.reload(), 300);
-                return;
-                }
-
-                showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
-                } catch (error) {
-                console.error('Error:', error);
-                showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
-                } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalHtml;
-                }
+                    try {
+                        const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
+                            setTimeout(() => location.reload(), 300);
+                            return;
+                        }
+                        hidePageLoading();
+                        showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
+                    } catch (error) {
+                        hidePageLoading();
+                        console.error('Error:', error);
+                        showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalHtml;
+                    }
                 });
 
                 // Handle Remove Item Button
@@ -1608,40 +1622,42 @@
                 }
 
                 async function submitAddProductForm() {
-                const form = document.getElementById('addProductForm');
+                    const form = document.getElementById('addProductForm');
+                    showPageLoading();
+                    try {
+                        const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: $(form).serialize()
+                        });
 
-                try {
-                const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: $(form).serialize()
-                });
+                        const data = await response.json();
 
-                const data = await response.json();
-
-                if (data.success) {
-                // Close modal and refresh page
-                bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
-                setTimeout(() => location.reload(), 300);
-                } else {
-                alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
-                }
-                } catch (error) {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra khi thêm sản phẩm');
-                }
+                        if (data.success) {
+                            // Close modal and refresh page
+                            bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
+                            setTimeout(() => location.reload(), 300);
+                        } else {
+                            hidePageLoading();
+                            alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
+                        }
+                    } catch (error) {
+                        hidePageLoading();
+                        console.error('Error:', error);
+                        alert('Có lỗi xảy ra khi thêm sản phẩm');
+                    }
                 }
 
                 function resetAddProductForm() {
-                document.getElementById('itemQuantity').value = '1';
-                document.getElementById('itemUnitPrice').value = '';
-                document.getElementById('modalProductInfo').classList.add('d-none');
+                    document.getElementById('itemQuantity').value = '1';
+                    document.getElementById('itemUnitPrice').value = '';
+                    document.getElementById('modalProductInfo').classList.add('d-none');
 
-                if (productPickerInstance) {
-                productPickerInstance.clear();
-                }
+                    if (productPickerInstance) {
+                        productPickerInstance.clear();
+                    }
                 }
 
                 function parsePurchaseOrderDecimal(value, scale) {
@@ -1672,34 +1688,37 @@
                 }
 
                 async function removeItem(itemId, purchaseOrderId) {
-                try {
-                const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({
-                purchaseOrderItemId: itemId,
-                purchaseOrderId: purchaseOrderId
-                })
-                });
+                    showPageLoading();
+                    try {
+                        const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                            },
+                            body: JSON.stringify({
+                                purchaseOrderItemId: itemId,
+                                purchaseOrderId: purchaseOrderId
+                            })
+                        });
 
-                const data = await response.json();
+                        const data = await response.json();
 
-                if (data.success) {
-                // Remove row from table
-                document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
+                        if (data.success) {
+                            // Remove row from table
+                            document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
 
-                // Refresh page after short delay
-                setTimeout(() => location.reload(), 300);
-                } else {
-                alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
-                }
-                } catch (error) {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra khi xóa sản phẩm');
-                }
+                            // Refresh page after short delay
+                            setTimeout(() => location.reload(), 300);
+                        } else {
+                            hidePageLoading();
+                            alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
+                        }
+                    } catch (error) {
+                        hidePageLoading();
+                        console.error('Error:', error);
+                        alert('Có lỗi xảy ra khi xóa sản phẩm');
+                    }
                 }
 
             </script>
@@ -1755,7 +1774,7 @@
                     document.addEventListener('DOMContentLoaded', () => {
                         const modalEl = document.getElementById('bulkReceiveModal');
                         if (!modalEl) return;
-                        new BulkReceiveController().init(modalEl);
+                        new BulkReceiveController('@Model.Info.Id').init(modalEl);
                     });
                 </script>
             }
@@ -1817,7 +1836,7 @@
                     });
 
                     function loadEligibleItems(poItemId) {
-                        fetch('/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=' + poItemId)
+                        fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${currentPoId}&purchaseOrderItemId=${poItemId}`)
                             .then(r => r.json())
                             .then(items => {
                                 document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
@@ -1921,6 +1940,7 @@
                         const btn = this;
                         btn.disabled = true;
                         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+                        showPageLoading();
 
                         fetch('/PurchaseOrder/AllocateToOrder', {
                             method: 'POST',
@@ -1942,6 +1962,7 @@
                                 bootstrap.Modal.getInstance(modal)?.hide();
                                 location.reload();
                             } else {
+                                hidePageLoading();
                                 errEl.textContent = result.message || 'Có lỗi xảy ra.';
                                 errEl.classList.remove('d-none');
                                 btn.disabled = false;
@@ -1949,6 +1970,7 @@
                             }
                         })
                         .catch(() => {
+                            hidePageLoading();
                             errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
                             errEl.classList.remove('d-none');
                             btn.disabled = false;
@@ -1985,6 +2007,7 @@
                         }
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
+                        hidePageLoading();
                     });
                 });
             });
@@ -1998,41 +2021,37 @@
                 if (!markDsModal) return;
                 markDsModal.addEventListener('show.bs.modal', function (e) {
                     const btn = e.relatedTarget;
-                    document.getElementById('markDsAllocationId').value = btn.dataset.allocationId;
-                    document.getElementById('markDsOrderCode').textContent = btn.dataset.orderCode;
-                    document.getElementById('markDsAddress').value = '';
-                    document.getElementById('markDsPhone').value = '';
-                    document.getElementById('markDsContactName').value = '';
-                    document.getElementById('markDsError').classList.add('d-none');
+                    markDsModal.querySelector('#markDsAllocationId').value = btn.dataset.allocationId;
+                    markDsModal.querySelector('#markDsOrderCode').textContent = btn.dataset.orderCode;
+                    markDsModal.querySelector('#markDsAddress').value = '';
+                    markDsModal.querySelector('#markDsPhone').value = '';
+                    markDsModal.querySelector('#markDsContactName').value = '';
                 });
 
-                document.getElementById('btnMarkDsSubmit')?.addEventListener('click', async function () {
-                    const allocationId = document.getElementById('markDsAllocationId').value;
-                    const address = document.getElementById('markDsAddress').value.trim();
-                    const phone = document.getElementById('markDsPhone').value.trim();
-                    const contactName = document.getElementById('markDsContactName').value.trim();
-                    const errEl = document.getElementById('markDsError');
-                    errEl.classList.add('d-none');
+                markDsModal.querySelector('form')?.addEventListener('submit', async function (e) {
+                    e.preventDefault();
 
-                    if (!address) { errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.'; errEl.classList.remove('d-none'); return; }
-                    if (!phone) { errEl.textContent = 'Vui lòng nhập số điện thoại.'; errEl.classList.remove('d-none'); return; }
+                    if (!$(this).valid())
+                        return;
 
                     const btn = this;
                     btn.disabled = true;
+                    showPageLoading();
                     try {
                         const resp = await fetch('/DirectShipDelivery/MarkAsDirectShip', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
-                            body: JSON.stringify({ allocationId, address, contactName, contactPhone: phone })
+                            body: new FormData(this)
                         });
                         const data = await resp.json();
                         if (data.success) {
                             location.reload();
                         } else {
+                            hidePageLoading();
                             errEl.textContent = data.message || 'Có lỗi xảy ra.';
                             errEl.classList.remove('d-none');
                         }
                     } catch {
+                        hidePageLoading();
                         errEl.textContent = 'Có lỗi xảy ra.';
                         errEl.classList.remove('d-none');
                     } finally {

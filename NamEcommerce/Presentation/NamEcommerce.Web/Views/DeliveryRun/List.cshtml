@@ -69,8 +69,7 @@
                     <th class="text-end">Tiền cần thu</th>
                     <th class="text-center">Offline</th>
                     <th class="text-center">Trạng thái</th>
-                    <th class="d-none d-md-table-cell">Ngày tạo</th>
-                    <th class="ui-w-220"></th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -95,7 +94,8 @@
 
                         <tr>
                             <td class="ps-4">
-                                <a asp-action="Details" asp-route-id="@run.Id" class="fw-bold text-decoration-none">@run.Code</a>
+                                <a asp-action="Details" asp-route-id="@run.Id" class="fw-bold text-decoration-none text-nowrap">@run.Code</a>
+                                <span class="text-muted small d-block">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                             </td>
                             <td>
                                 <div class="fw-medium">@run.AssignedDeliveryFullName</div>
@@ -108,7 +108,7 @@
                                 <div class="fw-medium">@run.ItemCount</div>
                                 <div class="small text-muted">@run.DeliveredItemCount/@run.ItemCount đã giao</div>
                             </td>
-                            <td class="text-end fw-medium">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                            <td class="text-end fw-medium text-nowrap">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                             <td class="text-center">
                                 @if (offlineReady)
                                 {
@@ -128,16 +128,15 @@
                                     <i class="bi @statusTuple.Item2 me-1"></i>@run.StatusName
                                 </span>
                             </td>
-                            <td class="d-none d-md-table-cell text-muted">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
                                 <div class="d-flex justify-content-end gap-2">
                                     <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-outline-secondary" title="Chi tiết">
-                                        <i class="bi bi-info-circle text-primary"></i>
+                                        <i class="bi bi-info-circle"></i>
                                     </a>
                                     @if (canManageDeliveryRun && run.PaperManifestIssued)
                                     {
                                         <a asp-action="Print" asp-route-id="@run.Id" target="_blank" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy">
-                                            <i class="bi bi-printer text-secondary"></i>
+                                            <i class="bi bi-printer"></i>
                                         </a>
                                     }
                                     else if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover)
@@ -145,7 +144,7 @@
                                         <form asp-action="IssuePaperManifest" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />
                                             <button type="submit" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy dự phòng">
-                                                <i class="bi bi-printer text-secondary"></i>
+                                                <i class="bi bi-printer"></i>
                                             </button>
                                         </form>
                                     }
@@ -153,7 +152,7 @@
                                     {
                                         <form asp-action="HandOver" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : "Bàn giao")">
+                                            <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : "Bàn giao")">
                                                 <i class="bi bi-truck me-1"></i>Bàn giao
                                             </button>
                                         </form>

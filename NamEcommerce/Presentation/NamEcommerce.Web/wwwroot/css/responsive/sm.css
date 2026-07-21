@@ -170,7 +170,7 @@
     }
 
     .order-workflow-steps {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
     }
 
     .workflow-step {

@@ -10,6 +10,9 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Security;
+using NamEcommerce.Application.Contracts.Users;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -19,15 +22,19 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IOrderAppService _orderAppService;
+    private readonly IAuthorizationAppService _authorizationAppService;
+    private readonly ICurrentUserService _currentUserService;
 
     public PurchaseOrderController(IMediator mediator,
         IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
-        IOrderAppService orderAppService)
+        IOrderAppService orderAppService, IAuthorizationAppService authorizationAppService, ICurrentUserService currentUserService)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
         _purchaseOrderAppService = purchaseOrderAppService;
         _orderAppService = orderAppService;
+        _authorizationAppService = authorizationAppService;
+        _currentUserService = currentUserService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -151,7 +158,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
     public async Task<IActionResult> QuickCreate()
     {
         var model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel();
@@ -159,7 +166,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
     public async Task<IActionResult> QuickCreate([FromBody] QuickCreatePurchaseOrderCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -170,7 +177,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> Edit(EditPurchaseOrderModel model)
     {
         if (!ModelState.IsValid)
@@ -281,7 +288,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> Receive(ReceivePurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -373,7 +380,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> BulkReceive(BulkReceivePurchaseOrderModel model)
     {
         if (!ModelState.IsValid)
@@ -487,6 +494,29 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Approve)]
+    public async Task<IActionResult> ApprovesPurchaseOrder(Guid id)
+    {
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var (success, errorMessage) = await _mediator.Send(new ApprovesPurchaseOrderCommand
+        {
+            PurchaseOrderId = id
+        });
+
+        if (success)
+            NotificationService.Success(errorMessage ?? LocalizeError("Msg.SaveSuccess"));
+        else
+            NotifyError(errorMessage!);
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Cancel)]
     public async Task<IActionResult> CancelPurchaseOrder(Guid id)
     {
@@ -510,7 +540,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> ClosePartial(Guid id, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -554,9 +584,15 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> ChangeStatus(Guid id, int status)
     {
+        if ((PurchaseOrderStatus)status == PurchaseOrderStatus.Approved)
+        {
+            NotifyError("Error.PurchaseOrder.ApproveRequiresPermission");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
@@ -580,12 +616,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
-    public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderItemId)
+    public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
         var productIds = items.Select(i => i.ProductId).Distinct();
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
@@ -608,12 +644,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
-    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderItemId)
+    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
 
         return Json(allocations.Select(a => new
         {
@@ -630,7 +666,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> AllocateToOrder([FromBody] AllocateToOrderRequestModel request)
     {
         if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
@@ -655,7 +691,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> ReleaseAllocationsForPurchaseOrderItem([FromBody] ReleaseAllocationsOfPurchaseOrderItemCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -666,7 +702,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> MarkAllocationAsDirectShip([FromBody] MarkAllocationAsDirectShipCommand command)
     {
         if (command is null

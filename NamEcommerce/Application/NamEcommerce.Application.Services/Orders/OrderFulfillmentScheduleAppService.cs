@@ -95,13 +95,15 @@ public sealed class OrderFulfillmentScheduleAppService(
         }
     }
 
-    public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(IReadOnlyCollection<Guid> purchaseOrderItemIds)
+    public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(
+        IReadOnlyCollection<(Guid purchaseOrderId, Guid purchaseOrderItemId)> purchaseOrderItemIds)
     {
         if (purchaseOrderItemIds.Count == 0)
             return CommonActionResultDto.CreateSuccess();
 
+        var poItemIds = purchaseOrderItemIds.Select(id => id.purchaseOrderItemId).Distinct().ToList();
         var orderItemIds = allocationDataReader.DataSource
-            .Where(allocation => purchaseOrderItemIds.Contains(allocation.PurchaseOrderItemId))
+            .Where(allocation => poItemIds.Contains(allocation.PurchaseOrderItemId.SecondaryId))
             .Select(allocation => allocation.OrderItemId)
             .Distinct()
             .ToList();
@@ -176,7 +178,7 @@ public sealed class OrderFulfillmentScheduleAppService(
         if (orderIds.Count == 0)
             return [];
 
-        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering };
+        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering, DeliveryNoteStatus.PendingConfirmation };
         return deliveryNoteDataReader.DataSource
             .Where(note => orderIds.Contains(note.OrderId) && statuses.Contains(note.Status))
             .Select(note => note.OrderId)
@@ -314,7 +316,7 @@ public sealed class OrderFulfillmentScheduleAppService(
         if (orderIds.Count == 0)
             return [];
 
-        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering };
+        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering, DeliveryNoteStatus.PendingConfirmation };
         return deliveryNoteDataReader.DataSource
             .Where(note => orderIds.Contains(note.OrderId) && statuses.Contains(note.Status))
             .OrderBy(note => note.UpdatedOnUtc ?? note.CreatedOnUtc)
@@ -334,7 +336,9 @@ public sealed class OrderFulfillmentScheduleAppService(
                 ScheduledToUtc = null,
                 Mode = (int)OrderFulfillmentScheduleMode.AsSoonAsPossible,
                 Tone = "info",
-                StatusText = note.Status == DeliveryNoteStatus.Delivering ? "Đang giao" : "Phiếu đã xác nhận",
+                StatusText = note.Status == DeliveryNoteStatus.PendingConfirmation
+                    ? "Chờ đối soát"
+                    : note.Status == DeliveryNoteStatus.Delivering ? "Đang giao" : "Phiếu đã xác nhận",
                 IsActive = true,
                 Note = note.Note,
                 Items = note.Items.Select(item => new OrderFulfillmentBoardItemAppDto

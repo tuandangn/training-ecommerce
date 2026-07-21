@@ -29,6 +29,15 @@ public sealed record DeliveryRunAppDto
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public IList<DeliveryRunItemAppDto> Items { get; init; } = [];
+    public IList<DeliveryRunWarehousePickAppDto> WarehousePicks { get; init; } = [];
+}
+
+[Serializable]
+public sealed record DeliveryRunWarehousePickAppDto
+{
+    public required Guid WarehouseId { get; init; }
+    public string? ConfirmedByFullName { get; init; }
+    public DateTime ConfirmedOnUtc { get; init; }
 }
 
 [Serializable]

@@ -68,7 +68,7 @@ public sealed class E2ETestDataService(
             .ConfigureAwait(false);
 
         await dbContext.Set<PurchaseOrderItemAllocation>()
-            .Where(x => ids.PurchaseOrderItemIds.Contains(x.PurchaseOrderItemId) || ids.OrderItemIds.Contains(x.OrderItemId))
+            .Where(x => ids.PurchaseOrderItemIds.Contains(x.PurchaseOrderItemId.SecondaryId) || ids.OrderItemIds.Contains(x.OrderItemId.SecondaryId))
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 

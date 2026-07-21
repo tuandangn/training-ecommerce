@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -15,6 +16,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Application.Contracts.Customers;
 
 namespace NamEcommerce.Application.Services.Orders;
 
@@ -24,6 +26,7 @@ public sealed class FastSaleAppService(
     ICustomerDebtManager customerDebtManager,
     IBankTransferPaymentIntentManager paymentIntentManager,
     IInventoryStockManager inventoryStockManager,
+    ICustomerAppService customerAppService,
     IEntityDataReader<Product> productReader,
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<Warehouse> warehouseReader,
@@ -103,6 +106,11 @@ public sealed class FastSaleAppService(
         var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
         if (customer is null)
             return QuickSaleResultAppDto.CreateError("Error.CustomerIsNotFound");
+
+        // Khách lẻ (tài khoản dùng chung) không được bán chịu — phải thanh toán đủ.
+        if (paymentTiming == QuickSalePaymentTiming.Unpaid
+            && customer.Kind == CustomerKind.RetailWalkIn && customer.IsSystem)
+            return QuickSaleResultAppDto.CreateError("Error.RetailOrderCannotLeaveDebt");
 
         var warehouseIds = GetWarehouseIdsToValidate(dto, fulfillmentMode);
         foreach (var warehouseId in warehouseIds)
@@ -281,25 +289,22 @@ public sealed class FastSaleAppService(
         if (order is null)
             throw new InvalidOperationException("Error.Order.QuickCreateFailed");
 
-        var orderItems = order.Items.ToList();
-        var quickSaleItems = dto.Items.ToList();
-        if (orderItems.Count != quickSaleItems.Count)
+        if (order.Items.Count != dto.Items.Count)
             throw new InvalidOperationException("Error.OrderItemMismatch");
 
+        var retailWalkInCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
         var deliveryNote = await deliveryNoteManager.CreateFromOrderAsync(new CreateDeliveryNoteDto
         {
             OrderId = orderId,
-            WarehouseId = ResolveHeaderWarehouseId(dto),
-            ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS : dto.ShippingAddress,
+            ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? retailWalkInCustomer.Address : dto.ShippingAddress,
             ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber) ? order.ShippingPhoneNumber : dto.ShippingPhoneNumber,
             ShowPrice = true,
-            CompensateReturnedQuantityInNextDelivery = false,
             Surcharge = 0,
             AmountToCollect = total,
-            Items = orderItems.Select((item, index) => new CreateDeliveryNoteItemDto
+            Items = order.Items.Select((item, index) => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = item.Id,
-                WarehouseId = ResolveItemWarehouseId(quickSaleItems[index], dto),
+                WarehouseId = ResolveItemWarehouseId(dto.Items[index], dto),
                 Quantity = item.Quantity
             }).ToList()
         }).ConfigureAwait(false);
@@ -314,9 +319,6 @@ public sealed class FastSaleAppService(
 
     private static Guid ResolveItemWarehouseId(QuickSaleItemAppDto item, CreateQuickSaleAppDto dto)
         => item.WarehouseId == Guid.Empty ? dto.WarehouseId : item.WarehouseId;
-
-    private static Guid ResolveHeaderWarehouseId(CreateQuickSaleAppDto dto)
-        => dto.Items.Select(item => ResolveItemWarehouseId(item, dto)).FirstOrDefault(id => id != Guid.Empty);
 
     private static IReadOnlyCollection<Guid> GetWarehouseIdsToValidate(
         CreateQuickSaleAppDto dto,

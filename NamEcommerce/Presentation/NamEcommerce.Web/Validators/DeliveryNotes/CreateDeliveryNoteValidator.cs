@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Resources;
 
-namespace NamEcommerce.Web.Validators.Orders;
+namespace NamEcommerce.Web.Validators.DeliveryNotes;
 
 public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDeliveryNoteModel>
 {
@@ -11,9 +11,6 @@ public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDelive
     {
         RuleFor(x => x.OrderId)
             .NotEmpty().WithMessage(x => localizer["Error.Invalid", localizer["Label.Code"]]);
-
-        RuleFor(x => x.WarehouseId)
-            .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Warehouse"]]);
 
         RuleFor(x => x.ShippingAddress)
             .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Address"]])

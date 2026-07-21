@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record OrderFulfillmentScheduleItem : AppEntity
 {
-    public OrderFulfillmentScheduleItem(Guid id) : base(id)
+    private OrderFulfillmentScheduleItem(Guid id) : base(id)
     {
         ProductName = string.Empty;
     }

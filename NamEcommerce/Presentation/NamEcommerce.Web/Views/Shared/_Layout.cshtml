@@ -27,6 +27,15 @@
                 <div>
                     <div class="sidebar-brand-text">@Information.Name</div>
                     <div class="sidebar-brand-sub">Quản lý bán hàng</div>
+                    @if (currentUser is not null)
+                    {
+                        <div class="sidebar-user-info">
+                            <span class="sidebar-user-name small">
+                                <i class="bi bi-person"></i>
+                                @currentUser.FullName
+                            </span>
+                        </div>
+                    }
                 </div>
             </a>
             <nav class="sidebar-nav" aria-label="Menu chính">
@@ -35,7 +44,7 @@
 
             @if (currentUser is not null)
             {
-                <div class="d-grid p-3 pb-2">
+                <div class="d-grid p-3 pb-3">
                     <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary btn-sm">
                         Đăng xuất
                     </a>

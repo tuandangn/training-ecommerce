@@ -98,7 +98,6 @@ class FastSale {
         this.createQr = document.getElementById('fastSaleCreateQr');
         this.confirmQr = document.getElementById('fastSaleConfirmQr');
         this.complete = document.getElementById('fastSaleComplete');
-        this.clearCart = document.getElementById('fastSaleClearCart');
         this.customer = document.getElementById('CustomerId');
         this.shippingPhoneNumber = document.getElementById('ShippingPhoneNumber');
         this.shippingAddress = document.getElementById('ShippingAddress');
@@ -239,12 +238,6 @@ class FastSale {
         this.createQr.addEventListener('click', () => this.createPaymentIntent());
         this.confirmQr.addEventListener('click', () => this.confirmPaymentIntent());
         this.complete.addEventListener('click', () => this.completeSale());
-        this.clearCart.addEventListener('click', () => {
-            this.cart = [];
-            this.resetPaymentIntent();
-            this.setFulfillmentMode('notDelivered');
-            this.render();
-        });
         this.shippingAddress?.addEventListener('input', () => this.resetPaymentIntent());
         this.shippingPhoneNumber?.addEventListener('input', () => this.resetPaymentIntent());
     }
@@ -291,10 +284,11 @@ class FastSale {
         product = this.normalizeProduct(product);
         const warehouseId = this.resolveInitialWarehouseId(product);
         const existing = this.cart.find(item => item.productId === product.id && item.warehouseId === warehouseId);
+        let cartItem;
         if (existing) {
             existing.quantity += 1;
         } else {
-            this.cart.push({
+            cartItem = {
                 productId: product.id,
                 name: product.name,
                 warehouseId,
@@ -305,7 +299,8 @@ class FastSale {
                 unitPrice: Number(product.unitPrice || 0),
                 quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
                 pictureUrl: product.pictureUrl
-            });
+            };
+            this.cart.push(cartItem);
         }
         if (product.quantityAvailable)
             this.fromCommand = 'add-available';
@@ -314,12 +309,9 @@ class FastSale {
 
         this.resetPaymentIntent();
         this.render();
+        this.#closeOffcanvas();
 
-        const idx = this.cart.findIndex(item => item.productId === product.id && item.warehouseId === warehouseId);
-        if (this.itemEditor && !existing) {
-            this.#closeOffcanvas();
-
-            const cartItem = this.cart[idx];
+        if (this.itemEditor && cartItem) {
             this.itemEditor.open({
                 name: cartItem.name,
                 quantity: cartItem.quantity,
@@ -455,7 +447,6 @@ class FastSale {
     renderCart() {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
-        this.clearCart.classList.toggle('d-none', this.cart.length === 0);
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -725,9 +716,8 @@ class FastSale {
         }
 
         if (this.paymentTiming == 'unpaid' && this.selectedCustomer?.id == this.defaultCustomer) {
-            if (! await confirm('Chưa thanh toán', 'Khách hàng hiện tại là khách lẻ. Bạn có chắc chắn muốn tạo đơn chưa thanh toán cho khách này không?')) {
-                return;
-            }
+            this.showAlert('warning', 'Khách lẻ phải thanh toán đủ, không thể bán chịu.');
+            return;
         }
 
         const payload = this.buildSalePayload();

@@ -42,6 +42,13 @@ public static class DeliveryRunExtensions
                 ShippingPhoneNumber = item.ShippingPhoneNumber,
                 ShippingAddress = item.ShippingAddress,
                 AmountToCollect = item.AmountToCollect
+            }).ToList(),
+            WarehousePicks = run.WarehousePicks.Select(pick => new DeliveryRunWarehousePickDto
+            {
+                WarehouseId = pick.WarehouseId,
+                ConfirmedByUserId = pick.ConfirmedByUserId,
+                ConfirmedByFullName = pick.ConfirmedByFullName,
+                ConfirmedOnUtc = pick.ConfirmedOnUtc
             }).ToList()
         };
 }

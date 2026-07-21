@@ -49,6 +49,24 @@ public static class DeliverySystemNotificationComposer
             BuildDeliveryNoteMessage(note, "Người giao hàng vừa cập nhật giao hàng hoàn tất."),
             DeliveryRunsViewPermission);
 
+    public static CreateSystemNotificationAppDto DeliverySettlementApprovalRequested(DeliveryNoteAppDto note)
+        => DeliveryNoteNotification(
+            note,
+            SystemNotificationType.DeliverySettlementApprovalRequested,
+            SystemNotificationSeverity.Warning,
+            $"Phiếu {note.Code} chờ duyệt số tiền thu",
+            BuildDeliveryNoteMessage(note, $"Người giao đề xuất thu {note.ProposedAmountToCollect ?? 0:#,##0}. Cần admin duyệt số tiền."),
+            DeliveryNotesManagePermission);
+
+    public static CreateSystemNotificationAppDto DeliveryNoteAmountToCollectUpdated(DeliveryNoteAppDto note, decimal newAmount)
+        => DeliveryNoteNotification(
+            note,
+            SystemNotificationType.DeliveryNoteAmountToCollectUpdated,
+            SystemNotificationSeverity.Warning,
+            $"Tiền thu phiếu {note.Code} đã cập nhật",
+            BuildDeliveryNoteMessage(note, $"Admin đã cập nhật tiền cần thu thành {newAmount:#,##0}đ."),
+            DeliveryRunsViewPermission);
+
     public static CreateSystemNotificationAppDto DeliveryRunCreated(DeliveryRunAppDto run)
         => DeliveryRunNotification(
             run,

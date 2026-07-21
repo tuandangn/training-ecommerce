@@ -20,19 +20,29 @@ public sealed class AdminUserSeeder(
             return;
 
         await userAppService.EnsureSystemRolesAsync().ConfigureAwait(false);
-
+        
         var username = configuration["SeedData:Admin:Username"] ?? DefaultUsername;
         var password = configuration["SeedData:Admin:Password"] ?? DefaultPassword;
-
-        var createResult = await userAppService.CreateUserAsync(new CreateUserAppDto(
-            username: username,
-            password: password,
-            fullName: DefaultFullName,
-            phoneNumber: DefaultPhone
-        )).ConfigureAwait(false);
-
-        if (!createResult.Success || !createResult.CreatedId.HasValue)
-            return;
+        Guid administratorUserId = Guid.Empty;
+        if (await userAppService.DoesUsernameExistsAsync(username).ConfigureAwait(false))
+        {
+            var administratorUser = await userAppService.GetUserByUsernameAndPasswordAsync(username, password).ConfigureAwait(false);
+            if (administratorUser is null)
+                return;
+            administratorUserId = administratorUser.Id;
+        }
+        else
+        {
+            var createResult = await userAppService.CreateUserAsync(new CreateUserAppDto(
+                username: username,
+                password: password,
+                fullName: DefaultFullName,
+                phoneNumber: DefaultPhone
+            )).ConfigureAwait(false);
+            if (!createResult.Success || !createResult.CreatedId.HasValue)
+                return;
+            administratorUserId = createResult.CreatedId.Value;
+        }
 
         var roles = await userAppService.GetRolesAsync().ConfigureAwait(false);
         var adminRoleId = roles.FirstOrDefault(r =>
@@ -43,7 +53,7 @@ public sealed class AdminUserSeeder(
 
         await userAppService.UpdateUserRolesAsync(new UpdateUserRolesAppDto
         {
-            UserId = createResult.CreatedId.Value,
+            UserId = administratorUserId,
             RoleIds = [adminRoleId.Value]
         }).ConfigureAwait(false);
     }

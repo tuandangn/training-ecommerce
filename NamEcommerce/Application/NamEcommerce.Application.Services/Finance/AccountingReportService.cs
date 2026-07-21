@@ -103,7 +103,7 @@ public sealed class AccountingReportService : IAccountingReportService
 
         var cogs = _costLedger.DataSource
             .Where(e => e.MovementType == InventoryCostMovementType.SaleDispatch
-                     && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+                     && deliveredNoteIds.Contains(e.ReferenceId))
             .Sum(e => (decimal?)e.TotalCost) ?? 0;
 
         var vendorReturnCost = _costLedger.DataSource
@@ -210,14 +210,24 @@ public sealed class AccountingReportService : IAccountingReportService
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
             .Sum(e => (decimal?)e.TotalCost) ?? 0) - openingInventoryInPeriod;
 
-        var inventoryDecrease = _costLedger.DataSource
-            .Where(e => (e.MovementType == InventoryCostMovementType.SaleDispatch
-                      || e.MovementType == InventoryCostMovementType.VendorReturn
-                      || e.MovementType == InventoryCostMovementType.TransferOut
-                      || e.MovementType == InventoryCostMovementType.NegativeAdjustment
-                      || e.MovementType == InventoryCostMovementType.RevertReceipt)
-                     && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+        var deliveredNoteIds = _deliveryNotes.DataSource
+            .Where(dn => dn.Status == DeliveryNoteStatus.Delivered
+                      && dn.DeliveredOnUtc >= start && dn.DeliveredOnUtc <= end)
+            .Select(dn => dn.Id)
+            .ToHashSet();
+
+        var inventoryDecrease =
+            (_costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.SaleDispatch
+                         && deliveredNoteIds.Contains(e.ReferenceId))
+                .Sum(e => (decimal?)e.TotalCost) ?? 0) +
+            (_costLedger.DataSource
+                .Where(e => (e.MovementType == InventoryCostMovementType.VendorReturn
+                          || e.MovementType == InventoryCostMovementType.TransferOut
+                          || e.MovementType == InventoryCostMovementType.NegativeAdjustment
+                          || e.MovementType == InventoryCostMovementType.RevertReceipt)
+                         && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+                .Sum(e => (decimal?)e.TotalCost) ?? 0);
 
         var invChange = -(inventoryIncrease - inventoryDecrease);
 
@@ -288,6 +298,21 @@ public sealed class AccountingReportService : IAccountingReportService
         {
             var cost = await _inventoryCostingService.GetCurrentProductCostPriceAsync(stock.ProductId).ConfigureAwait(false);
             inventory += cost * stock.QuantityOnHand;
+        }
+
+        // Hàng đang giao/chờ đối soát đã bị trừ khỏi kho vật lý nhưng chưa ghi nhận COGS
+        // → vẫn là tài sản của doanh nghiệp cho đến khi Delivered
+        var inTransitNoteIds = _deliveryNotes.DataSource
+            .Where(dn => dn.Status == DeliveryNoteStatus.Delivering
+                      || dn.Status == DeliveryNoteStatus.PendingConfirmation)
+            .Select(dn => dn.Id)
+            .ToHashSet();
+        if (inTransitNoteIds.Count > 0)
+        {
+            inventory += _costLedger.DataSource
+                .Where(e => e.MovementType == InventoryCostMovementType.SaleDispatch
+                         && inTransitNoteIds.Contains(e.ReferenceId))
+                .Sum(e => (decimal?)e.TotalCost) ?? 0;
         }
 
         var grossAssets = _fixedAssets.DataSource

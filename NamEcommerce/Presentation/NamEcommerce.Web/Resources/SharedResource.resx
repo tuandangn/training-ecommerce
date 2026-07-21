@@ -540,6 +540,21 @@
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Delivery proof is required.</value>
   </data>
+  <data name="Error.DeliverySettlement.NotPending" xml:space="preserve">
+    <value>This delivery note is not awaiting settlement approval.</value>
+  </data>
+  <data name="Error.DeliverySettlement.AlreadyPending" xml:space="preserve">
+    <value>A settlement approval request is already pending for this delivery note.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ReasonRequired" xml:space="preserve">
+    <value>A reason is required.</value>
+  </data>
+  <data name="Error.DeliverySettlement.NotApproved" xml:space="preserve">
+    <value>This delivery note has not been approved yet.</value>
+  </data>
+  <data name="Error.DeliverySettlement.ApprovalRequired" xml:space="preserve">
+    <value>Collecting less than the amount due requires admin approval first.</value>
+  </data>
   <data name="Error.ExpenseTitleRequired" xml:space="preserve">
     <value>Expense title is required.</value>
   </data>
@@ -654,6 +669,9 @@
   <data name="Error.CashCollectedAmountCannotExceedAmountToCollect" xml:space="preserve">
     <value>Collected cash amount cannot exceed the delivery note amount to collect.</value>
   </data>
+  <data name="Error.RetailOrderCannotLeaveDebt" xml:space="preserve">
+    <value>Retail walk-in orders must be paid in full; debt is not allowed. Please collect the full outstanding amount.</value>
+  </data>
   <data name="Error.DeliveryCashCollectedAmountRequired" xml:space="preserve">
     <value>Please enter the cash collected by the shipper for delivered notes before confirming cash handover.</value>
   </data>
@@ -668,6 +686,15 @@
   </data>
   <data name="Error.DeliveryRunDeliveryNoteNotInRun" xml:space="preserve">
     <value>The delivery note does not belong to this delivery run.</value>
+  </data>
+  <data name="Error.DeliveryRunPickingIncomplete" xml:space="preserve">
+    <value>Not all warehouses have been confirmed. Please confirm each warehouse before handing over.</value>
+  </data>
+  <data name="Error.DeliveryRunWarehouseNotInRun" xml:space="preserve">
+    <value>The warehouse does not belong to this delivery run.</value>
+  </data>
+  <data name="Error.DeliveryRunCannotConfirmPick" xml:space="preserve">
+    <value>Cannot confirm warehouse pick.</value>
   </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
@@ -968,5 +995,14 @@
   </data>
   <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
     <value>Customer</value>
+  </data>
+  <data name="Error.DeliveryUserRequired" xml:space="preserve">
+    <value>Shipper is required</value>
+  </data>
+  <data name="Error.DeliveryRunItemsRequired" xml:space="preserve">
+    <value>Delivery notes are required</value>
+  </data>
+  <data name="Error.DeliveryNoteItemDataIsInvalid" xml:space="preserve">
+    <value>Delivery note item data is invalid</value>
   </data>
 </root>

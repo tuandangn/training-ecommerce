@@ -15,7 +15,7 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
         if (!acceptance.Success)
             return new CommonActionResultModel { Success = false, ErrorMessage = acceptance.ErrorMessage };
 
-        var result = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
+        var result = await deliveryNoteAppService.MarkPendingConfirmationAsync(new MarkDeliveryNoteDeliveredAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
             PictureIds = [request.PictureId],
@@ -43,28 +43,52 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
     private async Task<(bool Success, string? ErrorMessage, DeliveryAcceptanceAppDto? Acceptance)> BuildAcceptanceAsync(
         CompleteMobileDeliveryNoteCommand request)
     {
-        if (request.Items.Count == 0)
+        if (request.Items.Count == 0 || request.Items.All(i => i.ReturnedQuantity <= 0))
             return (true, null, null);
 
         var deliveryNote = await deliveryNoteAppService.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return (false, "Error.DeliveryNoteNotFound", null);
 
-        var itemsById = deliveryNote.Items.ToDictionary(item => item.Id);
-        var acceptanceItems = new List<DeliveryAcceptanceItemAppDto>(request.Items.Count);
-        foreach (var item in request.Items)
+        if (request.Items.Any(item => item.ProductId == Guid.Empty))
+            return (false, "Error.DeliveryAcceptance.InvalidItem", null);
+
+        var itemsByProductId = deliveryNote.Items
+            .GroupBy(item => item.ProductId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var productRequests = request.Items
+            .GroupBy(item => item.ProductId)
+            .Select(group => new
+            {
+                ProductId = group.Key,
+                ReturnedQuantity = group.Sum(item => Math.Max(0m, item.ReturnedQuantity)),
+                RejectReason = group.FirstOrDefault(item => item.ReturnedQuantity > 0 && !string.IsNullOrWhiteSpace(item.RejectReason))?.RejectReason
+            })
+            .ToList();
+
+        var acceptanceItems = new List<DeliveryAcceptanceItemAppDto>();
+        foreach (var item in productRequests)
         {
-            if (!itemsById.TryGetValue(item.DeliveryNoteItemId, out var deliveryNoteItem))
+            if (!itemsByProductId.TryGetValue(item.ProductId, out var deliveryNoteItems))
                 return (false, "Error.DeliveryAcceptance.InvalidItem", null);
 
-            var returnedQuantity = Math.Max(0m, Math.Min(deliveryNoteItem.Quantity, item.ReturnedQuantity));
-            acceptanceItems.Add(new DeliveryAcceptanceItemAppDto
+            var totalQuantity = deliveryNoteItems.Sum(deliveryNoteItem => deliveryNoteItem.Quantity);
+            if (item.ReturnedQuantity - totalQuantity > 0.0001m)
+                return (false, "Error.DeliveryAcceptance.QuantityMismatch", null);
+
+            var remainingReturnedQuantity = item.ReturnedQuantity;
+            foreach (var deliveryNoteItem in deliveryNoteItems)
             {
-                DeliveryNoteItemId = item.DeliveryNoteItemId,
-                AcceptedQuantity = deliveryNoteItem.Quantity - returnedQuantity,
-                RejectedQuantity = returnedQuantity,
-                RejectReason = returnedQuantity > 0 ? item.RejectReason : null
-            });
+                var returnedQuantity = Math.Min(deliveryNoteItem.Quantity, remainingReturnedQuantity);
+                remainingReturnedQuantity -= returnedQuantity;
+                acceptanceItems.Add(new DeliveryAcceptanceItemAppDto
+                {
+                    DeliveryNoteItemId = deliveryNoteItem.Id,
+                    AcceptedQuantity = deliveryNoteItem.Quantity - returnedQuantity,
+                    RejectedQuantity = returnedQuantity,
+                    RejectReason = returnedQuantity > 0 ? item.RejectReason : null
+                });
+            }
         }
 
         return (true, null, new DeliveryAcceptanceAppDto { Items = acceptanceItems });

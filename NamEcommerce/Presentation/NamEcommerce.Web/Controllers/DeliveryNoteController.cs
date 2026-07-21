@@ -2,15 +2,22 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
-using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
+using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using System.Text.Json;
@@ -23,25 +30,34 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
     private readonly ICustomerPortalQrCodeService _customerPortalQrCodeService;
+    private readonly ICurrentUserAccessor _currentUserAccessor;
+    private readonly ICachedValuesService _cachedValuesService;
+    private readonly IOrderAppService _orderAppService;
 
     public DeliveryNoteController(
         IDeliveryNoteModelFactory deliveryNoteModelFactory,
         IMediator mediator,
         IDeliveryNoteAppService deliveryNoteAppService,
-        ICustomerPortalQrCodeService customerPortalQrCodeService)
+        ICustomerPortalQrCodeService customerPortalQrCodeService,
+        ICurrentUserAccessor currentUserAccessor,
+        ICachedValuesService cachedValuesService,
+        IOrderAppService orderAppService)
     {
         _deliveryNoteModelFactory = deliveryNoteModelFactory;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
         _customerPortalQrCodeService = customerPortalQrCodeService;
+        _currentUserAccessor = currentUserAccessor;
+        _cachedValuesService = cachedValuesService;
+        _orderAppService = orderAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
-    public async Task<IActionResult> List(DeliveryNoteSearchModel searchModel)
+    public async Task<IActionResult> List(DeliveryNoteListSearchModel searchModel)
     {
-        var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel).ConfigureAwait(false);
+        var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel);
         return View(model);
     }
 
@@ -50,7 +66,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId);
 
             if (!string.IsNullOrEmpty(selected))
             {
@@ -88,16 +104,47 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
 
-        var orderItems = BuildCreateDeliveryNoteItems(model);
-        if (!orderItems.Any())
+        var order = await _orderAppService.GetOrderByIdAsync(model.OrderId);
+        if (order is null)
+        {
+            NotifyError("Error.OrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var deliveryNoteItems = BuildCreateDeliveryNoteItems(model);
+        if (!deliveryNoteItems.Any())
         {
             AddLocalizedModelError("Error.DeliveryNoteItemRequired");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
+        }
+
+        if (order.CustomerId == _cachedValuesService.DefaultCustomerId)
+        {
+            var amountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order.Id });
+            var totalSelected = 0m;
+            foreach (var deliveryNoteItem in deliveryNoteItems)
+            {
+                var orderItem = order.Items.FirstOrDefault(item => item.Id == deliveryNoteItem.OrderItemId);
+                if (orderItem is null)
+                {
+                    AddLocalizedModelError("Error.OrderItemIsNotFound");
+                    model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+                    return View(model);
+                }
+                totalSelected += deliveryNoteItem.Quantity * orderItem.UnitPrice;
+            }
+            var calculatedAmountToCollect = model.Surcharge + Math.Max(0, totalSelected - amountAlreadyPaidForOrder);
+            if (calculatedAmountToCollect != model.AmountToCollect)
+            {
+                AddLocalizedModelError("Error.AmountToCollectIsInvalid");
+                model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+                return View(model);
+            }
         }
 
         try
@@ -107,14 +154,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 ShippingAddress = model.ShippingAddress,
                 ShippingPhoneNumber = model.ShippingPhoneNumber,
-                WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
                 Note = model.Note,
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
                 AmountToCollect = model.AmountToCollect,
-                Items = orderItems
-            }).ConfigureAwait(false);
+                Items = deliveryNoteItems
+            });
 
             if (result.Success)
             {
@@ -123,13 +169,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             }
 
             AddLocalizedModelError(result.ErrorMessage ?? "Error.DeliveryNoteCreateFailed");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
         catch (NamEcommerceDomainException ex)
         {
             AddLocalizedModelError(ex.ErrorCode, ex.Parameters);
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
     }
@@ -145,7 +191,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             .Distinct()
             .ToList();
 
-        var warehouses = (await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false))
+        var warehouses = (await _mediator.Send(new GetWarehouseOptionListQuery()))
             .Options
             .ToList();
 
@@ -155,7 +201,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             var warehouseItems = new List<object>(warehouses.Count);
             foreach (var warehouse in warehouses)
             {
-                var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouse.Id)).ConfigureAwait(false);
+                var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouse.Id));
                 warehouseItems.Add(new
                 {
                     warehouseId = warehouse.Id,
@@ -180,7 +226,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
             return View(model);
         }
         catch
@@ -198,7 +244,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         {
             DeliveryNoteId = id,
             AssignedDeliveryUserId = assignedDeliveryUserId
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
@@ -213,8 +259,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id).ConfigureAwait(false);
-            var qrCode = await _customerPortalQrCodeService.CreateDeliveryQrCodeAsync(id, Request).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
+            var qrCode = await _customerPortalQrCodeService.CreateDeliveryQrCodeAsync(id, Request);
             if (qrCode is not null)
             {
                 model.CustomerPortalUrl = qrCode.Url;
@@ -231,13 +277,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Approve)]
     public async Task<IActionResult> Confirm(Guid id)
     {
         var result = await _mediator.Send(new ConfirmDeliveryNoteCommand
         {
             DeliveryNoteId = id
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             return Json(new { success = true });
@@ -253,14 +299,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
         var result = await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
         {
             DeliveryNoteId = id
-        }).ConfigureAwait(false);
+        });
 
         if (!result.Success)
             return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.DeliveryNoteMarkDeliveringFailed"));
@@ -275,11 +321,21 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         string? agreedCustomerChargeReason, bool compensateInNextDelivery,
         decimal? cashCollectedAmount, string? acceptanceItemsJson, [FromForm] IList<Guid>? pictureIds)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        if (pictureIds is null || pictureIds.Count == 0)
+        var effectivePictureIds = pictureIds?
+            .Where(pictureId => pictureId != Guid.Empty)
+            .ToList() ?? [];
+        if (effectivePictureIds.Count == 0
+            && deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+            && deliveryNote.DeliveryProofPictureId.HasValue)
+        {
+            effectivePictureIds.Add(deliveryNote.DeliveryProofPictureId.Value);
+        }
+
+        if (effectivePictureIds.Count == 0)
             return this.JsonError(message: LocalizeError("Error.DeliveryProofRequired"));
 
         var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
@@ -292,7 +348,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             CompensateInNextDelivery = compensateInNextDelivery,
             CashCollectedAmount = cashCollectedAmount,
             Items = acceptanceItems,
-            PictureIds = pictureIds
+            PictureIds = effectivePictureIds
         });
 
         if (result.Success)
@@ -301,37 +357,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         return this.JsonError(LocalizeError(result.ErrorMessage!));
     }
 
-    public async Task<IActionResult> GetAcceptantItems(Guid id)
-    {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
-        if (deliveryNote is null)
-            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
-
-        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
-        {
-            DeliveryNoteId = id
-        }).ConfigureAwait(false);
-        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
-        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
-        var items = deliveryNote.Items.Select(i =>
-        {
-            returnedQuantities.TryGetValue(i.Id, out var summary);
-            return new DeliveryNoteItemModel
-            {
-                Id = i.Id,
-                ProductName = i.ProductName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                SubTotal = i.SubTotal,
-                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
-                PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
-                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
-                QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
-            };
-        }).ToList();
-        return this.JsonOk(items);
-    }
     private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
     {
         if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
@@ -350,6 +375,122 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
     }
 
+    public async Task<IActionResult> GetDeliveryNoteAcceptantItemsInfo(Guid id)
+    {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        {
+            DeliveryNoteId = id
+        });
+
+        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
+        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+
+        Dictionary<Guid, DeliveryNoteSettlementItemAppDto> settlementItemsByDeliveryNoteItemId = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
+            ? deliveryNote.SettlementItems.ToDictionary(item => item.DeliveryNoteItemId)
+            : [];
+
+        var acceptantItems = deliveryNote.Items.Select(i =>
+        {
+            returnedQuantities.TryGetValue(i.Id, out var summary);
+            settlementItemsByDeliveryNoteItemId.TryGetValue(i.Id, out var settlementItem);
+            return new DeliveryNoteDetailsModel.DeliveryNoteItemModel
+            {
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                SubTotal = i.SubTotal,
+                ReturnedQuantity = settlementItem?.RejectedQuantity ?? summary?.ConfirmedQuantity ?? 0m,
+                RejectReason = settlementItem?.RejectReason,
+                PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
+                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
+                QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
+            };
+        }).ToList();
+
+        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> ApproveSettlement(
+        Guid deliveryNoteId, decimal approvedAmountToCollect,
+        decimal agreedCustomerCharge, string? agreedCustomerChargeReason, string? adminNote)
+    {
+        if (!User.IsInRole(SystemUserRoleNames.Admin))
+            return Forbid();
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
+        var result = await _mediator.Send(new ApproveDeliverySettlementCommand
+        {
+            DeliveryNoteId = deliveryNoteId,
+            ApprovedAmountToCollect = approvedAmountToCollect,
+            AgreedCustomerCharge = agreedCustomerCharge,
+            AgreedCustomerChargeReason = agreedCustomerChargeReason,
+            AdminNote = adminNote,
+            ApprovedByUserId = currentUser?.Id
+        });
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.GenericError");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> RejectSettlement(Guid deliveryNoteId, string reason)
+    {
+        if (!User.IsInRole(SystemUserRoleNames.Admin))
+            return Forbid();
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
+        var result = await _mediator.Send(new RejectDeliverySettlementCommand
+        {
+            DeliveryNoteId = deliveryNoteId,
+            Reason = reason,
+            ApprovedByUserId = currentUser?.Id
+        });
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.GenericError");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
+    public async Task<IActionResult> AdminUpdateAmountToCollect(Guid deliveryNoteId, decimal newAmount, string? note)
+    {
+        if (!User.IsInRole(SystemUserRoleNames.Admin))
+            return Forbid();
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
+        var result = await _mediator.Send(new AdminUpdateAmountToCollectCommand
+        {
+            DeliveryNoteId = deliveryNoteId,
+            NewAmount = newAmount,
+            Note = note,
+            AdminUserId = currentUser?.Id
+        });
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.GenericError");
+
+        return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
@@ -359,7 +500,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             await _mediator.Send(new CancelDeliveryNoteCommand
             {
                 DeliveryNoteId = id
-            }).ConfigureAwait(false);
+            });
 
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
         }
@@ -380,7 +521,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId);
 
             foreach (var selectedItem in request.SelectedItems)
             {
@@ -429,7 +570,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 Note = model.Note,
                 ShowPrice = model.ShowPrice,
-                WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
                 ShippingPhoneNumber = model.ShippingPhoneNumber,
                 Surcharge = request.Surcharge,
@@ -438,10 +578,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Items = request.SelectedItems.Select(selectedItem => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
                 {
                     OrderItemId = selectedItem.OrderItemId,
-                    WarehouseId = selectedItem.WarehouseId == Guid.Empty ? request.WarehouseId : selectedItem.WarehouseId,
+                    WarehouseId = selectedItem.WarehouseId,
                     Quantity = selectedItem.Quantity
                 }).ToList()
-            }).ConfigureAwait(false);
+            });
 
             if (createResult.Success)
             {
@@ -494,7 +634,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 continue;
             }
 
-            var warehouseId = item.WarehouseId == Guid.Empty ? model.WarehouseId : item.WarehouseId;
+            var warehouseId = item.WarehouseId;
             if (warehouseId == Guid.Empty || item.Quantity <= 0)
                 continue;
 
@@ -516,7 +656,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         var result = await _mediator.Send(new UpdateDeliveryNoteShippingCommand(
             deliveryNoteId,
             shippingAddress,
-            shippingPhoneNumber)).ConfigureAwait(false);
+            shippingPhoneNumber));
 
         if (result.Success)
             NotifySuccess("Msg.SaveSuccess");
@@ -525,28 +665,27 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
     }
+
+    #region Helper classes
+
+    public class CreateFromPreparationRequest
+    {
+        public Guid OrderId { get; set; }
+        public List<SelectedItemModel> SelectedItems { get; set; } = [];
+        public bool ShowPrice { get; set; }
+        public bool CompensateReturnedQuantityInNextDelivery { get; set; }
+        public string? Note { get; set; }
+        public decimal Surcharge { get; set; }
+        public string? SurchargeReason { get; set; }
+        public decimal AmountToCollect { get; set; }
+    }
+
+    public class SelectedItemModel
+    {
+        public Guid OrderItemId { get; set; }
+        public Guid WarehouseId { get; set; }
+        public decimal Quantity { get; set; }
+    }
+
+    #endregion
 }
-
-#region Helper classes
-
-public class CreateFromPreparationRequest
-{
-    public Guid OrderId { get; set; }
-    public List<SelectedItemModel> SelectedItems { get; set; } = [];
-    public bool ShowPrice { get; set; }
-    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
-    public Guid WarehouseId { get; set; }
-    public string? Note { get; set; }
-    public decimal Surcharge { get; set; }
-    public string? SurchargeReason { get; set; }
-    public decimal AmountToCollect { get; set; }
-}
-
-public class SelectedItemModel
-{
-    public Guid OrderItemId { get; set; }
-    public Guid WarehouseId { get; set; }
-    public decimal Quantity { get; set; }
-}
-
-#endregion 

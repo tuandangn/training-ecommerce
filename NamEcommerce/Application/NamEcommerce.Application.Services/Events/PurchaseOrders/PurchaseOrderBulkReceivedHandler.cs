@@ -26,7 +26,7 @@ public sealed class PurchaseOrderBulkReceivedHandler : INotificationHandler<Purc
             return;
 
         await _orderFulfillmentScheduleAppService
-            .RefreshWhenStockAvailableForPurchaseOrderItemsAsync(purchaseOrder.Items.Select(item => item.Id).ToList())
+            .RefreshWhenStockAvailableForPurchaseOrderItemsAsync(purchaseOrder.Items.Select(item => (purchaseOrder.Id, item.Id)).ToList())
             .ConfigureAwait(false);
     }
 }

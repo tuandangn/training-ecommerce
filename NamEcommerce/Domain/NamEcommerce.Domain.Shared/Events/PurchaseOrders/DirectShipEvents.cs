@@ -1,3 +1,5 @@
+using NamEcommerce.Domain.Shared.Common;
+
 namespace NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 /// </summary>
 public sealed record AllocationMarkedAsDirectShip(
     Guid AllocationId,
-    Guid PurchaseOrderItemId,
+    SecondaryItemId PurchaseOrderItemId,
     string Address,
     string? ContactName,
     string? ContactPhone) : DomainEvent, IReliableDomainEvent;

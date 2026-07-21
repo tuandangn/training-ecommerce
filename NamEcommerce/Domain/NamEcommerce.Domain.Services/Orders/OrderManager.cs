@@ -36,7 +36,9 @@ public sealed class OrderManager(
     IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
     IInventoryStockManager stockManager,
     ICurrentUserAccessor currentUserAccessor,
-    EntityCodeGenerator entityCodeGenerator) : IOrderManager
+    EntityCodeGenerator entityCodeGenerator,
+    IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
+    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository) : IOrderManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -190,6 +192,14 @@ public sealed class OrderManager(
             throw new OrderCannotUpdateOrderItemsException();
         if (HasReceivedAllocations(dto.OrderItemId))
             throw new OrderCannotUpdateOrderItemsException();
+
+        var scheduleItemsToDelete = scheduleDataReader.DataSource
+            .Where(s => s.OrderId == order.Id)
+            .SelectMany(s => s.Items)
+            .Where(item => item.OrderItemId == dto.OrderItemId)
+            .ToList();
+        foreach (var scheduleItem in scheduleItemsToDelete)
+            await scheduleItemRepository.DeleteAsync(scheduleItem).ConfigureAwait(false);
 
         order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -414,14 +424,14 @@ public sealed class OrderManager(
 
     private decimal GetOutstandingAllocationQuantity(Guid orderItemId)
         => allocationDataReader.DataSource
-            .Where(allocation => allocation.OrderItemId == orderItemId
+            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled)
             .ToList()
             .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
 
     private bool HasReceivedAllocations(Guid orderItemId)
         => allocationDataReader.DataSource
-            .Any(allocation => allocation.OrderItemId == orderItemId
+            .Any(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled
                 && allocation.ReceivedQuantity > 0);
 }

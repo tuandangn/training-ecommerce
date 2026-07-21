@@ -21,41 +21,55 @@
 <div class="row g-3">
     <div class="col-lg-8">
         <div class="content-card">
-            <div class="content-card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-sm-6">
-                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
-                        <div id="vendorPicker" data-id="" data-name="" data-phone="" data-address=""></div>
-                        <input type="hidden" id="VendorId" name="VendorId" />
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
-                        <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
-                        <select id="DefaultWarehouseId" class="form-select">
-                            <option value="">-- Chọn kho --</option>
-                            @foreach (var w in Model.AvailableWarehouses)
-                            {
-                                <option value="@w.Id">@w.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-sm-6">
-                        <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
-                        <input asp-for="Note" id="Note" class="form-control" placeholder="Ghi chú đơn nhập" />
+            <div class="content-card-body-flush border-bottom pt-2">
+                <div class="content-card-header">
+                    <h5>
+                        Thông tin đơn nhập
+                    </h5>
+                </div>
+                <div class="content-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
+                                <div id="vendorPicker" data-id="" data-name="" data-phone="" data-address=""></div>
+                                <input type="hidden" id="VendorId" name="VendorId" />
+                            </div>
+                            <div>
+                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
+                                <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
+                                <select id="DefaultWarehouseId" class="form-select">
+                                    <option value="">-- Chọn kho --</option>
+                                    @foreach (var w in Model.AvailableWarehouses)
+                                    {
+                                        <option value="@w.Id">@w.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
+                                <input asp-for="Note" id="Note" class="form-control" placeholder="Ghi chú đơn nhập" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div class="content-card-body-flush border-top">
+            <div class="content-card-body-flush">
                 <div class="content-card-header">
                     <h5 class="mb-0">Danh sách hàng hóa</h5>
                     <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
                             data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
                         <i class="bi bi-plus-lg me-1"></i>Thêm hàng
                     </button>
+                </div>
+                <div class="alert alert-warning mb-0 d-none notHasAppropriatedVendorWarning">
+                    <span class="fw-bold d-block">Không có nhà cung cấp nào phù hợp cho tất cả hàng hóa đã chọn.</span>
+                    Nếu muốn nhập hàng từ nhiều nhà cung cấp vui lòng tạo nhiều đơn nhập tương ứng.
                 </div>
                 <div class="table-responsive">
                     <table class="table data-table mb-0">

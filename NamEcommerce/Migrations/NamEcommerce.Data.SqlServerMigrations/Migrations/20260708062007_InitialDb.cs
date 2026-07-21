@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class Db16062026 : Migration
+    public partial class InitialDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -646,8 +646,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     OrderCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    WarehouseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    WarehouseName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AssignedDeliveryUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     AssignedDeliveryUsername = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     AssignedDeliveryFullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
@@ -677,6 +675,19 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     DeliveryCompletionSource = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     DeliveryCompletionIdempotencyKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     DeliveryCashCollectedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    AmountToCollectOverriddenAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AmountToCollectOverrideNote = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SettlementApproval = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    ProposedAmountToCollect = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ApprovedAmountToCollect = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ApprovedAgreedCustomerCharge = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ApprovedAgreedChargeReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    SettlementReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    SettlementAdminNote = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    SettlementRequestedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SettlementRequestedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SettlementApprovedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SettlementApprovedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CustomerAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
@@ -1060,6 +1071,33 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PurchaseOrder", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PurchaseOrderItemAllocation",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AllocatedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ReceivedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    IsDirectShip = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DirectShipAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    DirectShipContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    DirectShipContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DirectShipPriority = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PurchaseOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PurchaseOrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PurchaseOrderItemAllocation", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1705,6 +1743,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DeliveryNoteSettlementItem",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DeliveryNoteId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DeliveryNoteItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AcceptedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RejectedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RejectReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeliveryNoteSettlementItem", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DeliveryNoteSettlementItem_DeliveryNote_DeliveryNoteId",
+                        column: x => x.DeliveryNoteId,
+                        principalSchema: "tbl",
+                        principalTable: "DeliveryNote",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DeliveryRunItem",
                 schema: "tbl",
                 columns: table => new
@@ -1724,6 +1786,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     table.PrimaryKey("PK_DeliveryRunItem", x => x.Id);
                     table.ForeignKey(
                         name: "FK_DeliveryRunItem_DeliveryRun_DeliveryRunId",
+                        column: x => x.DeliveryRunId,
+                        principalSchema: "tbl",
+                        principalTable: "DeliveryRun",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DeliveryRunWarehousePick",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DeliveryRunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    WarehouseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ConfirmedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ConfirmedByFullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ConfirmedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeliveryRunWarehousePick", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DeliveryRunWarehousePick_DeliveryRun_DeliveryRunId",
                         column: x => x.DeliveryRunId,
                         principalSchema: "tbl",
                         principalTable: "DeliveryRun",
@@ -1926,6 +2012,37 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         principalSchema: "tbl",
                         principalTable: "PurchaseOrder",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DirectShipAddressChangeLog",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AllocationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OldAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    NewAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    OldContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    NewContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    OldContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NewContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    EditedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EditedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DirectShipAddressChangeLog", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DirectShipAddressChangeLog_PurchaseOrderItemAllocation_AllocationId",
+                        column: x => x.AllocationId,
+                        principalSchema: "tbl",
+                        principalTable: "PurchaseOrderItemAllocation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2409,76 +2526,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "PurchaseOrderItemAllocation",
-                schema: "tbl",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PurchaseOrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AllocatedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ReceivedQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    IsDirectShip = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    DirectShipAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    DirectShipContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    DirectShipContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    DirectShipPriority = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PurchaseOrderItemAllocation", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PurchaseOrderItemAllocation_OrderItem_OrderItemId",
-                        column: x => x.OrderItemId,
-                        principalSchema: "tbl",
-                        principalTable: "OrderItem",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_PurchaseOrderItemAllocation_PurchaseOrderItem_PurchaseOrderItemId",
-                        column: x => x.PurchaseOrderItemId,
-                        principalSchema: "tbl",
-                        principalTable: "PurchaseOrderItem",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "DirectShipAddressChangeLog",
-                schema: "tbl",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AllocationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OldAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    NewAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    OldContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    NewContactName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    OldContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    NewContactPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    EditedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EditedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DirectShipAddressChangeLog", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_DirectShipAddressChangeLog_PurchaseOrderItemAllocation_AllocationId",
-                        column: x => x.AllocationId,
-                        principalSchema: "tbl",
-                        principalTable: "PurchaseOrderItemAllocation",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_BankAccount_Code",
                 schema: "tbl",
@@ -2894,6 +2941,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "WarehouseId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_DeliveryNoteSettlementItem_DeliveryNoteId",
+                schema: "tbl",
+                table: "DeliveryNoteSettlementItem",
+                column: "DeliveryNoteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DeliveryRun_AssignedDeliveryUserId_Status",
                 schema: "tbl",
                 table: "DeliveryRun",
@@ -2923,6 +2976,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "DeliveryRunItem",
                 column: "DeliveryRunId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeliveryRunWarehousePick_DeliveryRunId_WarehouseId",
+                schema: "tbl",
+                table: "DeliveryRunWarehousePick",
+                columns: new[] { "DeliveryRunId", "WarehouseId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_DirectShipAddressChangeLog_AllocationId",
@@ -3295,18 +3355,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "PurchaseOrderItem",
                 column: "PurchaseOrderId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PurchaseOrderItemAllocation_OrderItemId",
-                schema: "tbl",
-                table: "PurchaseOrderItemAllocation",
-                column: "OrderItemId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PurchaseOrderItemAllocation_PurchaseOrderItemId",
-                schema: "tbl",
-                table: "PurchaseOrderItemAllocation",
-                column: "PurchaseOrderItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseOrderItemChangeAudit_ProductId",
@@ -3719,7 +3767,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "DeliveryNoteSettlementItem",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "DeliveryRunItem",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "DeliveryRunWarehousePick",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -3796,6 +3852,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProductVendor",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "PurchaseOrderItem",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -3915,6 +3975,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "OrderItem",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "Category",
                 schema: "tbl");
 
@@ -3924,6 +3988,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "Vendor",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "PurchaseOrder",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -3955,23 +4023,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
-                name: "OrderItem",
-                schema: "tbl");
-
-            migrationBuilder.DropTable(
-                name: "PurchaseOrderItem",
-                schema: "tbl");
-
-            migrationBuilder.DropTable(
                 name: "Order",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
                 name: "Product",
-                schema: "tbl");
-
-            migrationBuilder.DropTable(
-                name: "PurchaseOrder",
                 schema: "tbl");
 
             migrationBuilder.DropTable(

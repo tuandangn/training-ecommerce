@@ -152,6 +152,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
 public sealed record PurchaseOrderItemAllocationForPoItemAppDto
 {
     public required Guid AllocationId { get; init; }
+    public required Guid PurchaseOrderId { get; init; }
     public required Guid PurchaseOrderItemId { get; init; }
     public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }

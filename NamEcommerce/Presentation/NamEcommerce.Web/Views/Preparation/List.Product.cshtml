@@ -143,6 +143,7 @@
                                                                             DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
                                                                             DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
                                                                             DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                                            DeliveryNoteStatus.PendingConfirmation => ("warning", "Chờ đối soát"),
                                                                             DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
                                                                             DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
                                                                             _ => ("secondary", "Không rõ")
@@ -279,6 +280,7 @@
                                                         DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
                                                         DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
                                                         DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                        DeliveryNoteStatus.PendingConfirmation => ("warning", "Chờ đối soát"),
                                                         DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
                                                         DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
                                                         _ => ("secondary", "Không rõ")

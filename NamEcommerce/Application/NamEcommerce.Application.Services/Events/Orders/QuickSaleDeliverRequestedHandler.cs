@@ -28,13 +28,15 @@ public sealed class QuickSaleDeliverRequestedHandler(
             .GroupBy(item => new
             {
                 item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+                WarehouseId = item.WarehouseId
             })
             .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(i => i.Quantity) })
             .ToList();
 
         foreach (var group in dispatchGroups)
         {
+            if (group.WarehouseId == Guid.Empty)
+                continue;
             await stockManager.DispatchStockUpToAsync(
                 group.ProductId,
                 group.WarehouseId,
@@ -50,7 +52,7 @@ public sealed class QuickSaleDeliverRequestedHandler(
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId,
+                WarehouseId = item.WarehouseId,
                 Quantity = item.Quantity,
                 MovementType = InventoryCostMovementType.SaleDispatch,
                 ReferenceType = InventoryCostReferenceType.SalesOrder,

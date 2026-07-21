@@ -8,6 +8,8 @@
  * qty không vượt RemainingQuantity.
  */
 export default class BulkReceiveController {
+    #purchaseOrderId;
+
     #modalEl;
     #form;
     #tbody;
@@ -34,6 +36,10 @@ export default class BulkReceiveController {
     #rowSeq = 0;
     #taxMode = 'amount';
     #dsAbortControllers = new Map();
+
+    constructor(purchaseOrderId) {
+        this.#purchaseOrderId = purchaseOrderId;
+    }
 
     init(modalEl) {
         if (!modalEl) return;
@@ -371,8 +377,8 @@ export default class BulkReceiveController {
 
         try {
             const [eligibleResp, nonDsResp] = await Promise.all([
-                fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`, { signal: controller.signal }),
-                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderItemId=${itemId}`, { signal: controller.signal })
+                fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal }),
+                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal })
             ]);
             if (!eligibleResp.ok || !nonDsResp.ok) throw new Error('Lỗi tải dữ liệu');
             const [eligibleData, nonDsData] = await Promise.all([eligibleResp.json(), nonDsResp.json()]);

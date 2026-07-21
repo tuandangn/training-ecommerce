@@ -8,6 +8,7 @@ public interface IDeliveryRunAppService
     Task<CreateDeliveryRunResultAppDto> CreateAsync(CreateDeliveryRunAppDto dto);
     Task<CommonActionResultDto> AcknowledgeDriverCacheAsync(Guid id, string? deviceId);
     Task<CommonActionResultDto> IssuePaperManifestAsync(Guid id);
+    Task<CommonActionResultDto> ConfirmWarehousePickAsync(Guid id, Guid warehouseId);
     Task<CommonActionResultDto> HandOverAsync(Guid id);
     Task<CommonActionResultDto> CloseAsync(Guid id);
     Task<CommonActionResultDto> ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverAppDto dto);

@@ -5,7 +5,7 @@ public sealed record DeliveryNotePickerAppDto(Guid Id)
 {
     public required string Code { get; init; }
     public required DateTime DeliveredOnUtc { get; init; }
-    public Guid WarehouseId { get; set; }
+    public Guid? WarehouseId { get; set; }
 }
 
 [Serializable]

@@ -65,6 +65,9 @@ public sealed class DeliveryRunAppService(
     public Task<CommonActionResultDto> IssuePaperManifestAsync(Guid id)
         => RunActionAsync(() => manager.IssuePaperManifestAsync(id));
 
+    public Task<CommonActionResultDto> ConfirmWarehousePickAsync(Guid id, Guid warehouseId)
+        => RunActionAsync(() => manager.ConfirmWarehousePickAsync(id, warehouseId));
+
     public async Task<CommonActionResultDto> HandOverAsync(Guid id)
     {
         var result = await RunActionAsync(() => manager.HandOverAsync(id)).ConfigureAwait(false);

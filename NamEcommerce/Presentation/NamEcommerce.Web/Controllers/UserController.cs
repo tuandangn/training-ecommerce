@@ -104,4 +104,6 @@ public sealed class UserController : BaseController
 
         return RedirectToHome();
     }
+
+    public IActionResult AccessDenied() => View();
 }

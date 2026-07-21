@@ -119,7 +119,9 @@
                             {
                                 var canConfirm = !note.IsDirectShip && note.Status == (int)DeliveryNoteStatus.Draft;
                                 var canDelivering = !note.IsDirectShip && note.Status == (int)DeliveryNoteStatus.Confirmed;
-                                var canDelivered = note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering;
+                                var canDelivered = note.Status == (int)DeliveryNoteStatus.Confirmed
+                                    || note.Status == (int)DeliveryNoteStatus.Delivering
+                                    || note.Status == (int)DeliveryNoteStatus.PendingConfirmation;
                                 var canReject = note.IsDirectShip && note.Status != (int)DeliveryNoteStatus.Delivered && note.Status != (int)DeliveryNoteStatus.Cancelled;
                                 var canCancel = !note.IsDirectShip && note.Status != (int)DeliveryNoteStatus.Delivered && note.Status != (int)DeliveryNoteStatus.Cancelled;
                                 <tr>

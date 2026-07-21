@@ -119,6 +119,22 @@ public sealed class DeliveryRunManager(
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
     }
 
+    public async Task ConfirmWarehousePickAsync(Guid id, Guid warehouseId)
+    {
+        var run = await runRepository.GetByIdAsync(id).ConfigureAwait(false)
+                  ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
+        if (!run.DriverCachedOnUtc.HasValue)
+            throw new NamEcommerceDomainException("Error.DeliveryRunDriverNotAccepted");
+
+        var warehouseIds = GetRunWarehouseIds(run);
+        if (!warehouseIds.Contains(warehouseId))
+            throw new NamEcommerceDomainException("Error.DeliveryRunWarehouseNotInRun");
+
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        run.ConfirmWarehousePick(warehouseId, currentUser?.Id, currentUser?.FullName, DateTime.UtcNow);
+        await runRepository.UpdateAsync(run).ConfigureAwait(false);
+    }
+
     public async Task HandOverAsync(Guid id)
     {
         await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
@@ -126,12 +142,23 @@ public sealed class DeliveryRunManager(
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
-        run.HandOver(currentUser?.Id, DateTime.UtcNow);
+        run.HandOver(GetRunWarehouseIds(run), currentUser?.Id, DateTime.UtcNow);
         foreach (var item in run.Items)
             await deliveryNoteManager.MarkDeliveringAsync(item.DeliveryNoteId).ConfigureAwait(false);
 
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
         await transaction.CommitAsync().ConfigureAwait(false);
+    }
+
+    private List<Guid> GetRunWarehouseIds(DeliveryRun run)
+    {
+        var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
+        return deliveryNoteReader.DataSource
+            .Where(note => noteIds.Contains(note.Id))
+            .SelectMany(note => note.Items)
+            .Select(item => item.WarehouseId)
+            .Distinct()
+            .ToList();
     }
 
     public async Task CloseAsync(Guid id)
@@ -174,7 +201,6 @@ public sealed class DeliveryRunManager(
         if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m)
             throw new NamEcommerceDomainException("Error.CashHandoverAmountMustMatchCollectedAmount");
 
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var confirmedOnUtc = DateTime.UtcNow;
         run.ConfirmCashHandover(
@@ -187,7 +213,6 @@ public sealed class DeliveryRunManager(
         await RecordCodPaymentsAsync(run, deliveredNotes, currentUser?.Id, confirmedOnUtc, dto.Note)
             .ConfigureAwait(false);
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedDto dto)
@@ -287,13 +312,14 @@ public sealed class DeliveryRunManager(
                 continue;
 
             CustomerDebtDto? debt = null;
-            if (note.AmountToCollect > 0)
+            var debtAmount = note.TotalAmount + note.Surcharge + (note.ApprovedAgreedCustomerCharge ?? 0m);
+            if (debtAmount > 0)
             {
                 debt = await customerDebtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
                 {
                     CustomerId = note.CustomerId,
                     DeliveryNoteId = note.Id,
-                    TotalAmount = note.AmountToCollect
+                    TotalAmount = debtAmount
                 }).ConfigureAwait(false);
             }
 

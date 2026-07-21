@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260615192240_Db16062026")]
-    partial class Db16062026
+    [Migration("20260708062007_InitialDb")]
+    partial class InitialDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2320,6 +2320,22 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasDefaultValue(0m);
 
+                    b.Property<DateTime?>("AmountToCollectOverriddenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AmountToCollectOverrideNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ApprovedAgreedChargeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("ApprovedAgreedCustomerCharge")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ApprovedAmountToCollect")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("AssignedDeliveryFullName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -2431,6 +2447,34 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal?>("ProposedAmountToCollect")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SettlementAdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("SettlementApproval")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid?>("SettlementApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("SettlementApprovedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SettlementReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("SettlementRequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("SettlementRequestedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ShippingPhoneNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -2462,12 +2506,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<Guid>("WarehouseId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("WarehouseName")
-                        .HasColumnType("nvarchar(max)");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "CustomerInfo", "NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote.CustomerInfo#CustomerInfo", b1 =>
                         {
@@ -2580,6 +2618,35 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("WarehouseId");
 
                     b.ToTable("DeliveryNoteItem", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNoteSettlementItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AcceptedQuantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("DeliveryNoteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeliveryNoteItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("RejectedQuantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoteId");
+
+                    b.ToTable("DeliveryNoteSettlementItem", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", b =>
@@ -2734,6 +2801,36 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("DeliveryRunId");
 
                     b.ToTable("DeliveryRunItem", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRunWarehousePick", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConfirmedByFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ConfirmedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ConfirmedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DeliveryRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryRunId", "WarehouseId")
+                        .IsUnique();
+
+                    b.ToTable("DeliveryRunWarehousePick", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.AccountingSetup", b =>
@@ -4591,12 +4688,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("OrderItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PurchaseOrderItemId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<decimal>("ReceivedQuantity")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(18,2)")
@@ -4605,11 +4696,33 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "OrderItemId", "NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation.OrderItemId#SecondaryItemId", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<Guid>("PrimaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("OrderId");
+
+                            b1.Property<Guid>("SecondaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("OrderItemId");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PurchaseOrderItemId", "NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation.PurchaseOrderItemId#SecondaryItemId", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<Guid>("PrimaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("PurchaseOrderId");
+
+                            b1.Property<Guid>("SecondaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("PurchaseOrderItemId");
+                        });
+
                     b.HasKey("Id");
-
-                    b.HasIndex("OrderItemId");
-
-                    b.HasIndex("PurchaseOrderItemId");
 
                     b.ToTable("PurchaseOrderItemAllocation", "tbl");
                 });
@@ -5395,10 +5508,28 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNoteSettlementItem", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote", null)
+                        .WithMany("SettlementItems")
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRunItem", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", null)
                         .WithMany("Items")
+                        .HasForeignKey("DeliveryRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRunWarehousePick", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", null)
+                        .WithMany("WarehousePicks")
                         .HasForeignKey("DeliveryRunId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -5551,21 +5682,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation", b =>
-                {
-                    b.HasOne("NamEcommerce.Domain.Entities.Orders.OrderItem", null)
-                        .WithMany()
-                        .HasForeignKey("OrderItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItem", null)
-                        .WithMany()
-                        .HasForeignKey("PurchaseOrderItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemChangeAudit", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
@@ -5678,11 +5794,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("SettlementItems");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("WarehousePicks");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.GoodsReceipts.GoodsReceipt", b =>

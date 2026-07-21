@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 [Serializable]
 public sealed record DeliveryRunItem : AppEntity
 {
-    public DeliveryRunItem(Guid id) : base(id)
+    private DeliveryRunItem(Guid id) : base(id)
     {
         DeliveryNoteCode = string.Empty;
         CustomerName = string.Empty;
@@ -14,7 +14,7 @@ public sealed record DeliveryRunItem : AppEntity
     }
 
     internal DeliveryRunItem(Guid deliveryRunId, Guid deliveryNoteId, string deliveryNoteCode, string? orderCode,
-        string customerName, string? shippingPhoneNumber, string shippingAddress, decimal amountToCollect) : base(Guid.NewGuid())
+        string customerName, string? shippingPhoneNumber, string shippingAddress, decimal amountToCollect) : base(Guid.Empty)
     {
         DeliveryRunId = deliveryRunId;
         DeliveryNoteId = deliveryNoteId;
@@ -34,4 +34,9 @@ public sealed record DeliveryRunItem : AppEntity
     public string? ShippingPhoneNumber { get; private set; }
     public string ShippingAddress { get; private set; }
     public decimal AmountToCollect { get; private set; }
+
+    internal void UpdateAmountToCollect(decimal amount)
+    {
+        AmountToCollect = amount;
+    }
 }

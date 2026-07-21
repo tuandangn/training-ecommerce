@@ -15,9 +15,7 @@ public interface IDirectShipAppService
 
     Task<IList<PendingDirectShipDeliveryAppDto>> GetPendingDeliveriesAsync(PendingDirectShipFilterAppDto filter);
 
-    Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(
-        IReadOnlyList<Guid> orderItemIds);
+    Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(IReadOnlyList<(Guid orderId, Guid orderItemId)> orderItemIds);
 
-    Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(
-        IReadOnlyList<Guid> purchaseOrderItemIds);
+    Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(IReadOnlyList<(Guid purchaseOrderId, Guid purchaseOrderItemId)> purchaseOrderItemIds);
 }

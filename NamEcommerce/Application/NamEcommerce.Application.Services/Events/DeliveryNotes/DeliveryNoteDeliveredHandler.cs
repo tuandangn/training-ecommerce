@@ -30,19 +30,18 @@ public sealed class DeliveryNoteDeliveredHandler(
             return;
 
         // Fallback cho event cũ trong Outbox được serialize trước khi có DebtAmount.
-        var debtAmount = notification.DebtAmount > 0 ? notification.DebtAmount : notification.AmountToCollect;
+        var fallbackDebtAmount = Math.Max(notification.AmountToCollect, deliveryNote.TotalAmount + deliveryNote.Surcharge);
+        var debtAmount = notification.DebtAmount > 0 ? notification.DebtAmount : fallbackDebtAmount;
         if (debtAmount <= 0)
             return;
 
-        var createDebtDto = new CreateCustomerDebtDto
+        await _debtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
             TotalAmount = debtAmount,
             DueDateUtc = null
-        };
-
-        await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         var surcharge = deliveryNote.Surcharge;
         var chargeAmount = debtAmount - surcharge;
@@ -102,7 +101,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             .GroupBy(item => new
             {
                 item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+                WarehouseId = item.WarehouseId
             })
             .Select(group => new
             {
@@ -114,6 +113,8 @@ public sealed class DeliveryNoteDeliveredStockHandler(
 
         foreach (var group in dispatchGroups)
         {
+            if (group.WarehouseId == Guid.Empty)
+                continue;
             await stockManager.DispatchStockUpToAsync(
                 group.ProductId,
                 group.WarehouseId,
@@ -130,7 +131,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId,
+                WarehouseId = item.WarehouseId,
                 Quantity = item.Quantity,
                 MovementType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
                     ? InventoryCostMovementType.VendorReturn

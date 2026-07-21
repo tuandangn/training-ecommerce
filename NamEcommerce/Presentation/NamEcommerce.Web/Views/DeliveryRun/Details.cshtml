@@ -19,9 +19,11 @@
         || User.IsInRole(SystemUserRoleNames.WarehouseManager);
     var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.Cashier);
-    var offlineReady = Model.DriverCachedOnUtc.HasValue || Model.PaperManifestIssued;
+    var driverAccepted = Model.DriverCachedOnUtc.HasValue;
+    var offlineReady = driverAccepted || Model.PaperManifestIssued;
+    var allWarehousesPicked = Model.PickingManifest.Count == 0 || Model.PickingManifest.All(g => g.Confirmed);
     var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
-    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady && !Model.IsDeliveryCompleted;
+    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && driverAccepted && offlineReady && allWarehousesPicked && !Model.IsDeliveryCompleted;
     var canClose = canManageDeliveryRun
         && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
         && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
@@ -34,6 +36,8 @@
     var canReviewCashCollected = canConfirmDeliveryRunCashHandover
         && !Model.CashHandoverConfirmedOnUtc.HasValue
         && status != DeliveryRunStatus.Cancelled;
+    var canReconcileDeliveryRunItems = canManageDeliveryRun && status != DeliveryRunStatus.Cancelled;
+    var showItemActions = canReviewCashCollected || canReconcileDeliveryRunItems;
     var deliveryProgressPercent = Model.Items.Count == 0
         ? 0
         : (int)Math.Round((decimal)Model.DeliveredItemCount * 100 / Model.Items.Count);
@@ -80,7 +84,8 @@
             {
                 <form asp-action="HandOver" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
+                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)"
+                            title="@(!driverAccepted ? "Cần người giao nhận chuyến trước" : !allWarehousesPicked ? "Cần xác nhận lấy đủ hàng ở tất cả kho trước khi bàn giao" : null)">
                         <i class="bi bi-truck me-1"></i>Bàn giao
                     </button>
                 </form>
@@ -105,11 +110,11 @@
             }
         </div>
     </div>
-    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady && !Model.IsDeliveryCompleted)
+    @if (status == DeliveryRunStatus.ReadyForHandover && !driverAccepted && !Model.IsDeliveryCompleted)
     {
         <div class="alert alert-warning d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle fs-5"></i>
-            <div>Cần người giao mở app để cache chuyến, hoặc quản kho in phiếu giấy dự phòng trước khi bàn giao.</div>
+            <div>Đang chờ người giao hàng nhận chuyến</div>
         </div>
     }
     <div class="content-card-body-flush px-3">
@@ -174,8 +179,11 @@
                             <input type="hidden" name="id" value="@Model.Id" />
                             <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="number" name="amount" class="form-control" min="0" step="1000" value="@expectedCashAmount" placeholder="Nhập số tiền nhận"/>
-                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền"/>
+                                <input name="amount" class="form-control text-end" data-decimal="currency" value="@expectedCashAmount.DisplayCurrency()" placeholder="Nhập số tiền nhận"
+                                       data-val="true" data-val-required="Vui lòng nhập số tiền nhận"
+                                       data-val-range="Số tiền nhận phải lớn hơn 0" data-val-range-min="0.001"
+                                       data-val-number="Số tiền nhận phải là số" />
+                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền" />
                                 <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                                     <i class="bi bi-cash-coin me-1"></i>Xác nhận
                                 </button>
@@ -215,7 +223,9 @@
                             @if (Model.DriverCachedOnUtc.HasValue)
                             {
                                 <span class="text-muted fw-bold">@Model.DriverCachedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                            } else {
+                            }
+                            else
+                            {
                                 @(Model.DriverCachedOnUtc.HasValue ? "Có" : "Chưa")
                             }
                         </span>
@@ -234,82 +244,187 @@
             </div>
         </div>
     </div>
+    @if (Model.PickingManifest.Count > 0 && status == DeliveryRunStatus.ReadyForHandover)
+    {
+        var confirmedCount = Model.PickingManifest.Count(g => g.Confirmed);
+        var totalCount = Model.PickingManifest.Count;
+        <div class="content-card-header d-flex align-items-center justify-content-between">
+            <h5 class="mb-0">Phiếu lấy hàng theo kho</h5>
+            <span class="badge @(confirmedCount == totalCount ? "bg-success" : "bg-warning")">
+                Đã lấy @confirmedCount/@totalCount kho
+            </span>
+        </div>
+        <div class="content-card-body-flush px-3 pb-3">
+            <div class="row g-3">
+                @foreach (var group in Model.PickingManifest)
+                {
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 @(group.Confirmed ? "border-success" : "")">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0">
+                                        <i class="bi bi-building me-1"></i>@group.WarehouseName
+                                    </h6>
+                                    @if (group.Confirmed)
+                                    {
+                                        <div class="small text-success mt-1">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Đã xác nhận@(string.IsNullOrWhiteSpace(group.ConfirmedByFullName) ? "" : $" bởi {group.ConfirmedByFullName}")
+                                            @if (group.ConfirmedOnUtc.HasValue)
+                                            {
+                                                <span class="text-muted"> — @group.ConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                @if (canManageDeliveryRun && !group.Confirmed)
+                                {
+                                    <form asp-action="ConfirmWarehousePick" method="post">
+                                        <input type="hidden" name="id" value="@Model.Id" />
+                                        <input type="hidden" name="warehouseId" value="@group.WarehouseId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success" disabled="@(!driverAccepted)"
+                                                title="@(!driverAccepted ? "Cần người giao nhận chuyến trước khi kho lấy hàng" : null)">
+                                            <i class="bi bi-check2 me-1"></i>Đã lấy đủ
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    @foreach (var product in group.Products)
+                                    {
+                                        <tr>
+                                            <td class="ps-0">@product.ProductName</td>
+                                            <td class="text-end text-nowrap fw-medium">@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) @product.UnitMeasurement</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
     <div class="content-card-header">
         <h5>Phiếu giao hàng</h5>
     </div>
     <div class="content-card-body-flush pb-3">
         <div class="table-responsive">
-        <table class="table data-table align-middle">
-            <thead>
-                <tr>
-                    <th class="ps-4">Mã PXK</th>
-                    <th>Đơn hàng</th>
-                    <th>Khách hàng</th>
-                    <th>Địa chỉ giao</th>
-                    <th class="text-end">Tiền COD</th>
-                    <th class="text-end">Shipper thu</th>
-                    @if (canReviewCashCollected)
-                    {
-                        <th class="text-end ui-w-220">Cập nhật</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Items)
-                {
-                    var isDelivered = item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered;
+            <table class="table data-table align-middle">
+                <thead>
                     <tr>
-                        <td class="ps-4">
-                            <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId" class="fw-bold text-decoration-none">@item.DeliveryNoteCode</a>
-                        </td>
-                        <td>@item.OrderCode</td>
-                        <td>
-                            <div class="fw-medium">@item.CustomerName</div>
-                            @if (!string.IsNullOrWhiteSpace(item.ShippingPhoneNumber))
-                            {
-                                <a href="tel:@item.ShippingPhoneNumber" class="small text-muted text-decoration-none">@item.ShippingPhoneNumber</a>
-                            }
-                        </td>
-                        <td>@item.ShippingAddress</td>
-                        <td class="text-end fw-medium">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
-                        <td class="text-end fw-medium">
-                            @if (!isDelivered)
-                            {
-                                <span class="text-muted">Chưa giao</span>
-                            }
-                            else if (item.CashCollectedAmount.HasValue)
-                            {
-                                @item.CashCollectedAmount.Value.DisplayCurrencyWithSymbol()
-                            }
-                            else if (item.AmountToCollect > 0)
-                            {
-                                <span class="text-warning">Chưa khai báo</span>
-                            }
-                            else
-                            {
-                                @(0m.DisplayCurrencyWithSymbol())
-                            }
-                        </td>
-                        @if (canReviewCashCollected)
+                        <th class="ps-4">Mã PXK</th>
+                        <th>Đơn hàng</th>
+                        <th>Khách hàng</th>
+                        <th>Địa chỉ giao</th>
+                        <th class="text-end">Tiền COD</th>
+                        <th class="text-end">Shipper thu</th>
+                        @if (showItemActions)
                         {
-                            <td class="text-end">
-                                @if (isDelivered)
-                                {
-                                    <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-2">
-                                        <input type="hidden" name="id" value="@Model.Id" />
-                                        <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
-                                        <input type="number" name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140" min="0" max="@item.AmountToCollect" step="1000" value="@(item.CashCollectedAmount ?? 0m)" />
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-save me-1"></i>Lưu
-                                        </button>
-                                    </form>
-                                }
-                            </td>
+                            <th class="text-end">Cập nhật</th>
                         }
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var isDelivered = item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered;
+                        <tr>
+                            <td class="ps-4">
+                                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId" class="fw-bold text-decoration-none text-nowrap">
+                                    @item.DeliveryNoteCode
+                                </a>
+                            </td>
+                            <td class="text-nowrap">@item.OrderCode</td>
+                            <td>
+                                <div class="fw-medium">@item.CustomerName</div>
+                                @if (!string.IsNullOrWhiteSpace(item.ShippingPhoneNumber))
+                                {
+                                    <a href="tel:@item.ShippingPhoneNumber" class="small text-muted text-decoration-none">@item.ShippingPhoneNumber</a>
+                                }
+                            </td>
+                            <td>@item.ShippingAddress</td>
+                            <td class="text-end fw-medium text-nowrap">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                            <td class="text-end fw-medium">
+                                @if (!isDelivered && item.SettlementApproval == 1)
+                                {
+                                    <span class="status-badge warning small"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt số tiền thu</span>
+                                }
+                                else if (item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
+                                {
+                                    <span class="status-badge warning small"><i class="bi bi-hourglass-split me-1"></i>Chờ đối soát</span>
+                                }
+                                else if (!isDelivered)
+                                {
+                                    <span class="text-muted">Chưa giao</span>
+                                }
+                                else if (item.CashCollectedAmount.HasValue)
+                                {
+                                    @item.CashCollectedAmount.Value.DisplayCurrencyWithSymbol()
+                                }
+                                else if (item.AmountToCollect > 0)
+                                {
+                                    <span class="text-warning">Chưa khai báo</span>
+                                }
+                                else
+                                {
+                                    @(0m.DisplayCurrencyWithSymbol())
+                                }
+                            </td>
+                            @if (showItemActions)
+                            {
+                                <td class="text-end">
+                                    @if (canReconcileDeliveryRunItems && item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
+                                    {
+                                        <form asp-action="ReconcileDeliveryNote" method="post" class="">
+                                            <input type="hidden" name="id" value="@Model.Id" />
+                                            <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+                                            <div class="d-flex justify-content-end gap-2">
+                                                @if (item.AmountToCollect > 0)
+                                                {
+                                                    <input name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140"
+                                                           placeholder="Nhập số tiền đã thu"
+                                                           value="@((item.CashCollectedAmount ?? item.AmountToCollect).DisplayCurrency())"
+                                                           data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập số tiền đã thu"
+                                                           data-val-range="Số tiền thu phải lớn hơn 0" data-val-range-min="0.001" data-val-number="Số tiền thu phải là số" />
+
+                                                    <button type="submit" class="btn btn-sm btn-primary text-nowrap">
+                                                        <i class="bi bi-cash-coin me-1"></i>Xác nhận đã thu
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <input type="hidden" name="cashCollectedAmount" value="0" />
+                                                    <button type="submit" class="btn btn-sm btn-success text-nowrap">
+                                                        <i class="bi bi-check-circle me-1"></i>Xác nhận đã giao
+                                                    </button>
+                                                }
+                                            </div>
+                                            <span class="small text-danger field-validation-valid d-block text-start" data-valmsg-for="cashCollectedAmount" data-valmsg-replace="true"></span>
+                                        </form>
+                                    }
+                                    else if (canReviewCashCollected && isDelivered)
+                                    {
+                                        <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-2">
+                                            <input type="hidden" name="id" value="@Model.Id" />
+                                            <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+                                            <input type="number" name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140" min="0" max="@item.AmountToCollect" step="1000" value="@(item.CashCollectedAmount ?? 0m)" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-save me-1"></i>Lưu
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

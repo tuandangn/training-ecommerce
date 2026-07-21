@@ -114,6 +114,14 @@
         return type === 'currency' ? formatCurrency(value) : formatQuantity(value, decimals);
     }
 
+    function setValue(input, value) {
+        if (!input || !(input instanceof HTMLInputElement)) throw new Error('Invalid input element');
+        var type = input.dataset.decimal || "quantity";
+        var decimals = parseInt(input.dataset.decimals, 10) || 0;
+        input.value = type === 'currency' ? formatCurrency(value) : formatQuantity(value, decimals);
+        return input.value;
+    }
+
     function getValue(input) {
         var stripped = stripInputFormatting(input);
         return parseFloat(stripped) || 0;

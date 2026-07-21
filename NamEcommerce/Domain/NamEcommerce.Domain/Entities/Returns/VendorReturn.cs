@@ -82,7 +82,7 @@ public sealed record VendorReturn : AppAggregateEntity
         if (returnUnitCost < 0)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.ReturnUnitCostCannotBeNegative");
 
-        var item = new VendorReturnItem(Guid.NewGuid(), Id, productId, productName,
+        var item = new VendorReturnItem(Id, productId, productName,
             goodsReceiptItemId, requestedQuantity, acceptedQuantity, originalUnitCost, returnUnitCost);
         _items.Add(item);
     }

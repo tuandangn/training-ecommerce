@@ -232,4 +232,7 @@ public sealed class UserAppService : IUserAppService
             return new UserManagementResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
     }
+
+    public async Task<IEnumerable<string>> GetRoleNamesByUserIdAsync(Guid userId) 
+        => await _userManager.GetRoleNamesByUserIdAsync(userId).ConfigureAwait(false);
 }

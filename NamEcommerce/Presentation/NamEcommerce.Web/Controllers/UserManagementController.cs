@@ -122,7 +122,6 @@ public sealed class UserManagementController : BaseAuthorizedController
         return RedirectToAction(nameof(RolePermissions), new { roleId = command.RoleId });
     }
 
-    [AllowAnonymous]
     [Authorize(Policy = SystemPermissions.Users.Manage)]
     public async Task<IActionResult> Users()
     {
@@ -165,7 +164,7 @@ public sealed class UserManagementController : BaseAuthorizedController
     {
         var result = await _mediator.Send(new LockUserCommand(id));
         if (!result.Success)
-            NotifyError(result.ErrorMessage);
+            NotifyError(result.ErrorMessage!);
         else
             NotifySuccess("Msg.SaveSuccess");
 
@@ -179,7 +178,7 @@ public sealed class UserManagementController : BaseAuthorizedController
     {
         var result = await _mediator.Send(new UnlockUserCommand(id));
         if (!result.Success)
-            NotifyError(result.ErrorMessage);
+            NotifyError(result.ErrorMessage!);
         else
             NotifySuccess("Msg.SaveSuccess");
 
@@ -193,7 +192,7 @@ public sealed class UserManagementController : BaseAuthorizedController
     {
         var result = await _mediator.Send(new DeleteUserCommand(id));
         if (!result.Success)
-            NotifyError(result.ErrorMessage);
+            NotifyError(result.ErrorMessage!);
         else
             NotifySuccess("Msg.DeleteSuccess");
 

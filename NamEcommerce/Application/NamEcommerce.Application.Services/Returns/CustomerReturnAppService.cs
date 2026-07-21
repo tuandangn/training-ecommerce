@@ -204,10 +204,10 @@ public sealed class CustomerReturnAppService(
     }
 
     public async Task<(int Total, List<CustomerReturnAppDto> Items)> GetListAsync(
-        Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize)
+        int pageIndex, int pageSize, Guid? customerId = null, Guid? deliveryNoteId = null, int? status = null)
     {
         var (total, items) = await _manager.GetListAsync(
-            customerId, deliveryNoteId, status, pageIndex, pageSize).ConfigureAwait(false);
+            pageIndex, pageSize, customerId, deliveryNoteId, status).ConfigureAwait(false);
 
         return (total, items.Select(i => i.ToAppDto()).ToList());
     }
@@ -225,7 +225,7 @@ public sealed class CustomerReturnAppService(
         {
             Code = dn.Code,
             DeliveredOnUtc = dn.DeliveredOnUtc ?? dn.CreatedOnUtc,
-            WarehouseId = dn.WarehouseId
+            WarehouseId = null
         }).ToList();
 
         return Task.FromResult(result);

@@ -103,6 +103,16 @@ public sealed record CustomerDebt : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
+    internal void UpdateTotalAmount(decimal totalAmount)
+    {
+        TotalAmount = totalAmount;
+        RemainingAmount = Math.Max(0m, totalAmount - PaidAmount);
+        Status = RemainingAmount <= 0m
+            ? DebtStatus.FullyPaid
+            : PaidAmount > 0m ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal void MarkCreated()
         => RaiseDomainEvent(new CustomerDebtCreated(Id, CustomerId, TotalAmount, DeliveryNoteId, OrderId));
 }

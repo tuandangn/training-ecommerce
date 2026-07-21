@@ -7,6 +7,7 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
 using System.Text.Json;
 
@@ -39,6 +40,12 @@ public sealed class DeliveryMobileController(
         try
         {
             var model = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
+            if ((DeliveryRunStatus)model.Run.Status == DeliveryRunStatus.ReadyForHandover)
+            {
+                NotifyError("Chuyến giao đang chờ bàn giao, chưa thể mở chi tiết.");
+                return RedirectToAction(nameof(Index));
+            }
+
             return View(model);
         }
         catch (UnauthorizedAccessException)
@@ -74,6 +81,36 @@ public sealed class DeliveryMobileController(
 
         var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId));
         return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReceiveRun(Guid id, string? deviceId)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return RedirectToAction("Login", "User");
+
+        try
+        {
+            await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch
+        {
+            NotifyError("Error.DeliveryRunNotFound");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId));
+        if (result.Success)
+            NotifySuccess("Đã nhận chuyến. Quản kho có thể bàn giao khi sẵn sàng.");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.DeliveryRunCannotCache");
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
@@ -144,6 +181,119 @@ public sealed class DeliveryMobileController(
             IdempotencyKey = idempotencyKey,
             CashCollectedAmount = cashCollectedAmount,
             Items = ParseAcceptanceItems(acceptanceItemsJson)
+        });
+
+        return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RequestSettlement(
+        Guid deliveryRunId,
+        Guid deliveryNoteId,
+        string? receiverName,
+        string? reason,
+        decimal? proposedAmountToCollect,
+        double? latitude,
+        double? longitude,
+        string? locationAddress,
+        string? acceptanceItemsJson,
+        IFormFile? proofFile)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return Json(new { success = false, message = "Error.UserNotFound" });
+
+        DeliveryMobileRunModel run;
+        try
+        {
+            run = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Json(new { success = false, message = "Error.Forbidden" });
+        }
+        catch
+        {
+            return Json(new { success = false, message = "Error.DeliveryRunNotFound" });
+        }
+        if (!run.Run.Items.Any(item => item.DeliveryNoteId == deliveryNoteId))
+            return Json(new { success = false, message = "Error.DeliveryNoteNotFound" });
+
+        if (proofFile is null || proofFile.Length == 0)
+            return Json(new { success = false, message = "Error.DeliveryProofRequired" });
+        if (proofFile.Length > appConfig.UploadFileMaxSizeInBytes)
+            return Json(new { success = false, message = "Error.UploadFileTooLarge" });
+        if (!IsAllowedImage(proofFile.ContentType))
+            return Json(new { success = false, message = "Error.InvalidImageType" });
+
+        await using var stream = proofFile.OpenReadStream();
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
+
+        var upload = await mediator.Send(new UploadPictureCommand
+        {
+            Data = memoryStream.ToArray(),
+            MimeType = proofFile.ContentType,
+            FileName = proofFile.FileName,
+            Extension = Path.GetExtension(proofFile.FileName)
+        });
+        if (!upload.Success || !upload.PictureId.HasValue)
+            return Json(new { success = false, message = upload.ErrorMessage ?? "Error.UploadPictureFailed" });
+
+        var result = await mediator.Send(new RequestDeliverySettlementCommand
+        {
+            DeliveryRunId = deliveryRunId,
+            DeliveryNoteId = deliveryNoteId,
+            PictureId = upload.PictureId.Value,
+            ReceiverName = receiverName,
+            Reason = reason,
+            ProposedAmountToCollect = proposedAmountToCollect,
+            Latitude = latitude,
+            Longitude = longitude,
+            LocationAddress = locationAddress,
+            RequestedByUserId = currentUser.Id,
+            Items = ParseAcceptanceItems(acceptanceItemsJson)
+        });
+
+        return Json(new { success = result.Success, message = result.ErrorMessage });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ConfirmApprovedDelivery(
+        Guid deliveryRunId,
+        Guid deliveryNoteId,
+        string? idempotencyKey,
+        double? latitude,
+        double? longitude,
+        string? locationAddress)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        if (currentUser is null)
+            return Json(new { success = false, message = "Error.UserNotFound" });
+
+        try
+        {
+            var run = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName);
+            if (!run.Run.Items.Any(item => item.DeliveryNoteId == deliveryNoteId))
+                return Json(new { success = false, message = "Error.DeliveryNoteNotFound" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Json(new { success = false, message = "Error.Forbidden" });
+        }
+        catch
+        {
+            return Json(new { success = false, message = "Error.DeliveryRunNotFound" });
+        }
+
+        var result = await mediator.Send(new CompleteApprovedDeliveryCommand
+        {
+            DeliveryRunId = deliveryRunId,
+            DeliveryNoteId = deliveryNoteId,
+            Latitude = latitude,
+            Longitude = longitude,
+            LocationAddress = locationAddress,
+            IdempotencyKey = idempotencyKey
         });
 
         return Json(new { success = result.Success, message = result.ErrorMessage });

@@ -12,7 +12,7 @@ public interface ICustomerReturnManager
 
     Task<CustomerReturnDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(
-        Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize);
+        int pageIndex, int pageSize, Guid? customerId = null, Guid? deliveryNoteId = null, int? status = null);
 
     /// <summary>
     /// Tính tổng <c>AcceptedQuantity</c> đã chiếm chỗ cho một (deliveryNoteId, productId) — bao gồm cả phiếu

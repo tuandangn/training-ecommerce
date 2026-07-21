@@ -49,6 +49,9 @@ public sealed class SystemPermissionsSeeder(
             .Select(rp => (rp.RoleId, rp.PermissionId))
             .ToHashSet();
 
+        if (existingRolePermissions.Count > 0)
+            return;
+
         foreach (var (roleName, permissionNames) in DefaultRolePermissions())
         {
             var role = roles.FirstOrDefault(r =>
@@ -78,14 +81,24 @@ public sealed class SystemPermissionsSeeder(
 
     private static IEnumerable<(string Role, string[] Permissions)> DefaultRolePermissions()
     {
+        yield return (SystemUserRoleNames.Admin,
+        [
+            SystemPermissions.Dashboard.System,
+            SystemPermissions.DeliveryNotes.Approve,
+            SystemPermissions.Orders.Edit,
+            SystemPermissions.PurchaseOrders.Approve,
+            SystemPermissions.Orders.QuickCreate,
+            SystemPermissions.PurchaseOrders.QuickCreate,
+            SystemPermissions.PurchaseOrders.Edit
+        ]);
+
         yield return (SystemUserRoleNames.SalesStaff,
         [
             SystemPermissions.Catalog.CategoriesView,
             SystemPermissions.Catalog.ProductsView,
             SystemPermissions.Orders.View,
             SystemPermissions.Orders.Create,
-            SystemPermissions.Orders.Edit,
-            SystemPermissions.Orders.FastSale,
+            SystemPermissions.Orders.QuickCreate,
             SystemPermissions.DeliveryNotes.View,
             SystemPermissions.DirectShip.View,
             SystemPermissions.Inventory.View,
@@ -101,7 +114,6 @@ public sealed class SystemPermissionsSeeder(
             SystemPermissions.Catalog.VendorsView,
             SystemPermissions.Orders.View,
             SystemPermissions.DeliveryNotes.View,
-            SystemPermissions.DeliveryNotes.Manage,
             SystemPermissions.DeliveryRuns.View,
             SystemPermissions.DeliveryRuns.Manage,
             SystemPermissions.DirectShip.View,
@@ -131,7 +143,7 @@ public sealed class SystemPermissionsSeeder(
         yield return (SystemUserRoleNames.Cashier,
         [
             SystemPermissions.Orders.View,
-            SystemPermissions.Orders.FastSale,
+            SystemPermissions.Orders.QuickCreate,
             SystemPermissions.DeliveryNotes.View,
             SystemPermissions.DeliveryRuns.View,
             SystemPermissions.DeliveryRuns.ConfirmCashHandover,

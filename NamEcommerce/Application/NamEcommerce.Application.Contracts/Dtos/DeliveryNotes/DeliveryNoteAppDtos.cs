@@ -11,7 +11,6 @@ public sealed record DeliveryNoteAppDto
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
 
-    public Guid WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
@@ -25,7 +24,8 @@ public sealed record DeliveryNoteAppDto
     
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
-    
+    public bool CanUpdateShippingInfo { get; set; }
+
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
     
@@ -56,7 +56,51 @@ public sealed record DeliveryNoteAppDto
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
 
+    public DateTime? AmountToCollectOverriddenAt { get; init; }
+    public string? AmountToCollectOverrideNote { get; init; }
+
+    public int SettlementApproval { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public decimal? ApprovedAmountToCollect { get; init; }
+    public decimal? ApprovedAgreedCustomerCharge { get; init; }
+    public string? ApprovedAgreedChargeReason { get; init; }
+    public string? SettlementReason { get; init; }
+    public string? SettlementAdminNote { get; init; }
+
     public IList<DeliveryNoteItemAppDto> Items { get; init; } = [];
+    public IList<DeliveryNoteSettlementItemAppDto> SettlementItems { get; init; } = [];
+
+    public bool CanApprove { get; set; }
+    public bool CanMarkDelivering { get; set; }
+    public bool CanMarkDelivered { get; set; }
+    public bool CanReject { get; set; }
+}
+
+[Serializable]
+public sealed record DeliveryNoteSettlementItemAppDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record AdminUpdateAmountToCollectAppDto
+{
+    public Guid DeliveryNoteId { get; init; }
+    public decimal NewAmount { get; init; }
+    public string? Note { get; init; }
+    public Guid? AdminUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (NewAmount < 0)
+            return (false, "Error.AmountToCollectCannotBeNegative");
+        return (true, null);
+    }
 }
 
 [Serializable]
@@ -78,23 +122,19 @@ public sealed record DeliveryNoteItemAppDto
 public sealed record CreateDeliveryNoteAppDto
 {
     public required Guid OrderId { get; init; }
-    public required Guid WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
-    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
-    public required IList<CreateDeliveryNoteItemAppDto> Items { get; init; } = [];
+    public IList<CreateDeliveryNoteItemAppDto> Items { get; init; } = [];
 
     public (bool valid, string? errorMessage) Validate()
     {
         if (OrderId == Guid.Empty)
             return (false, "Error.OrderRequired");
-        if (WarehouseId == Guid.Empty)
-            return (false, "Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
             return (false, "Error.ShippingAddressRequired");
         if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
@@ -165,6 +205,53 @@ public sealed record MarkDeliveryNoteDeliveredAppDto
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
     public DeliveryCompletionMetadataAppDto? CompletionMetadata { get; init; }
+}
+
+[Serializable]
+public sealed record RequestDeliverySettlementAppDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
+    public string? ReceiverName { get; init; }
+    public string? Reason { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public DeliveryAcceptanceAppDto? Acceptance { get; init; }
+    public Guid? RequestedByUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (PictureIds is null || PictureIds.Count == 0)
+            return (false, "Error.DeliveryProofRequired");
+        if (ProposedAmountToCollect is < 0)
+            return (false, "Error.AmountToCollectCannotBeNegative");
+
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record ApproveDeliverySettlementAppDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required decimal ApprovedAmountToCollect { get; init; }
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public string? AdminNote { get; init; }
+    public Guid? ApprovedByUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (ApprovedAmountToCollect < 0)
+            return (false, "Error.CashCollectedAmountCannotBeNegative");
+        if (AgreedCustomerCharge < 0)
+            return (false, "Error.SurchargeCannotBeNegative");
+
+        return (true, null);
+    }
 }
 
 [Serializable]

@@ -1,4 +1,6 @@
 using NamEcommerce.Data.Contracts;
+using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
@@ -10,6 +12,7 @@ using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
@@ -25,6 +28,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -39,7 +43,11 @@ public sealed class DeliveryNoteManager(
     IProductReservationManager productReservationManager,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<VendorReturn> vendorReturnReader,
+    IEntityDataReader<CustomerPayment> customerPaymentReader,
+    IEntityDataReader<Customer> customerReader,
     ICustomerReturnManager customerReturnManager,
+    IEntityDataReader<DeliveryRun> deliveryRunReader,
+    IRepository<DeliveryRun> deliveryRunRepository,
     EntityCodeGenerator entityCodeGenerator) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
@@ -54,6 +62,9 @@ public sealed class DeliveryNoteManager(
         return summary.AverageCost;
     }
 
+    private bool IsRetailWalkInCustomer(Guid customerId)
+        => customerReader.DataSource.Any(c => c.Id == customerId && c.Kind == CustomerKind.RetailWalkIn && c.IsSystem);
+
     public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -67,18 +78,21 @@ public sealed class DeliveryNoteManager(
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         var requestedQuantitiesByOrderItem = dto.Items
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(order.Id, g.Key), g => g.Sum(item => item.Quantity));
 
         EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
-        if (dto.AmountToCollect > 0)
+        var productCollectedAmount = dto.AmountToCollect - dto.Surcharge;
+        if (productCollectedAmount > 0)
         {
-            var existingCollect = deliveryNoteReader.DataSource
-                .Where(dn => dn.OrderId == dto.OrderId && dn.Status != DeliveryNoteStatus.Cancelled)
-                .Sum(dn => dn.AmountToCollect);
-            var remaining = order.OrderTotal + dto.Surcharge - existingCollect;
-            if (dto.AmountToCollect > remaining)
-                throw new AmountToCollectExceedsOrderRemainingException(dto.AmountToCollect, remaining);
+            var deliveryNotes = deliveryNoteReader.DataSource
+                .Where(dn => dn.OrderId == dto.OrderId && dn.Status != DeliveryNoteStatus.Cancelled).ToList();
+            var paidForOrder = customerPaymentReader.DataSource
+                .Where(p => p.OrderId == dto.OrderId)
+                .Sum(p => p.Amount) - deliveryNotes.Sum(dn => dn.Surcharge);
+            var remaining = order.OrderTotal - paidForOrder;
+            if (productCollectedAmount > remaining)
+                throw new AmountToCollectExceedsOrderRemainingException(dto.AmountToCollect, Math.Max(0m, remaining));
         }
 
         var itemsByProductWarehouse = dto.Items
@@ -95,29 +109,19 @@ public sealed class DeliveryNoteManager(
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            orderId: order.Id,
-            customerId: order.CustomerId,
-            customerName: order.CustomerInfo.FullName,
-            customerPhone: order.CustomerInfo.PhoneNumber,
-            customerAddress: order.CustomerInfo.Address,
-            shippingAddress: dto.ShippingAddress,
-            shippingPhoneNumber: string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, dto.AmountToCollect, dto.Surcharge)
+        {
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.ShippingPhoneNumber)
                 ? order.ShippingPhoneNumber ?? order.CustomerInfo.PhoneNumber
                 : dto.ShippingPhoneNumber,
-            warehouseId: dto.WarehouseId,
-            showPrice: dto.ShowPrice,
-            note: dto.Note,
-            surcharge: dto.Surcharge,
-            amountToCollect: dto.AmountToCollect,
-            surchargeReason: dto.SurchargeReason,
-            createdByUserId: order.CreatedByUserId
-        );
-        deliveryNote.OrderCode = order.Code;
-        deliveryNote.WarehouseName = dto.WarehouseName;
-
+            ShowPrice = dto.ShowPrice,
+            SurchargeReason = dto.SurchargeReason,
+            Note = dto.Note,
+            CustomerInfo = new CustomerInfo(order.CustomerInfo.FullName, order.CustomerInfo.PhoneNumber, order.CustomerInfo.Address),
+            OrderCode = order.Code,
+            CreatedByUserId = order.CreatedByUserId
+        };
         foreach (var itemDto in dto.Items)
         {
             var orderItem = orderItemsById[itemDto.OrderItemId];
@@ -196,12 +200,17 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
+        if (!deliveryNote.CanEditShippingInfo())
+            throw new DeliveryNoteCannotUpdateShippingInfoException();
+
         deliveryNote.UpdateShippingInfo(dto.ShippingAddress, dto.ShippingPhoneNumber);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
@@ -212,9 +221,24 @@ public sealed class DeliveryNoteManager(
             return;
         }
 
-        var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
-        if (dto.CompletionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
+        var acceptanceDto = dto.Acceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
+        var acceptance = ResolveDeliveryAcceptance(deliveryNote, acceptanceDto);
+        var completionMetadata = MergeCompletionMetadata(deliveryNote, dto.CompletionMetadata);
+        if (completionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
+
+        // Khách lẻ (tài khoản dùng chung) không được để công nợ dương: phải thu đủ số còn lại tại lúc giao.
+        if (IsRetailWalkInCustomer(deliveryNote.CustomerId)
+            && (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect)
+            throw new RetailOrderCannotLeaveDebtException();
+
+        // Shipper (mobile) không được tự hoàn tất khi thu hụt — phải qua duyệt admin trước.
+        var isMobileShipper = string.Equals(completionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
+        var hasShortfall = acceptance.RejectedGoodsAmount > 0
+            || (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect;
+        if (isMobileShipper && hasShortfall
+            && deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.ApprovalRequired");
 
         // Snapshot chỉ cập nhật khi phiếu chưa xuất kho (Confirmed → Delivered trực tiếp).
         // Nếu đang ở Delivering, CostAtDispatch đã được set đúng trước khi xuất kho ở MarkDeliveringAsync.
@@ -228,18 +252,22 @@ public sealed class DeliveryNoteManager(
         }
 
         deliveryNote.AmountToCollect = acceptance.AmountToCollect;
+        var pictureIds = ResolveProofPictureIds(deliveryNote, dto.PictureIds);
+        var receiverName = string.IsNullOrWhiteSpace(dto.ReceiverName)
+            ? deliveryNote.DeliveryReceiverName
+            : dto.ReceiverName;
 
         // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
         deliveryNote.MarkDelivered(
-            dto.PictureIds,
-            dto.ReceiverName,
-            dto.CompletionMetadata?.Latitude,
-            dto.CompletionMetadata?.Longitude,
-            dto.CompletionMetadata?.LocationAddress,
-            dto.CompletionMetadata?.Note,
-            dto.CompletionMetadata?.Source,
-            dto.CompletionMetadata?.IdempotencyKey,
-            dto.CompletionMetadata?.CashCollectedAmount,
+            pictureIds,
+            receiverName,
+            completionMetadata?.Latitude,
+            completionMetadata?.Longitude,
+            completionMetadata?.LocationAddress,
+            completionMetadata?.Note,
+            completionMetadata?.Source,
+            completionMetadata?.IdempotencyKey,
+            completionMetadata?.CashCollectedAmount,
             acceptance.RejectedGoodsAmount,
             acceptance.DebtAmount);
         // Save entity (display cost + status) → interceptor fires events.
@@ -257,18 +285,62 @@ public sealed class DeliveryNoteManager(
             foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
             {
                 var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
-                var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+                var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault((SecondaryItemId)(order.Id, noteItem.OrderItemId));
                 if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
                 {
                     await orderManager.MarkOrderItemDeliveredAsync(new MarkOrderItemDeliveredDto
                     {
                         OrderId = order.Id,
                         OrderItemId = orderItem.Id,
-                        PictureId = dto.PictureIds.Count > 0 ? dto.PictureIds[0] : Guid.Empty
+                        PictureId = pictureIds.Count > 0 ? pictureIds[0] : Guid.Empty
                     }).ConfigureAwait(false);
                 }
             }
         }
+    }
+
+    public async Task MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        if (deliveryNote.Status == DeliveryNoteStatus.PendingConfirmation
+            && deliveryNote.HasSameDeliveryCompletionRequest(dto.CompletionMetadata?.IdempotencyKey))
+        {
+            return;
+        }
+
+        var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
+        if (dto.CompletionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
+
+        if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
+        {
+            foreach (var item in deliveryNote.Items)
+            {
+                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+            }
+        }
+
+        deliveryNote.AmountToCollect = acceptance.AmountToCollect;
+        var acceptanceLines = acceptance.Lines.Select(line =>
+            (line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+
+        deliveryNote.MarkPendingConfirmation(
+            dto.PictureIds,
+            dto.ReceiverName,
+            dto.CompletionMetadata?.Latitude,
+            dto.CompletionMetadata?.Longitude,
+            dto.CompletionMetadata?.LocationAddress,
+            dto.CompletionMetadata?.Note,
+            dto.CompletionMetadata?.Source,
+            dto.CompletionMetadata?.IdempotencyKey,
+            dto.CompletionMetadata?.CashCollectedAmount,
+            acceptanceLines);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName,
@@ -316,23 +388,17 @@ public sealed class DeliveryNoteManager(
             ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            warehouseId: dto.WarehouseId,
-            note: null,
-            createdByUserId: vendorReturn.CreatedByUserId);
-
-        deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
+        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, 0, 0)
+        {
+            SourceType = DeliveryNoteSourceType.ToVendorReturn,
+            CreatedByUserId = vendorReturn.CreatedByUserId
+        };
 
         foreach (var item in dto.Items)
             deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
 
-        // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
         foreach (var item in deliveryNote.Items)
-        {
             item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-        }
 
         // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
         // DeliveryNoteDeliveredStockHandler sẽ dispatch stock; DeliveryNoteDeliveredEventHandler có guard
@@ -353,7 +419,12 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal> {[orderItem.Id] = dto.Quantity }, includeDirectShipOutstanding: false);
+        EnsureQuantitiesCanBeDelivered(order,
+            new Dictionary<SecondaryItemId, decimal>
+            {
+                [(SecondaryItemId)(order.Id, orderItem.Id)] = dto.Quantity
+            }, 
+            includeDirectShipOutstanding: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -363,24 +434,12 @@ public sealed class DeliveryNoteManager(
             ? order.CustomerInfo.PhoneNumber
             : dto.ContactPhone.Trim();
 
-        var deliveryNote = new DeliveryNote(
-            code: code,
-            orderId: order.Id,
-            customerId: order.CustomerId,
-            customerName: contactName,
-            customerPhone: contactPhone,
-            customerAddress: dto.ShippingAddress,
-            shippingAddress: dto.ShippingAddress,
-            shippingPhoneNumber: contactPhone,
-            warehouseId: dto.DirectShipWarehouseId,
-            showPrice: false,
-            note: null,
-            surcharge: 0,
-            amountToCollect: 0,
-            surchargeReason: null,
-            createdByUserId: null)
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, 0, 0)
         {
-            OrderCode = order.Code
+            OrderCode = order.Code,
+            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress),
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = contactPhone
         };
 
         deliveryNote.AddItem(
@@ -452,7 +511,8 @@ public sealed class DeliveryNoteManager(
             await customerReturnManager.CancelAsync(returnId).ConfigureAwait(false);
 
         bool wasBeforeDispatch = deliveryNote.Status == DeliveryNoteStatus.Draft || deliveryNote.Status == DeliveryNoteStatus.Confirmed;
-        bool wasDelivering = deliveryNote.Status == DeliveryNoteStatus.Delivering;
+        bool wasDelivering = deliveryNote.Status == DeliveryNoteStatus.Delivering
+            || deliveryNote.Status == DeliveryNoteStatus.PendingConfirmation;
 
         deliveryNote.Cancel();
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
@@ -467,7 +527,7 @@ public sealed class DeliveryNoteManager(
                 .GroupBy(item => new
                 {
                     item.ProductId,
-                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item)
+                    WarehouseId = ResolveItemWarehouseId(item)
                 })
                 .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
                 .ToList();
@@ -506,10 +566,10 @@ public sealed class DeliveryNoteManager(
             {
                 await stockManager.ReceiveStockUpToAsync(
                     item.ProductId,
-                    ResolveItemWarehouseId(deliveryNote, item),
+                    ResolveItemWarehouseId(item),
                     deliveryNote.Items
                         .Where(i => i.ProductId == item.ProductId
-                            && ResolveItemWarehouseId(deliveryNote, i) == ResolveItemWarehouseId(deliveryNote, item))
+                            && ResolveItemWarehouseId(i) == ResolveItemWarehouseId(item))
                         .Sum(i => i.Quantity),
                     $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
                     Guid.Empty,
@@ -519,7 +579,7 @@ public sealed class DeliveryNoteManager(
                 await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
                 {
                     ProductId = item.ProductId,
-                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item),
+                    WarehouseId = ResolveItemWarehouseId(item),
                     Quantity = item.Quantity,
                     UnitCost = item.CostAtDispatch,
                     MovementType = InventoryCostMovementType.CustomerReturn,
@@ -549,8 +609,155 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
-        => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
+    public async Task RequestSettlementApprovalAsync(RequestDeliverySettlementDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
+
+        decimal proposed = acceptance.RejectedGoodsAmount > 0
+            ? Math.Max(0m, deliveryNote.AmountToCollect - acceptance.RejectedGoodsAmount)
+            : deliveryNote.AmountToCollect;
+        if (dto.ProposedAmountToCollect.HasValue)
+            proposed = Math.Min(proposed, Math.Max(0m, dto.ProposedAmountToCollect.Value));
+
+        var lines = acceptance.Lines.Select(line =>
+            (line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
+
+        deliveryNote.RequestSettlementApproval(
+            proposed, dto.Reason, dto.PictureIds, dto.ReceiverName, lines,
+            dto.RequestedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task ApproveSettlementAsync(ApproveDeliverySettlementDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        deliveryNote.ApproveSettlement(
+            dto.ApprovedAmountToCollect, dto.AgreedCustomerCharge, dto.AgreedCustomerChargeReason,
+            dto.AdminNote, dto.ApprovedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        deliveryNote.RejectSettlement(reason, approvedByUserId, DateTime.UtcNow);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        // Auto: nhập lại kho + restore reservation + hủy phiếu (luồng Cancel hiện có).
+        await CancelAsync(id).ConfigureAwait(false);
+    }
+
+    public async Task CompleteApprovedSettlementAsync(
+        Guid id,
+        IReadOnlyList<Guid> pictureIds,
+        DeliveryCompletionMetadataDto? completionMetadata)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+        if (deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
+            throw new NamEcommerceDomainException("Error.DeliverySettlement.NotApproved");
+
+        var acceptance = new DeliveryAcceptanceDto
+        {
+            AgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge ?? 0m,
+            AgreedCustomerChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            CompensateInNextDelivery = false,
+            Items = deliveryNote.SettlementItems.Select(item => new DeliveryAcceptanceItemDto
+            {
+                DeliveryNoteItemId = item.DeliveryNoteItemId,
+                AcceptedQuantity = item.AcceptedQuantity,
+                RejectedQuantity = item.RejectedQuantity,
+                RejectReason = item.RejectReason
+            }).ToList()
+        };
+
+        var proofPictureIds = pictureIds is { Count: > 0 }
+            ? pictureIds
+            : deliveryNote.DeliveryProofPictureIds.ToList();
+
+        await MarkPendingConfirmationAsync(new MarkDeliveryNoteDeliveredDto
+        {
+            DeliveryNoteId = id,
+            PictureIds = proofPictureIds,
+            ReceiverName = deliveryNote.DeliveryReceiverName,
+            Acceptance = acceptance,
+            CompletionMetadata = new DeliveryCompletionMetadataDto
+            {
+                Latitude = completionMetadata?.Latitude,
+                Longitude = completionMetadata?.Longitude,
+                LocationAddress = completionMetadata?.LocationAddress,
+                Note = completionMetadata?.Note,
+                Source = completionMetadata?.Source,
+                IdempotencyKey = completionMetadata?.IdempotencyKey,
+                CashCollectedAmount = deliveryNote.ApprovedAmountToCollect ?? 0m
+            }
+        }).ConfigureAwait(false);
+    }
+
+    private static IReadOnlyList<Guid> ResolveProofPictureIds(DeliveryNote deliveryNote, IReadOnlyList<Guid> pictureIds)
+        => pictureIds.Count > 0 ? pictureIds : deliveryNote.DeliveryProofPictureIds.ToList();
+
+    private static DeliveryCompletionMetadataDto? MergeCompletionMetadata(
+        DeliveryNote deliveryNote,
+        DeliveryCompletionMetadataDto? completionMetadata)
+    {
+        if (completionMetadata is null && !deliveryNote.DeliveryCashCollectedAmount.HasValue)
+            return null;
+
+        return new DeliveryCompletionMetadataDto
+        {
+            Latitude = completionMetadata?.Latitude ?? deliveryNote.DeliveryLatitude,
+            Longitude = completionMetadata?.Longitude ?? deliveryNote.DeliveryLongitude,
+            LocationAddress = completionMetadata?.LocationAddress ?? deliveryNote.DeliveryLocationAddress,
+            Note = completionMetadata?.Note ?? deliveryNote.DeliveryCompletionNote,
+            Source = completionMetadata?.Source ?? deliveryNote.DeliveryCompletionSource,
+            IdempotencyKey = completionMetadata?.IdempotencyKey ?? deliveryNote.DeliveryCompletionIdempotencyKey,
+            CashCollectedAmount = completionMetadata?.CashCollectedAmount ?? deliveryNote.DeliveryCashCollectedAmount
+        };
+    }
+
+    private static DeliveryAcceptanceDto? BuildAcceptanceFromStoredSettlement(DeliveryNote deliveryNote)
+    {
+        if (deliveryNote.SettlementItems.Count == 0)
+            return null;
+
+        return new DeliveryAcceptanceDto
+        {
+            AgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge ?? 0m,
+            AgreedCustomerChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            CompensateInNextDelivery = false,
+            Items = deliveryNote.SettlementItems.Select(item => new DeliveryAcceptanceItemDto
+            {
+                DeliveryNoteItemId = item.DeliveryNoteItemId,
+                AcceptedQuantity = item.AcceptedQuantity,
+                RejectedQuantity = item.RejectedQuantity,
+                RejectReason = item.RejectReason
+            }).ToList()
+        };
+    }
+
+    private static Guid ResolveItemWarehouseId(DeliveryNoteItem item)
+    {
+        if (item.WarehouseId == Guid.Empty)
+            throw new WarehouseIsNotSuitableException(Guid.Empty);
+
+        return item.WarehouseId;
+    }
 
     private async Task ReleaseReservedStockIfPresentAsync(
         Guid productId,
@@ -607,7 +814,7 @@ public sealed class DeliveryNoteManager(
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
     {
-        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(id).ConfigureAwait(false);
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
@@ -734,7 +941,7 @@ public sealed class DeliveryNoteManager(
             DeliveryNoteId = deliveryNote.Id,
             CustomerId = deliveryNote.CustomerId,
             WarehouseId = null,
-            AdditionalCost = 0,
+            AdditionalCost = acceptance.AgreedCustomerCharge,
             CompensateInNextDelivery = acceptance.CompensateInNextDelivery,
             Note = BuildAutoGeneratedReturnNote(deliveryNote, acceptance, rejectedLines, deliveryItemsById),
             Items = itemDtos
@@ -809,11 +1016,11 @@ public sealed class DeliveryNoteManager(
         }
 
         var agreedCustomerCharge = acceptance?.AgreedCustomerCharge ?? 0m;
-        var deliveredChargeAmount = acceptedGoodsAmount + deliveryNote.Surcharge + agreedCustomerCharge;
-        var amountToCollect = deliveryNote.ShowPrice
-            ? deliveredChargeAmount
-            : deliveryNote.AmountToCollect + agreedCustomerCharge;
-        var debtAmount = deliveredChargeAmount + rejectedGoodsAmount;
+        // Dùng AmountToCollect gốc làm cơ sở để bảo toàn OrderDiscount.
+        // acceptedGoodsAmount (qty × unitPrice) không trừ discount nên không thể dùng trực tiếp.
+        var amountToCollect = deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
+        // debtAmount = toàn bộ nghĩa vụ khách phải trả (phần reject sẽ được bù bởi credit note).
+        var debtAmount = deliveryNote.TotalAmount + deliveryNote.Surcharge + agreedCustomerCharge;
         return new DeliveryAcceptanceResolution(
             Math.Max(0m, amountToCollect),
             Math.Max(0m, debtAmount),
@@ -838,7 +1045,7 @@ public sealed class DeliveryNoteManager(
         foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
         {
             var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
-            var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+            var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault((SecondaryItemId)(deliveryNote.OrderId, noteItem.OrderItemId));
             if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
             {
                 await orderManager.MarkOrderItemReceivedByCustomerAsync(new MarkOrderItemReceivedByCustomerDto
@@ -851,10 +1058,10 @@ public sealed class DeliveryNoteManager(
     }
 
     private void EnsureQuantitiesCanBeDelivered(Order order,
-        IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem,
+        IReadOnlyDictionary<SecondaryItemId, decimal> requestedQuantitiesByOrderItem,
         bool includeDirectShipOutstanding = true)
     {
-        var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
+        var orderItemsById = order.OrderItems.ToDictionary(item => (SecondaryItemId)(order.Id, item.Id));
         var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
         var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(
             order.Id, requestedOrderItemIds);
@@ -880,19 +1087,20 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<SecondaryItemId, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var deliveredByOrderItem = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId && note.Status != DeliveryNoteStatus.Cancelled)
             .SelectMany(note => note.Items)
-            .Where(item => orderItemIds.Contains(item.OrderItemId))
+            .Where(item => itemIds.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(orderId, g.Key), g => g.Sum(item => item.Quantity));
 
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
             deliveredByOrderItem.TryGetValue(orderItemId, out var deliveredQuantity);
@@ -903,101 +1111,132 @@ public sealed class DeliveryNoteManager(
         return deliveredByOrderItem;
     }
 
-    private Dictionary<Guid, decimal> GetNetDeliveredQuantitiesByOrderItem(Guid orderId, DeliveryNote currentDeliveryNote)
+    private Dictionary<SecondaryItemId, decimal> GetNetDeliveredQuantitiesByOrderItem(Guid orderId, DeliveryNote currentDeliveryNote)
     {
         // Phiếu đang xử lý mới chuyển Delivered ở trạng thái staged (DB vẫn còn status cũ),
         // query DB sẽ không thấy nó — loại khỏi query và cộng từ instance in-memory.
-        var deliveredByOrderItem = deliveryNoteReader.DataSource
+        var deliveredByOrderItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId && note.Status == DeliveryNoteStatus.Delivered
                 && note.Id != currentDeliveryNote.Id)
             .SelectMany(note => note.Items)
             .Where(item => item.OrderItemId != Guid.Empty)
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(orderId, g.Key), g => g.Sum(item => item.Quantity));
 
         if (currentDeliveryNote.Status == DeliveryNoteStatus.Delivered)
         {
             foreach (var item in currentDeliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
             {
-                deliveredByOrderItem[item.OrderItemId] =
-                    deliveredByOrderItem.GetValueOrDefault(item.OrderItemId) + item.Quantity;
+                deliveredByOrderItems[(SecondaryItemId)(currentDeliveryNote.OrderId, item.OrderItemId)] =
+                    deliveredByOrderItems.GetValueOrDefault((SecondaryItemId)(currentDeliveryNote.OrderId, item.OrderItemId)) + item.Quantity;
             }
         }
 
-        var orderItemIds = deliveredByOrderItem.Keys.ToList();
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
+        var orderItemIds = deliveredByOrderItems.Keys.ToList();
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
-            var deliveredQuantity = deliveredByOrderItem.GetValueOrDefault(orderItemId);
+            var deliveredQuantity = deliveredByOrderItems.GetValueOrDefault(orderItemId);
             var returnedQuantity = returnedByOrderItem.GetValueOrDefault(orderItemId);
-            deliveredByOrderItem[orderItemId] = Math.Max(0m, deliveredQuantity - returnedQuantity);
+            deliveredByOrderItems[orderItemId] = Math.Max(0m, deliveredQuantity - returnedQuantity);
         }
 
-        return deliveredByOrderItem;
+        return deliveredByOrderItems;
     }
 
-    private Dictionary<Guid, decimal> GetReturnedQuantitiesByOrderItem(
-        Guid orderId,
-        IReadOnlyCollection<Guid> orderItemIds,
-        bool compensatedOnly)
+    private Dictionary<SecondaryItemId, decimal> GetReturnedQuantitiesByOrderItem(IReadOnlyCollection<SecondaryItemId> orderItemIds, bool compensatedOnly)
     {
         if (orderItemIds.Count == 0)
             return orderItemIds.ToDictionary(id => id, id => 0m);
 
-        // 1. Chuẩn bị Query lấy các DeliveryNoteItem hợp lệ (chưa thực thi dưới DB - vẫn là IQueryable)
+        var orderId = orderItemIds.First().PrimaryId;
+
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var validDeliveryNoteItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId)
             .SelectMany(note => note.Items)
-            .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
+            .Where(item => item.OrderItemId != Guid.Empty && itemIds.Contains(item.OrderItemId))
             .Select(item => new { item.Id, item.OrderItemId });
 
-        // 2. Thực hiện Join và GroupBy dưới DB, sau đó lấy kết quả về RAM dạng Dictionary
-        var returnedByOrderItem = customerReturnReader.DataSource
-            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
-                                 && (!compensatedOnly
-                                     || (returnNote.CompensateInNextDelivery
-                                         && returnNote.Status != CustomerReturnStatus.Draft)))
+        var returnedByOrderItems = customerReturnReader.DataSource
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled 
+                && (!compensatedOnly || (returnNote.CompensateInNextDelivery && returnNote.Status != CustomerReturnStatus.Draft)))
             .SelectMany(returnNote => returnNote.Items)
             .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
-            // Join trực tiếp 2 Queryable với nhau dưới DB thông qua Id của DeliveryNoteItem
             .Join(
                 validDeliveryNoteItems,
                 returnItem => returnItem.DeliveryNoteItemId!.Value,
                 dnItem => dnItem.Id,
                 (returnItem, dnItem) => new { dnItem.OrderItemId, returnItem.AcceptedQuantity }
             )
-            // Group theo OrderItemId để tính tổng
             .GroupBy(x => x.OrderItemId)
-            // Đến đây EF sẽ sinh ra SQL, chạy dưới DB và trả kết quả về RAM dạng Dictionary
             .ToDictionary(
-                group => group.Key,
+                group => (SecondaryItemId)(orderId, group.Key),
                 group => group.Sum(x => x.AcceptedQuantity)
             );
 
-        // 3. Đảm bảo tất cả orderItemId truyền vào đều có mặt trong kết quả (nếu không có thì bằng 0)
         foreach (var orderItemId in orderItemIds)
         {
-            if (!returnedByOrderItem.ContainsKey(orderItemId))
-                returnedByOrderItem[orderItemId] = 0m;
+            if (!returnedByOrderItems.ContainsKey(orderItemId))
+                returnedByOrderItems[orderItemId] = 0m;
         }
 
-        return returnedByOrderItem;
+        return returnedByOrderItems;
     }
 
-    private Dictionary<Guid, decimal> GetDirectShipOutstandingQuantitiesByOrderItem(IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<SecondaryItemId, decimal> GetDirectShipOutstandingQuantitiesByOrderItem(IReadOnlyCollection<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         return allocationReader.DataSource
             .Where(allocation => allocation.IsDirectShip
                 && allocation.Status != AllocationStatus.Cancelled
-                && orderItemIds.Contains(allocation.OrderItemId))
+                && itemIds.Contains(allocation.OrderItemId.SecondaryId))
             .ToList()
             .GroupBy(allocation => allocation.OrderItemId)
             .ToDictionary(
                 g => g.Key,
                 g => g.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
+    }
+
+    public async Task AdminUpdateAmountToCollectAsync(Guid deliveryNoteId, decimal newAmount, string? note, Guid? adminUserId)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(deliveryNoteId);
+
+        var run = deliveryRunReader.DataSource
+            .FirstOrDefault(r =>
+                r.Status != DeliveryRunStatus.Cancelled &&
+                r.Status != DeliveryRunStatus.Closed &&
+                r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+
+        if (run is null)
+        {
+            // check if there's a closed/cancelled run — also block in that case
+            var closedRun = deliveryRunReader.DataSource
+                .FirstOrDefault(r =>
+                    (r.Status == DeliveryRunStatus.Closed || r.Status == DeliveryRunStatus.Cancelled) &&
+                    r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
+            if (closedRun is not null)
+                throw new NamEcommerceDomainException("Error.DeliveryRun.CannotUpdateAmountWhenRunClosedOrCancelled");
+        }
+
+        // entity guard: status Delivered/Cancelled throws
+        deliveryNote.UpdateAmountToCollect(newAmount, note);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        if (run is null)
+            return;
+
+        var trackedRun = await deliveryRunRepository.GetByIdAsync(run.Id).ConfigureAwait(false);
+        if (trackedRun is null)
+            return;
+
+        trackedRun.UpdateItemAmountToCollect(deliveryNoteId, newAmount);
+        await deliveryRunRepository.UpdateAsync(trackedRun).ConfigureAwait(false);
     }
 
     private sealed record DeliveryAcceptanceLine(
@@ -1022,7 +1261,6 @@ public sealed class DeliveryNoteManager(
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
             OrderId = deliveryNote.OrderId,
-            WarehouseId = deliveryNote.WarehouseId,
             OrderCode = deliveryNote.OrderCode,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
@@ -1034,6 +1272,7 @@ public sealed class DeliveryNoteManager(
             CustomerAddress = deliveryNote.CustomerInfo.Address,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
+            CanUpdateShippingInfo = deliveryNote.CanEditShippingInfo(),
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
@@ -1059,6 +1298,22 @@ public sealed class DeliveryNoteManager(
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,
+            AmountToCollectOverrideNote = deliveryNote.AmountToCollectOverrideNote,
+            SettlementApproval = deliveryNote.SettlementApproval,
+            ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
+            ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
+            ApprovedAgreedCustomerCharge = deliveryNote.ApprovedAgreedCustomerCharge,
+            ApprovedAgreedChargeReason = deliveryNote.ApprovedAgreedChargeReason,
+            SettlementReason = deliveryNote.SettlementReason,
+            SettlementAdminNote = deliveryNote.SettlementAdminNote,
+            SettlementItems = deliveryNote.SettlementItems.Select(s => new DeliveryNoteSettlementItemDto
+            {
+                DeliveryNoteItemId = s.DeliveryNoteItemId,
+                AcceptedQuantity = s.AcceptedQuantity,
+                RejectedQuantity = s.RejectedQuantity,
+                RejectReason = s.RejectReason
+            }).ToList(),
             Items = deliveryNote.Items.Select(i => new DeliveryNoteItemDto
             {
                 Id = i.Id,
@@ -1071,7 +1326,11 @@ public sealed class DeliveryNoteManager(
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
                 CostAtDispatch = i.CostAtDispatch
-            }).ToList()
+            }).ToList(),
+            CanApprove = deliveryNote.CanApprove(),
+            CanReject = deliveryNote.CanReject(),
+            CanMarkDelivering = deliveryNote.CanMarkDelivering(),
+            CanMarkDelivered = deliveryNote.CanMarkDelivered(),
         };
     }
 }

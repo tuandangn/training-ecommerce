@@ -19,7 +19,7 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
     public async Task<CustomerListModel> Handle(GetCustomerListQuery request, CancellationToken cancellationToken)
     {
         var paged = await _customerAppService
-            .GetCustomersAsync(request.Keywords, request.PageIndex, request.PageSize, request.IncludeSystem)
+            .GetCustomersAsync(request.PageIndex, request.PageSize, request.Keywords, request.IncludeSystem)
             .ConfigureAwait(false);
         var items = paged.Items.Select(c => new CustomerListModel.CustomerItemModel(c.Id)
         {

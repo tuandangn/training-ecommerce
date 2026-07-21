@@ -110,6 +110,17 @@ public sealed class DeliveryRunDetailsModel
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public IList<DeliveryRunItemModel> Items { get; init; } = [];
+    public IList<DeliveryRunWarehousePickGroupModel> PickingManifest { get; init; } = [];
+}
+
+public sealed record DeliveryRunWarehousePickGroupModel
+{
+    public required Guid WarehouseId { get; init; }
+    public required string WarehouseName { get; init; }
+    public bool Confirmed { get; init; }
+    public string? ConfirmedByFullName { get; init; }
+    public DateTime? ConfirmedOnUtc { get; init; }
+    public IList<DeliveryRunProductLineModel> Products { get; init; } = [];
 }
 
 public sealed record DeliveryRunItemModel
@@ -118,26 +129,73 @@ public sealed record DeliveryRunItemModel
     public required Guid DeliveryNoteId { get; init; }
     public required string DeliveryNoteCode { get; init; }
     public string? OrderCode { get; init; }
+    public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public required string ShippingAddress { get; init; }
     public decimal AmountToCollect { get; init; }
+    public DateTime? AmountToCollectOverriddenAt { get; init; }
     public decimal? CashCollectedAmount { get; init; }
     public string? ReceiverName { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public int? DeliveryNoteStatus { get; init; }
     public DateTime? DeliveredOnUtc { get; init; }
+
+    public int SettlementApproval { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public decimal? ApprovedAmountToCollect { get; init; }
+    public string? SettlementReason { get; init; }
+    public string? SettlementAdminNote { get; init; }
+
     public IList<DeliveryRunProductItemModel> ProductItems { get; init; } = [];
+    public IList<DeliveryRunProductLineModel> ProductLines { get; init; } = [];
+    public IList<DeliveryRunSettlementProductItemModel> SettlementItems { get; init; } = [];
+    public IList<DeliveryRunSettlementProductLineModel> SettlementProductLines { get; init; } = [];
+}
+
+public sealed record DeliveryRunProductLineModel
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal TotalQuantity { get; init; }
+    public string? UnitMeasurement { get; set; }
+    public int QuantityDecimalPlaces { get; init; } = 2;
 }
 
 public sealed record DeliveryRunProductItemModel
 {
     public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
+    public string? WarehouseName { get; init; }
     public decimal Quantity { get; init; }
+    public string? UnitMeasurement { get; set; }
     public decimal UnitPrice { get; init; }
     public decimal SubTotal { get; init; }
+    public int QuantityDecimalPlaces { get; init; } = 2;
+}
+
+public sealed record DeliveryRunSettlementProductItemModel
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal AcceptedQuantity { get; init; }
+    public decimal RejectedQuantity { get; init; }
+    public string? UnitMeasurement { get; set; }
+    public int QuantityDecimalPlaces { get; init; } = 2;
+}
+
+public sealed record DeliveryRunSettlementProductLineModel
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal AcceptedQuantity { get; init; }
+    public decimal RejectedQuantity { get; init; }
+    public string? UnitMeasurement { get; set; }
     public int QuantityDecimalPlaces { get; init; } = 2;
 }
 

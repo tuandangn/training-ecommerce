@@ -184,7 +184,7 @@ public sealed record OrderDetailsModel
         public int SourceType { get; init; }
         public bool IsDirectShip { get; init; }
         public int DeliveryConfirmationStatus { get; init; }
-        public Guid WarehouseId { get; init; }
+        public Guid? WarehouseId { get; init; }
         public string? WarehouseName { get; init; }
         public DateTime CreatedOn { get; init; }
         public DateTime? UpdatedOn { get; init; }
@@ -326,7 +326,7 @@ public sealed record OrderDetailsModel
         public required string StatusClass { get; init; }
         public required bool IsDirectShip { get; init; }
         public required int DeliveryConfirmationStatus { get; init; }
-        public required Guid WarehouseId { get; init; }
+        public required Guid? WarehouseId { get; init; }
         public string? WarehouseName { get; init; }
         public string? Note { get; init; }
         public DateTime CreatedOn { get; init; }

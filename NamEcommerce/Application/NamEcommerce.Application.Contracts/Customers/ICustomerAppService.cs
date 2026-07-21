@@ -5,19 +5,13 @@ namespace NamEcommerce.Application.Contracts.Customers;
 
 public interface ICustomerAppService
 {
+    Task<CustomerAppDto?> GetCustomerByIdAsync(Guid id);
+    Task<IEnumerable<CustomerAppDto>> GetCustomersByIdsAsync(IEnumerable<Guid> ids);
+    Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false);
+
     Task<CreateCustomerResultAppDto> CreateCustomerAsync(CreateCustomerAppDto dto);
-
     Task<UpdateCustomerResultAppDto> UpdateCustomerAsync(UpdateCustomerAppDto dto);
-
     Task<DeleteCustomerResultAppDto> DeleteCustomerAsync(Guid id);
 
-    Task<CustomerAppDto?> GetCustomerByIdAsync(Guid id);
     Task<CustomerAppDto> GetOrCreateRetailWalkInCustomerAsync();
-    Task<IEnumerable<CustomerAppDto>> GetCustomersByIdsAsync(IEnumerable<Guid> ids);
-
-    Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(
-        string? keywords,
-        int pageIndex,
-        int pageSize,
-        bool includeSystem = false);
 }

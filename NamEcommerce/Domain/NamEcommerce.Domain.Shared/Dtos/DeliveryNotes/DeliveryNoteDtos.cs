@@ -11,7 +11,6 @@ public sealed record DeliveryNoteDto
     
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
-    public required Guid WarehouseId { get; init; }
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
     public string? AssignedDeliveryFullName { get; init; }
@@ -24,7 +23,8 @@ public sealed record DeliveryNoteDto
     
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
-    
+    public bool CanUpdateShippingInfo { get; init; }
+
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
     
@@ -55,7 +55,33 @@ public sealed record DeliveryNoteDto
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
 
+    public DateTime? AmountToCollectOverriddenAt { get; init; }
+    public string? AmountToCollectOverrideNote { get; init; }
+
+    public DeliverySettlementApprovalStatus SettlementApproval { get; init; }
+    public decimal? ProposedAmountToCollect { get; init; }
+    public decimal? ApprovedAmountToCollect { get; init; }
+    public decimal? ApprovedAgreedCustomerCharge { get; init; }
+    public string? ApprovedAgreedChargeReason { get; init; }
+    public string? SettlementReason { get; init; }
+    public string? SettlementAdminNote { get; init; }
+
     public IList<DeliveryNoteItemDto> Items { get; init; } = [];
+    public IList<DeliveryNoteSettlementItemDto> SettlementItems { get; init; } = [];
+
+    public bool CanApprove { get; set; }
+    public bool CanMarkDelivering { get; set; }
+    public bool CanMarkDelivered { get; set; }
+    public bool CanReject { get; set; }
+}
+
+[Serializable]
+public sealed record DeliveryNoteSettlementItemDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
 }
 
 [Serializable]
@@ -81,24 +107,19 @@ public sealed record DeliveryNoteItemDto
 public sealed record CreateDeliveryNoteDto
 {
     public required Guid OrderId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public string? WarehouseName { get; init; }
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public bool ShowPrice { get; init; }
-    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
-    public required IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
+    public IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
 
     public void Verify()
     {
         if (OrderId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.OrderRequired");
-        if (WarehouseId == Guid.Empty)
-            throw new NamEcommerceDomainException("Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
             throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
@@ -160,6 +181,30 @@ public sealed record MarkDeliveryNoteDeliveredDto
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }
     public DeliveryCompletionMetadataDto? CompletionMetadata { get; init; }
+}
+
+[Serializable]
+public sealed record RequestDeliverySettlementDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
+    public string? ReceiverName { get; init; }
+    public string? Reason { get; init; }
+    /// <summary>Case khách từ chối/thu thiếu không trả hàng — số shipper đề xuất thu.</summary>
+    public decimal? ProposedAmountToCollect { get; init; }
+    public DeliveryAcceptanceDto? Acceptance { get; init; }
+    public Guid? RequestedByUserId { get; init; }
+}
+
+[Serializable]
+public sealed record ApproveDeliverySettlementDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required decimal ApprovedAmountToCollect { get; init; }
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public string? AdminNote { get; init; }
+    public Guid? ApprovedByUserId { get; init; }
 }
 
 [Serializable]
@@ -233,6 +278,7 @@ public sealed record CreateDeliveryNoteFromVendorReturnItemDto
 public sealed record CreateDeliveryNoteForDirectShipDto
 {
     public required Guid GoodsReceiptId { get; init; }
+    public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required decimal Quantity { get; init; }
     public required Guid DirectShipWarehouseId { get; init; }

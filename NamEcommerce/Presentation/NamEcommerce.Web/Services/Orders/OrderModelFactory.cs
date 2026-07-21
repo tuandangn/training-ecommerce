@@ -11,7 +11,6 @@ using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
-using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -36,68 +35,32 @@ using NamEcommerce.Application.Contracts.Inventory;
 
 namespace NamEcommerce.Web.Services.Orders;
 
-public sealed class OrderModelFactory : IOrderModelFactory
+public sealed class OrderModelFactory(
+    AppConfig appConfig,
+    IMediator mediator,
+    IDeliveryNoteAppService deliveryNoteAppService,
+    IDirectShipAppService directShipAppService,
+    ICustomerDebtAppService customerDebtAppService,
+    IExpenseAppService expenseAppService,
+    IGoodsReceiptAppService goodsReceiptAppService,
+    IOrderAuditAppService orderAuditAppService,
+    ICustomerReturnAppService customerReturnAppService,
+    IPictureAppService pictureAppService,
+    IInventoryAppService inventoryAppService,
+    IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
+    BankTransferPaymentSettings bankTransferPaymentSettings,
+    ICustomerLedgerManager customerLedgerManager) : IOrderModelFactory
 {
-    private readonly AppConfig _appConfig;
-    private readonly IMediator _mediator;
-    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
-    private readonly IDirectShipAppService _directShipAppService;
-    private readonly ICustomerDebtAppService _customerDebtAppService;
-    private readonly IExpenseAppService _expenseAppService;
-    private readonly IGoodsReceiptAppService _goodsReceiptAppService;
-    private readonly IOrderAuditAppService _orderAuditAppService;
-    private readonly ICustomerReturnAppService _customerReturnAppService;
-    private readonly IPictureAppService _pictureAppService;
-    private readonly IFinancialReportAppService _financialReportAppService;
-    private readonly IInventoryAppService _inventoryAppService;
-    private readonly IBankTransferReceivingAccountResolver _bankTransferReceivingAccountResolver;
-    private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
-    private readonly ICustomerLedgerManager _customerLedgerManager;
-
-    public OrderModelFactory(
-        AppConfig appConfig,
-        IMediator mediator,
-        IDeliveryNoteAppService deliveryNoteAppService,
-        IDirectShipAppService directShipAppService,
-        ICustomerDebtAppService customerDebtAppService,
-        IExpenseAppService expenseAppService,
-        IGoodsReceiptAppService goodsReceiptAppService,
-        IOrderAuditAppService orderAuditAppService,
-        ICustomerReturnAppService customerReturnAppService,
-        IPictureAppService pictureAppService,
-        IFinancialReportAppService financialReportAppService,
-        IInventoryAppService inventoryAppService,
-        IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
-        BankTransferPaymentSettings bankTransferPaymentSettings,
-        ICustomerLedgerManager customerLedgerManager)
-    {
-        _appConfig = appConfig;
-        _mediator = mediator;
-        _deliveryNoteAppService = deliveryNoteAppService;
-        _directShipAppService = directShipAppService;
-        _customerDebtAppService = customerDebtAppService;
-        _expenseAppService = expenseAppService;
-        _goodsReceiptAppService = goodsReceiptAppService;
-        _customerReturnAppService = customerReturnAppService;
-        _pictureAppService = pictureAppService;
-        _orderAuditAppService = orderAuditAppService;
-        _financialReportAppService = financialReportAppService;
-        _inventoryAppService = inventoryAppService;
-        _bankTransferReceivingAccountResolver = bankTransferReceivingAccountResolver;
-        _bankTransferPaymentSettings = bankTransferPaymentSettings;
-        _customerLedgerManager = customerLedgerManager;
-    }
-
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
         var model = oldModel ?? new CreateOrderModel();
-        model.AvailableCategories = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
-        model.AvailableUnitMeasurements = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
-        model.AvailableVendors = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
+        model.AvailableCategories = await mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        model.AvailableUnitMeasurements = await mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
+        model.AvailableVendors = await mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 
         if (model.CustomerId.HasValue)
         {
-            var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value }).ConfigureAwait(false);
+            var customer = await mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value }).ConfigureAwait(false);
             if (customer is null)
                 model.CustomerId = null;
             else
@@ -120,7 +83,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
             if (productIds.Count > 0)
             {
-                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                var products = await mediator.Send(new GetProductsByIdsForOrderQuery
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
@@ -146,7 +109,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
     public async Task<OrderDetailsModel?> PrepareOrderDetailsModel(Guid orderId)
     {
-        var order = await _mediator.Send(new GetOrderByIdQuery { Id = orderId }).ConfigureAwait(false);
+        var order = await mediator.Send(new GetOrderByIdQuery { Id = orderId }).ConfigureAwait(false);
         if (order is null)
             return null;
 
@@ -173,7 +136,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             CreatedOn = order.CreatedOn
         };
         var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
-        var orderProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
+        var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
         var orderDecimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         foreach (var it in order.Items)
@@ -183,7 +146,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 ProductId = it.ProductId,
                 ProductName = it.ProductName,
                 ProductPicture = it.ProductPicture,
-                ProductAvailableQty = await _inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false),
+                ProductAvailableQty = await inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false),
                 Quantity = it.Quantity,
                 UnitPrice = it.UnitPrice,
                 QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
@@ -201,10 +164,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 Quantity = item.Quantity,
                 QuantityDecimalPlaces = item.QuantityDecimalPlaces
             }).ToList(),
-            Schedules = await _mediator.Send(new GetOrderFulfillmentSchedulesByOrderQuery(order.Id)).ConfigureAwait(false)
+            Schedules = await mediator.Send(new GetOrderFulfillmentSchedulesByOrderQuery(order.Id)).ConfigureAwait(false)
         };
 
-        var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         foreach (var dn in deliveryNotes)
         {
             var dnModel = new OrderDetailsModel.DeliveryNoteBasicModel
@@ -215,7 +178,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 SourceType = dn.SourceType,
                 IsDirectShip = dn.IsDirectShip,
                 DeliveryConfirmationStatus = dn.DeliveryConfirmationStatus,
-                WarehouseId = dn.WarehouseId,
+                WarehouseId = dn.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty,
                 WarehouseName = dn.WarehouseName,
                 CreatedOn = dn.CreatedOnUtc.ToLocalTime(),
                 UpdatedOn = dn.UpdatedOnUtc?.ToLocalTime(),
@@ -231,7 +194,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 AmountToCollect = dn.AmountToCollect
             };
 
-            var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+            var returnedQuantities = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
             {
                 DeliveryNoteId = dn.Id
             }).ConfigureAwait(false);
@@ -259,20 +222,20 @@ public sealed class OrderModelFactory : IOrderModelFactory
         await PrepareDeliveryProofPicturesAsync(model).ConfigureAwait(false);
         model.CustomerReturns = await GetCustomerReturnsForDeliveryNotesAsync(model.DeliveryNotes).ConfigureAwait(false);
 
-        model.ShortageInfo = await _mediator.Send(new GetOrderShortageInfoQuery
+        model.ShortageInfo = await mediator.Send(new GetOrderShortageInfoQuery
         {
             OrderId = orderId
         }).ConfigureAwait(false);
 
-        model.AllocatedPurchaseOrders = await _mediator.Send(new GetAllocatedPurchaseOrdersForOrderQuery
+        model.AllocatedPurchaseOrders = await mediator.Send(new GetAllocatedPurchaseOrdersForOrderQuery
         {
             OrderId = orderId
         }).ConfigureAwait(false);
 
-        var orderItemIds = order.Items.Select(i => i.Id).ToList();
+        var orderItemIds = order.Items.Select(item => (order.Id, item.Id)).ToList();
         if (orderItemIds.Count > 0)
         {
-            var dsAllocations = await _directShipAppService
+            var dsAllocations = await directShipAppService
                 .GetDirectShipAllocationsForOrderAsync(orderItemIds)
                 .ConfigureAwait(false);
 
@@ -301,7 +264,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a =>
             a.ReceivedQuantity > 0 &&
             (!a.DeliveryStatus.HasValue || a.DeliveryStatus == (int)DeliveryNoteStatus.Confirmed));
-        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.AvailableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         model.ReturnWarehouseOptions = model.AvailableWarehouses
             .OrderBy(warehouse => warehouse.Name)
             .Select(warehouse => new OrderDetailsModel.ReturnWarehouseOptionModel
@@ -320,10 +283,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var pageNumber = searchModel?.PageNumber ?? 1;
         var pageSize = searchModel?.PageSize ?? 0;
         if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+        if (pageSize <= 0) pageSize = appConfig.DefaultPageSize;
+        if (appConfig.PageSizeOptions.Contains(pageSize)) pageSize = appConfig.DefaultPageSize;
 
-        var model = await _mediator.Send(new GetOrderListQuery
+        var model = await mediator.Send(new GetOrderListQuery
         {
             Keywords = searchModel?.Keywords,
             Status = searchModel?.Status,
@@ -338,7 +301,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
     {
         foreach (var deliveryNote in model.DeliveryNotes.Where(note => note.DeliveryProofPictureId.HasValue))
         {
-            var picture = await _pictureAppService
+            var picture = await pictureAppService
                 .GetBase64PictureByIdAsync(deliveryNote.DeliveryProofPictureId!.Value)
                 .ConfigureAwait(false);
             deliveryNote.DeliveryProofPictureUrl = picture?.Base64Value;
@@ -355,12 +318,12 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var returns = new List<CustomerReturnAppDto>();
         foreach (var deliveryNoteId in deliveryNoteIds)
         {
-            var (_, items) = await _customerReturnAppService.GetListAsync(
+            var (_, items) = await customerReturnAppService.GetListAsync(
+                pageIndex: 0,
+                pageSize: int.MaxValue,
                 customerId: null,
                 deliveryNoteId: deliveryNoteId,
-                status: null,
-                pageIndex: 0,
-                pageSize: int.MaxValue).ConfigureAwait(false);
+                status: null).ConfigureAwait(false);
             returns.AddRange(items);
         }
 
@@ -406,15 +369,15 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var deliveryStatus = CalculateDeliveryStatus(model);
         var activeStage = CalculateActiveStage(model, deliveryStatus);
         var relatedReceipts = await GetRelatedGoodsReceiptsAsync(model).ConfigureAwait(false);
-        var customerDebts = await _customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
+        var customerDebts = await customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
         var orderDebts = customerDebts?.Debts.Where(debt => debt.OrderId == model.Id).ToList() ?? [];
-        var customerPayments = await _customerDebtAppService.GetPaymentsAsync(model.CustomerId, 0, 100).ConfigureAwait(false);
+        var customerPayments = await customerDebtAppService.GetPaymentsAsync(model.CustomerId, 0, 100).ConfigureAwait(false);
         var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
-        var expenses = await _expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
-        var itemChangeAudits = await _orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
-        var receivingAccount = await _bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
-        var customerBalance = await _customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
-        var bankTransferEnabled = _bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
+        var expenses = await expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
+        var itemChangeAudits = await orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
+        var receivingAccount = await bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
+        var customerBalance = await customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
+        var bankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
         var bankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
             ? null
             : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
@@ -430,7 +393,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             customerBalance,
             orderPayments,
             bankTransferEnabled,
-            _bankTransferPaymentSettings.Verification.AllowManualConfirm,
+            bankTransferPaymentSettings.Verification.AllowManualConfirm,
             bankAccountLabel);
         model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts, orderPayments, itemChangeAudits);
     }
@@ -444,7 +407,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .Select(async purchaseOrder => new
             {
                 purchaseOrder.PurchaseOrderId,
-                Receipts = await _goodsReceiptAppService
+                Receipts = await goodsReceiptAppService
                     .GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrder.PurchaseOrderId)
                     .ConfigureAwait(false)
             })
@@ -947,6 +910,18 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     Stage = OrderDetailsModel.WorkflowStage.Delivery
                 });
             }
+            else if (status == DeliveryNoteStatus.PendingConfirmation)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
+                    Title = "Chờ đối soát",
+                    Description = deliveryNote.Code,
+                    Icon = "bi-hourglass-split",
+                    Tone = "warning",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
             else if (status == DeliveryNoteStatus.Cancelled)
             {
                 var isRejected = deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected;
@@ -1207,6 +1182,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             DeliveryNoteStatus.Draft => "Bản nháp",
             DeliveryNoteStatus.Confirmed => "Đã xác nhận",
             DeliveryNoteStatus.Delivering => "Đang giao",
+            DeliveryNoteStatus.PendingConfirmation => "Chờ đối soát",
             DeliveryNoteStatus.Delivered => "Đã giao",
             DeliveryNoteStatus.Cancelled => "Đã hủy",
             _ => status.ToString()
@@ -1218,6 +1194,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             DeliveryNoteStatus.Draft => "secondary",
             DeliveryNoteStatus.Confirmed => "info",
             DeliveryNoteStatus.Delivering => "warning",
+            DeliveryNoteStatus.PendingConfirmation => "warning",
             DeliveryNoteStatus.Delivered => "success",
             DeliveryNoteStatus.Cancelled => "danger",
             _ => "secondary"

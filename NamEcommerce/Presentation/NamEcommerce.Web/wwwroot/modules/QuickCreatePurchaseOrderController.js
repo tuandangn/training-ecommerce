@@ -16,7 +16,11 @@ export default class QuickCreatePurchaseOrderController {
     #vendorId = null;
     #items = [];
     #itemEditor;
+
     #browser;
+    #mobileBrowser;
+
+    #vendorPicker;
 
     constructor() {
         const offcanvasEl = getEl('itemEditOffcanvas');
@@ -35,15 +39,23 @@ export default class QuickCreatePurchaseOrderController {
         const el = getEl('vendorPicker');
         if (!el) return;
 
-        new VendorPicker(el, {
-            onSelect: (vendor) => {
+        this.#vendorPicker = new VendorPicker(el, {
+            onSelect: async (vendor) => {
+                const valid = vendor == null || await this.#checkCommonVendor(vendor.id);
+
+                if (!valid) return;
+
                 this.#vendorId = vendor?.id ?? null;
                 getEl('VendorId').value = this.#vendorId ?? '';
                 if (vendor) this.#refreshPricesForVendor(vendor.id);
+                this.#browser?.setVendor(vendor?.id ?? null);
+                this.#mobileBrowser?.setVendor(vendor?.id ?? null);
             },
             onRemove: () => {
                 this.#vendorId = null;
                 getEl('VendorId').value = '';
+                this.#browser?.setVendor(null);
+                this.#mobileBrowser?.setVendor(null);
             }
         });
     }
@@ -54,9 +66,15 @@ export default class QuickCreatePurchaseOrderController {
             const browser = new ProductBrowser(
                 productBrowserEl,
                 (product) => this.#addOrIncrementProduct(product),
-                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', initialShow: true }
+                {
+                    purchase: true,
+                    colClass: productBrowserEl.dataset.colClass ?? 'col-12',
+                    initialShow: true,
+                    checkProduct: this.#isValidProduct
+                }
             );
             browser.init();
+            this.#browser = browser;
         }
 
         const mobileProductBrowserEl = getEl('productBrowserMobile');
@@ -68,9 +86,15 @@ export default class QuickCreatePurchaseOrderController {
                     bootstrap.Offcanvas.getOrCreateInstance(offCanvas)?.hide();
                     this.#addOrIncrementProduct(product);
                 },
-                { purchase: true, colClass: productBrowserEl.dataset.colClass ?? 'col-12', notCollapsed: true }
+                {
+                    purchase: true,
+                    colClass: productBrowserEl.dataset.colClass ?? 'col-12',
+                    notCollapsed: true,
+                    checkProduct: this.#isValidProduct
+                }
             );
             browser.init();
+            this.#mobileBrowser = browser;
         }
     }
 
@@ -100,7 +124,41 @@ export default class QuickCreatePurchaseOrderController {
         getEl('btnSubmit')?.addEventListener('click', () => this.#submit());
     }
 
+    #isValidProduct(product) {
+        return product.vendorCount > 0;
+    }
+
+    #getCommonVendorOfItems(items) {
+        const vendors = items.flatMap(item => item.appropriateVendors);
+        const vendorIds = [...new Set(items.flatMap(item => item.appropriateVendorIds))];
+        return vendorIds.filter(id => items.every(item => item.appropriateVendorIds.includes(id)))
+            .map(id => vendors.find(v => v.id == id));
+    }
+
+    async #checkCommonVendor(vendorId) {
+        const commonVendors = this.#getCommonVendorOfItems(this.#items);
+        if (vendorId == null || this.#items.length == 0 || (vendorId != null && commonVendors.find(v => v.id === vendorId))) {
+            return true;
+        }
+
+        const isConfirmed = await confirm('Xác nhận', `Nhà cung cấp này không phù hợp với một số mặt hàng đã chọn. Bạn có muốn chuyển sang nhà cung cấp này và bỏ các mặt hàng không phù hợp không?`, 'warning');
+        if (!isConfirmed) {
+            this.#vendorPicker.removeVendor();
+            return false;
+        }
+
+        const items = this.#items.filter(item => item.appropriateVendorIds.includes(vendorId));
+        this.#items = items;
+        this.#renderItems();
+        return true;
+    }
+
     async #addOrIncrementProduct(product) {
+        if (!this.#isValidProduct(product)) {
+            toast('Hàng hóa không phù hợp', 'Vui lòng chọn hàng hóa khác.', 'warning');
+            return;
+        }
+
         const idx = this.#items.findIndex(i => i.productId === product.id);
         if (idx >= 0) {
             this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
@@ -118,7 +176,7 @@ export default class QuickCreatePurchaseOrderController {
             unitCost = payload.suggestedCost ?? 0;
         } catch { /* keep 0 */ }
 
-        this.#items.push({
+        const newItem = {
             productId: product.id,
             productName: product.name ?? '',
             productPicture: product.picture ?? '',
@@ -126,14 +184,18 @@ export default class QuickCreatePurchaseOrderController {
             unitCost,
             warehouseId: null,
             quantityDecimalPlaces: product.quantityDecimalPlaces ?? 0,
-            manualCostSet: false
-        });
+            manualCostSet: false,
+            appropriateVendors: product.availableVendors?.map(v => ({ id: v.key, name: v.value })) ?? [],
+            appropriateVendorIds: product.availableVendors?.map(v => v.key) ?? [],
+        };
+        const items = [...this.#items, newItem];
+        const commonVendors = this.#getCommonVendorOfItems(items);
+        if (commonVendors.length == 0) {
+            const isConfirmed = await confirm('Xác nhận', `Không tìm thấy nhà cung cấp phù hợp khi bạn thêm mặt hàng này. Bạn có muốn tiếp tục không?`, 'warning');
+            if (!isConfirmed) return;
+        }
 
-        const newIdx = this.#items.length - 1;
-        this.#renderItems();
-        this.#renderSummary();
-
-        this.#openEditor(newIdx, { canRemove: false });
+        this.#openEditor(newItem, { canRemove: false });
     }
 
     async #refreshPricesForVendor(vendorId) {
@@ -144,7 +206,7 @@ export default class QuickCreatePurchaseOrderController {
                 const res = await apiGet(`/Product/PurchasePriceReference?${params}`);
                 const payload = res.data ?? res;
                 const suggested = payload.suggestedCost;
-                if (suggested != null) {
+                if (suggested != null && suggested > 0) {
                     this.#items[i] = { ...this.#items[i], unitCost: suggested };
                 }
             } catch { /* keep existing */ }
@@ -153,10 +215,11 @@ export default class QuickCreatePurchaseOrderController {
         this.#renderSummary();
     }
 
-    #openEditor(index, openOptions) {
+    #openEditor(item, openOptions) {
         this.#closeOffcanvas();
 
-        const item = this.#items[index];
+        const data = { ...item };
+
         this.#itemEditor.open({
             name: item.productName,
             picture: item.productPicture,
@@ -166,17 +229,28 @@ export default class QuickCreatePurchaseOrderController {
             priceLabel: 'Đơn giá nhập'
         }, {
             onApply: (qty, price) => {
-                this.#items[index] = {
-                    ...this.#items[index],
-                    quantity: qty,
-                    unitCost: price,
-                    manualCostSet: price !== this.#items[index].unitCost || this.#items[index].manualCostSet
-                };
+                const idx = this.#items.findIndex(i => i.productId === data.productId);
+                if (idx == -1) {
+                    data.quantity = qty;
+                    data.unitCost = price;
+                    data.manualCostSet = price != data.unitCost;
+                    this.#items.push(data);
+                } else {
+                    const currentItem = this.#items[idx];
+                    this.#items[idx] = {
+                        ...this.#items[idx],
+                        quantity: qty,
+                        unitCost: price,
+                        manualCostSet: currentItem.manualCostSet || price != currentItem.unitCost
+                    };
+                }
                 this.#renderItems();
                 this.#renderSummary();
             },
             onDelete: () => {
-                this.#items.splice(index, 1);
+                const idx = this.#items.findIndex(i => i.productId === data.productId);
+                if (idx === -1) return;
+                this.#items.splice(idx, 1);
                 this.#renderItems();
                 this.#renderSummary();
             }
@@ -201,9 +275,22 @@ export default class QuickCreatePurchaseOrderController {
 
         tbody.querySelectorAll('[data-del-idx]').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const ok = await confirm('Xóa sản phẩm này khỏi đơn?');
-                if (ok) {
-                    this.#items.splice(+btn.dataset.delIdx, 1);
+                const index = Number(btn.getAttribute('data-del-idx'));
+                if (Number.isNaN(index) || index < 0) throw new Error('Invalid index');
+                const item = this.#items[index];
+                const result = await Swal.fire({
+                    title: 'Xóa hàng hóa?',
+                    text: `"${item.productName}" sẽ bị xóa khỏi đơn.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Xóa',
+                    cancelButtonText: 'Hủy',
+                    confirmButtonColor: '#dc3545',
+                    reverseButtons: true
+                });
+
+                if (result.isConfirmed) {
+                    this.#items.splice(index, 1);
                     this.#renderItems();
                     this.#renderSummary();
                 }
@@ -213,9 +300,18 @@ export default class QuickCreatePurchaseOrderController {
             row.style.cursor = 'pointer';
             row.addEventListener('click', (e) => {
                 if (e.target.closest('button')) return;
-                this.#openEditor(i);
+                this.#openEditor(this.#items[i]);
             });
         });
+
+        const commonVendors = this.#getCommonVendorOfItems(this.#items);
+        if (this.#items.length > 0) {
+            this.#vendorPicker.setLimitVendorIds(commonVendors.map(v => v.id));
+            document.querySelector('.notHasAppropriatedVendorWarning')?.classList.toggle('d-none', commonVendors.length > 0);
+        }
+        else {
+            this.#vendorPicker.setLimitVendorIds(null);
+        }
     }
 
     #buildRow(item, i) {
@@ -274,6 +370,8 @@ export default class QuickCreatePurchaseOrderController {
             return;
         }
 
+        showPageLoading();
+
         const receiveImmediately = getEl('receiveImmediately')?.checked ?? true;
         const isPaid = receiveImmediately && (getEl('isPaid')?.checked ?? false);
 
@@ -318,8 +416,14 @@ export default class QuickCreatePurchaseOrderController {
             const result = await apiPost('/PurchaseOrder/QuickCreate', command);
             if (result.success) {
                 window.location.href = `/PurchaseOrder/Details/${result.data?.purchaseOrderId}`;
+                return;
             }
-        } finally {
+            hidePageLoading();
+        }
+        catch {
+            hidePageLoading();
+        }
+        finally {
             if (btn) { btn.disabled = false; btn.textContent = 'Lưu đơn nhập'; }
         }
     }

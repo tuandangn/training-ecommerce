@@ -1,40 +1,28 @@
 using Microsoft.AspNetCore.Authorization;
-using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Web.Services.Permissions;
-using System.Security.Claims;
+using NamEcommerce.Application.Contracts.Security;
+using NamEcommerce.Application.Contracts.Users;
 
 namespace NamEcommerce.Web.Authorization;
 
-public sealed class PermissionAuthorizationHandler(IPermissionCacheService permissionCache)
+public sealed class PermissionAuthorizationHandler(ICurrentUserService currentUserService, IAuthorizationAppService authorizationAppService)
     : AuthorizationHandler<PermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
-        if (context.User?.Identity?.IsAuthenticated != true)
-            return;
-
-        if (context.User.IsInRole(SystemUserRoleNames.Admin))
+        if (await currentUserService.IsAdminAsync())
         {
             context.Succeed(requirement);
             return;
         }
 
-        var userRoles = context.User.Claims
-            .Where(c => c.Type == ClaimTypes.Role)
-            .Select(c => c.Value)
-            .ToList();
+        var currentUser = await currentUserService.GetCurrentUserInfoAsync();
+        if (currentUser is null)
+            return;
 
-        foreach (var role in userRoles)
-        {
-            var permissions = await permissionCache.GetPermissionsForRoleAsync(role).ConfigureAwait(false);
-            var normalizedPermission = requirement.Permission.ToUpperInvariant();
-            if (permissions.Contains(normalizedPermission))
-            {
-                context.Succeed(requirement);
-                return;
-            }
-        }
+        var authorized = await authorizationAppService.Authorize(currentUser.Id, requirement.Permission);
+        if (authorized)
+            context.Succeed(requirement);
     }
 }

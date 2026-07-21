@@ -18,5 +18,7 @@ public enum SystemNotificationType
     PurchaseOrderStatusChanged = 410,
     InventoryCostReturnReversalLost = 500,
     DeliveryNoteShipperNotResponded = 601,
-    DeliveryNoteReconciliationAlert = 602
+    DeliveryNoteReconciliationAlert = 602,
+    DeliverySettlementApprovalRequested = 603,
+    DeliveryNoteAmountToCollectUpdated = 604
 }

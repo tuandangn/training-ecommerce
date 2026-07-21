@@ -1,5 +1,9 @@
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.Inventory;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -13,6 +17,9 @@ public sealed class DeliveryRunModelFactory(
     IDeliveryRunAppService deliveryRunAppService,
     IDeliveryNoteAppService deliveryNoteAppService,
     IUserAppService userAppService,
+    IProductAppService productAppService,
+    IUnitMeasurementAppService unitMeasurementAppService,
+    IWarehouseAppService warehouseAppService,
     AppConfig appConfig) : IDeliveryRunModelFactory
 {
     public async Task<DeliveryRunListModel> PrepareDeliveryRunListModelAsync(DeliveryRunSearchModel searchModel)
@@ -63,9 +70,61 @@ public sealed class DeliveryRunModelFactory(
                 currentNotes[item.DeliveryNoteId] = note;
         }
 
+        var productIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.ProductId)).Distinct().ToList();
+        var products = await productAppService.GetProductsByIdsAsync(productIds).ConfigureAwait(false);
+
+        var unitMeasurementIds = products.Select(product => product.UnitMeasurementId).OfType<Guid>().Distinct().ToList();
+        var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
+
+        var warehouseIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.WarehouseId)).OfType<Guid>().Distinct().ToList();
+        var warehouses = (await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false))
+            .Where(warehouse => warehouseIds.Contains(warehouse.Id)).ToList();
+
         var itemModels = run.Items.Select(item =>
         {
             currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+            var productItems = note?.Items.Select(noteItem =>
+            {
+                var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
+                var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                var warehouse = warehouses.FirstOrDefault(warehouse => warehouse.Id == noteItem.WarehouseId);
+                return new DeliveryRunProductItemModel
+                {
+                    DeliveryNoteItemId = noteItem.Id,
+                    ProductId = noteItem.ProductId,
+                    ProductName = noteItem.ProductName,
+                    WarehouseName = warehouse?.Name,
+                    Quantity = noteItem.Quantity,
+                    UnitPrice = noteItem.UnitPrice,
+                    SubTotal = noteItem.SubTotal,
+                    QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                    UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                };
+            }).ToList() ?? [];
+            var settlementItems = new List<DeliveryRunSettlementProductItemModel>();
+            if (note is not null)
+            {
+                var noteItemsById = note.Items.ToDictionary(noteItem => noteItem.Id);
+                foreach (var settlementItem in note.SettlementItems)
+                {
+                    if (!noteItemsById.TryGetValue(settlementItem.DeliveryNoteItemId, out var noteItem))
+                        continue;
+
+                    var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
+                    var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
+                    settlementItems.Add(new DeliveryRunSettlementProductItemModel
+                    {
+                        DeliveryNoteItemId = noteItem.Id,
+                        ProductId = noteItem.ProductId,
+                        ProductName = noteItem.ProductName,
+                        Quantity = noteItem.Quantity,
+                        AcceptedQuantity = settlementItem.AcceptedQuantity,
+                        RejectedQuantity = settlementItem.RejectedQuantity,
+                        QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                        UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                    });
+                }
+            }
 
             return new DeliveryRunItemModel
             {
@@ -75,6 +134,7 @@ public sealed class DeliveryRunModelFactory(
                 DeliveryNoteId = item.DeliveryNoteId,
                 DeliveryNoteCode = item.DeliveryNoteCode,
                 OrderCode = note?.OrderCode ?? item.OrderCode,
+                CustomerId = note?.CustomerId ?? Guid.Empty,
                 CustomerName = note?.CustomerName ?? item.CustomerName,
                 CustomerPhone = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
                     ? item.ShippingPhoneNumber
@@ -84,18 +144,19 @@ public sealed class DeliveryRunModelFactory(
                     : note?.ShippingPhoneNumber,
                 ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
                 AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
+                AmountToCollectOverriddenAt = note?.AmountToCollectOverriddenAt,
                 CashCollectedAmount = note?.DeliveryCashCollectedAmount,
                 ReceiverName = note?.DeliveryReceiverName,
                 DeliveryProofPictureId = note?.DeliveryProofPictureId,
-                ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
-                {
-                    DeliveryNoteItemId = product.Id,
-                    ProductName = product.ProductName,
-                    Quantity = product.Quantity,
-                    UnitPrice = product.UnitPrice,
-                    SubTotal = product.SubTotal,
-                    QuantityDecimalPlaces = 2
-                }).ToList() ?? []
+                SettlementApproval = note?.SettlementApproval ?? 0,
+                ProposedAmountToCollect = note?.ProposedAmountToCollect,
+                ApprovedAmountToCollect = note?.ApprovedAmountToCollect,
+                SettlementReason = note?.SettlementReason,
+                SettlementAdminNote = note?.SettlementAdminNote,
+                ProductItems = productItems,
+                ProductLines = BuildProductLines(productItems),
+                SettlementItems = settlementItems,
+                SettlementProductLines = BuildSettlementProductLines(settlementItems)
             };
         }).ToList();
         var progress = GetProgressInfo((DeliveryRunStatus)run.Status, itemModels);
@@ -128,7 +189,8 @@ public sealed class DeliveryRunModelFactory(
             Note = run.Note,
             CreatedOnUtc = run.CreatedOnUtc,
             UpdatedOnUtc = run.UpdatedOnUtc,
-            Items = itemModels
+            Items = itemModels,
+            PickingManifest = BuildPickingManifest(run.WarehousePicks, currentNotes.Values.ToList(), products, unitMeasurements, warehouses)
         };
     }
 
@@ -323,12 +385,15 @@ public sealed class DeliveryRunModelFactory(
             item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Delivered &&
             item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Cancelled);
         var isCompleted = items.Count > 0 && openCount == 0;
+        var pendingConfirmationCount = items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation);
         var hasStarted = deliveredCount > 0 ||
+            pendingConfirmationCount > 0 ||
             items.Any(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivering);
         var statusName = status switch
         {
             DeliveryRunStatus.Cancelled => "Đã hủy",
             _ when isCompleted => "Đã giao xong",
+            _ when pendingConfirmationCount > 0 => "Chờ đối soát",
             _ when hasStarted || status == DeliveryRunStatus.HandedToDriver => "Đang giao",
             DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
             DeliveryRunStatus.Closed => "Đã đóng",
@@ -344,6 +409,100 @@ public sealed class DeliveryRunModelFactory(
             .Where(item => item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Delivered &&
                            item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Cancelled)
             .Sum(item => item.AmountToCollect);
+
+    private static IList<DeliveryRunWarehousePickGroupModel> BuildPickingManifest(
+        IEnumerable<DeliveryRunWarehousePickAppDto> warehousePicks,
+        IEnumerable<DeliveryNoteAppDto> notes,
+        IEnumerable<ProductAppDto> products,
+        IEnumerable<UnitMeasurementAppDto> unitMeasurements,
+        IEnumerable<WarehouseAppDto> warehouses)
+    {
+        var confirmedByWarehouse = warehousePicks.ToDictionary(p => p.WarehouseId);
+        var warehouseList = warehouses.ToList();
+        var productList = products.ToList();
+        var unitMeasurementList = unitMeasurements.ToList();
+        var noteItemsByWarehouse = notes
+            .SelectMany(note => note.Items)
+            .GroupBy(item => item.WarehouseId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return noteItemsByWarehouse
+            .OrderBy(kv => warehouseList.FirstOrDefault(w => w.Id == kv.Key)?.Name ?? kv.Key.ToString())
+            .Select(kv =>
+            {
+                var warehouseId = kv.Key;
+                var warehouse = warehouseList.FirstOrDefault(w => w.Id == warehouseId);
+                confirmedByWarehouse.TryGetValue(warehouseId, out var pick);
+
+                var productLines = kv.Value
+                    .GroupBy(item => item.ProductId)
+                    .Select(group =>
+                    {
+                        var first = group.First();
+                        var product = productList.FirstOrDefault(p => p.Id == first.ProductId);
+                        var unitMeasurement = product is not null
+                            ? unitMeasurementList.FirstOrDefault(u => u.Id == product.UnitMeasurementId)
+                            : null;
+                        return new DeliveryRunProductLineModel
+                        {
+                            ProductId = first.ProductId,
+                            ProductName = first.ProductName,
+                            TotalQuantity = group.Sum(item => item.Quantity),
+                            QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
+                            UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                        };
+                    })
+                    .ToList<DeliveryRunProductLineModel>();
+
+                return new DeliveryRunWarehousePickGroupModel
+                {
+                    WarehouseId = warehouseId,
+                    WarehouseName = warehouse?.Name ?? warehouseId.ToString(),
+                    Confirmed = pick is not null,
+                    ConfirmedByFullName = pick?.ConfirmedByFullName,
+                    ConfirmedOnUtc = pick?.ConfirmedOnUtc,
+                    Products = productLines
+                };
+            })
+            .ToList();
+    }
+
+    private static IList<DeliveryRunProductLineModel> BuildProductLines(IList<DeliveryRunProductItemModel> items)
+        => items
+            .GroupBy(item => item.ProductId)
+            .Select(group =>
+            {
+                var first = group.First();
+                return new DeliveryRunProductLineModel
+                {
+                    ProductId = group.Key,
+                    ProductName = first.ProductName,
+                    TotalQuantity = group.Sum(item => item.Quantity),
+                    QuantityDecimalPlaces = first.QuantityDecimalPlaces,
+                    UnitMeasurement = first.UnitMeasurement
+                };
+            })
+            .ToList();
+
+    private static IList<DeliveryRunSettlementProductLineModel> BuildSettlementProductLines(
+        IList<DeliveryRunSettlementProductItemModel> items)
+        => items
+            .GroupBy(item => item.ProductId)
+            .Select(group =>
+            {
+                var first = group.First();
+                return new DeliveryRunSettlementProductLineModel
+                {
+                    ProductId = group.Key,
+                    ProductName = first.ProductName,
+                    Quantity = group.Sum(item => item.Quantity),
+                    AcceptedQuantity = group.Sum(item => item.AcceptedQuantity),
+                    RejectedQuantity = group.Sum(item => item.RejectedQuantity),
+                    QuantityDecimalPlaces = first.QuantityDecimalPlaces,
+                    UnitMeasurement = first.UnitMeasurement
+                };
+            })
+            .ToList();
 
     private sealed record DeliveryRunProgressInfo(
         string StatusName,

@@ -15,7 +15,7 @@
     }
 
     .order-workflow-steps {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .workflow-step {
@@ -31,5 +31,8 @@
         grid-column: 2;
         justify-items: start;
         justify-content: flex-start;
+    }
+    .order-workflow-info-grid, .workflow-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

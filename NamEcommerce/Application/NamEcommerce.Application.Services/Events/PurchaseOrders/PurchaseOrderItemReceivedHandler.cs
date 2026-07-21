@@ -14,7 +14,7 @@ public sealed class PurchaseOrderItemReceivedHandler(
     {
         await purchaseOrderManager.VerifyStatusAsync(notification.PurchaseOrderId).ConfigureAwait(false);
         await orderFulfillmentScheduleAppService
-            .RefreshWhenStockAvailableForPurchaseOrderItemsAsync([notification.PurchaseOrderItemId])
+            .RefreshWhenStockAvailableForPurchaseOrderItemsAsync([(notification.PurchaseOrderId, notification.PurchaseOrderItemId)])
             .ConfigureAwait(false);
     }
 }
