@@ -19,12 +19,12 @@ public sealed class GetCustomerReturnListHandler : IRequestHandler<GetCustomerRe
     public async Task<CustomerReturnListModel> Handle(GetCustomerReturnListQuery request, CancellationToken cancellationToken)
     {
         var (total, items) = await _customerReturnAppService.GetListAsync(
-            request.CustomerId,
-            request.DeliveryNoteId,
-            request.Status,
             request.PageIndex,
             request.PageSize
-        ).ConfigureAwait(false);
+,
+            request.CustomerId,
+            request.DeliveryNoteId,
+            request.Status).ConfigureAwait(false);
 
         var itemModels = items.Select(dto => new CustomerReturnListModel.ItemModel(dto.Id)
         {

@@ -112,11 +112,7 @@ public sealed class CustomerManager : ICustomerManager
         return MapToDto(inserted);
     }
 
-    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(
-        string? keywords,
-        int pageIndex,
-        int pageSize,
-        bool includeSystem = false)
+    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false)
     {
         var query = _customerDataReader.DataSource;
 

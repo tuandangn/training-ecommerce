@@ -1,38 +1,26 @@
+@using System.Globalization
 @model DeliveryNoteDetailsModel
 @{
-    ViewData["Title"] = "Chi tiết phiếu xuất kho " + Model.Code;
+    ViewData[ViewConstants.PageTitle] = $"Phiếu xuất kho - {Model.Code}";
 
-    var statusTuple = Model.Status switch
-    {
-        (int)DeliveryNoteStatus.Draft => ("bg-secondary text-white", "Bản nháp", "bi-pencil"),
-        (int)DeliveryNoteStatus.Confirmed => ("bg-info text-white", "Đã xác nhận", "bi-check-all"),
-        (int)DeliveryNoteStatus.Delivering => ("bg-warning text-white", "Đang giao", "bi-truck"),
-        (int)DeliveryNoteStatus.PendingConfirmation => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
-        (int)DeliveryNoteStatus.Delivered => ("bg-success text-white", "Đã giao", "bi-check-circle-fill"),
-        (int)DeliveryNoteStatus.Cancelled => ("bg-danger text-white", "Đã hủy", "bi-x-circle"),
-        _ => ("bg-secondary text-white", "Không rõ", "bi-question-circle")
-    };
-    var isDirectShip = Model.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer;
-    var isCounterPickup = string.Equals(TextHelper.Normalize("Tại cửa hàng"), TextHelper.Normalize(Model.ShippingAddress));
-    var deliveryUserOptions = (Model.AvailableDeliveryUsers?.Options ?? Enumerable.Empty<EntityOptionListModel.EntityOptionModel>()).ToList();
-    var hasDeliveryUsers = deliveryUserOptions.Any();
-    var canAssignDeliveryUser = !isDirectShip
-        && Model.Status != (int)DeliveryNoteStatus.Delivered
-        && Model.Status != (int)DeliveryNoteStatus.Cancelled;
+    var status = (DeliveryNoteStatus)Model.Status;
+    var settlementApprovalStatus = (DeliverySettlementApprovalStatus)Model.SettlementApproval;
+
     var isDeliveryUserAssigned = !string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName);
-    var canLeaveWarehouse = isDirectShip || isCounterPickup || isDeliveryUserAssigned;
-    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.PendingConfirmation
-        || Model.Status == (int)DeliveryNoteStatus.Delivering
-        || (Model.Status == (int)DeliveryNoteStatus.Confirmed && canLeaveWarehouse);
+    var canLeaveWarehouse = Model.IsDirectShip || Model.IsCounterPickup || isDeliveryUserAssigned;
+    var canOpenDeliveredWorkflow = status == DeliveryNoteStatus.PendingConfirmation
+        || status == DeliveryNoteStatus.Delivering
+        || (status == DeliveryNoteStatus.Confirmed && canLeaveWarehouse);
+
     var needsDeliveryRunOverrideConfirmation = Model.DeliveryRunInfo != null
         && (Model.DeliveryRunInfo.HandedOverOnUtc.HasValue || Model.DeliveryRunInfo.Status == (int)DeliveryRunStatus.HandedToDriver);
-    var canUpdateShippingInfo = Model.Status != (int)DeliveryNoteStatus.Delivered
-        && Model.Status != (int)DeliveryNoteStatus.Cancelled;
+
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
             ? Model.DeliveryProofPictureUrl
             : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
+
     var hasDeliveryCompletionInfo = Model.DeliveredOnUtc.HasValue
         || !string.IsNullOrWhiteSpace(Model.DeliveryReceiverName)
         || Model.DeliveryLatitude.HasValue
@@ -42,13 +30,14 @@
         || Model.DeliveryCashCollectedAmount.HasValue
         || !string.IsNullOrWhiteSpace(deliveryProofPictureSrc);
 }
+
 @section TitleSection {
     <h1 class="topbar-page-title">
         Phiếu xuất kho
         <span class="text-muted">@Model.Code</span>
         <span class="text-muted small d-none d-md-inline">
-            <span class="status-badge @statusTuple.Item1">
-                @Model.StatusName
+            <span class="status-badge @status.GetDisplayColor()">
+                @status.GetDisplayText()
             </span>
         </span>
     </h1>
@@ -62,10 +51,10 @@
         </nav>
     </div>
 }
-@if (isDirectShip || Model.ShortageInfo.HasShortage)
+@if (Model.IsDirectShip || Model.ShortageInfo.HasShortage)
 {
     <div class="content-card mb-3">
-        @if (isDirectShip)
+        @if (Model.IsDirectShip)
         {
             <div class="alert alert-info d-flex align-items-center gap-2 mb-0" role="alert">
                 <i class="bi bi-truck fs-5"></i>
@@ -102,9 +91,8 @@
         }
     </div>
 }
-@if (Model.SettlementApproval == 1)
+@if (settlementApprovalStatus == DeliverySettlementApprovalStatus.PendingApproval)
 {
-    var canApproveSettlement = User.IsInRole(SystemUserRoleNames.Admin);
     var proposed = Model.ProposedAmountToCollect ?? Model.AmountToCollect;
     var rejectedValue = Model.SettlementItems.Where(i => i.RejectedQuantity > 0).Sum(i => i.RejectedQuantity * i.UnitPrice);
     <div class="content-card mb-3 border border-warning">
@@ -152,7 +140,7 @@
                     </table>
                 </div>
             }
-            @if (canApproveSettlement)
+            @if (Model.UserCanApproveSettlement)
             {
                 <div class="border-top pt-3 d-flex justify-content-end">
                     <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveSettlementModal">
@@ -166,7 +154,7 @@
             }
         </div>
     </div>
-    @if (canApproveSettlement)
+    @if (Model.UserCanApproveSettlement)
     {
         <div class="modal fade" id="approveSettlementModal" tabindex="-1" aria-labelledby="approveSettlementModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -237,7 +225,7 @@
         </div>
     }
 }
-else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatus.Delivered)
+else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved && status != DeliveryNoteStatus.Delivered)
 {
     <div class="content-card mb-3 border border-success">
         <div class="card-body d-flex align-items-center gap-2">
@@ -300,21 +288,14 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                 </div>
                 @if (Model.DeliveryRunInfo != null)
                 {
-                    var runBadgeClass = Model.DeliveryRunInfo.Status switch
-                    {
-                        10 => "bg-secondary text-white",
-                        20 => "bg-info text-white",
-                        30 => "bg-warning text-white",
-                        40 => "bg-success text-white",
-                        _ => "bg-secondary text-white"
-                    };
+                    var deliveryRunStatus = (DeliveryRunStatus)Model.DeliveryRunInfo.Status;
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chuyến giao</label>
                         <div class="fw-bold">
                             <a asp-controller="DeliveryRun" asp-action="Details" asp-route-id="@Model.DeliveryRunInfo.Id" class="text-decoration-none">@Model.DeliveryRunInfo.Code</a>
                         </div>
                         <div class="small mt-1">
-                            <span class="status-badge @runBadgeClass">@Model.DeliveryRunInfo.StatusName</span>
+                            <span class="status-badge @deliveryRunStatus.GetDisplayColor()">@Model.DeliveryRunInfo.StatusName</span>
                         </div>
                         @if (Model.DeliveryRunInfo.HandedOverOnUtc.HasValue)
                         {
@@ -325,7 +306,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                 <div class="mb-4">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                         <label class="form-label small fw-bold text-muted text-uppercase mb-0">Thông tin giao hàng</label>
-                        @if (canUpdateShippingInfo)
+                        @if (Model.CanUpdateShippingInfo)
                         {
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#deliveryShippingModal">
                                 <i class="bi bi-pencil-square me-1"></i>Sửa
@@ -341,11 +322,9 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                     <div class="text-dark">@Model.ShippingAddress</div>
                 </div>
 
-                <hr class="border-light my-4">
-
                 @if (Model.ShowPrice || Model.Surcharge > 0 || Model.AmountToCollect > 0)
                 {
-                    <div class="financial-summary-sidebar deliverynote-financial-summary mb-4 p-3">
+                    <div class="financial-summary-sidebar deliverynote-financial-summary p-3">
                         <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
                         @if (Model.ShowPrice)
                         {
@@ -356,7 +335,8 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                             @if (Model.AmountAlreadyPaidForOrder > 0)
                             {
                                 <div class="d-flex justify-content-between mb-2" id="paidAmount">
-                                    <span class="text-muted small">Đã thanh toán
+                                    <span class="text-muted small">
+                                        Đã thanh toán
                                         <span class="@(Model.AmountAlreadyPaidForOrder == Model.TotalAmount ? "d-none" : "")"> (tổng @Model.AmountAlreadyPaidForOrder.DisplayCurrency())</span>:
                                     </span>
                                     <span class="fw-bold text-success" id="breakdown-items">@(Math.Min(Model.TotalAmount, Model.AmountAlreadyPaidForOrder).DisplayCurrencyWithSymbol())</span>
@@ -503,25 +483,28 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
             @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
             {
                 <div class="action-toolbar justify-content-end">
-                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
+                    @if (Model.CanApprove)
                     {
                         <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
                             <i class="bi bi-check me-1"></i>Xác nhận
                         </button>
                     }
-                    @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                    @if (!Model.IsDirectShip && status == DeliveryNoteStatus.Confirmed)
                     {
-                        <button type="button" class="btn btn-outline-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@canLeaveWarehouse">
+                        <button type="button" class="btn btn-outline-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@(!Model.CanMarkDelivering)">
                             <i class="bi bi-truck me-1"></i>Đang giao
                         </button>
                     }
-                    @if (Model.Status == (int)DeliveryNoteStatus.PendingConfirmation || Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
+                    @if (status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering or DeliveryNoteStatus.Confirmed))
                     {
-                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" data-needs-run-override="@needsDeliveryRunOverrideConfirmation.ToString().ToLowerInvariant()" data-receiver-name="@Model.DeliveryReceiverName" data-cash-collected-amount="@((Model.DeliveryCashCollectedAmount ?? Model.AmountToCollect).ToString(System.Globalization.CultureInfo.InvariantCulture))" disabled="@(!canOpenDeliveredWorkflow)">
+                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" 
+                            data-id="@Model.Id" data-needs-run-override="@needsDeliveryRunOverrideConfirmation.ToString().ToLowerInvariant()" 
+                            data-receiver-name="@Model.DeliveryReceiverName" data-cash-collected-amount="@((Model.DeliveryCashCollectedAmount ?? Model.AmountToCollect).ToString(CultureInfo.InvariantCulture))" 
+                            disabled="@(!Model.CanMarkDelivered)">
                             <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                         </button>
                     }
-                    @if (isDirectShip)
+                    @if (Model.IsDirectShip)
                     {
                         <button type="button" class="btn btn-outline-danger btn-sm btn-customer-reject" data-id="@Model.Id" data-code="@Model.Code">
                             <i class="bi bi-person-fill-x me-1"></i>Từ chối
@@ -644,7 +627,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                     }
                     @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
                     {
-                        if (!isDirectShip)
+                        if (!Model.IsDirectShip)
                         {
                             <button type="button" class="btn btn-outline-danger btn-cancel btn-sm" data-id="@Model.Id">
                                 <i class="bi bi-x-circle me-1"></i>Hủy phiếu
@@ -657,12 +640,10 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                             <i class="bi bi-printer me-2"></i> In phiếu
                         </a>
                     }
-                    <div>
-                    </div>
                 </div>
             </div>
         </div>
-        @if (Model.Status == (int)DeliveryNoteStatus.Delivered)
+        @if (Model.HasCustomerReturns)
         {
             <div class="content-card mt-3" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
                 <div class="content-card-header">
@@ -694,7 +675,7 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
         }
     </div>
 </div>
-@if (canUpdateShippingInfo)
+@if (Model.CanUpdateShippingInfo)
 {
     <div class="modal fade" id="deliveryShippingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -707,12 +688,16 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                     <div class="modal-body py-3">
                         <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
                         <div class="mb-3">
-                            <label for="deliveryShippingPhoneNumber" class="form-label">Số điện thoại giao hàng</label>
-                            <input id="deliveryShippingPhoneNumber" name="shippingPhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber" required maxlength="50" />
+                            <label for="deliveryShippingPhoneNumber" class="form-label">Số điện thoại</label>
+                            <input id="deliveryShippingPhoneNumber" name="shippingPhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber"
+                                   data-val="true" data-val-required="Vui lòng nhập số điện thoại" data-val-maxlength="Số điện thoại không được vượt quá 50 ký tự" data-val-maxlength-max="50" />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="shippingPhoneNumber" data-valmsg-replace="true"></span>
                         </div>
                         <div class="mb-0">
-                            <label for="deliveryShippingAddress" class="form-label">Địa chỉ giao hàng</label>
-                            <textarea id="deliveryShippingAddress" name="shippingAddress" class="form-control" rows="3" required maxlength="1000">@Model.ShippingAddress</textarea>
+                            <label for="deliveryShippingAddress" class="form-label">Địa chỉ</label>
+                            <textarea id="deliveryShippingAddress" name="shippingAddress" class="form-control" rows="3"
+                                data-val="true" data-val-required="Vui lòng nhập địa chỉ" data-val-maxlength="Địa chỉ không được vượt quá 1000 ký tự" data-val-maxlength-max="1000">@Model.ShippingAddress</textarea>
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="shippingAddress" data-valmsg-replace="true"></span>
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0">
@@ -855,6 +840,13 @@ else if (Model.SettlementApproval == 2 && Model.Status != (int)DeliveryNoteStatu
                 });
             });
 
+            const editShippingInfoModalEl = document.getElementById('deliveryShippingModal');
+            if (editShippingInfoModalEl) {
+                editShippingInfoModalEl.querySelector('form')?.addEventListener('submit', function(e){
+                    if(!$(this).valid()) return;
+                    showPageLoading();
+                });
+            }
 
             // ── Tải danh sách phiếu trả hàng ────────────────────────────────
             function showShortageModal(res) {

@@ -106,7 +106,7 @@ public sealed class DirectShipDeliveryController(
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
-    public async Task<IActionResult> MarkAsDirectShip([FromBody] MarkAllocationAsDirectShipRequest request)
+    public async Task<IActionResult> MarkAsDirectShip(MarkAllocationAsDirectShipRequest request)
     {
         if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.Address))
             return Json(new { success = false, message = "Dữ liệu không hợp lệ." });

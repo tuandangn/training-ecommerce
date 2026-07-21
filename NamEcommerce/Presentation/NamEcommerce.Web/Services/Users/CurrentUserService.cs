@@ -16,7 +16,7 @@ public sealed class CurrentUserService(ICurrentUserAccessor currentUserAccessor,
         return new CurrentUserInfoAppDto(currentUser.Id, currentUser.Username, currentUser.FullName);
     }
 
-    public async Task<bool> IsAdmin()
+    public async Task<bool> IsAdminAsync()
     {
         var currentUser = await GetCurrentUserInfoAsync();
         if (currentUser is null)

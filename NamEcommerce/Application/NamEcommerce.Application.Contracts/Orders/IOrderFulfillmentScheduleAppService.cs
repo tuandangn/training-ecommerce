@@ -12,5 +12,6 @@ public interface IOrderFulfillmentScheduleAppService
     Task<CommonActionResultDto> SetActiveAsync(SetOrderFulfillmentScheduleActiveAppDto dto);
     Task<CommonActionResultDto> DeleteAsync(Guid id);
     Task<OrderFulfillmentBoardAppDto> GetBoardAsync(OrderFulfillmentBoardFilterAppDto filter);
-    Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(IReadOnlyCollection<Guid> purchaseOrderItemIds);
+    Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(
+        IReadOnlyCollection<(Guid purchaseOrderId, Guid purchaseOrderItemId)> purchaseOrderItemIds);
 }

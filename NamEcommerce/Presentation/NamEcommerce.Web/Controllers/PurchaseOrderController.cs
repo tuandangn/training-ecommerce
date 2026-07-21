@@ -616,12 +616,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
-    public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderItemId)
+    public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
         var productIds = items.Select(i => i.ProductId).Distinct();
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
@@ -644,12 +644,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
-    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderItemId)
+    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
 
         return Json(allocations.Select(a => new
         {

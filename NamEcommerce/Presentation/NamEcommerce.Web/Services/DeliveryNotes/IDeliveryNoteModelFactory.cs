@@ -5,7 +5,7 @@ namespace NamEcommerce.Web.Services.DeliveryNotes;
 
 public interface IDeliveryNoteModelFactory
 {
-    Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteSearchModel searchModel);
+    Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteListSearchModel searchModel);
     
     Task<CreateDeliveryNoteModel> PrepareCreateDeliveryNoteModelAsync(Guid orderId, CreateDeliveryNoteModel? model = null);
     

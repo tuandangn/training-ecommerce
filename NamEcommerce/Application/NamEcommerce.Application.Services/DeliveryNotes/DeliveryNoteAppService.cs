@@ -223,78 +223,59 @@ public sealed class DeliveryNoteAppService(
 
     public async Task<MarkDeliveryNoteDeliveredResultAppDto> MarkDeliveredAsync(MarkDeliveryNoteDeliveredAppDto dto)
     {
-        try
-        {
-            var note = await deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
-            var isCompletedByAdminOnBehalf = note is not null
-                && note.AssignedDeliveryUserId.HasValue
-                && note.Status != DeliveryNoteStatus.Delivered
-                && note.Status != DeliveryNoteStatus.PendingConfirmation
-                && !string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
+        var note = await deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        var isCompletedByAdminOnBehalf = note is not null
+            && note.AssignedDeliveryUserId.HasValue
+            && note.Status != DeliveryNoteStatus.Delivered
+            && note.Status != DeliveryNoteStatus.PendingConfirmation
+            && !string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
 
-            await deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
-            {
-                DeliveryNoteId = dto.DeliveryNoteId,
-                PictureIds = dto.PictureIds,
-                ReceiverName = dto.ReceiverName,
-                Acceptance = dto.Acceptance is null
-                    ? null
-                    : new DeliveryAcceptanceDto
+        await deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
+        {
+            DeliveryNoteId = dto.DeliveryNoteId,
+            PictureIds = dto.PictureIds,
+            ReceiverName = dto.ReceiverName,
+            Acceptance = dto.Acceptance is null
+                ? null
+                : new DeliveryAcceptanceDto
+                {
+                    AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
+                    AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
+                    CompensateInNextDelivery = dto.Acceptance.CompensateInNextDelivery,
+                    Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
                     {
-                        AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
-                        AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
-                        CompensateInNextDelivery = dto.Acceptance.CompensateInNextDelivery,
-                        Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
-                        {
-                            DeliveryNoteItemId = item.DeliveryNoteItemId,
-                            AcceptedQuantity = item.AcceptedQuantity,
-                            RejectedQuantity = item.RejectedQuantity,
-                            RejectReason = item.RejectReason
-                        }).ToList()
-                    }
-                ,
-                CompletionMetadata = dto.CompletionMetadata is null
-                    ? null
-                    : new DeliveryCompletionMetadataDto
-                    {
-                        Latitude = dto.CompletionMetadata.Latitude,
-                        Longitude = dto.CompletionMetadata.Longitude,
-                        LocationAddress = dto.CompletionMetadata.LocationAddress,
-                        Note = dto.CompletionMetadata.Note,
-                        Source = dto.CompletionMetadata.Source,
-                        IdempotencyKey = dto.CompletionMetadata.IdempotencyKey,
-                        CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
-                    }
-            }).ConfigureAwait(false);
+                        DeliveryNoteItemId = item.DeliveryNoteItemId,
+                        AcceptedQuantity = item.AcceptedQuantity,
+                        RejectedQuantity = item.RejectedQuantity,
+                        RejectReason = item.RejectReason
+                    }).ToList()
+                }
+            ,
+            CompletionMetadata = dto.CompletionMetadata is null
+                ? null
+                : new DeliveryCompletionMetadataDto
+                {
+                    Latitude = dto.CompletionMetadata.Latitude,
+                    Longitude = dto.CompletionMetadata.Longitude,
+                    LocationAddress = dto.CompletionMetadata.LocationAddress,
+                    Note = dto.CompletionMetadata.Note,
+                    Source = dto.CompletionMetadata.Source,
+                    IdempotencyKey = dto.CompletionMetadata.IdempotencyKey,
+                    CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
+                }
+        }).ConfigureAwait(false);
 
-            if (isCompletedByAdminOnBehalf)
-            {
-                await systemNotificationAppService.CreateAsync(
-                    DeliveryNoteSystemNotificationComposer.ShipperNotResponded(note!.Id, note.Code, note.AssignedDeliveryFullName)
-                ).ConfigureAwait(false);
-            }
+        if (isCompletedByAdminOnBehalf)
+        {
+            await systemNotificationAppService.CreateAsync(
+                DeliveryNoteSystemNotificationComposer.ShipperNotResponded(note!.Id, note.Code, note.AssignedDeliveryFullName)
+            ).ConfigureAwait(false);
+        }
 
-            return new MarkDeliveryNoteDeliveredResultAppDto
-            {
-                Success = true
-            };
-        }
-        catch (NamEcommerceDomainException ex)
+        return new MarkDeliveryNoteDeliveredResultAppDto
         {
-            return new MarkDeliveryNoteDeliveredResultAppDto
-            {
-                Success = false,
-                ErrorMessage = ex.ErrorCode
-            };
-        }
-        catch (Exception ex)
-        {
-            return new MarkDeliveryNoteDeliveredResultAppDto
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true
+        };
     }
 
     public async Task<MarkDeliveryNoteDeliveredResultAppDto> MarkPendingConfirmationAsync(MarkDeliveryNoteDeliveredAppDto dto)
@@ -585,8 +566,10 @@ public sealed class DeliveryNoteAppService(
     public async Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
         var paged = await deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+
         var mappedItems = paged.Items.Select(d => d.ToDto()).ToList();
         var result = PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
+
         return (PagedDataAppDto<DeliveryNoteAppDto>)result;
     }
 }

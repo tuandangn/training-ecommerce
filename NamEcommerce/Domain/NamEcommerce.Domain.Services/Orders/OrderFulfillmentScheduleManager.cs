@@ -148,7 +148,7 @@ public sealed class OrderFulfillmentScheduleManager(
         await scheduleRepository.DeleteAsync(schedule).ConfigureAwait(false);
     }
 
-    public async Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<Guid> orderItemIds)
+    public async Task RefreshWhenStockAvailableAsync(IReadOnlyCollection<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return;
@@ -156,7 +156,7 @@ public sealed class OrderFulfillmentScheduleManager(
         var schedules = scheduleDataReader.DataSource
             .Where(schedule => schedule.IsActive
                 && schedule.Mode == OrderFulfillmentScheduleMode.WhenStockAvailable
-                && schedule.Items.Any(item => orderItemIds.Contains(item.OrderItemId)))
+                && schedule.Items.Any(item => orderItemIds.Any(orderItemId => orderItemId.SecondaryId == item.OrderItemId)))
             .ToList();
         foreach (var schedule in schedules)
         {

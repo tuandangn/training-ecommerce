@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
-using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
@@ -22,7 +21,7 @@ public sealed class DeliveryRunController(
 
     public async Task<IActionResult> List(DeliveryRunSearchModel searchModel)
     {
-        var model = await deliveryRunModelFactory.PrepareDeliveryRunListModelAsync(searchModel).ConfigureAwait(false);
+        var model = await deliveryRunModelFactory.PrepareDeliveryRunListModelAsync(searchModel);
         return View(model);
     }
 
@@ -32,7 +31,7 @@ public sealed class DeliveryRunController(
         var model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(new CreateDeliveryRunModel
         {
             AssignedDeliveryUserId = assignedDeliveryUserId ?? Guid.Empty
-        }).ConfigureAwait(false);
+        });
 
         return View(model);
     }
@@ -48,7 +47,7 @@ public sealed class DeliveryRunController(
 
         if (!ModelState.IsValid)
         {
-            model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(model).ConfigureAwait(false);
+            model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(model);
             return View(model);
         }
 
@@ -57,7 +56,7 @@ public sealed class DeliveryRunController(
             AssignedDeliveryUserId = model.AssignedDeliveryUserId,
             DeliveryNoteIds = model.DeliveryNoteIds,
             Note = model.Note
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
         {
@@ -66,7 +65,7 @@ public sealed class DeliveryRunController(
         }
 
         AddLocalizedModelError(result.ErrorMessage ?? "Error.DeliveryRunCreateFailed");
-        model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(model).ConfigureAwait(false);
+        model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(model);
         return View(model);
     }
 
@@ -74,7 +73,7 @@ public sealed class DeliveryRunController(
     {
         try
         {
-            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id).ConfigureAwait(false);
+            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
             return View(model);
         }
         catch
@@ -89,7 +88,7 @@ public sealed class DeliveryRunController(
     {
         try
         {
-            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id).ConfigureAwait(false);
+            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
             return View(model);
         }
         catch
@@ -103,7 +102,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> IssuePaperManifest(Guid id)
     {
-        var result = await mediator.Send(new IssuePaperManifestDeliveryRunCommand(id)).ConfigureAwait(false);
+        var result = await mediator.Send(new IssuePaperManifestDeliveryRunCommand(id));
         if (result.Success)
             return RedirectToAction(nameof(Print), new { id });
 
@@ -115,7 +114,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> HandOver(Guid id)
     {
-        var result = await mediator.Send(new HandOverDeliveryRunCommand(id)).ConfigureAwait(false);
+        var result = await mediator.Send(new HandOverDeliveryRunCommand(id));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -128,7 +127,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Close(Guid id)
     {
-        var result = await mediator.Send(new CloseDeliveryRunCommand(id)).ConfigureAwait(false);
+        var result = await mediator.Send(new CloseDeliveryRunCommand(id));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -141,7 +140,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.ConfirmCashHandover)]
     public async Task<IActionResult> ConfirmCashHandover(Guid id, decimal amount, string? note)
     {
-        var result = await mediator.Send(new ConfirmDeliveryRunCashHandoverCommand(id, amount, note)).ConfigureAwait(false);
+        var result = await mediator.Send(new ConfirmDeliveryRunCashHandoverCommand(id, amount, note));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -156,7 +155,7 @@ public sealed class DeliveryRunController(
     {
         var result = await mediator
             .Send(new UpdateDeliveryRunDeliveredNoteCashCollectedCommand(id, deliveryNoteId, cashCollectedAmount))
-            .ConfigureAwait(false);
+            ;
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -169,14 +168,14 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> ReconcileDeliveryNote(Guid id, Guid deliveryNoteId, decimal? cashCollectedAmount)
     {
-        var run = await deliveryRunAppService.GetByIdAsync(id).ConfigureAwait(false);
+        var run = await deliveryRunAppService.GetByIdAsync(id);
         if (run is null || run.Items.All(item => item.DeliveryNoteId != deliveryNoteId))
         {
             NotifyError("Error.DeliveryRunDeliveryNoteNotInRun");
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(deliveryNoteId);
         if (deliveryNote is null)
         {
             NotifyError("Error.DeliveryNoteNotFound");
@@ -189,22 +188,18 @@ public sealed class DeliveryRunController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        IReadOnlyList<Guid> pictureIds = deliveryNote.DeliveryProofPictureId.HasValue
+        IList<Guid> pictureIds = deliveryNote.DeliveryProofPictureId.HasValue
             ? [deliveryNote.DeliveryProofPictureId.Value]
             : [];
 
-        var result = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
+        var result = await mediator.Send(new MarkDeliveryNoteDeliveredCommand
         {
             DeliveryNoteId = deliveryNoteId,
             PictureIds = pictureIds,
             ReceiverName = deliveryNote.DeliveryReceiverName,
-            Acceptance = null,
-            CompletionMetadata = new DeliveryCompletionMetadataAppDto
-            {
-                Source = "WarehouseReconciliation",
-                CashCollectedAmount = cashCollectedAmount ?? deliveryNote.DeliveryCashCollectedAmount ?? 0m
-            }
-        }).ConfigureAwait(false);
+            Source = "WarehouseReconciliation",
+            CashCollectedAmount = cashCollectedAmount ?? deliveryNote.DeliveryCashCollectedAmount ?? 0m
+        });
 
         if (result.Success)
             NotifySuccess("Msg.SaveSuccess");
@@ -218,7 +213,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> ConfirmWarehousePick(Guid id, Guid warehouseId)
     {
-        var result = await mediator.Send(new ConfirmDeliveryRunWarehousePickCommand(id, warehouseId)).ConfigureAwait(false);
+        var result = await mediator.Send(new ConfirmDeliveryRunWarehousePickCommand(id, warehouseId));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -231,7 +226,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        var result = await mediator.Send(new CancelDeliveryRunCommand(id)).ConfigureAwait(false);
+        var result = await mediator.Send(new CancelDeliveryRunCommand(id));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else

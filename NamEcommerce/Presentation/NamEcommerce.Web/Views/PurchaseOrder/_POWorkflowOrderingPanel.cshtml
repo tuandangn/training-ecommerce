@@ -30,7 +30,7 @@
                     <form asp-action="ApprovesPurchaseOrder" asp-route-id="@Model.Info.Id" method="post"
                           class="d-inline change-status-form" data-new-status="@(PurchaseOrderStatus.Approved.GetDisplayText())" data-confirm-text="Bạn xác nhận duyệt đơn hàng này?">
                         <button type="submit" class="btn btn-sm btn-info text-white" data-testid="po-approve">
-                            <i class="bi bi-check me-1"></i>Duyệt đơn
+                            <i class="bi bi-check-all me-1"></i>Duyệt đơn
                         </button>
                     </form>
                 }

@@ -20,7 +20,7 @@ public sealed class MarkDeliveryNoteDeliveredHandler(IDeliveryNoteAppService del
             ReceiverName = request.ReceiverName,
             CompletionMetadata = new DeliveryCompletionMetadataAppDto
             {
-                Source = "Admin",
+                Source = request.Source ?? "Admin",
                 CashCollectedAmount = request.CashCollectedAmount ?? 0
             },
             Acceptance = new DeliveryAcceptanceAppDto

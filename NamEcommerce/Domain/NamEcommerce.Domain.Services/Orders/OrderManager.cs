@@ -424,14 +424,14 @@ public sealed class OrderManager(
 
     private decimal GetOutstandingAllocationQuantity(Guid orderItemId)
         => allocationDataReader.DataSource
-            .Where(allocation => allocation.OrderItemId == orderItemId
+            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled)
             .ToList()
             .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
 
     private bool HasReceivedAllocations(Guid orderItemId)
         => allocationDataReader.DataSource
-            .Any(allocation => allocation.OrderItemId == orderItemId
+            .Any(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled
                 && allocation.ReceivedQuantity > 0);
 }

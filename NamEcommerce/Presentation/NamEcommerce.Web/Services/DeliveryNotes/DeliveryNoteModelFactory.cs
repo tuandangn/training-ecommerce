@@ -9,77 +9,51 @@ using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
-using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
-
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Contracts.Customers;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
-public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
+public sealed class DeliveryNoteModelFactory(
+    IDeliveryNoteAppService deliveryNoteAppService,
+    IOrderAppService orderAppService,
+    IDirectShipAppService directShipAppService,
+    IPictureAppService pictureAppService,
+    IUserAppService userAppService,
+    IDeliveryRunAppService deliveryRunAppService,
+    IMediator mediator,
+    ICachedValuesService cachedValuesService,
+    ICustomerAppService customerAppService,
+    ICurrentUserService currentUserService,
+    ICustomerReturnAppService customerReturnAppService,
+    AppConfig appConfig) : IDeliveryNoteModelFactory
 {
-    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
-    private readonly IOrderAppService _orderAppService;
-    private readonly IDirectShipAppService _directShipAppService;
-    private readonly IPictureAppService _pictureAppService;
-    private readonly IWarehouseAppService _warehouseAppService;
-    private readonly IUserAppService _userAppService;
-    private readonly IDeliveryRunAppService _deliveryRunAppService;
-    private readonly IWebHelper _webHelper;
-    private readonly IMediator _mediator;
-    private readonly ICachedValuesService _cachedValuesService;
-    private readonly AppConfig _appConfig;
-
-    public DeliveryNoteModelFactory(
-        IDeliveryNoteAppService deliveryNoteAppService,
-        IOrderAppService orderAppService,
-        IDirectShipAppService directShipAppService,
-        IPictureAppService pictureAppService,
-        IWarehouseAppService warehouseAppService,
-        IUserAppService userAppService,
-        IDeliveryRunAppService deliveryRunAppService,
-        IWebHelper webHelper,
-        IMediator mediator,
-        ICachedValuesService cachedValuesService,
-        AppConfig appConfig)
-    {
-        _deliveryNoteAppService = deliveryNoteAppService;
-        _orderAppService = orderAppService;
-        _directShipAppService = directShipAppService;
-        _pictureAppService = pictureAppService;
-        _warehouseAppService = warehouseAppService;
-        _userAppService = userAppService;
-        _deliveryRunAppService = deliveryRunAppService;
-        _webHelper = webHelper;
-        _mediator = mediator;
-        _cachedValuesService = cachedValuesService;
-        _appConfig = appConfig;
-    }
-
-    public async Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteSearchModel searchModel)
+    public async Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteListSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
         var pageSize = searchModel?.PageSize ?? 0;
         var keywords = searchModel?.Keywords;
         if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+        if (pageSize <= 0) pageSize = appConfig.DefaultPageSize;
+        if (appConfig.PageSizeOptions.Contains(pageSize)) pageSize = appConfig.DefaultPageSize;
 
-        var pagedData = await _deliveryNoteAppService.GetListAsync(
-            keywords,
-            pageNumber - 1,
-            pageSize).ConfigureAwait(false);
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var pagedData = await deliveryNoteAppService.GetListAsync(keywords, pageNumber - 1, pageSize).ConfigureAwait(false);
+
+        var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
-        var deliveryNotes = pagedData.Items.Select(deliveryNote => new DeliveryNoteListItemModel
+        var retailWalkinCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
+
+        var deliveryNotes = pagedData.Items.Select(deliveryNote => new DeliveryNoteListModel.DeliveryNoteListItemModel
         {
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
@@ -90,16 +64,16 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 ? deliveryNote.CustomerPhone
                 : deliveryNote.ShippingPhoneNumber,
             IsDirectShip = deliveryNote.IsDirectShip,
+            IsCounterPickup = retailWalkinCustomer.Id == deliveryNote.CustomerId,
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode ?? string.Empty,
             TotalAmount = deliveryNote.TotalAmount,
             Status = deliveryNote.Status,
-            StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
-            CreatedOnUtc = deliveryNote.CreatedOnUtc,
-            DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
-            Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
+            CreatedOn = DateTimeHelper.ToLocalTime(deliveryNote.CreatedOnUtc),
+            DeliveredOn = DateTimeHelper.ToLocalTime(deliveryNote.DeliveredOnUtc),
+            Items = deliveryNote.Items.Select(item => new DeliveryNoteListModel.DeliveryNoteListItemProductModel
             {
                 Id = item.Id,
                 WarehouseId = item.WarehouseId,
@@ -128,14 +102,14 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
     public async Task<CreateDeliveryNoteModel> PrepareCreateDeliveryNoteModelAsync(Guid orderId, CreateDeliveryNoteModel? oldModel = null)
     {
-        var order = await _orderAppService.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        var order = await orderAppService.GetOrderByIdAsync(orderId).ConfigureAwait(false);
         if (order == null)
             throw new ArgumentException("Order not found");
 
         var model = oldModel ?? new CreateDeliveryNoteModel
         {
             OrderId = order.Id,
-            ShowPrice = false, // Default is hide price
+            ShowPrice = false,
             Items = []
         };
         model.OrderId = order.Id;
@@ -152,19 +126,19 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ? order.CustomerPhone ?? string.Empty
             : order.ShippingPhoneNumber;
 
-        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.AvailableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        model.AmountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
-        model.IsRetailWalkInCustomer = order.CustomerId == _cachedValuesService.DefaultCustomerId;
+        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
+        model.IsRetailWalkInCustomer = order.CustomerId == cachedValuesService.DefaultCustomerId;
 
-        var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         var activeDeliveryNotes = deliveryNotes
             .Where(note => note.Status != (int)DeliveryNoteStatus.Cancelled)
             .ToList();
         var returnedByDeliveryNoteItemId = new Dictionary<Guid, decimal>();
         foreach (var deliveryNote in activeDeliveryNotes)
         {
-            var returnedByItem = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+            var returnedByItem = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
             {
                 DeliveryNoteId = deliveryNote.Id
             }).ConfigureAwait(false);
@@ -179,8 +153,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }
         }
 
-        var orderItemIds = order.Items.Select(item => item.Id).ToList();
-        var directShipOutstandingQuantities = (await _directShipAppService
+        var orderItemIds = order.Items.Select(item => (order.Id, item.Id)).ToList();
+        var directShipOutstandingQuantities = (await directShipAppService
                 .GetDirectShipAllocationsForOrderAsync(orderItemIds)
                 .ConfigureAwait(false))
             .Where(allocation => allocation.Status != (int)AllocationStatus.Cancelled)
@@ -190,7 +164,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
 
         var productIds = order.Items.Select(i => i.ProductId).Distinct();
-        var orderProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         foreach (var orderItem in order.Items)
@@ -241,22 +215,25 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
     public async Task<DeliveryNoteDetailsModel> PrepareDeliveryNoteDetailsModelAsync(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
             throw new ArgumentException("Delivery note not found");
 
-        var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        var order = await orderAppService.GetOrderByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
 
-        // Tổng số lượng đã trả (Confirmed) — group theo DeliveryNoteItemId.
-        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        var returnedQuantities = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+
+        var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
+
         var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = products.ToDictionary(product => product.Id, product => product.QuantityDecimalPlaces);
+
+        var retailWalkinCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
 
         var model = new DeliveryNoteDetailsModel
         {
@@ -269,16 +246,17 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             CustomerPhone = deliveryNote.CustomerPhone,
             CustomerAddress = deliveryNote.CustomerAddress,
             ShippingAddress = deliveryNote.ShippingAddress,
+            IsCounterPickup = retailWalkinCustomer.Id == deliveryNote.CustomerId,
             ShippingPhoneNumber = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
                 ? deliveryNote.CustomerPhone
                 : deliveryNote.ShippingPhoneNumber,
+            CanUpdateShippingInfo = deliveryNote.CanUpdateShippingInfo,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
             SourceType = deliveryNote.SourceType,
             IsDirectShip = deliveryNote.IsDirectShip,
             DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
-            StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
@@ -295,6 +273,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
             SettlementApproval = deliveryNote.SettlementApproval,
+            UserCanApproveSettlement = await currentUserService.IsAdminAsync().ConfigureAwait(false),
             ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
             ApprovedAmountToCollect = deliveryNote.ApprovedAmountToCollect,
             SettlementReason = deliveryNote.SettlementReason,
@@ -307,7 +286,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Items = deliveryNote.Items.Select(i =>
             {
                 returnedQuantities.TryGetValue(i.Id, out var summary);
-                return new DeliveryNoteItemModel
+                return new DeliveryNoteDetailsModel.DeliveryNoteItemModel
                 {
                     Id = i.Id,
                     WarehouseId = i.WarehouseId,
@@ -321,9 +300,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
                     CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m
                 };
-            }).ToList()
+            }).ToList(),
+            CanApprove = deliveryNote.CanApprove,
+            CanMarkDelivering = deliveryNote.CanMarkDelivering,
+            CanMarkDelivered = deliveryNote.CanMarkDelivered,
+            CanReject = deliveryNote.CanReject
         };
-        model.AmountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
+        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
 
         var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
         var decimalPlacesByNoteItemId = model.Items.ToDictionary(item => item.Id, item => item.QuantityDecimalPlaces);
@@ -331,7 +314,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             .Select(settlementItem =>
             {
                 noteItemsById.TryGetValue(settlementItem.DeliveryNoteItemId, out var noteItem);
-                return new DeliveryNoteSettlementLineModel
+                return new DeliveryNoteDetailsModel.DeliveryNoteSettlementLineModel
                 {
                     ProductName = noteItem?.ProductName ?? string.Empty,
                     Quantity = noteItem?.Quantity ?? (settlementItem.AcceptedQuantity + settlementItem.RejectedQuantity),
@@ -347,9 +330,12 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         model.AvailableWarehouses = availableWarehouses;
         model.WarehouseName = BuildWarehouseSummary(model.Items.Select(item => item.WarehouseName), null);
 
+        var (totalReturns, _) = await customerReturnAppService.GetListAsync(0, 1, deliveryNoteId: deliveryNote.Id).ConfigureAwait(false);
+        model.HasCustomerReturns = totalReturns > 0;
+
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {
-            var picture = await _pictureAppService.GetBase64PictureByIdAsync(deliveryNote.DeliveryProofPictureId.Value).ConfigureAwait(false);
+            var picture = await pictureAppService.GetBase64PictureByIdAsync(deliveryNote.DeliveryProofPictureId.Value).ConfigureAwait(false);
             if (picture != null)
             {
                 model.DeliveryProofPictureUrl = picture.Base64Value;
@@ -359,22 +345,22 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         if (deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected)
         {
             model.RejectionReason = deliveryNote.ConfirmedNote;
-            model.ReturnedToWarehouseName = await _mediator.Send(new GetDeliveryNoteReturnWarehouseQuery
+            model.ReturnedToWarehouseName = await mediator.Send(new GetDeliveryNoteReturnWarehouseQuery
             {
                 DeliveryNoteId = id,
                 DeliveryNoteWarehouseId = deliveryNote.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty
             }).ConfigureAwait(false);
         }
 
-        model.ShortageInfo = await _mediator.Send(new GetDeliveryNoteShortageInfoQuery
+        model.ShortageInfo = await mediator.Send(new GetDeliveryNoteShortageInfoQuery
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
 
-        var deliveryRun = await _deliveryRunAppService.GetByDeliveryNoteIdAsync(id).ConfigureAwait(false);
+        var deliveryRun = await deliveryRunAppService.GetByDeliveryNoteIdAsync(id).ConfigureAwait(false);
         if (deliveryRun != null)
         {
-            model.DeliveryRunInfo = new DeliveryRunInfoModel
+            model.DeliveryRunInfo = new DeliveryNoteDetailsModel.DeliveryRunInfoModel
             {
                 Id = deliveryRun.Id,
                 Code = deliveryRun.Code,
@@ -405,7 +391,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
     private async Task<EntityOptionListModel> PrepareDeliveryUserOptionsAsync()
     {
-        var users = await _userAppService.GetUsersByRoleAsync(SystemUserRoleNames.DeliveryStaff).ConfigureAwait(false);
+        var users = await userAppService.GetUsersByRoleAsync(SystemUserRoleNames.DeliveryStaff).ConfigureAwait(false);
         return new EntityOptionListModel
         {
             Options = users.Select(user => new EntityOptionListModel.EntityOptionModel
@@ -429,19 +415,5 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         return warehouseNames.Count > 0
             ? string.Join(", ", warehouseNames)
             : fallbackWarehouseName;
-    }
-
-    private string GetStatusName(DeliveryNoteStatus status)
-    {
-        return status switch
-        {
-            DeliveryNoteStatus.Draft => "Bản nháp",
-            DeliveryNoteStatus.Confirmed => "Đã xác nhận",
-            DeliveryNoteStatus.Delivering => "Đang giao",
-            DeliveryNoteStatus.PendingConfirmation => "Chờ đối soát",
-            DeliveryNoteStatus.Delivered => "Đã giao",
-            DeliveryNoteStatus.Cancelled => "Đã hủy",
-            _ => status.ToString()
-        };
     }
 }

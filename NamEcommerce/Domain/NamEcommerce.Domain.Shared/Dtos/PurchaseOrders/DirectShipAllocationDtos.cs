@@ -4,6 +4,7 @@ namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 public sealed record DirectShipAllocationStatusDto
 {
     public Guid AllocationId { get; init; }
+    public Guid OrderId { get; init; }
     public Guid OrderItemId { get; init; }
     public int Status { get; init; }
     public int? DeliveryStatus { get; init; }
@@ -17,6 +18,7 @@ public sealed record DirectShipAllocationStatusDto
 public sealed record DirectShipAllocationForPoItemDto
 {
     public Guid AllocationId { get; init; }
+    public Guid PurchaseOrderId { get; init; }
     public Guid PurchaseOrderItemId { get; init; }
     public string DirectShipAddress { get; init; } = string.Empty;
     public string? DirectShipContactName { get; init; }

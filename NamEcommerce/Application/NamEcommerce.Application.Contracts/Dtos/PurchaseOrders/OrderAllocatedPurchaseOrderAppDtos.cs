@@ -16,6 +16,7 @@ public sealed record OrderAllocatedPurchaseOrderAppDto
 [Serializable]
 public sealed record OrderAllocatedPurchaseOrderItemAppDto
 {
+    public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }

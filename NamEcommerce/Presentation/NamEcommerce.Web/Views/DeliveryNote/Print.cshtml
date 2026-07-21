@@ -13,136 +13,137 @@
     <link rel="stylesheet" href="~/css/print/deliverynote-print.css" asp-append-version="true" />
 </head>
 <body onload="window.print()">
-
-    @for (int copy = 1; copy <= 2; copy++)
-    {
-        <div class="print-page @(copy == 2 ? "page-break" : "")">
-            <div class="print-header-grid">
-                <div>
-                    <strong>@Info.Name</strong><br />
-                    Địa chỉ: @Info.Address<br />
-                    Điện thoại: @Info.PhoneNumber
-                </div>
-                <div class="text-right">
-                    @if (!string.IsNullOrWhiteSpace(Model.CustomerPortalQrCodeSvg))
-                    {
-                        <div class="qr-box mt-2">
-                            <div class="qr-code">
-                                @Html.Raw(Model.CustomerPortalQrCodeSvg)
-                            </div>
-                            <div class="qr-caption">
-                                <strong>Quét để xem phiếu giao</strong>
-                                <div>Khách xem hàng hóa, số lượng, trạng thái và xác thực OTP khi cần thao tác.</div>
-                                <div class="qr-url">@Model.CustomerPortalUrl</div>
-                            </div>
-                        </div>
-                    }
-                </div>
+    <div class="print-page">
+        <div class="print-header-grid">
+            <div>
+                <strong>@Info.Name</strong><br />
+                Địa chỉ: @Info.Address<br />
+                Điện thoại: @Info.PhoneNumber
             </div>
-
-            <div class="header">
-                <h1>PHIẾU XUẤT KHO</h1>
-                <p>Số: @Model.Code</p>
-                @{
-                    var createdOn = DateTimeHelper.ToLocalTime(Model.CreatedOnUtc);
-                }
-                <p>Ngày @createdOn.ToString("dd") tháng @createdOn.ToString("MM") năm @createdOn.ToString("yyyy")</p>
-            </div>
-
-            <table class="info-table">
-                <tr>
-                    <td class="info-title">Người mua hàng:</td>
-                    <td>@Model.CustomerName</td>
-                </tr>
-                <tr>
-                    <td class="info-title">Điện thoại:</td>
-                    <td>@Model.ShippingPhoneNumber</td>
-                </tr>
-                <tr>
-                    <td class="info-title">Địa chỉ giao:</td>
-                    <td>@Model.ShippingAddress</td>
-                </tr>
-                @if (!string.IsNullOrEmpty(Model.Note))
+            <div class="text-right">
+                @if (!string.IsNullOrWhiteSpace(Model.CustomerPortalQrCodeSvg))
                 {
-                    <tr>
-                        <td class="info-title">Ghi chú:</td>
-                        <td>@Model.Note</td>
-                    </tr>
+                    <div class="qr-box mt-2">
+                        <div class="qr-code">
+                            @Html.Raw(Model.CustomerPortalQrCodeSvg)
+                        </div>
+                        <div class="qr-caption">
+                            <strong>Quét để xem phiếu giao</strong>
+                            <div>Khách xem hàng hóa, số lượng, trạng thái và xác thực OTP khi cần thao tác.</div>
+                            <div class="qr-url">@Model.CustomerPortalUrl</div>
+                        </div>
+                    </div>
                 }
-            </table>
-
-            <table class="item-table">
-                <thead>
-                    <tr>
-                        <th class="text-center ui-w-50">STT</th>
-                        <th>Tên hàng hóa</th>
-                        <th class="text-right ui-w-100">Số lượng</th>
-                        @if (Model.ShowPrice)
-                        {
-                            <th class="text-right ui-w-120">Đơn giá</th>
-                            <th class="text-right ui-w-120">Thành tiền</th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Items.Any())
-                    {
-                        var idx = 1;
-                        foreach (var item in Model.Items)
-                        {
-                            <tr>
-                                <td class="text-center">@(idx++)</td>
-                                <td>@item.ProductName</td>
-                                <td class="text-right">@item.Quantity.ToString("N2")</td>
-                                @if (Model.ShowPrice)
-                                {
-                                    <td class="text-right">@item.UnitPrice.ToString("N0")</td>
-                                    <td class="text-right">@item.SubTotal.ToString("N0")</td>
-                                }
-                            </tr>
-                        }
-                        @if (Model.ShowPrice)
-                        {
-                            <tr>
-                                <td colspan="4" class="text-right"><strong>Tồng tiền hàng:</strong></td>
-                                <td class="text-right"><strong>@Model.TotalAmount.ToString("N0")</strong></td>
-                            </tr>
-                        }
-                        @if (Model.Surcharge > 0)
-                        {
-                            <tr>
-                                <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right">
-                                    <strong>Phụ phí:</strong> @(string.IsNullOrEmpty(Model.SurchargeReason) ? "" : "(" + Model.SurchargeReason + ")")
-                                </td>
-                                <td class="text-right"><strong>@Model.Surcharge.ToString("N0")</strong></td>
-                            </tr>
-                        }
-                        @if(Model.AmountToCollect > 0){
-                        <tr>
-                            <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right"><strong>SỐ TIỀN PHẢI THU:</strong></td>
-                            <td class="text-right"><strong class="ui-print-fs-16">@Model.AmountToCollect.ToString("N0")</strong></td>
-                        </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-
-            <div class="footer">
-                <div class="footer-sig">
-                    <strong>Người Lập Phiếu</strong><br />
-                    <span class="ui-print-note">(Ký, họ tên)</span>
-                </div>
-                <div class="footer-sig">
-                    <strong>Người Giao Hàng</strong><br />
-                    <span class="ui-print-note">(Ký, họ tên)</span>
-                </div>
-                <div class="footer-sig">
-                    <strong>Người Nhận Hàng</strong><br />
-                    <span class="ui-print-note">(Ký, họ tên)</span>
-                </div>
             </div>
         </div>
-    }
 
+        <div class="header">
+            <h1>PHIẾU XUẤT KHO</h1>
+            <p>Số: @Model.Code</p>
+            @{
+                var createdOn = DateTimeHelper.ToLocalTime(Model.CreatedOnUtc);
+            }
+            <p>Ngày @createdOn.ToString("dd") tháng @createdOn.ToString("MM") năm @createdOn.ToString("yyyy")</p>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <td class="info-title">Người mua hàng:</td>
+                <td>@Model.CustomerName</td>
+            </tr>
+            <tr>
+                <td class="info-title">Điện thoại:</td>
+                <td>@Model.ShippingPhoneNumber</td>
+            </tr>
+            <tr>
+                <td class="info-title">Địa chỉ giao:</td>
+                <td>@Model.ShippingAddress</td>
+            </tr>
+            @if (!string.IsNullOrEmpty(Model.Note))
+            {
+                <tr>
+                    <td class="info-title">Ghi chú:</td>
+                    <td>@Model.Note</td>
+                </tr>
+            }
+        </table>
+
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th class="text-center ui-w-50">STT</th>
+                    <th>Tên hàng hóa</th>
+                    <th class="text-right ui-w-100">Số lượng</th>
+                    @if (Model.ShowPrice)
+                    {
+                        <th class="text-right ui-w-120">Đơn giá</th>
+                        <th class="text-right ui-w-120">Thành tiền</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Any())
+                {
+                    var idx = 1;
+                    foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-center">@(idx++)</td>
+                            <td>@item.ProductName</td>
+                            <td class="text-right">@item.Quantity.DisplayQuantity()</td>
+                            @if (Model.ShowPrice)
+                            {
+                                <td class="text-right">@item.UnitPrice.DisplayCurrencyWithSymbol()</td>
+                                <td class="text-right">@item.SubTotal.DisplayCurrencyWithSymbol()</td>
+                            }
+                        </tr>
+                    }
+                    @if (Model.ShowPrice)
+                    {
+                        <tr>
+                            <td colspan="4" class="text-right"><strong>Tiền hàng:</strong></td>
+                            <td class="text-right"><strong>@Model.TotalAmount.DisplayCurrencyWithSymbol()</strong></td>
+                        </tr>
+                    }
+                    @if (Model.Surcharge > 0)
+                    {
+                        <tr>
+                            <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right">
+                                <strong>Phụ phí:</strong> @(string.IsNullOrEmpty(Model.SurchargeReason) ? "" : "(" + Model.SurchargeReason + ")")
+                            </td>
+                            <td class="text-right"><strong>@Model.Surcharge.DisplayCurrencyWithSymbol()</strong></td>
+                        </tr>
+                    }
+                    @if (Model.AmountToCollect > 0)
+                    {
+                        <tr>
+                            <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right"><strong>Tổng tiền:</strong></td>
+                            <td class="text-right">
+                                <strong class="ui-print-fs-16">
+                                    @Model.AmountToCollect.DisplayCurrencyWithSymbol()
+                                </strong>
+                                <span style="color:#0d9488;font-size:0.9em;display:block;">@Model.AmountToCollect.DisplayVietnameseCurrencyHint()</span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <div class="footer-sig">
+                <strong>Người Lập Phiếu</strong><br />
+                <span class="ui-print-note">(Ký, họ tên)</span>
+            </div>
+            <div class="footer-sig">
+                <strong>Người Giao Hàng</strong><br />
+                <span class="ui-print-note">(Ký, họ tên)</span>
+            </div>
+            <div class="footer-sig">
+                <strong>Người Nhận Hàng</strong><br />
+                <span class="ui-print-note">(Ký, họ tên)</span>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

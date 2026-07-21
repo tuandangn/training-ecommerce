@@ -23,6 +23,7 @@ public static class DeliveryNoteExtensions
             CustomerAddress = deliveryNote.CustomerAddress,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
+            CanUpdateShippingInfo = deliveryNote.CanUpdateShippingInfo,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = (int)deliveryNote.Status,
@@ -76,7 +77,11 @@ public static class DeliveryNoteExtensions
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
                 CostAtDispatch = i.CostAtDispatch
-            }).ToList()
+            }).ToList(),
+            CanApprove = deliveryNote.CanApprove,
+            CanMarkDelivering = deliveryNote.CanMarkDelivering,
+            CanMarkDelivered = deliveryNote.CanMarkDelivered,
+            CanReject = deliveryNote.CanReject,
         };
     }
 }

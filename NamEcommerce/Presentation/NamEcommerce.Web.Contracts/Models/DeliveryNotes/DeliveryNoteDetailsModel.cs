@@ -16,7 +16,9 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
+    public bool IsCounterPickup { get; set; }
     public string? ShippingPhoneNumber { get; set; }
+    public bool CanUpdateShippingInfo { get; set; }
 
     public string? WarehouseName { get; set; }
     public EntityOptionListModel? AvailableWarehouses { get; set; }
@@ -33,8 +35,6 @@ public sealed class DeliveryNoteDetailsModel
     public int SourceType { get; set; }
     public bool IsDirectShip { get; set; }
     public int DeliveryConfirmationStatus { get; set; }
-    public string StatusName { get; set; } = string.Empty;
-    
     public DateTime CreatedOnUtc { get; set; }
     public DateTime? DeliveredOnUtc { get; set; }
     public Guid? DeliveryProofPictureId { get; set; }
@@ -65,50 +65,61 @@ public sealed class DeliveryNoteDetailsModel
     public string? SettlementReason { get; set; }
     public string? SettlementAdminNote { get; set; }
     public IList<DeliveryNoteSettlementLineModel> SettlementItems { get; set; } = [];
+    public bool UserCanApproveSettlement { get; set; }
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();
     public DeliveryRunInfoModel? DeliveryRunInfo { get; set; }
-}
 
-public sealed class DeliveryNoteSettlementLineModel
-{
-    public string ProductName { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
-    public decimal AcceptedQuantity { get; set; }
-    public decimal RejectedQuantity { get; set; }
-    public decimal UnitPrice { get; set; }
-    public string? RejectReason { get; set; }
-    public int QuantityDecimalPlaces { get; set; } = 2;
-}
+    public bool HasCustomerReturns { get; set; }
 
-public sealed class DeliveryRunInfoModel
-{
-    public Guid Id { get; set; }
-    public string Code { get; set; } = string.Empty;
-    public int Status { get; set; }
-    public string StatusName { get; set; } = string.Empty;
-    public string AssignedDeliveryFullName { get; set; } = string.Empty;
-    public DateTime? HandedOverOnUtc { get; set; }
-    public DateTime CreatedOnUtc { get; set; }
-}
+    public bool CanApprove { get; set; }
+    public bool CanMarkDelivering { get; set; }
+    public bool CanMarkDelivered { get; set; }
+    public bool CanReject { get; set; }
 
-public sealed class DeliveryNoteItemModel
-{
-    public Guid Id { get; set; }
-    public Guid WarehouseId { get; set; }
-    public string? WarehouseName { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
-    public int QuantityDecimalPlaces { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal SubTotal { get; set; }
+    [Serializable]
+    public sealed class DeliveryNoteSettlementLineModel
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal AcceptedQuantity { get; set; }
+        public decimal RejectedQuantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public string? RejectReason { get; set; }
+        public int QuantityDecimalPlaces { get; set; } = 2;
+    }
 
-    /// <summary>Tổng đã trả (Confirmed).</summary>
-    public decimal ReturnedQuantity { get; set; }
-    public string? RejectReason { get; set; }
+    [Serializable]
+    public sealed class DeliveryRunInfoModel
+    {
+        public Guid Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public int Status { get; set; }
+        public string StatusName { get; set; } = string.Empty;
+        public string AssignedDeliveryFullName { get; set; } = string.Empty;
+        public DateTime? HandedOverOnUtc { get; set; }
+        public DateTime CreatedOnUtc { get; set; }
+    }
 
-    /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
-    public decimal PendingReturnQuantity { get; set; }
-    public decimal CompensatedReturnQuantity { get; set; }
+    [Serializable]
+    public sealed class DeliveryNoteItemModel
+    {
+        public Guid Id { get; set; }
+        public Guid WarehouseId { get; set; }
+        public string? WarehouseName { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public int QuantityDecimalPlaces { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal SubTotal { get; set; }
+
+        /// <summary>Tổng đã trả (Confirmed).</summary>
+        public decimal ReturnedQuantity { get; set; }
+        public string? RejectReason { get; set; }
+
+        /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
+        public decimal PendingReturnQuantity { get; set; }
+        public decimal CompensatedReturnQuantity { get; set; }
+    }
 }

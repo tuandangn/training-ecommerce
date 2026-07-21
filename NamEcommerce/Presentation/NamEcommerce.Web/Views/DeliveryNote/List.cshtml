@@ -1,25 +1,24 @@
 @model DeliveryNoteListModel
-@using System.Text.Json
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
-@using NamEcommerce.Web.Constants
 @{
-    ViewData["Title"] = "Phiếu xuất kho";
+    ViewData[ViewConstants.PageTitle] = "Phiếu xuất kho";
     var query = Model.Keywords ?? "";
-    var deliveryUserRequiredTitle = "Can phan cong nguoi giao truoc";
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Phiếu xuất kho</h1>
-        <p class="page-header-subtitle">Quản lý phiếu xuất kho và giao hàng</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Phiếu xuất kho</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Phiếu xuất kho</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 
 <div class="content-card" data-responsive-list data-list-key="delivery-note-list">
     <div class="action-toolbar">
-        <div class="search-group">
-            <partial name="_Search" model="query" />
-        </div>
+        <partial name="_Search" model="@(new DeliveryNoteListSearchModel { Keywords = Model.Keywords })" />
         <partial name="_ResponsiveListToolbar" />
     </div>
 
@@ -28,26 +27,19 @@
             <table class="table data-table">
                 <thead>
                     <tr>
-                        <th class="ps-4">Mã PXK</th>
+                        <th class="ps-4">Mã phiếu</th>
                         <th class="text-center">Đơn hàng</th>
                         <th>
-                            <i class="bi bi-person me-1"></i>
                             Khách hàng
                         </th>
                         <th class="d-none d-lg-table-cell">
-                            <i class="bi bi-geo-alt me-1"></i>
                             Địa chỉ giao
                         </th>
                         <th class="d-none d-xl-table-cell">
-                            <i class="bi bi-box-seam me-1"></i>
                             Kho xuất
                         </th>
                         <th class="text-center ui-w-140">
                             Trạng thái
-                        </th>
-                        <th class="d-none d-md-table-cell">
-                            <i class="bi bi-calendar me-1"></i>
-                            Ngày tạo
                         </th>
                         <th class="ui-w-100"></th>
                     </tr>
@@ -57,27 +49,18 @@
                     {
                         foreach (var deliveryNote in Model.Data.Items)
                         {
-                            var statusTuple = deliveryNote.Status switch
-                            {
-                                10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
-                                20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
-                                30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
-                                35 => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
-                                40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
-                                50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
-                                _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
-                            };
-                            var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
-                            var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
+                            var status = (DeliveryNoteStatus)deliveryNote.Status;
+                            var canLeaveWarehouse = deliveryNote.IsDirectShip || deliveryNote.IsCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
                             var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
                                 || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering
                                 || canLeaveWarehouse;
 
                             <tr>
                                 <td class="ps-4">
-                                    <a asp-action="Details" asp-route-id="@deliveryNote.Id" class="text-decoration-none fw-bold">
+                                    <a asp-action="Details" asp-route-id="@deliveryNote.Id" class="text-decoration-none fw-bold d-block">
                                         @HighlighHelper.Highlight(deliveryNote.Code, query)
                                     </a>
+                                    <span class="text-muted small">@deliveryNote.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                                 </td>
                                 <td class="text-center fw-medium">
                                     <a asp-action="Details" asp-controller="Order" asp-route-id="@deliveryNote.OrderId" class="text-decoration-none">
@@ -96,7 +79,7 @@
                                     }
                                     <div class="d-md-none mt-1">
                                         <small class="text-muted d-block">
-                                            <i class="bi bi-calendar me-1"></i>@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                            <i class="bi bi-calendar me-1"></i>@deliveryNote.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                         </small>
                                     </div>
                                 </td>
@@ -117,15 +100,15 @@
                                     }
                                 </td>
                                 <td class="text-center">
-                                    <span class="status-badge @statusTuple.Item1 w-100">
-                                        <i class="bi @statusTuple.Item3 me-1"></i>@deliveryNote.StatusName
+                                    <span class="status-badge @status.GetDisplayColor() w-100">
+                                        <i class="bi @status.GetActionIcon() me-1"></i>
+                                        @status.GetDisplayText()
                                     </span>
-                                    @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOnUtc.HasValue)
+                                    @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOn.HasValue)
                                     {
-                                        <div class="small text-muted mt-1 fst-italic">@deliveryNote.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                                        <div class="small text-muted text-nowrap">@deliveryNote.DeliveredOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</div>
                                     }
                                 </td>
-                                <td class="d-none d-md-table-cell text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                                 <td>
                                     <div class="dropdown position-static text-end pe-3">
                                         <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton-@deliveryNote.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
@@ -155,7 +138,8 @@
                                             {
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
-                                                    <a class="dropdown-item py-2 @(canLeaveWarehouse ? "text-secondary btn-delivering" : "text-muted disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
+                                                    <a class="dropdown-item py-2 @(canLeaveWarehouse ? "text-secondary btn-delivering" : "text-muted disabled") fw-medium" href="#"
+                                                       data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? "Cần phân công người giao trước" : null)" aria-disabled="@(!canLeaveWarehouse)">
                                                         <i class="bi bi-truck me-1"></i>Đang giao
                                                     </a>
                                                 </li>
@@ -164,7 +148,8 @@
                                             {
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
-                                                    <a class="dropdown-item py-2 @(canOpenDeliveredWorkflow ? "text-success btn-delivered" : "text-muted disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
+                                                    <a class="dropdown-item py-2 @(canOpenDeliveredWorkflow ? "text-success btn-delivered" : "text-muted disabled") fw-medium" href="#"
+                                                       data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? "Cần phân công người giao trước" : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
                                                         <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                                                     </a>
                                                 </li>
@@ -199,7 +184,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="8">
+                            <td colspan="7">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                                     <h5>Không tìm thấy phiếu xuất kho nào</h5>
@@ -218,18 +203,8 @@
         {
             foreach (var deliveryNote in Model.Data.Items)
             {
-                var statusTuple = deliveryNote.Status switch
-                {
-                    10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
-                    20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
-                    30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
-                    35 => ("bg-warning text-dark", "Chờ đối soát", "bi-hourglass-split"),
-                    40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
-                    50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
-                    _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
-                };
-                var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
-                var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
+                var status = (DeliveryNoteStatus)deliveryNote.Status;
+                var canLeaveWarehouse = deliveryNote.IsDirectShip || deliveryNote.IsCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
                 var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
                     || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering
                     || canLeaveWarehouse;
@@ -244,26 +219,29 @@
                                 Đơn @deliveryNote.OrderCode
                             </a>
                         </div>
-                        <span class="status-badge @statusTuple.Item1">
-                            <i class="bi @statusTuple.Item3 me-1"></i>@deliveryNote.StatusName
+                        <span class="status-badge @status.GetDisplayColor()">
+                            <i class="bi @status.GetActionIcon() me-1"></i>
+                            @status.GetDisplayText()
                         </span>
                     </div>
                     <div class="list-card-fields">
-                        <div class="list-card-field list-card-field-stack">
+                        <div class="list-card-field">
                             <span class="list-card-label">Khách hàng</span>
-                            <span class="fw-medium text-dark">@HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)</span>
-                            @if (!string.IsNullOrEmpty(deliveryNote.ShippingPhoneNumber))
-                            {
-                                <a href="tel:@deliveryNote.ShippingPhoneNumber" class="small text-muted text-decoration-none">
-                                    @HighlighHelper.Highlight(deliveryNote.ShippingPhoneNumber ?? "", query)
-                                </a>
-                            }
+                            <div class="list-card-value text-end">
+                                <span class="fw-medium text-dark d-block">@HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)</span>
+                                @if (!string.IsNullOrEmpty(deliveryNote.ShippingPhoneNumber))
+                                {
+                                    <a href="tel:@deliveryNote.ShippingPhoneNumber" class="small text-muted text-decoration-none">
+                                        @HighlighHelper.Highlight(deliveryNote.ShippingPhoneNumber ?? "", query)
+                                    </a>
+                                }
+                            </div>
                         </div>
                         @if (!string.IsNullOrEmpty(deliveryNote.ShippingAddress))
                         {
                             <div class="list-card-field">
                                 <span class="list-card-label">Địa chỉ giao</span>
-                                <span class="text-muted small text-end">@deliveryNote.ShippingAddress</span>
+                                <span class="list-card-value fw-normal text-muted text-end">@deliveryNote.ShippingAddress</span>
                             </div>
                         }
                         <div class="list-card-field">
@@ -273,30 +251,30 @@
                         @if (!string.IsNullOrWhiteSpace(deliveryNote.AssignedDeliveryFullName))
                         {
                             <div class="list-card-field">
-                                <span class="list-card-label">Nguoi giao</span>
+                                <span class="list-card-label">Người giao</span>
                                 <span class="list-card-value fw-normal text-muted">@deliveryNote.AssignedDeliveryFullName</span>
                             </div>
                         }
                         <div class="list-card-field">
                             <span class="list-card-label">Ngày tạo</span>
-                            <span class="list-card-value fw-normal text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            <span class="list-card-value fw-normal text-muted">@deliveryNote.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                         </div>
-                        @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOnUtc.HasValue)
+                        @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOn.HasValue)
                         {
                             <div class="list-card-field">
                                 <span class="list-card-label">Đã giao</span>
-                                <span class="list-card-value fw-normal text-muted">@deliveryNote.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                                <span class="list-card-value fw-normal text-success fw-medium">@deliveryNote.DeliveredOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                             </div>
                         }
                     </div>
                     <div class="list-card-actions justify-content-between">
                         <div class="d-flex align-items-center gap-2">
                             <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@deliveryNote.Id">
-                                <i class="bi bi-info-circle me-1 text-primary"></i>
+                                <i class="bi bi-info-circle"></i>
                                 <span class="visually-hidden">Chi tiết</span>
                             </a>
                             <a class="btn btn-sm btn-outline-secondary" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank">
-                                <i class="bi bi-printer me-1 text-secondary"></i>
+                                <i class="bi bi-printer"></i>
                                 <span class="visually-hidden">In phiếu</span>
                             </a>
                         </div>
@@ -309,14 +287,16 @@
                             }
                             @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
                             {
-                                <a class="btn btn-sm @(canLeaveWarehouse ? "btn-outline-secondary btn-delivering" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
-                                    <i class="bi bi-truck me-1"></i>Đang giao
+                                <a class="btn btn-sm @(canLeaveWarehouse ? "btn-outline-secondary btn-delivering" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? "Cần phân công người giao trước" : null)" aria-disabled="@(!canLeaveWarehouse)">
+                                    <i class="bi bi-truck"></i>
+                                    <span class="d-none d-xl-inline">Đang giao</span>
                                 </a>
                             }
                             @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation)
                             {
-                                <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-outline-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Đã giao
+                                <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-outline-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? "Cần phân công người giao trước" : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span class="d-none d-xl-inline">Đã giao</span>
                                 </a>
                             }
                             @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
@@ -324,13 +304,15 @@
                                 if (deliveryNote.IsDirectShip)
                                 {
                                     <a class="btn btn-sm btn-outline-danger btn-customer-reject fw-medium" href="#" data-id="@deliveryNote.Id" data-code="@deliveryNote.Code">
-                                        <i class="bi bi-person-fill-x me-1"></i>Từ chối
+                                        <i class="bi bi-person-fill-x"></i>
+                                        <span class="d-none d-xxl-inline">Từ chối</span>
                                     </a>
                                 }
                                 else
                                 {
                                     <a class="btn btn-sm btn-outline-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id">
-                                        <i class="bi bi-x-circle me-1"></i>Hủy phiếu
+                                        <i class="bi bi-x-circle"></i>
+                                        <span class="d-none d-xxl-inline">Hủy phiếu</span>
                                     </a>
                                 }
                             }

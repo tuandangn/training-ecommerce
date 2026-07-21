@@ -109,7 +109,14 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    #region Events
+    #region Method
+
+    public bool CanApprove() => !IsDirectShip && Status is DeliveryNoteStatus.Draft;
+    public bool CanMarkDelivering() => !IsDirectShip && Status is DeliveryNoteStatus.Confirmed && !AssignedDeliveryUserId.HasValue;
+    public bool CanMarkDelivered() => Status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering);
+    public bool CanReject() => IsDirectShip;
+
+    public bool CanEditShippingInfo() => Status is not (DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled);
 
     internal void AddItem(Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice)
     {

@@ -11,7 +11,7 @@ public sealed class PermissionAuthorizationHandler(ICurrentUserService currentUs
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
-        if (await currentUserService.IsAdmin())
+        if (await currentUserService.IsAdminAsync())
         {
             context.Succeed(requirement);
             return;

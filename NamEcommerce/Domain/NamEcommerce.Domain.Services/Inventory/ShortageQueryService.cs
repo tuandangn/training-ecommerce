@@ -72,7 +72,7 @@ public sealed class ShortageQueryService(
 
         var orderItemIds = deliveryNote.Items
             .Where(item => item.OrderItemId != Guid.Empty)
-            .Select(item => item.OrderItemId)
+            .Select(item => (SecondaryItemId)(deliveryNote.OrderId, item.OrderItemId))
             .ToList();
         var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id, order.Id);
         var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
@@ -197,8 +197,9 @@ public sealed class ShortageQueryService(
         var orderItems = order.OrderItems
             .Where(item => limitedOrderItemIds is null || limitedOrderItemIds.Contains(item.Id))
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItems.Select(item => item.Id), null, order.Id);
-        var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItems.Select(item => item.Id));
+        var orderItemIds = orderItems.Select(item => (SecondaryItemId)(order.Id, item.Id)).ToList();
+        var shippedQuantities = GetShippedQuantities(orderItemIds, null, order.Id);
+        var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
         var result = new List<OrderItemFulfillmentStateDto>();
 
         foreach (var productGroup in orderItems.GroupBy(item => item.ProductId))
@@ -242,44 +243,40 @@ public sealed class ShortageQueryService(
         return result;
     }
 
-    private Dictionary<Guid, decimal> GetShippedQuantities(IEnumerable<Guid> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
+    private Dictionary<Guid, decimal> GetShippedQuantities(IList<SecondaryItemId> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
     {
-        var ids = orderItemIds.ToList();
-        if (ids.Count == 0)
-            return [];
-
         var query = deliveryNoteReader.DataSource
             .Where(note => ShippedStatuses.Contains(note.Status));
 
         if (excludedDeliveryNoteId.HasValue)
             query = query.Where(note => note.Id != excludedDeliveryNoteId.Value);
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var shippedQuantities = query
             .SelectMany(note => note.Items)
-            .Where(item => ids.Contains(item.OrderItemId))
+            .Where(item => itemIds.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
 
-        var returnedQuantities = GetCompensatedReturnedQuantities(orderId, ids);
-        foreach (var id in ids)
+        var returnedQuantities = GetCompensatedReturnedQuantities(orderId, orderItemIds);
+        foreach (var id in orderItemIds)
         {
-            shippedQuantities[id] = Math.Max(
-                0m,
-                shippedQuantities.GetValueOrDefault(id) - returnedQuantities.GetValueOrDefault(id));
+            shippedQuantities[id.SecondaryId] = Math.Max(0m, shippedQuantities.GetValueOrDefault(id.SecondaryId) - returnedQuantities.GetValueOrDefault(id.SecondaryId));
         }
 
         return shippedQuantities;
     }
 
-    private Dictionary<Guid, decimal> GetCompensatedReturnedQuantities(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<Guid, decimal> GetCompensatedReturnedQuantities(Guid orderId, IList<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var validDeliveryNoteItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId)
             .SelectMany(note => note.Items)
-            .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
+            .Where(item => item.OrderItemId != Guid.Empty && itemIds.Contains(item.OrderItemId))
             .Select(item => new { item.Id, item.OrderItemId });
 
         return customerReturnReader.DataSource
@@ -297,21 +294,21 @@ public sealed class ShortageQueryService(
             .ToDictionary(group => group.Key, group => group.Sum(item => item.AcceptedQuantity));
     }
 
-    private Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> GetPurchaseOrderAllocations(IEnumerable<Guid> orderItemIds)
+    private Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> GetPurchaseOrderAllocations(IEnumerable<SecondaryItemId> orderItemIds)
     {
-        var ids = orderItemIds.ToList();
-        if (ids.Count == 0)
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
+        if (itemIds.Count == 0)
             return [];
 
         var allocations = allocationReader.DataSource
-            .Where(allocation => ids.Contains(allocation.OrderItemId))
+            .Where(allocation => itemIds.Contains(allocation.OrderItemId.SecondaryId))
             .OrderBy(allocation => allocation.CreatedOnUtc)
             .ToList();
         if (allocations.Count == 0)
             return [];
 
         var purchaseOrderItemIds = allocations
-            .Select(allocation => allocation.PurchaseOrderItemId)
+            .Select(allocation => allocation.PurchaseOrderItemId.SecondaryId)
             .Distinct()
             .ToList();
 
@@ -333,13 +330,13 @@ public sealed class ShortageQueryService(
         var result = new Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>>();
         foreach (var allocation in allocations)
         {
-            if (!purchaseOrderItemMap.TryGetValue(allocation.PurchaseOrderItemId, out var purchaseOrderItem))
+            if (!purchaseOrderItemMap.TryGetValue(allocation.PurchaseOrderItemId.SecondaryId, out var purchaseOrderItem))
                 continue;
 
-            if (!result.TryGetValue(allocation.OrderItemId, out var orderItemAllocations))
+            if (!result.TryGetValue(allocation.OrderItemId.SecondaryId, out var orderItemAllocations))
             {
                 orderItemAllocations = [];
-                result[allocation.OrderItemId] = orderItemAllocations;
+                result[allocation.OrderItemId.SecondaryId] = orderItemAllocations;
             }
 
             orderItemAllocations.Add(new PurchaseOrderShortageAllocationDto

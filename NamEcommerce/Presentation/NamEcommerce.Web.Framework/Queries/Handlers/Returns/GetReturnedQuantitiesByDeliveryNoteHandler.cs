@@ -39,11 +39,11 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
             .ToHashSet();
 
         var (_, items) = await _customerReturnAppService.GetListAsync(
+            pageIndex: 0,
+            pageSize: FullPageSize,
             customerId: null,
             deliveryNoteId: null,
-            status: null,
-            pageIndex: 0,
-            pageSize: FullPageSize).ConfigureAwait(false);
+            status: null).ConfigureAwait(false);
 
         var dict = items
             .Where(r => r.Status != CancelledStatus)

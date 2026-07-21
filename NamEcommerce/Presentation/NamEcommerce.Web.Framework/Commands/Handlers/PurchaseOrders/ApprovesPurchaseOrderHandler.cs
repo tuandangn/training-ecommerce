@@ -34,7 +34,7 @@ public sealed class ApprovesPurchaseOrderHandler : IRequestHandler<ApprovesPurch
             };
         }
 
-        if (!await _currentUserService.IsAdmin() && !await _authorizationAppService.Authorize(currentUser.Id, SystemPermissions.PurchaseOrders.Approve).ConfigureAwait(false))
+        if (!await _currentUserService.IsAdminAsync() && !await _authorizationAppService.Authorize(currentUser.Id, SystemPermissions.PurchaseOrders.Approve).ConfigureAwait(false))
         {
             return new CommonActionResultModel
             {

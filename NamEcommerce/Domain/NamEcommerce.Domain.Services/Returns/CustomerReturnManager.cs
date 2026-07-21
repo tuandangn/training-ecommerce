@@ -372,7 +372,7 @@ public sealed class CustomerReturnManager(
     }
 
     public Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(
-        Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize)
+        int pageIndex, int pageSize, Guid? customerId = null, Guid? deliveryNoteId = null, int? status = null)
     {
         var query = customerReturnDataReader.DataSource;
 

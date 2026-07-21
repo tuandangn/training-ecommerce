@@ -55,7 +55,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
-    public async Task<IActionResult> List(DeliveryNoteSearchModel searchModel)
+    public async Task<IActionResult> List(DeliveryNoteListSearchModel searchModel)
     {
         var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel);
         return View(model);
@@ -398,7 +398,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         {
             returnedQuantities.TryGetValue(i.Id, out var summary);
             settlementItemsByDeliveryNoteItemId.TryGetValue(i.Id, out var settlementItem);
-            return new DeliveryNoteItemModel
+            return new DeliveryNoteDetailsModel.DeliveryNoteItemModel
             {
                 Id = i.Id,
                 ProductName = i.ProductName,
@@ -665,27 +665,27 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         return RedirectToAction(nameof(Details), new { id = deliveryNoteId });
     }
+
+    #region Helper classes
+
+    public class CreateFromPreparationRequest
+    {
+        public Guid OrderId { get; set; }
+        public List<SelectedItemModel> SelectedItems { get; set; } = [];
+        public bool ShowPrice { get; set; }
+        public bool CompensateReturnedQuantityInNextDelivery { get; set; }
+        public string? Note { get; set; }
+        public decimal Surcharge { get; set; }
+        public string? SurchargeReason { get; set; }
+        public decimal AmountToCollect { get; set; }
+    }
+
+    public class SelectedItemModel
+    {
+        public Guid OrderItemId { get; set; }
+        public Guid WarehouseId { get; set; }
+        public decimal Quantity { get; set; }
+    }
+
+    #endregion
 }
-
-#region Helper classes
-
-public class CreateFromPreparationRequest
-{
-    public Guid OrderId { get; set; }
-    public List<SelectedItemModel> SelectedItems { get; set; } = [];
-    public bool ShowPrice { get; set; }
-    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
-    public string? Note { get; set; }
-    public decimal Surcharge { get; set; }
-    public string? SurchargeReason { get; set; }
-    public decimal AmountToCollect { get; set; }
-}
-
-public class SelectedItemModel
-{
-    public Guid OrderItemId { get; set; }
-    public Guid WarehouseId { get; set; }
-    public decimal Quantity { get; set; }
-}
-
-#endregion 

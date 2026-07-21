@@ -95,13 +95,15 @@ public sealed class OrderFulfillmentScheduleAppService(
         }
     }
 
-    public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(IReadOnlyCollection<Guid> purchaseOrderItemIds)
+    public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(
+        IReadOnlyCollection<(Guid purchaseOrderId, Guid purchaseOrderItemId)> purchaseOrderItemIds)
     {
         if (purchaseOrderItemIds.Count == 0)
             return CommonActionResultDto.CreateSuccess();
 
+        var poItemIds = purchaseOrderItemIds.Select(id => id.purchaseOrderItemId).Distinct().ToList();
         var orderItemIds = allocationDataReader.DataSource
-            .Where(allocation => purchaseOrderItemIds.Contains(allocation.PurchaseOrderItemId))
+            .Where(allocation => poItemIds.Contains(allocation.PurchaseOrderItemId.SecondaryId))
             .Select(allocation => allocation.OrderItemId)
             .Distinct()
             .ToList();

@@ -24,7 +24,8 @@ public sealed record DeliveryNoteAppDto
     
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
-    
+    public bool CanUpdateShippingInfo { get; set; }
+
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
     
@@ -68,6 +69,11 @@ public sealed record DeliveryNoteAppDto
 
     public IList<DeliveryNoteItemAppDto> Items { get; init; } = [];
     public IList<DeliveryNoteSettlementItemAppDto> SettlementItems { get; init; } = [];
+
+    public bool CanApprove { get; set; }
+    public bool CanMarkDelivering { get; set; }
+    public bool CanMarkDelivered { get; set; }
+    public bool CanReject { get; set; }
 }
 
 [Serializable]

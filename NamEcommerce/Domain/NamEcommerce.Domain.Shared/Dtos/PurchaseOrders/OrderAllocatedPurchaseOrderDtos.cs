@@ -1,3 +1,4 @@
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
@@ -18,7 +19,7 @@ public sealed record OrderAllocatedPurchaseOrderDto
 [Serializable]
 public sealed record OrderAllocatedPurchaseOrderItemDto
 {
-    public required Guid OrderItemId { get; init; }
+    public required SecondaryItemId OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public required decimal AllocatedQuantity { get; init; }

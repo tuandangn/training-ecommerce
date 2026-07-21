@@ -23,7 +23,8 @@ public sealed record DeliveryNoteDto
     
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
-    
+    public bool CanUpdateShippingInfo { get; init; }
+
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
     
@@ -67,6 +68,11 @@ public sealed record DeliveryNoteDto
 
     public IList<DeliveryNoteItemDto> Items { get; init; } = [];
     public IList<DeliveryNoteSettlementItemDto> SettlementItems { get; init; } = [];
+
+    public bool CanApprove { get; set; }
+    public bool CanMarkDelivering { get; set; }
+    public bool CanMarkDelivered { get; set; }
+    public bool CanReject { get; set; }
 }
 
 [Serializable]
@@ -272,6 +278,7 @@ public sealed record CreateDeliveryNoteFromVendorReturnItemDto
 public sealed record CreateDeliveryNoteForDirectShipDto
 {
     public required Guid GoodsReceiptId { get; init; }
+    public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required decimal Quantity { get; init; }
     public required Guid DirectShipWarehouseId { get; init; }

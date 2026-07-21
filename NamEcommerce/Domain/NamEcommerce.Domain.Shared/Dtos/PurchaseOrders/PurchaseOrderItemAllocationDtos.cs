@@ -7,7 +7,9 @@ namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 [Serializable]
 public sealed record PurchaseOrderItemAllocationDto(Guid Id)
 {
+    public required Guid PurchaseOrderId { get; init; }
     public required Guid PurchaseOrderItemId { get; init; }
+    public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required decimal AllocatedQuantity { get; init; }
     public required decimal ReceivedQuantity { get; init; }
@@ -85,7 +87,7 @@ public sealed record NonDirectShipAllocationDto
 public sealed record AllocationReceiptDto
 {
     public required Guid AllocationId { get; init; }
-    public required Guid OrderItemId { get; init; }
+    public required SecondaryItemId OrderItemId { get; init; }
     public required decimal Quantity { get; init; }
     public required bool IsDirectShip { get; init; }
     public string? DirectShipAddress { get; init; }

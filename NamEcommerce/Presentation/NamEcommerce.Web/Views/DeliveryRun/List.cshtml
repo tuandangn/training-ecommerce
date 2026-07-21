@@ -131,12 +131,12 @@
                             <td>
                                 <div class="d-flex justify-content-end gap-2">
                                     <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-outline-secondary" title="Chi tiết">
-                                        <i class="bi bi-info-circle text-primary"></i>
+                                        <i class="bi bi-info-circle"></i>
                                     </a>
                                     @if (canManageDeliveryRun && run.PaperManifestIssued)
                                     {
                                         <a asp-action="Print" asp-route-id="@run.Id" target="_blank" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy">
-                                            <i class="bi bi-printer text-secondary"></i>
+                                            <i class="bi bi-printer"></i>
                                         </a>
                                     }
                                     else if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover)
@@ -144,7 +144,7 @@
                                         <form asp-action="IssuePaperManifest" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />
                                             <button type="submit" class="btn btn-sm btn-outline-secondary" title="In phiếu giấy dự phòng">
-                                                <i class="bi bi-printer text-secondary"></i>
+                                                <i class="bi bi-printer"></i>
                                             </button>
                                         </form>
                                     }

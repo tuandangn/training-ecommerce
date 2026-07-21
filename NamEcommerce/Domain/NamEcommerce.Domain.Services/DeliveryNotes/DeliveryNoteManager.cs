@@ -78,7 +78,7 @@ public sealed class DeliveryNoteManager(
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         var requestedQuantitiesByOrderItem = dto.Items
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(order.Id, g.Key), g => g.Sum(item => item.Quantity));
 
         EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
@@ -200,6 +200,9 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
+        if (!deliveryNote.CanEditShippingInfo())
+            throw new DeliveryNoteCannotUpdateShippingInfoException();
+
         deliveryNote.UpdateShippingInfo(dto.ShippingAddress, dto.ShippingPhoneNumber);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
@@ -282,7 +285,7 @@ public sealed class DeliveryNoteManager(
             foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
             {
                 var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
-                var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+                var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault((SecondaryItemId)(order.Id, noteItem.OrderItemId));
                 if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
                 {
                     await orderManager.MarkOrderItemDeliveredAsync(new MarkOrderItemDeliveredDto
@@ -416,7 +419,12 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal> { [orderItem.Id] = dto.Quantity }, includeDirectShipOutstanding: false);
+        EnsureQuantitiesCanBeDelivered(order,
+            new Dictionary<SecondaryItemId, decimal>
+            {
+                [(SecondaryItemId)(order.Id, orderItem.Id)] = dto.Quantity
+            }, 
+            includeDirectShipOutstanding: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -1037,7 +1045,7 @@ public sealed class DeliveryNoteManager(
         foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
         {
             var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
-            var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+            var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault((SecondaryItemId)(deliveryNote.OrderId, noteItem.OrderItemId));
             if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
             {
                 await orderManager.MarkOrderItemReceivedByCustomerAsync(new MarkOrderItemReceivedByCustomerDto
@@ -1050,10 +1058,10 @@ public sealed class DeliveryNoteManager(
     }
 
     private void EnsureQuantitiesCanBeDelivered(Order order,
-        IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem,
+        IReadOnlyDictionary<SecondaryItemId, decimal> requestedQuantitiesByOrderItem,
         bool includeDirectShipOutstanding = true)
     {
-        var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
+        var orderItemsById = order.OrderItems.ToDictionary(item => (SecondaryItemId)(order.Id, item.Id));
         var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
         var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(
             order.Id, requestedOrderItemIds);
@@ -1079,19 +1087,20 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<SecondaryItemId, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var deliveredByOrderItem = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId && note.Status != DeliveryNoteStatus.Cancelled)
             .SelectMany(note => note.Items)
-            .Where(item => orderItemIds.Contains(item.OrderItemId))
+            .Where(item => itemIds.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(orderId, g.Key), g => g.Sum(item => item.Quantity));
 
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
             deliveredByOrderItem.TryGetValue(orderItemId, out var deliveredQuantity);
@@ -1102,96 +1111,89 @@ public sealed class DeliveryNoteManager(
         return deliveredByOrderItem;
     }
 
-    private Dictionary<Guid, decimal> GetNetDeliveredQuantitiesByOrderItem(Guid orderId, DeliveryNote currentDeliveryNote)
+    private Dictionary<SecondaryItemId, decimal> GetNetDeliveredQuantitiesByOrderItem(Guid orderId, DeliveryNote currentDeliveryNote)
     {
         // Phiếu đang xử lý mới chuyển Delivered ở trạng thái staged (DB vẫn còn status cũ),
         // query DB sẽ không thấy nó — loại khỏi query và cộng từ instance in-memory.
-        var deliveredByOrderItem = deliveryNoteReader.DataSource
+        var deliveredByOrderItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId && note.Status == DeliveryNoteStatus.Delivered
                 && note.Id != currentDeliveryNote.Id)
             .SelectMany(note => note.Items)
             .Where(item => item.OrderItemId != Guid.Empty)
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            .ToDictionary(g => (SecondaryItemId)(orderId, g.Key), g => g.Sum(item => item.Quantity));
 
         if (currentDeliveryNote.Status == DeliveryNoteStatus.Delivered)
         {
             foreach (var item in currentDeliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
             {
-                deliveredByOrderItem[item.OrderItemId] =
-                    deliveredByOrderItem.GetValueOrDefault(item.OrderItemId) + item.Quantity;
+                deliveredByOrderItems[(SecondaryItemId)(currentDeliveryNote.OrderId, item.OrderItemId)] =
+                    deliveredByOrderItems.GetValueOrDefault((SecondaryItemId)(currentDeliveryNote.OrderId, item.OrderItemId)) + item.Quantity;
             }
         }
 
-        var orderItemIds = deliveredByOrderItem.Keys.ToList();
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
+        var orderItemIds = deliveredByOrderItems.Keys.ToList();
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
-            var deliveredQuantity = deliveredByOrderItem.GetValueOrDefault(orderItemId);
+            var deliveredQuantity = deliveredByOrderItems.GetValueOrDefault(orderItemId);
             var returnedQuantity = returnedByOrderItem.GetValueOrDefault(orderItemId);
-            deliveredByOrderItem[orderItemId] = Math.Max(0m, deliveredQuantity - returnedQuantity);
+            deliveredByOrderItems[orderItemId] = Math.Max(0m, deliveredQuantity - returnedQuantity);
         }
 
-        return deliveredByOrderItem;
+        return deliveredByOrderItems;
     }
 
-    private Dictionary<Guid, decimal> GetReturnedQuantitiesByOrderItem(
-        Guid orderId,
-        IReadOnlyCollection<Guid> orderItemIds,
-        bool compensatedOnly)
+    private Dictionary<SecondaryItemId, decimal> GetReturnedQuantitiesByOrderItem(IReadOnlyCollection<SecondaryItemId> orderItemIds, bool compensatedOnly)
     {
         if (orderItemIds.Count == 0)
             return orderItemIds.ToDictionary(id => id, id => 0m);
 
-        // 1. Chuẩn bị Query lấy các DeliveryNoteItem hợp lệ (chưa thực thi dưới DB - vẫn là IQueryable)
+        var orderId = orderItemIds.First().PrimaryId;
+
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var validDeliveryNoteItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId)
             .SelectMany(note => note.Items)
-            .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
+            .Where(item => item.OrderItemId != Guid.Empty && itemIds.Contains(item.OrderItemId))
             .Select(item => new { item.Id, item.OrderItemId });
 
-        // 2. Thực hiện Join và GroupBy dưới DB, sau đó lấy kết quả về RAM dạng Dictionary
-        var returnedByOrderItem = customerReturnReader.DataSource
-            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
-                                 && (!compensatedOnly
-                                     || (returnNote.CompensateInNextDelivery
-                                         && returnNote.Status != CustomerReturnStatus.Draft)))
+        var returnedByOrderItems = customerReturnReader.DataSource
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled 
+                && (!compensatedOnly || (returnNote.CompensateInNextDelivery && returnNote.Status != CustomerReturnStatus.Draft)))
             .SelectMany(returnNote => returnNote.Items)
             .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
-            // Join trực tiếp 2 Queryable với nhau dưới DB thông qua Id của DeliveryNoteItem
             .Join(
                 validDeliveryNoteItems,
                 returnItem => returnItem.DeliveryNoteItemId!.Value,
                 dnItem => dnItem.Id,
                 (returnItem, dnItem) => new { dnItem.OrderItemId, returnItem.AcceptedQuantity }
             )
-            // Group theo OrderItemId để tính tổng
             .GroupBy(x => x.OrderItemId)
-            // Đến đây EF sẽ sinh ra SQL, chạy dưới DB và trả kết quả về RAM dạng Dictionary
             .ToDictionary(
-                group => group.Key,
+                group => (SecondaryItemId)(orderId, group.Key),
                 group => group.Sum(x => x.AcceptedQuantity)
             );
 
-        // 3. Đảm bảo tất cả orderItemId truyền vào đều có mặt trong kết quả (nếu không có thì bằng 0)
         foreach (var orderItemId in orderItemIds)
         {
-            if (!returnedByOrderItem.ContainsKey(orderItemId))
-                returnedByOrderItem[orderItemId] = 0m;
+            if (!returnedByOrderItems.ContainsKey(orderItemId))
+                returnedByOrderItems[orderItemId] = 0m;
         }
 
-        return returnedByOrderItem;
+        return returnedByOrderItems;
     }
 
-    private Dictionary<Guid, decimal> GetDirectShipOutstandingQuantitiesByOrderItem(IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<SecondaryItemId, decimal> GetDirectShipOutstandingQuantitiesByOrderItem(IReadOnlyCollection<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
 
+        var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         return allocationReader.DataSource
             .Where(allocation => allocation.IsDirectShip
                 && allocation.Status != AllocationStatus.Cancelled
-                && orderItemIds.Contains(allocation.OrderItemId))
+                && itemIds.Contains(allocation.OrderItemId.SecondaryId))
             .ToList()
             .GroupBy(allocation => allocation.OrderItemId)
             .ToDictionary(
@@ -1270,6 +1272,7 @@ public sealed class DeliveryNoteManager(
             CustomerAddress = deliveryNote.CustomerInfo.Address,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
+            CanUpdateShippingInfo = deliveryNote.CanEditShippingInfo(),
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
@@ -1323,7 +1326,11 @@ public sealed class DeliveryNoteManager(
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
                 CostAtDispatch = i.CostAtDispatch
-            }).ToList()
+            }).ToList(),
+            CanApprove = deliveryNote.CanApprove(),
+            CanReject = deliveryNote.CanReject(),
+            CanMarkDelivering = deliveryNote.CanMarkDelivering(),
+            CanMarkDelivered = deliveryNote.CanMarkDelivered(),
         };
     }
 }

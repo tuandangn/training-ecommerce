@@ -229,7 +229,7 @@ public sealed class UserManager : IUserManager
 
         dto.Verify();
 
-        var user = await _userEntityDataReader.GetByIdAsync(dto.UserId, default).ConfigureAwait(false);
+        var user = await _userRepository.GetByIdAsync(dto.UserId, default).ConfigureAwait(false);
         if (user is null)
             throw new UserIsNotFoundException(dto.UserId);
 

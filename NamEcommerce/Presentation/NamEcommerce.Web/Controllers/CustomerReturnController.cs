@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
@@ -280,20 +281,20 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             id = r.Id,
             code = r.Code,
             status = r.Status,
-            statusLabel = r.Status switch
+            statusLabel = (CustomerReturnStatus)r.Status switch
             {
-                0 => "Bản nháp",
-                1 => "Đang kiểm hàng",
-                2 => "Đã xác nhận",
-                3 => "Đã hủy",
+                CustomerReturnStatus.Draft => "Bản nháp",
+                CustomerReturnStatus.Inspecting => "Đang kiểm hàng",
+                CustomerReturnStatus.Confirmed => "Đã xác nhận",
+                CustomerReturnStatus.Cancelled => "Đã hủy",
                 _ => "?"
             },
-            statusColor = r.Status switch
+            statusColor = (CustomerReturnStatus)r.Status switch
             {
-                0 => "secondary",
-                1 => "warning",
-                2 => "success",
-                3 => "danger",
+                CustomerReturnStatus.Draft => "secondary",
+                CustomerReturnStatus.Inspecting => "warning",
+                CustomerReturnStatus.Confirmed => "success",
+                CustomerReturnStatus.Cancelled => "danger",
                 _ => "secondary"
             },
             returnDate = r.ReturnDate.ToLocalTime().ToString("dd/MM/yyyy"),

@@ -41,7 +41,7 @@ public sealed class ConfirmDeliveryNoteHandler : IRequestHandler<ConfirmDelivery
             };
         }
 
-        if (!await _currentUserService.IsAdmin() && !await _authorizationAppService.Authorize(currentUser.Id, SystemPermissions.DeliveryNotes.Approve).ConfigureAwait(false))
+        if (!await _currentUserService.IsAdminAsync() && !await _authorizationAppService.Authorize(currentUser.Id, SystemPermissions.DeliveryNotes.Approve).ConfigureAwait(false))
         {
             return new ConfirmDeliveryNoteResultModel
             {

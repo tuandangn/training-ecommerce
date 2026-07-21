@@ -2,52 +2,48 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 
-public sealed class DeliveryNoteSearchModel
-{
-    public string? Keywords { get; set; }
-    public int? PageNumber { get; set; }
-    public int? PageSize { get; set; }
-}
-
+[Serializable]
 public sealed class DeliveryNoteListModel
 {
-    public string? Keywords { get; set; }
+    public string? Keywords { get; init; }
     public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     public required IPagedDataModel<DeliveryNoteListItemModel> Data { get; init; }
-}
 
-public sealed record DeliveryNoteListItemModel
-{
-    public required Guid Id { get; init; }
-    public required string Code { get; init; }
-    public required string CustomerName { get; init; }
-    public required string ShippingAddress { get; init; }
-    public string? ShippingPhoneNumber { get; init; }
+    [Serializable]
+    public sealed record DeliveryNoteListItemModel
+    {
+        public Guid Id { get; init; }
+        public string Code { get; init; } = string.Empty;
+        public string CustomerName { get; init; } = string.Empty;
+        public string ShippingAddress { get; init; } = string.Empty;
+        public bool IsCounterPickup { get; set; }
+        public string? ShippingPhoneNumber { get; init; }
 
-    public string? WarehouseName { get; set; }
-    public Guid? AssignedDeliveryUserId { get; init; }
-    public string? AssignedDeliveryFullName { get; init; }
+        public string? WarehouseName { get; set; }
+        public Guid? AssignedDeliveryUserId { get; init; }
+        public string? AssignedDeliveryFullName { get; init; }
 
-    public required bool IsDirectShip { get; set; }
+        public bool IsDirectShip { get; set; }
 
-    public required Guid OrderId { get; set; }
-    public required string OrderCode { get; set; }
+        public Guid OrderId { get; set; }
+        public string OrderCode { get; set; } = string.Empty;
 
-    public string? CustomerPhone { get; init; }
-    public decimal TotalAmount { get; init; }
-    public int Status { get; init; }
-    public string StatusName { get; init; } = string.Empty;
-    public DateTime CreatedOnUtc { get; init; }
-    public DateTime? DeliveredOnUtc { get; init; }
-    public IList<DeliveryNoteListItemProductModel> Items { get; init; } = [];
-}
+        public string? CustomerPhone { get; init; }
+        public decimal TotalAmount { get; init; }
+        public int Status { get; init; }
+        public DateTime CreatedOn { get; init; }
+        public DateTime? DeliveredOn { get; init; }
+        public IList<DeliveryNoteListItemProductModel> Items { get; init; } = [];
+    }
 
-public sealed record DeliveryNoteListItemProductModel
-{
-    public required Guid Id { get; init; }
-    public Guid WarehouseId { get; init; }
-    public string? WarehouseName { get; set; }
-    public required string ProductName { get; init; }
-    public decimal Quantity { get; init; }
+    [Serializable]
+    public sealed record DeliveryNoteListItemProductModel
+    {
+        public required Guid Id { get; init; }
+        public Guid WarehouseId { get; init; }
+        public string? WarehouseName { get; set; }
+        public required string ProductName { get; init; }
+        public decimal Quantity { get; init; }
+    }
 }

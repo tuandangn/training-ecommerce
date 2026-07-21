@@ -30,14 +30,13 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
         _deliveryNoteReader = deliveryNoteReader;
     }
 
-    public Task<DirectShipReportAppDto> GetReportAsync(DateTime? fromDate, DateTime? toDate)
+    public async Task<DirectShipReportAppDto> GetReportAsync(DateTime? fromDate, DateTime? toDate)
     {
         var fromUtc = fromDate?.ToUniversalTime();
         var toUtc = toDate.HasValue
             ? toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
             : (DateTime?)null;
 
-        // ── 1. Load direct-ship allocations ─────────────────────────────────────
         var allocQuery = _allocationReader.DataSource.Where(a => a.IsDirectShip);
         if (fromUtc.HasValue) allocQuery = allocQuery.Where(a => a.CreatedOnUtc >= fromUtc.Value);
         if (toUtc.HasValue) allocQuery = allocQuery.Where(a => a.CreatedOnUtc <= toUtc.Value);
@@ -45,22 +44,20 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .Select(a => new { a.PurchaseOrderItemId, a.AllocatedQuantity })
             .ToList();
 
-        // ── 2. Load POs with items to resolve vendor + product per allocation ────
         var poItemIds = allocations.Select(a => a.PurchaseOrderItemId).Distinct().ToList();
 
         var posWithItems = poItemIds.Count == 0
             ? []
             : _poReader.DataSource
-                .Where(po => po.Items.Any(i => poItemIds.Contains(i.Id)))
+                .Where(po => po.Items.Any(item => poItemIds.Any(itemId => itemId.SecondaryId == item.Id)))
                 .Select(po => new
                 {
                     po.Id,
                     po.VendorId,
-                    Items = po.Items.Select(i => new { i.Id, i.ProductId }).ToList()
+                    Items = po.Items.Select(item => new { item.Id, item.ProductId }).ToList()
                 })
                 .ToList();
 
-        // Build itemId → (VendorId, ProductId) map
         var itemMap = posWithItems
             .SelectMany(po => po.Items.Select(item => new
             {
@@ -70,7 +67,6 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             }))
             .ToDictionary(x => x.Id);
 
-        // ── 3. Load vendors and products by IDs ─────────────────────────────────
         var vendorIds = itemMap.Values.Select(x => x.VendorId).Distinct().ToList();
         var vendorDict = _vendorReader.DataSource
             .Where(v => vendorIds.Contains(v.Id))
@@ -85,7 +81,6 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .ToList()
             .ToDictionary(p => p.Id, p => p.Name);
 
-        // ── 4. Load direct-ship delivery notes (with date filter) ────────────────
         var dnQuery = _deliveryNoteReader.DataSource
             .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer);
         if (fromUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.CreatedOnUtc >= fromUtc.Value);
@@ -102,9 +97,8 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             })
             .ToList();
 
-        // ── D9.1 — By vendor ────────────────────────────────────────────────────
         var byVendor = allocations
-            .GroupBy(a => itemMap.TryGetValue(a.PurchaseOrderItemId, out var info) ? info.VendorId : Guid.Empty)
+            .GroupBy(a => itemMap.TryGetValue(a.PurchaseOrderItemId.SecondaryId, out var info) ? info.VendorId : Guid.Empty)
             .Where(g => g.Key != Guid.Empty)
             .Select(g => new DirectShipByVendorAppDto
             {
@@ -115,7 +109,6 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .OrderByDescending(x => x.AllocationCount)
             .ToList();
 
-        // ── D9.2 — Top customers ────────────────────────────────────────────────
         var byCustomer = dns
             .GroupBy(dn => dn.FullName)
             .Select(g => new DirectShipByCustomerAppDto
@@ -128,9 +121,8 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .Take(10)
             .ToList();
 
-        // ── D9.3 — By product ───────────────────────────────────────────────────
         var byProduct = allocations
-            .GroupBy(a => itemMap.TryGetValue(a.PurchaseOrderItemId, out var info) ? info.ProductId : Guid.Empty)
+            .GroupBy(a => itemMap.TryGetValue(a.PurchaseOrderItemId.SecondaryId, out var info) ? info.ProductId : Guid.Empty)
             .Where(g => g.Key != Guid.Empty)
             .Select(g => new DirectShipByProductAppDto
             {
@@ -141,7 +133,6 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .OrderByDescending(x => x.TotalQuantity)
             .ToList();
 
-        // ── D9.4 — Pending > 7 days (always current snapshot, no date filter) ───
         var cutoff = DateTime.UtcNow.AddDays(-7);
         var pendingAlerts = _deliveryNoteReader.DataSource
             .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
@@ -159,7 +150,6 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .OrderByDescending(x => x.DaysPending)
             .ToList();
 
-        // ── D9.5 — Reject rate ──────────────────────────────────────────────────
         var rejectRate = new DirectShipRejectRateAppDto
         {
             TotalDeliveries = dns.Count,
@@ -175,13 +165,13 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
                 .ToList()
         };
 
-        return Task.FromResult(new DirectShipReportAppDto
+        return new DirectShipReportAppDto
         {
             ByVendor = byVendor,
             ByCustomer = byCustomer,
             ByProduct = byProduct,
             PendingAlerts = pendingAlerts,
             RejectRate = rejectRate
-        });
+        };
     }
 }

@@ -206,7 +206,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             }
         }
 
-        var poItemIds = purchaseOrderInfo.Items.Select(i => i.Id).ToList();
+        var poItemIds = purchaseOrderInfo.Items.Select(i => (purchaseOrderInfo.Id, i.Id)).ToList();
         if (poItemIds.Count > 0)
         {
             var allocations = await _purchaseOrderAppService

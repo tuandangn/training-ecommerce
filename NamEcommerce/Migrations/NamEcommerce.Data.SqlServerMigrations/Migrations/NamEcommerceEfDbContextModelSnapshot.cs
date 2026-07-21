@@ -4685,12 +4685,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("OrderItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PurchaseOrderItemId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<decimal>("ReceivedQuantity")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(18,2)")
@@ -4699,11 +4693,33 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "OrderItemId", "NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation.OrderItemId#SecondaryItemId", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<Guid>("PrimaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("OrderId");
+
+                            b1.Property<Guid>("SecondaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("OrderItemId");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PurchaseOrderItemId", "NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation.PurchaseOrderItemId#SecondaryItemId", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<Guid>("PrimaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("PurchaseOrderId");
+
+                            b1.Property<Guid>("SecondaryId")
+                                .HasColumnType("uniqueidentifier")
+                                .HasColumnName("PurchaseOrderItemId");
+                        });
+
                     b.HasKey("Id");
-
-                    b.HasIndex("OrderItemId");
-
-                    b.HasIndex("PurchaseOrderItemId");
 
                     b.ToTable("PurchaseOrderItemAllocation", "tbl");
                 });
@@ -5659,21 +5675,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasOne("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", null)
                         .WithMany("Items")
                         .HasForeignKey("PurchaseOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItemAllocation", b =>
-                {
-                    b.HasOne("NamEcommerce.Domain.Entities.Orders.OrderItem", null)
-                        .WithMany()
-                        .HasForeignKey("OrderItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItem", null)
-                        .WithMany()
-                        .HasForeignKey("PurchaseOrderItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

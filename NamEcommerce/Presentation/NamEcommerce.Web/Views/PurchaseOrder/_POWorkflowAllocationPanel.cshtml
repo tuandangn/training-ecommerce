@@ -1,28 +1,9 @@
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model PurchaseOrderDetailsModel
 @{
-    var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0) ||
-                             Model.DirectShipAllocationsPerItem.Values.Any(a => a.Count > 0);
-    string AllocationStatusText(int status) => status switch
-    {
-        0 => "Đã phân bổ",
-        1 => "Nhận một phần",
-        2 => "Đã nhận đủ",
-        3 => "Chờ khách xác nhận",
-        4 => "Khách đã nhận",
-        5 => "Đã hủy",
-        _ => "Không rõ"
-    };
-    string AllocationStatusColor(int status) => status switch
-    {
-        0 => "secondary",
-        1 => "warning",
-        2 => "success",
-        3 => "info text-white",
-        4 => "success",
-        5 => "danger",
-        _ => "secondary"
-    };
+    var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0) 
+        || Model.DirectShipAllocationsPerItem.Values.Any(a => a.Count > 0);
+
     var allocationCount = 0;
     foreach (var item in Model.Info.Items)
     {
@@ -113,6 +94,7 @@
                             <div class="po-allocation-list">
                                 @foreach (var allocation in itemAllocations)
                                 {
+                                    var status = (AllocationStatus)allocation.Status;
                                     <div class="po-allocation-row">
                                         <div class="po-allocation-icon"><i class="bi bi-diagram-3"></i></div>
                                         <div class="po-allocation-body">
@@ -142,15 +124,15 @@
                                         </div>
                                         <div class="po-allocation-meta">
                                             <span>@allocation.ReceivedQuantity.DisplayQuantity() / @allocation.AllocatedQuantity.DisplayQuantity()</span>
-                                            <span class="status-badge @AllocationStatusColor(allocation.Status)">@AllocationStatusText(allocation.Status)</span>
+                                            <span class="status-badge @status.GetDisplayColor()">@status.GetDisplayText()</span>
                                         </div>
                                         <div class="po-allocation-actions">
-                                            @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && allocation.Status != 2 && allocation.Status != 5)
+                                            @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && status != AllocationStatus.FullyReceived && status != AllocationStatus.Cancelled)
                                             {
                                                 <button type="button" class="btn btn-outline-primary btn-sm"
                                                         data-bs-toggle="modal" data-bs-target="#markDsModal"
-                                                        data-allocation-id="@allocation.AllocationId"
-                                                        data-order-code="@allocation.OrderCode">
+                                                        data-allocation-id="@allocation.AllocationId" data-order-code="@allocation.OrderCode"
+                                                        data-address="@allocation.ShippingAddress" data-phone="@allocation.CustomerPhone" data-customer="@allocation.CustomerName">
                                                     <i class="bi bi-send me-1"></i>Giao thẳng
                                                 </button>
                                             }
@@ -159,21 +141,8 @@
                                 }
                                 @foreach (var dsAlloc in itemDirectShip)
                                 {
-                                    var deliveryStatus = dsAlloc.DeliveryStatus.HasValue ? (DeliveryNoteStatus?)((DeliveryNoteStatus)dsAlloc.DeliveryStatus.Value) : null;
-                                    var (dsStatusBadge, dsStatusText) = deliveryStatus switch
-                                    {
-                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
-                                        DeliveryNoteStatus.PendingConfirmation => ("warning", "Chờ đối soát"),
-                                        DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
-                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
-                                        _ => dsAlloc.Status switch
-                                        {
-                                            0 => ("secondary", "Chờ nhận"),
-                                            1 => ("warning", "Nhận một phần"),
-                                            2 => ("info text-white", "Đã nhận"),
-                                            _ => ("secondary", "Không rõ")
-                                        }
-                                    };
+                                    DeliveryNoteStatus? deliveryStatus = dsAlloc.DeliveryStatus.HasValue ? (DeliveryNoteStatus)dsAlloc.DeliveryStatus.Value : null;
+                                    var allocationStatus = (AllocationStatus)dsAlloc.Status;
                                     <div class="po-allocation-row">
                                         <div class="po-allocation-icon direct"><i class="bi bi-send"></i></div>
                                         <div class="po-allocation-body">
@@ -199,10 +168,21 @@
                                         </div>
                                         <div class="po-allocation-meta">
                                             <span>@dsAlloc.ReceivedQuantity.DisplayQuantity() / @dsAlloc.AllocatedQuantity.DisplayQuantity()</span>
-                                            <span class="status-badge @dsStatusBadge">@dsStatusText</span>
+                                            @if (deliveryStatus.HasValue)
+                                            {
+                                                <span class="status-badge @deliveryStatus.Value.GetDisplayColor()">
+                                                    @deliveryStatus.Value.GetDisplayText()
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-badge @allocationStatus.GetDisplayColor()">
+                                                    @allocationStatus.GetDisplayText()
+                                                </span>
+                                            }
                                         </div>
                                         <div class="po-allocation-actions">
-                                            @if (Model.Info.CanReceiveGoods && dsAlloc.Status != 2)
+                                            @if (Model.Info.CanReceiveGoods && allocationStatus != AllocationStatus.FullyReceived)
                                             {
                                                 <button type="button" class="btn btn-outline-secondary btn-sm btnEditDirectShipAddress"
                                                         data-bs-toggle="modal" data-bs-target="#editDirectShipAddressModal"
