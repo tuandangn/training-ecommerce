@@ -11,8 +11,6 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Application.Contracts.Security;
-using NamEcommerce.Application.Contracts.Users;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -22,19 +20,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IOrderAppService _orderAppService;
-    private readonly IAuthorizationAppService _authorizationAppService;
-    private readonly ICurrentUserService _currentUserService;
 
-    public PurchaseOrderController(IMediator mediator,
-        IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
-        IOrderAppService orderAppService, IAuthorizationAppService authorizationAppService, ICurrentUserService currentUserService)
+    public PurchaseOrderController(IMediator mediator, IOrderAppService orderAppService,
+        IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
         _purchaseOrderAppService = purchaseOrderAppService;
         _orderAppService = orderAppService;
-        _authorizationAppService = authorizationAppService;
-        _currentUserService = currentUserService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));

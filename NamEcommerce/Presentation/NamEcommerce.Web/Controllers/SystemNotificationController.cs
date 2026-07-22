@@ -7,9 +7,8 @@ using NamEcommerce.Web.Services.Notifications;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class SystemNotificationController(
-    ISystemNotificationModelFactory systemNotificationModelFactory,
-    IMediator mediator) : BaseAuthorizedController
+public sealed class SystemNotificationController(ISystemNotificationModelFactory systemNotificationModelFactory, IMediator mediator) 
+    : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(List));
 

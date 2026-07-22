@@ -10,6 +10,7 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Extensions;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
@@ -169,7 +170,7 @@ public sealed class DeliveryRunModelFactory(
             AssignedDeliveryUsername = run.AssignedDeliveryUsername,
             AssignedDeliveryFullName = run.AssignedDeliveryFullName,
             Status = run.Status,
-            StatusName = progress.StatusName,
+            DeliveryStatusInfo = progress.StatusName,
             DeliveredItemCount = progress.DeliveredItemCount,
             IsDeliveryCompleted = progress.IsCompleted,
             PreparedByUserId = run.PreparedByUserId,
@@ -312,7 +313,7 @@ public sealed class DeliveryRunModelFactory(
         var itemList = items.ToList();
         var summary = string.Join(", ", itemList
             .Take(2)
-            .Select(item => $"{item.ProductName} x {item.Quantity:#,##0.##}"));
+            .Select(item => $"{item.ProductName} x {item.Quantity.DisplayQuantity()}"));
         if (itemList.Count <= 2)
             return summary;
 

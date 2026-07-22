@@ -15,7 +15,8 @@ namespace NamEcommerce.Web.Controllers;
 
 [Authorize(Policy = SystemPermissions.DeliveryRuns.MobileAccess)]
 public sealed class DeliveryMobileController(
-    IDeliveryRunModelFactory deliveryRunModelFactory, ICurrentUserAccessor currentUserAccessor,
+    IDeliveryRunModelFactory deliveryRunModelFactory, 
+    ICurrentUserAccessor currentUserAccessor,
     AppConfig appConfig, IMediator mediator) : BaseAuthorizedController
 {
     public async Task<IActionResult> Index(bool showCompleted = false)

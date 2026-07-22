@@ -210,7 +210,7 @@
                     <h5 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Trạng thái</h5>
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <span class="status-badge @statusTuple.Item1">
-                            <i class="bi @statusTuple.Item2 me-1"></i>@Model.StatusName
+                            <i class="bi @statusTuple.Item2 me-1"></i>@Model.DeliveryStatusInfo
                         </span>
                         <span class="small text-muted">@Model.DeliveredItemCount/@Model.Items.Count phiếu đã giao</span>
                     </div>
@@ -291,11 +291,19 @@
                             </div>
                             <table class="table table-sm mb-0">
                                 <tbody>
-                                    @foreach (var product in group.Products)
+                                    @for (var i = 0; i < group.Products.Count; i++)
                                     {
+                                        var product = group.Products[i];
                                         <tr>
-                                            <td class="ps-0">@product.ProductName</td>
-                                            <td class="text-end text-nowrap fw-medium">@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) @product.UnitMeasurement</td>
+                                            <td class="ps-0 @(i == group.Products.Count - 1 ? "border-bottom-0" : "")">
+                                                @product.ProductName
+                                            </td>
+                                            <td class="text-end text-nowrap fw-medium @(i == group.Products.Count - 1 ? "border-bottom-0" : "")">
+                                                @product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces)
+                                                <span class="text-muted">
+                                                    @product.UnitMeasurement
+                                                </span>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>

@@ -47,7 +47,7 @@
                     @if (Model.CanViewOrders)
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
+                            <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn bán</a>
                         </li>
                     }
                     @if (Model.CanViewOrderFulfillmentSchedule)

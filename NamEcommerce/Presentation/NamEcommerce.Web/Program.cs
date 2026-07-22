@@ -109,7 +109,6 @@ using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Mvc.Filters;
 using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Services.Catalog;
-using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.Dashboard;
 using NamEcommerce.Web.Services.Debts;
 using NamEcommerce.Web.Services.DeliveryNotes;
@@ -336,7 +335,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
     services.AddScoped<IWebHelper, WebHelper>();
-    services.AddScoped<ICustomerPortalQrCodeService, CustomerPortalQrCodeService>();
     services.AddScoped<INotificationService, TempDataNotificationService>();
     services.AddScoped<ISystemNotificationRealtimePublisher, SignalRSystemNotificationRealtimePublisher>();
     services.AddSingleton<ICachedValuesService, CachedValuesService>();

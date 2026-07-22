@@ -51,7 +51,7 @@
                                         <th>Khách hàng</th>
                                         <th>Hàng giao</th>
                                         <th>Địa chỉ</th>
-                                        <th>Phân công hiện tại</th>
+                                        @* <th>Phân công hiện tại</th> *@
                                         <th class="text-end">Thu hộ</th>
                                     </tr>
                                 </thead>
@@ -60,14 +60,12 @@
                                     {
                                         <tr>
                                             <td class="ps-4">
-                                                <input class="form-check-input delivery-note-checkbox"
-                                                       type="checkbox"
-                                                       name="DeliveryNoteIds"
-                                                       value="@note.Id"
-                                                       checked="@selectedIds.Contains(note.Id)" />
+                                                <input class="form-check-input delivery-note-checkbox" type="checkbox" name="DeliveryNoteIds" value="@note.Id" checked="@selectedIds.Contains(note.Id)" />
                                             </td>
                                             <td>
-                                                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.Id" class="fw-bold text-decoration-none">@note.Code</a>
+                                                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.Id" class="fw-bold text-decoration-none text-nowrap">
+                                                    @note.Code
+                                                </a>
                                                 @if (!string.IsNullOrWhiteSpace(note.OrderCode))
                                                 {
                                                     <div class="text-muted small">@note.OrderCode</div>
@@ -81,13 +79,13 @@
                                                 }
                                             </td>
                                             <td>
-                                                <div class="fw-medium text-truncate ui-max-w-220" title="@note.ProductSummary">@note.ProductSummary</div>
-                                                <div class="text-muted small">Tổng SL: @note.TotalQuantity.ToString("#,##0.##")</div>
+                                                <div class="fw-medium text-truncate ui-max-w-220" title="@note.ProductSummary">@Html.Raw(note.ProductSummary.Replace(", ", "<br/>"))</div>
+                                                <div class="text-muted small">Tổng SL: @note.TotalQuantity.DisplayQuantity()</div>
                                             </td>
                                             <td>
                                                 <span class="d-inline-block text-truncate ui-max-w-260" title="@note.ShippingAddress">@note.ShippingAddress</span>
                                             </td>
-                                            <td>
+                                            @*                                             <td>
                                                 @if (string.IsNullOrWhiteSpace(note.AssignedDeliveryFullName))
                                                 {
                                                     <span class="badge bg-light text-muted border">Chưa phân công</span>
@@ -97,6 +95,7 @@
                                                     <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">@note.AssignedDeliveryFullName</span>
                                                 }
                                             </td>
+ *@
                                             <td class="text-end fw-medium">@note.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                                         </tr>
                                     }

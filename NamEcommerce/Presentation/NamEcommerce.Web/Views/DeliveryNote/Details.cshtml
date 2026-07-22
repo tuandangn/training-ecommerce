@@ -486,7 +486,7 @@ else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved &
                     @if (Model.CanApprove)
                     {
                         <button type="button" class="btn btn-primary btn-confirm btn-sm" data-testid="delivery-confirm" data-id="@Model.Id">
-                            <i class="bi bi-check me-1"></i>Xác nhận
+                            <i class="bi bi-check-all me-1"></i>Xác nhận
                         </button>
                     }
                     @if (!Model.IsDirectShip && status == DeliveryNoteStatus.Confirmed)

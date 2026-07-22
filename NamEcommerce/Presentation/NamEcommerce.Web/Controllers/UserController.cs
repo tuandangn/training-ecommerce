@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Users;
@@ -14,13 +13,11 @@ public sealed class UserController : BaseController
 {
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
-    private readonly IUserAppService userAppService;
 
-    public UserController(IMediator mediator, AppConfig appConfig, IUserAppService userAppService)
+    public UserController(IMediator mediator, AppConfig appConfig)
     {
         _mediator = mediator;
         _appConfig = appConfig;
-        this.userAppService = userAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(Login));

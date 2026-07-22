@@ -1,38 +1,37 @@
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
-using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
-using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
+using NamEcommerce.Data.Contracts;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed class CustomerPortalController(
     ICustomerPortalAdminAppService customerPortalAdminAppService,
-    IWarehouseAppService warehouseAppService) : BaseAuthorizedController
+    IWarehouseAppService warehouseAppService, IUnitOfWork unitOfWork) : BaseAuthorizedController
 {
     public async Task<IActionResult> Index()
     {
-        var model = await customerPortalAdminAppService.GetOverviewAsync().ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetOverviewAsync();
         return View(model);
     }
 
     public async Task<IActionResult> Accounts()
     {
-        var model = await customerPortalAdminAppService.GetAccountsAsync().ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetAccountsAsync();
         return View(model);
     }
 
     public async Task<IActionResult> AccountDetails(Guid customerId)
     {
-        var model = await customerPortalAdminAppService.GetAccountAsync(customerId).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetAccountAsync(customerId);
         if (model is null)
         {
             NotifyError("Không tìm thấy tài khoản.");
             return RedirectToAction(nameof(Accounts));
         }
 
-        var securityEvents = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId).ConfigureAwait(false);
+        var securityEvents = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId);
         ViewBag.SecurityEvents = securityEvents;
 
         return View(model);
@@ -40,7 +39,7 @@ public sealed class CustomerPortalController(
 
     public async Task<IActionResult> SecurityEvents(Guid? customerId = null)
     {
-        var model = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetSecurityEventsAsync(customerId);
         return View(model);
     }
 
@@ -50,7 +49,7 @@ public sealed class CustomerPortalController(
 
     public async Task<IActionResult> Settings()
     {
-        var model = await customerPortalAdminAppService.GetSettingsAsync().ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetSettingsAsync();
         return View(model);
     }
 
@@ -58,22 +57,23 @@ public sealed class CustomerPortalController(
     public async Task<IActionResult> UpdateSettings(bool otpEnabled)
     {
         var result = await customerPortalAdminAppService
-            .UpdateSettingsAsync(new UpdateCustomerPortalSettingsAdminAppDto { OtpEnabled = otpEnabled })
-            .ConfigureAwait(false);
+            .UpdateSettingsAsync(new UpdateCustomerPortalSettingsAdminAppDto { OtpEnabled = otpEnabled });
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(Settings));
     }
 
     public async Task<IActionResult> OrderRequests(int? status = null)
     {
-        var model = await customerPortalAdminAppService.GetOrderRequestsAsync(status).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetOrderRequestsAsync(status);
         ViewData["Status"] = status;
         return View(model);
     }
 
     public async Task<IActionResult> OrderRequestDetails(Guid id)
     {
-        var model = await customerPortalAdminAppService.GetOrderRequestAsync(id).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetOrderRequestAsync(id);
         if (model is null)
         {
             NotifyError("Không tìm thấy yêu cầu đặt hàng.");
@@ -85,34 +85,34 @@ public sealed class CustomerPortalController(
 
     public async Task<IActionResult> ReturnRequests(int? status = null)
     {
-        var model = await customerPortalAdminAppService.GetReturnRequestsAsync(status).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetReturnRequestsAsync(status);
         ViewData["Status"] = status;
         return View(model);
     }
 
     public async Task<IActionResult> ReturnRequestDetails(Guid id)
     {
-        var model = await customerPortalAdminAppService.GetReturnRequestAsync(id).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetReturnRequestAsync(id);
         if (model is null)
         {
             NotifyError("Không tìm thấy yêu cầu trả hàng.");
             return RedirectToAction(nameof(ReturnRequests));
         }
 
-        await PrepareWarehouseOptionsAsync().ConfigureAwait(false);
+        await PrepareWarehouseOptionsAsync();
         return View(model);
     }
 
     public async Task<IActionResult> PaymentIntents(int? status = null)
     {
-        var model = await customerPortalAdminAppService.GetPaymentIntentsAsync(status).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetPaymentIntentsAsync(status);
         ViewData["Status"] = status;
         return View(model);
     }
 
     public async Task<IActionResult> PaymentIntentDetails(Guid id)
     {
-        var model = await customerPortalAdminAppService.GetPaymentIntentAsync(id).ConfigureAwait(false);
+        var model = await customerPortalAdminAppService.GetPaymentIntentAsync(id);
         if (model is null)
         {
             NotifyError("Không tìm thấy thanh toán online.");
@@ -125,7 +125,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> BlockAccount(Guid customerId, string? returnUrl = null)
     {
-        var result = await customerPortalAdminAppService.BlockAccountAsync(customerId).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.BlockAccountAsync(customerId);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectBack(returnUrl, nameof(Accounts));
     }
@@ -133,7 +135,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> UnblockAccount(Guid customerId, string? returnUrl = null)
     {
-        var result = await customerPortalAdminAppService.UnblockAccountAsync(customerId).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.UnblockAccountAsync(customerId);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectBack(returnUrl, nameof(Accounts));
     }
@@ -141,7 +145,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> ResetAccountPassword(Guid customerId, string password, string? returnUrl = null)
     {
-        var result = await customerPortalAdminAppService.ResetAccountPasswordAsync(customerId, password).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.ResetAccountPasswordAsync(customerId, password);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectBack(returnUrl, nameof(Accounts));
     }
@@ -153,7 +159,9 @@ public sealed class CustomerPortalController(
             .Zip(unitPrices, (itemId, unitPrice) => new { itemId, unitPrice })
             .GroupBy(item => item.itemId)
             .ToDictionary(group => group.Key, group => group.Last().unitPrice);
-        var result = await customerPortalAdminAppService.ApproveOrderRequestAsync(id, itemPrices, adminNote).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.ApproveOrderRequestAsync(id, itemPrices, adminNote);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(OrderRequestDetails), new { id });
     }
@@ -161,7 +169,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> RejectOrderRequest(Guid id, string? adminNote)
     {
-        var result = await customerPortalAdminAppService.RejectOrderRequestAsync(id, adminNote).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.RejectOrderRequestAsync(id, adminNote);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(OrderRequestDetails), new { id });
     }
@@ -169,7 +179,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> ConvertOrderRequest(Guid id)
     {
-        var result = await customerPortalAdminAppService.ConvertOrderRequestAsync(id).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.ConvertOrderRequestAsync(id);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
 
         return result.Success && result.CreatedId.HasValue
@@ -180,7 +192,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> AcceptReturnRequest(Guid id, string? adminNote)
     {
-        var result = await customerPortalAdminAppService.AcceptReturnRequestAsync(id, adminNote).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.AcceptReturnRequestAsync(id, adminNote);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(ReturnRequestDetails), new { id });
     }
@@ -188,20 +202,18 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> RejectReturnRequest(Guid id, string? adminNote)
     {
-        var result = await customerPortalAdminAppService.RejectReturnRequestAsync(id, adminNote).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.RejectReturnRequestAsync(id, adminNote);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(ReturnRequestDetails), new { id });
     }
 
     [HttpPost]
     public async Task<IActionResult> ConvertReturnRequest(
-        Guid id,
-        Guid warehouseId,
-        Guid[] itemIds,
-        decimal[] acceptedQuantities,
-        decimal[] returnUnitPrices,
-        decimal additionalCost,
-        string? adminNote)
+        Guid id, Guid warehouseId, Guid[] itemIds,
+        decimal[] acceptedQuantities, decimal[] returnUnitPrices,
+        decimal additionalCost, string? adminNote)
     {
         var items = itemIds
             .Select((itemId, index) => new CustomerPortalReturnConversionItemAppDto
@@ -213,10 +225,10 @@ public sealed class CustomerPortalController(
             .ToList();
 
         var result = await customerPortalAdminAppService
-            .ConvertReturnRequestAsync(id, warehouseId, items, additionalCost, adminNote)
-            .ConfigureAwait(false);
-        NotifyResult(result);
+            .ConvertReturnRequestAsync(id, warehouseId, items, additionalCost, adminNote);
+        await unitOfWork.CommitAsync();
 
+        NotifyResult(result);
         return result.Success && result.CreatedId.HasValue
             ? RedirectToAction("Details", "CustomerReturn", new { id = result.CreatedId.Value })
             : RedirectToAction(nameof(ReturnRequestDetails), new { id });
@@ -225,7 +237,9 @@ public sealed class CustomerPortalController(
     [HttpPost]
     public async Task<IActionResult> ReconcilePaymentIntent(Guid id, string? adminNote)
     {
-        var result = await customerPortalAdminAppService.ReconcilePaymentIntentAsync(id, adminNote).ConfigureAwait(false);
+        var result = await customerPortalAdminAppService.ReconcilePaymentIntentAsync(id, adminNote);
+        await unitOfWork.CommitAsync();
+
         NotifyResult(result);
         return RedirectToAction(nameof(PaymentIntentDetails), new { id });
     }
@@ -258,7 +272,7 @@ public sealed class CustomerPortalController(
 
     private async Task PrepareWarehouseOptionsAsync()
     {
-        var warehouses = await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
+        var warehouses = await warehouseAppService.GetWarehousesAsync(0, int.MaxValue);
         ViewBag.Warehouses = warehouses
             .Where(warehouse => warehouse.IsActive && warehouse.IsPhysical)
             .OrderBy(warehouse => warehouse.Name)

@@ -10,9 +10,7 @@ using NamEcommerce.Web.Services.OrderFulfillment;
 namespace NamEcommerce.Web.Controllers;
 
 [Authorize(Policy = SystemPermissions.Orders.View)]
-public sealed class OrderFulfillmentController(
-    IMediator mediator,
-    IOrderFulfillmentModelFactory orderFulfillmentModelFactory) : BaseAuthorizedController
+public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfillmentModelFactory orderFulfillmentModelFactory) : BaseAuthorizedController
 {
     public async Task<IActionResult> Index(OrderFulfillmentBoardSearchModel search)
     {

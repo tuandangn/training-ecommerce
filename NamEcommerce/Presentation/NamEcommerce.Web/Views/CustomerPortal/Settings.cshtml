@@ -21,7 +21,7 @@
                 nhưng hệ thống sẽ tạo phiên portal trực tiếp mà không gửi SMS/email.
             </p>
             <div class="mt-3">
-                <span class="badge @(Model.OtpEnabled ? "bg-success" : "bg-warning text-dark")">
+                <span class="badge @(Model.OtpEnabled ? "bg-success" : "bg-warning")">
                     @(Model.OtpEnabled ? "OTP đang bật" : "OTP đang tắt")
                 </span>
                 @if (Model.UpdatedOnUtc.HasValue)

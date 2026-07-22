@@ -18,7 +18,6 @@ using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.Common;
-using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using System.Text.Json;
 
@@ -29,16 +28,15 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     private readonly IDeliveryNoteModelFactory _deliveryNoteModelFactory;
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
-    private readonly ICustomerPortalQrCodeService _customerPortalQrCodeService;
     private readonly ICurrentUserAccessor _currentUserAccessor;
     private readonly ICachedValuesService _cachedValuesService;
     private readonly IOrderAppService _orderAppService;
+    private readonly IConfiguration _configuration;
 
     public DeliveryNoteController(
         IDeliveryNoteModelFactory deliveryNoteModelFactory,
-        IMediator mediator,
+        IMediator mediator, IConfiguration configuration,
         IDeliveryNoteAppService deliveryNoteAppService,
-        ICustomerPortalQrCodeService customerPortalQrCodeService,
         ICurrentUserAccessor currentUserAccessor,
         ICachedValuesService cachedValuesService,
         IOrderAppService orderAppService)
@@ -46,10 +44,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         _deliveryNoteModelFactory = deliveryNoteModelFactory;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
-        _customerPortalQrCodeService = customerPortalQrCodeService;
         _currentUserAccessor = currentUserAccessor;
         _cachedValuesService = cachedValuesService;
         _orderAppService = orderAppService;
+        _configuration = configuration;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -260,7 +258,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         try
         {
             var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
-            var qrCode = await _customerPortalQrCodeService.CreateDeliveryQrCodeAsync(id, Request);
+            var qrCode = await _mediator.Send(new CreateDeliveryQrCodeCommand(id)
+            {
+                CustomerPortalUrl = _configuration.GetValue<string>("CustomerPortal:DeliveryNoteUrl") ?? string.Empty
+            });
             if (qrCode is not null)
             {
                 model.CustomerPortalUrl = qrCode.Url;
@@ -355,23 +356,24 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return this.JsonOk();
 
         return this.JsonError(LocalizeError(result.ErrorMessage!));
-    }
 
-    private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
-    {
-        if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
-            return [];
+        // local method
+        static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
+        {
+            if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
+                return [];
 
-        try
-        {
-            var items = JsonSerializer.Deserialize<List<MarkDeliveryNoteDeliveredItemCommand>>(
-                acceptanceItemsJson,
-                new JsonSerializerOptions(JsonSerializerDefaults.Web));
-            return items ?? [];
-        }
-        catch
-        {
-            return [];
+            try
+            {
+                var items = JsonSerializer.Deserialize<List<MarkDeliveryNoteDeliveredItemCommand>>(
+                    acceptanceItemsJson,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                return items ?? [];
+            }
+            catch
+            {
+                return [];
+            }
         }
     }
 
@@ -495,19 +497,12 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        try
+        await _mediator.Send(new CancelDeliveryNoteCommand
         {
-            await _mediator.Send(new CancelDeliveryNoteCommand
-            {
-                DeliveryNoteId = id
-            });
+            DeliveryNoteId = id
+        });
 
-            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
-        }
+        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
     }
 
     [HttpPost]
@@ -519,101 +514,82 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.DeliveryNoteItemRequired") });
         }
 
-        try
+        var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId);
+
+        foreach (var selectedItem in request.SelectedItems)
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId);
-
-            foreach (var selectedItem in request.SelectedItems)
-            {
-                if (selectedItem.Quantity <= 0)
-                    return Json(new { success = false, message = LocalizeError("Error.OrderItemQuantityMustBePositive") });
-            }
-
-            // Validate that requested quantities don't exceed remaining quantities
-            foreach (var selectedGroup in request.SelectedItems.GroupBy(item => item.OrderItemId))
-            {
-                var orderItem = model.Items.FirstOrDefault(i => i.OrderItemId == selectedGroup.Key);
-                if (orderItem == null)
-                    return Json(new { success = false, message = LocalizeError("Error.OrderItemIsNotFound") });
-
-                var remainingQty = orderItem.Quantity;
-                var requestedQuantity = selectedGroup.Sum(item => item.Quantity);
-                if (requestedQuantity > remainingQty)
-                    return Json(new { success = false, message = LocalizeError("Error.QuantityExceedsRemaining", orderItem.ProductName, remainingQty) });
-            }
-
-            // Update items with user-selected quantities
-            var selectedItemIds = request.SelectedItems.Select(s => s.OrderItemId).ToHashSet();
-            foreach (var item in model.Items)
-            {
-                var selectedItem = request.SelectedItems.FirstOrDefault(s => s.OrderItemId == item.OrderItemId);
-                if (selectedItem != null)
-                {
-                    item.Selected = true;
-                    item.Quantity = request.SelectedItems
-                        .Where(s => s.OrderItemId == item.OrderItemId)
-                        .Sum(s => s.Quantity);
-                }
-                else
-                {
-                    item.Selected = false;
-                }
-            }
-
-            model.ShowPrice = request.ShowPrice;
-
-            if (!string.IsNullOrEmpty(request.Note))
-                model.Note = request.Note;
-
-            var createResult = await _mediator.Send(new CreateDeliveryNoteCommand
-            {
-                OrderId = model.OrderId,
-                Note = model.Note,
-                ShowPrice = model.ShowPrice,
-                ShippingAddress = model.ShippingAddress,
-                ShippingPhoneNumber = model.ShippingPhoneNumber,
-                Surcharge = request.Surcharge,
-                SurchargeReason = request.SurchargeReason,
-                AmountToCollect = request.AmountToCollect,
-                Items = request.SelectedItems.Select(selectedItem => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
-                {
-                    OrderItemId = selectedItem.OrderItemId,
-                    WarehouseId = selectedItem.WarehouseId,
-                    Quantity = selectedItem.Quantity
-                }).ToList()
-            });
-
-            if (createResult.Success)
-            {
-                return Json(new
-                {
-                    success = true,
-                    message = LocalizeError(createResult.SuccessMessage ?? "Msg.SaveSuccess")
-                });
-            }
-
-            return Json(new
-            {
-                success = false,
-                message = LocalizeError(createResult.ErrorMessage ?? "Error.DeliveryNoteCreateFailed")
-            });
+            if (selectedItem.Quantity <= 0)
+                return Json(new { success = false, message = LocalizeError("Error.OrderItemQuantityMustBePositive") });
         }
-        catch (NamEcommerceDomainException ex)
+
+        // Validate that requested quantities don't exceed remaining quantities
+        foreach (var selectedGroup in request.SelectedItems.GroupBy(item => item.OrderItemId))
+        {
+            var orderItem = model.Items.FirstOrDefault(i => i.OrderItemId == selectedGroup.Key);
+            if (orderItem == null)
+                return Json(new { success = false, message = LocalizeError("Error.OrderItemIsNotFound") });
+
+            var remainingQty = orderItem.Quantity;
+            var requestedQuantity = selectedGroup.Sum(item => item.Quantity);
+            if (requestedQuantity > remainingQty)
+                return Json(new { success = false, message = LocalizeError("Error.QuantityExceedsRemaining", orderItem.ProductName, remainingQty) });
+        }
+
+        // Update items with user-selected quantities
+        var selectedItemIds = request.SelectedItems.Select(s => s.OrderItemId).ToHashSet();
+        foreach (var item in model.Items)
+        {
+            var selectedItem = request.SelectedItems.FirstOrDefault(s => s.OrderItemId == item.OrderItemId);
+            if (selectedItem != null)
+            {
+                item.Selected = true;
+                item.Quantity = request.SelectedItems
+                    .Where(s => s.OrderItemId == item.OrderItemId)
+                    .Sum(s => s.Quantity);
+            }
+            else
+            {
+                item.Selected = false;
+            }
+        }
+
+        model.ShowPrice = request.ShowPrice;
+
+        if (!string.IsNullOrEmpty(request.Note))
+            model.Note = request.Note;
+
+        var createResult = await _mediator.Send(new CreateDeliveryNoteCommand
+        {
+            OrderId = model.OrderId,
+            Note = model.Note,
+            ShowPrice = model.ShowPrice,
+            ShippingAddress = model.ShippingAddress,
+            ShippingPhoneNumber = model.ShippingPhoneNumber,
+            Surcharge = request.Surcharge,
+            SurchargeReason = request.SurchargeReason,
+            AmountToCollect = request.AmountToCollect,
+            Items = request.SelectedItems.Select(selectedItem => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+            {
+                OrderItemId = selectedItem.OrderItemId,
+                WarehouseId = selectedItem.WarehouseId,
+                Quantity = selectedItem.Quantity
+            }).ToList()
+        });
+
+        if (createResult.Success)
         {
             return Json(new
             {
-                success = false,
-                message = LocalizeError(ex.ErrorCode, ex.Parameters)
+                success = true,
+                message = LocalizeError(createResult.SuccessMessage ?? "Msg.SaveSuccess")
             });
         }
-        catch
+
+        return Json(new
         {
-            return Json(new
-            {
-                success = false,
-                message = LocalizeError("Error.GenericError")
-            });
-        }
+            success = false,
+            message = LocalizeError(createResult.ErrorMessage ?? "Error.DeliveryNoteCreateFailed")
+        });
     }
 
     private static IList<CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel> BuildCreateDeliveryNoteItems(CreateDeliveryNoteModel model)

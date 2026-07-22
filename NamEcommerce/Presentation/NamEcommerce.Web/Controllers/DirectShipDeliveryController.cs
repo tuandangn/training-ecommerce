@@ -10,8 +10,7 @@ using NamEcommerce.Web.Models.DirectShipDelivery;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class DirectShipDeliveryController(
-    IMediator mediator, IDirectShipAppService directShipAppService) : BaseAuthorizedController
+public sealed class DirectShipDeliveryController(IMediator mediator, IDirectShipAppService directShipAppService) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(Pending));
 
@@ -23,7 +22,7 @@ public sealed class DirectShipDeliveryController(
             Keywords = filter.Keywords,
             FromDateUtc = filter.FromDate.HasValue ? filter.FromDate.Value.ToUniversalTime() : null,
             ToDateUtc = filter.ToDate.HasValue ? filter.ToDate.Value.Date.AddDays(1).AddSeconds(-1).ToUniversalTime() : null
-        }).ConfigureAwait(false);
+        });
 
         var model = new PendingDirectShipDeliveryListModel
         {
@@ -48,7 +47,7 @@ public sealed class DirectShipDeliveryController(
                     UnitPrice = i.UnitPrice
                 }).ToList()
             }).ToList(),
-            ReturnWarehouseOptions = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
+            ReturnWarehouseOptions = await mediator.Send(new GetWarehouseOptionListQuery())
         };
 
         return View(model);
@@ -70,7 +69,7 @@ public sealed class DirectShipDeliveryController(
             DeliveryNoteId = request.DeliveryNoteId,
             ConfirmedAtUtc = confirmedAt,
             Note = request.Note
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
@@ -96,7 +95,7 @@ public sealed class DirectShipDeliveryController(
             DeliveryNoteId = request.DeliveryNoteId,
             ReturnWarehouseId = request.ReturnWarehouseId,
             Reason = request.Reason
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
@@ -117,7 +116,7 @@ public sealed class DirectShipDeliveryController(
             Address = request.Address,
             ContactName = request.ContactName,
             ContactPhone = request.ContactPhone
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             return Json(new { success = true });
@@ -139,7 +138,7 @@ public sealed class DirectShipDeliveryController(
             NewContactName = request.NewContactName,
             NewContactPhone = request.NewContactPhone,
             Reason = request.Reason
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success)
             return Json(new { success = true });

@@ -81,15 +81,22 @@ public sealed record DeliveryRunCandidateDeliveryNoteModel
     public DateTime CreatedOnUtc { get; init; }
 }
 
+[Serializable]
 public sealed class DeliveryRunDetailsModel
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
+    public required int Status { get; init; }
+    public required string DeliveryStatusInfo { get; init; }
+
+    public IList<DeliveryRunItemModel> Items { get; init; } = [];
+    public IList<DeliveryRunWarehousePickGroupModel> PickingManifest { get; init; } = [];
+
     public required Guid AssignedDeliveryUserId { get; init; }
     public required string AssignedDeliveryUsername { get; init; }
     public required string AssignedDeliveryFullName { get; init; }
-    public required int Status { get; init; }
-    public required string StatusName { get; init; }
+
+
     public int DeliveredItemCount { get; init; }
     public bool IsDeliveryCompleted { get; init; }
     public Guid? PreparedByUserId { get; init; }
@@ -100,17 +107,18 @@ public sealed class DeliveryRunDetailsModel
     public string? DriverCacheDeviceId { get; init; }
     public bool PaperManifestIssued { get; init; }
     public DateTime? PaperManifestIssuedOnUtc { get; init; }
+
     public Guid? CashHandoverConfirmedByUserId { get; init; }
     public string? CashHandoverConfirmedByUsername { get; init; }
     public string? CashHandoverConfirmedByFullName { get; init; }
     public DateTime? CashHandoverConfirmedOnUtc { get; init; }
     public decimal? CashHandoverAmount { get; init; }
     public string? CashHandoverNote { get; init; }
+
     public string? Note { get; init; }
+
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
-    public IList<DeliveryRunItemModel> Items { get; init; } = [];
-    public IList<DeliveryRunWarehousePickGroupModel> PickingManifest { get; init; } = [];
 }
 
 public sealed record DeliveryRunWarehousePickGroupModel
