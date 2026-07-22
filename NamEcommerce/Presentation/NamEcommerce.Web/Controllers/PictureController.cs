@@ -27,7 +27,7 @@ public sealed class PictureController : BaseAuthorizedController
         if (id == Guid.Empty)
             return File("~/images/default-image.png", "image/png");
 
-        var file = await _mediator.Send(new GetPictureQuery { Id = id }).ConfigureAwait(false);
+        var file = await _mediator.Send(new GetPictureQuery { Id = id });
         if (file is null)
             return File("~/images/default-image.png", "image/png");
 
@@ -54,7 +54,7 @@ public sealed class PictureController : BaseAuthorizedController
             return Json(new { success = false, message = "Chỉ chấp nhận file ảnh (jpg, png, webp, gif)." });
 
         using var ms = new MemoryStream();
-        await file.CopyToAsync(ms).ConfigureAwait(false);
+        await file.CopyToAsync(ms);
         var data = ms.ToArray();
 
         var ext = Path.GetExtension(file.FileName).TrimStart('.');
@@ -64,7 +64,7 @@ public sealed class PictureController : BaseAuthorizedController
             MimeType = file.ContentType,
             FileName = file.FileName,
             Extension = ext
-        }).ConfigureAwait(false);
+        });
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });

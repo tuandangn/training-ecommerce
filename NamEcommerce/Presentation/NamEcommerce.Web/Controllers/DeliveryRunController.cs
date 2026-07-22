@@ -71,31 +71,25 @@ public sealed class DeliveryRunController(
 
     public async Task<IActionResult> Details(Guid id)
     {
-        try
-        {
-            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
+        var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
+
+        if (model is not null)
             return View(model);
-        }
-        catch
-        {
-            NotifyError("Error.DeliveryRunNotFound");
-            return RedirectToAction(nameof(List));
-        }
+
+        NotifyError("Error.DeliveryRunNotFound");
+        return RedirectToAction(nameof(List));
     }
 
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Print(Guid id)
     {
-        try
-        {
-            var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
+        var model = await deliveryRunModelFactory.PrepareDeliveryRunDetailsModelAsync(id);
+
+        if (model is not null)
             return View(model);
-        }
-        catch
-        {
-            NotifyError("Error.DeliveryRunNotFound");
-            return RedirectToAction(nameof(List));
-        }
+
+        NotifyError("Error.DeliveryRunNotFound");
+        return RedirectToAction(nameof(List));
     }
 
     [HttpPost]
@@ -112,9 +106,19 @@ public sealed class DeliveryRunController(
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
-    public async Task<IActionResult> HandOver(Guid id)
+    public async Task<IActionResult> HandOver(Guid id, bool setProductsPicked = false)
     {
-        var result = await mediator.Send(new HandOverDeliveryRunCommand(id));
+        var deliveryRun = await deliveryRunAppService.GetByIdAsync(id);
+        if (deliveryRun is null)
+        {
+            NotifyError("Error.DeliveryRunIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var result = await mediator.Send(new HandOverDeliveryRunCommand(id)
+        {
+            SetProductsPicked = setProductsPicked
+        });
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -153,9 +157,7 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.ConfirmCashHandover)]
     public async Task<IActionResult> UpdateDeliveredNoteCashCollected(Guid id, Guid deliveryNoteId, decimal cashCollectedAmount)
     {
-        var result = await mediator
-            .Send(new UpdateDeliveryRunDeliveredNoteCashCollectedCommand(id, deliveryNoteId, cashCollectedAmount))
-            ;
+        var result = await mediator.Send(new UpdateDeliveryRunDeliveredNoteCashCollectedCommand(id, deliveryNoteId, cashCollectedAmount));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -213,6 +215,31 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> ConfirmWarehousePick(Guid id, Guid warehouseId)
     {
+        var deliveryRun = await deliveryRunAppService.GetByIdAsync(id);
+        if (deliveryRun is null)
+        {
+            NotifyError("Error.DeliveryRunIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var warehouseIsValid = false;
+        foreach (var deliveryItem in deliveryRun.Items)
+        {
+            var deliveryNote = await deliveryNoteAppService.GetByIdAsync(deliveryItem.DeliveryNoteId);
+            if (deliveryNote is null)
+                continue;
+            if (deliveryNote.Items.Any(item => item.WarehouseId == warehouseId))
+            {
+                warehouseIsValid = true;
+                break;
+            }
+        }
+        if (!warehouseIsValid)
+        {
+            NotifyError("Error.WarehouseIsNotFound");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var result = await mediator.Send(new ConfirmDeliveryRunWarehousePickCommand(id, warehouseId));
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");

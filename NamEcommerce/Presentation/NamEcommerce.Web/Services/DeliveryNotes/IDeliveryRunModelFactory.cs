@@ -6,7 +6,7 @@ public interface IDeliveryRunModelFactory
 {
     Task<DeliveryRunListModel> PrepareDeliveryRunListModelAsync(DeliveryRunSearchModel searchModel);
     Task<CreateDeliveryRunModel> PrepareCreateDeliveryRunModelAsync(CreateDeliveryRunModel? oldModel = null);
-    Task<DeliveryRunDetailsModel> PrepareDeliveryRunDetailsModelAsync(Guid id);
+    Task<DeliveryRunDetailsModel?> PrepareDeliveryRunDetailsModelAsync(Guid id);
     Task<DeliveryMobileIndexModel> PrepareDeliveryMobileIndexModelAsync(Guid currentUserId, string currentUserFullName,
         bool showCompleted);
     Task<DeliveryMobileRunModel> PrepareDeliveryMobileRunModelAsync(Guid id, Guid currentUserId, string currentUserFullName);

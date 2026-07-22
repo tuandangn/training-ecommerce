@@ -11,14 +11,14 @@ public sealed partial class OrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> QuickCreate()
     {
-        var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
+        var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync();
         return View(model);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreatePaymentIntent([FromBody] CreateBankTransferPaymentIntentCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.BankTransferIntentCreateFailed") });
 
@@ -28,7 +28,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> GetPaymentIntentStatus(Guid intentId)
     {
-        var result = await _mediator.Send(new GetBankTransferPaymentIntentStatusCommand { IntentId = intentId }).ConfigureAwait(false);
+        var result = await _mediator.Send(new GetBankTransferPaymentIntentStatusCommand { IntentId = intentId });
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.PaymentIntentIsNotFound") });
 
@@ -38,7 +38,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> ConfirmPaymentIntent([FromBody] ManualConfirmBankTransferPaymentIntentCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.BankTransferIntentConfirmFailed") });
 
@@ -49,7 +49,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateCashSale([FromBody] CreateCashQuickSaleCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         return ToQuickSaleJson(result);
     }
 
@@ -57,7 +57,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateBankTransferSale([FromBody] CreateBankTransferQuickSaleCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         return ToQuickSaleJson(result);
     }
 
@@ -65,7 +65,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
     public async Task<IActionResult> CreateUnpaidSale([FromBody] CreateUnpaidQuickSaleCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         return ToQuickSaleJson(result);
     }
 

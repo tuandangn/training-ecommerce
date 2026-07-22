@@ -115,25 +115,25 @@
                     {
                         var productParts = stop.ProductItems
                             .Take(2)
-                            .Select(product => $"<div class=\"bg-light p-2 me-2 mb-2\">{product.ProductName} <span class=\"text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span> <span class=\"text-muted\">(kho {product.WarehouseName})</span></div>")
+                            .Select(product => $"<div class=\"bg-light p-2 me-2 mb-2\">{product.ProductName} <span class=\"text-muted\">x{product.Quantity.DisplayQuantity(product.QuantityDecimalPlaces)} {product.UnitMeasurement}</span> <span class=\"text-muted\">({product.WarehouseName})</span></div>")
                             .ToList();
                         var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join("", productParts);
                         var remainingProductCount = stop.ProductItems.Count - productParts.Count;
                         var totalQuantity = stop.ProductItems.Sum(product => product.Quantity);
+                        var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
 
                         <div class="mobile-stop pb-0">
-                            @if (!isWaitingHandover)
-                            {
-                                var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
-                                var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
-                                <div class="mobile-stop-header">
-                                    <strong>@receiverName</strong>
+                            <div class="mobile-stop-header">
+                                <strong>@receiverName</strong>
+                                @if (!isWaitingHandover)
+                                {
+                                    var shippingPhoneNumber = string.IsNullOrWhiteSpace(stop.ShippingPhoneNumber) ? stop.CustomerPhone : stop.ShippingPhoneNumber;
                                     @if (!string.IsNullOrWhiteSpace(shippingPhoneNumber))
                                     {
                                         <a href="tel:@shippingPhoneNumber" class="mobile-phone-link">@shippingPhoneNumber</a>
                                     }
-                                </div>
-                            }
+                                }
+                            </div>
                             <div class="mobile-stop-address mb-2" style="@(isWaitingHandover ? "font-size:1rem;font-weight:600;" : "")">@stop.ShippingAddress</div>
                             <div class="mobile-stop-goods">
                                 <div>@Html.Raw(productSummary)</div>

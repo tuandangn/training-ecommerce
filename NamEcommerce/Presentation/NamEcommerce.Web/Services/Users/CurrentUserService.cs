@@ -29,4 +29,20 @@ public sealed class CurrentUserService(ICurrentUserAccessor currentUserAccessor,
         var currentUser = await GetCurrentUserInfoAsync();
         return currentUser != null;
     }
+
+    public async Task<bool> IsInRole(string roleName)
+    {
+        var currentUser = await GetCurrentUserInfoAsync();
+        if (currentUser is null)
+            return false;
+        return await userAppService.IsUserInRoleAsync(currentUser!.Id, roleName);
+    }
+
+    public async Task<bool> IsWarehouseManager()
+    {
+        var currentUser = await GetCurrentUserInfoAsync();
+        if (currentUser is null)
+            return false;
+        return await userAppService.IsUserInRoleAsync(currentUser!.Id, SystemUserRoleNames.WarehouseManager);
+    }
 }

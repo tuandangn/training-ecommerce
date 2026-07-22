@@ -20,7 +20,7 @@ public sealed class HomeController : BaseController
     [ServiceFilter(typeof(DefaultPageForRoleFilter))]
     public async Task<IActionResult> Index()
     {
-        var model = await _dashboardModelFactory.PrepareDashboardModelAsync().ConfigureAwait(false);
+        var model = await _dashboardModelFactory.PrepareDashboardModelAsync();
         return View(model);
     }
 

@@ -14,5 +14,15 @@ public static class DeliveryRunStatusExtensions
             DeliveryRunStatus.Closed => "bg-success text-white",
             _ => "bg-secondary text-white"
         };
+
+        public string GetDisplayName() => status switch
+        {
+            DeliveryRunStatus.Planning => "Đang lập",
+            DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
+            DeliveryRunStatus.HandedToDriver => "Đã bàn giao",
+            DeliveryRunStatus.Closed => "Đã đóng",
+            DeliveryRunStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
     }
 }

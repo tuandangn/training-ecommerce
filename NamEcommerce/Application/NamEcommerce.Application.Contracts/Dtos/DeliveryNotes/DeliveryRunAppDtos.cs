@@ -30,6 +30,12 @@ public sealed record DeliveryRunAppDto
     public DateTime? UpdatedOnUtc { get; init; }
     public IList<DeliveryRunItemAppDto> Items { get; init; } = [];
     public IList<DeliveryRunWarehousePickAppDto> WarehousePicks { get; init; } = [];
+
+    public bool CanIssuePaperManifest { get; set; }
+    public bool CanCloseIfDelivered { get; set; }
+    public bool CanCancel { get; set; }
+    public bool CanReviewCashCollected { get; set; }
+    public bool CanReconcileDeliveryRunItems { get; set; }
 }
 
 [Serializable]

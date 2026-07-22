@@ -52,7 +52,8 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             CanReceiveGoods = purchaseOrder.CanReceiveGoods,
             CanChangeDate = purchaseOrder.CanChangeDate,
             CanChangeFees = purchaseOrder.CanChangeFees,
-            CanChangeVendor = purchaseOrder.CanChangeVendor
+            CanChangeVendor = purchaseOrder.CanChangeVendor,
+            CanAllocation = purchaseOrder.CanAllocation
         };
 
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = purchaseOrder.Items.Select(item => item.ProductId).Distinct() }, cancellationToken).ConfigureAwait(false);

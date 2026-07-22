@@ -26,7 +26,10 @@ public sealed record IssuePaperManifestDeliveryRunCommand(Guid Id) : ICommand<Co
 public sealed record AcknowledgeDriverCacheDeliveryRunCommand(Guid Id, string? DeviceId) : ICommand<CommonActionResultModel>;
 
 [Serializable]
-public sealed record HandOverDeliveryRunCommand(Guid Id) : ICommand<CommonActionResultModel>;
+public sealed record HandOverDeliveryRunCommand(Guid Id) : ICommand<CommonActionResultModel>
+{
+    public bool SetProductsPicked { get; set; }
+}
 
 [Serializable]
 public sealed record CloseDeliveryRunCommand(Guid Id) : ICommand<CommonActionResultModel>;

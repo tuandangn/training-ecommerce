@@ -8,17 +8,13 @@ using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.DeliveryNotes;
 
 public sealed class DeliveryRunAppService(
-    IDeliveryRunManager manager,
-    IUserAppService userAppService,
-    ISystemNotificationAppService notificationAppService)
-    : IDeliveryRunAppService
+    IDeliveryRunManager manager, IUserAppService userAppService,
+    ISystemNotificationAppService notificationAppService) : IDeliveryRunAppService
 {
     public async Task<CreateDeliveryRunResultAppDto> CreateAsync(CreateDeliveryRunAppDto dto)
     {
@@ -36,96 +32,103 @@ public sealed class DeliveryRunAppService(
         if (!isDeliveryStaff)
             return new CreateDeliveryRunResultAppDto { Success = false, ErrorMessage = "Error.UserIsNotDeliveryStaff" };
 
-        try
+        var run = await manager.CreateAsync(new CreateDeliveryRunDto
         {
-            var run = await manager.CreateAsync(new CreateDeliveryRunDto
-            {
-                AssignedDeliveryUserId = user.Id,
-                AssignedDeliveryUsername = user.Username,
-                AssignedDeliveryFullName = user.FullName,
-                DeliveryNoteIds = dto.DeliveryNoteIds,
-                Note = dto.Note
-            }).ConfigureAwait(false);
+            AssignedDeliveryUserId = user.Id,
+            AssignedDeliveryUsername = user.Username,
+            AssignedDeliveryFullName = user.FullName,
+            DeliveryNoteIds = dto.DeliveryNoteIds,
+            Note = dto.Note
+        }).ConfigureAwait(false);
 
-            await notificationAppService
-                .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCreated(run.ToAppDto()))
-                .ConfigureAwait(false);
+        await notificationAppService
+            .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCreated(run.ToAppDto()))
+            .ConfigureAwait(false);
 
-            return new CreateDeliveryRunResultAppDto { Success = true, CreatedId = run.Id };
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return new CreateDeliveryRunResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
+        return new CreateDeliveryRunResultAppDto { Success = true, CreatedId = run.Id };
     }
 
-    public Task<CommonActionResultDto> AcknowledgeDriverCacheAsync(Guid id, string? deviceId)
-        => RunActionAsync(() => manager.AcknowledgeDriverCacheAsync(id, deviceId));
+    public async Task<CommonActionResultDto> AcknowledgeDriverCacheAsync(Guid id, string? deviceId)
+    {
+        await manager.AcknowledgeDriverCacheAsync(id, deviceId).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
+    }
 
-    public Task<CommonActionResultDto> IssuePaperManifestAsync(Guid id)
-        => RunActionAsync(() => manager.IssuePaperManifestAsync(id));
+    public async Task<CommonActionResultDto> IssuePaperManifestAsync(Guid id)
+    {
+        await manager.IssuePaperManifestAsync(id).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
+    }
 
-    public Task<CommonActionResultDto> ConfirmWarehousePickAsync(Guid id, Guid warehouseId)
-        => RunActionAsync(() => manager.ConfirmWarehousePickAsync(id, warehouseId));
+    public async Task<CommonActionResultDto> ConfirmWarehousePickAsync(Guid id, Guid warehouseId)
+    {
+        await manager.ConfirmWarehousePickAsync(id, warehouseId).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
+    }
 
     public async Task<CommonActionResultDto> HandOverAsync(Guid id)
     {
-        var result = await RunActionAsync(() => manager.HandOverAsync(id)).ConfigureAwait(false);
-        if (!result.Success)
-            return result;
-
         var run = await manager.GetByIdAsync(id).ConfigureAwait(false);
         if (run is null)
-            return result;
+            return CommonActionResultDto.CreateError("Error.DeliveryRunNotFound");
+
+        await manager.HandOverAsync(id).ConfigureAwait(false);
 
         var appDto = run.ToAppDto();
-        await notificationAppService
-            .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunHandedOver(appDto))
+        await notificationAppService.CreateAsync(DeliverySystemNotificationComposer.DeliveryRunHandedOver(appDto))
             .ConfigureAwait(false);
 
         if (appDto.Items.Sum(item => item.AmountToCollect) > 0 && appDto.CashHandoverConfirmedOnUtc is null)
         {
-            await notificationAppService
-                .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCashHandoverPending(appDto))
+            await notificationAppService.CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCashHandoverPending(appDto))
                 .ConfigureAwait(false);
         }
 
-        return result;
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public Task<CommonActionResultDto> CloseAsync(Guid id)
-        => RunActionAsync(() => manager.CloseAsync(id));
+    public async Task<CommonActionResultDto> CloseAsync(Guid id)
+    {
+        await manager.CloseAsync(id).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
+    }
 
-    public Task<CommonActionResultDto> ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverAppDto dto)
+    public async Task<CommonActionResultDto> ConfirmCashHandoverAsync(ConfirmDeliveryRunCashHandoverAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return Task.FromResult(CommonActionResultDto.CreateError(errorMessage!));
+            return CommonActionResultDto.CreateError(errorMessage!);
 
-        return RunActionAsync(() => manager.ConfirmCashHandoverAsync(new ConfirmDeliveryRunCashHandoverDto
+        await manager.ConfirmCashHandoverAsync(new ConfirmDeliveryRunCashHandoverDto
         {
             DeliveryRunId = dto.DeliveryRunId,
             Amount = dto.Amount,
             Note = dto.Note
-        }));
+        }).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public Task<CommonActionResultDto> UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedAppDto dto)
+    public async Task<CommonActionResultDto> UpdateDeliveredNoteCashCollectedAsync(UpdateDeliveryRunDeliveredNoteCashCollectedAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return Task.FromResult(CommonActionResultDto.CreateError(errorMessage!));
+            return CommonActionResultDto.CreateError(errorMessage!);
 
-        return RunActionAsync(() => manager.UpdateDeliveredNoteCashCollectedAsync(new UpdateDeliveryRunDeliveredNoteCashCollectedDto
+        await manager.UpdateDeliveredNoteCashCollectedAsync(new UpdateDeliveryRunDeliveredNoteCashCollectedDto
         {
             DeliveryRunId = dto.DeliveryRunId,
             DeliveryNoteId = dto.DeliveryNoteId,
             CashCollectedAmount = dto.CashCollectedAmount
-        }));
+        }).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public Task<CommonActionResultDto> CancelAsync(Guid id)
-        => RunActionAsync(() => manager.CancelAsync(id));
+    public async Task<CommonActionResultDto> CancelAsync(Guid id)
+    {
+        await manager.CancelAsync(id).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
+    }
 
     public async Task<DeliveryRunAppDto?> GetByIdAsync(Guid id)
     {
@@ -143,8 +146,7 @@ public sealed class DeliveryRunAppService(
         string? keywords, Guid? assignedDeliveryUserId, int? status)
     {
         var typedStatus = status.HasValue ? (DeliveryRunStatus?)status.Value : null;
-        var paged = await manager
-            .GetListAsync(pageIndex, pageSize, keywords, assignedDeliveryUserId, typedStatus)
+        var paged = await manager.GetListAsync(pageIndex, pageSize, keywords, assignedDeliveryUserId, typedStatus)
             .ConfigureAwait(false);
 
         return PagedDataAppDto.Create(
@@ -152,18 +154,5 @@ public sealed class DeliveryRunAppService(
             paged.PagerInfo.PageIndex,
             paged.PagerInfo.PageSize,
             paged.PagerInfo.TotalCount);
-    }
-
-    private static async Task<CommonActionResultDto> RunActionAsync(Func<Task> action)
-    {
-        try
-        {
-            await action().ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
     }
 }

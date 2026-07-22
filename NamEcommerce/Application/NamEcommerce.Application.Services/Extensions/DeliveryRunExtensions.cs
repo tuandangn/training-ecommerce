@@ -47,7 +47,12 @@ public static class DeliveryRunExtensions
                 WarehouseId = pick.WarehouseId,
                 ConfirmedByFullName = pick.ConfirmedByFullName,
                 ConfirmedOnUtc = pick.ConfirmedOnUtc
-            }).ToList()
+            }).ToList(),
+            CanIssuePaperManifest = dto.CanIssuePaperManifest,
+            CanCancel = dto.CanCancel,
+            CanCloseIfDelivered = dto.CanCloseIfDelivered,
+            CanReviewCashCollected = dto.CanReviewCashCollected,
+            CanReconcileDeliveryRunItems = dto.CanReconcileDeliveryRunItems
         };
 
     public static DeliveryRunListAppDto ToListAppDto(this DeliveryRunDto dto) =>

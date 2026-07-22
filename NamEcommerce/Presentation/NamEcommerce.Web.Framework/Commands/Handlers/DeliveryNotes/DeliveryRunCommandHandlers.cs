@@ -46,11 +46,37 @@ public sealed class AcknowledgeDriverCacheDeliveryRunHandler(IDeliveryRunAppServ
         => DeliveryRunActionResultMapper.Map(await deliveryRunAppService.AcknowledgeDriverCacheAsync(request.Id, request.DeviceId).ConfigureAwait(false));
 }
 
-public sealed class HandOverDeliveryRunHandler(IDeliveryRunAppService deliveryRunAppService)
+public sealed class HandOverDeliveryRunHandler(IDeliveryRunAppService deliveryRunAppService, IDeliveryNoteAppService deliveryNoteAppService)
     : IRequestHandler<HandOverDeliveryRunCommand, CommonActionResultModel>
 {
     public async Task<CommonActionResultModel> Handle(HandOverDeliveryRunCommand request, CancellationToken cancellationToken)
-        => DeliveryRunActionResultMapper.Map(await deliveryRunAppService.HandOverAsync(request.Id).ConfigureAwait(false));
+    {
+        var deliveryRun = await deliveryRunAppService.GetByIdAsync(request.Id).ConfigureAwait(false);
+        if (deliveryRun is null)
+            return new CommonActionResultModel { Success = false, ErrorMessage = "Error.DeliveryRunIsNotFound" };
+
+        if (request.SetProductsPicked)
+        {
+            var warehouseIds = new List<Guid>();
+            foreach (var deliveryItem in deliveryRun.Items)
+            {
+                var deliveryNote = await deliveryNoteAppService.GetByIdAsync(deliveryItem.DeliveryNoteId).ConfigureAwait(false);
+                if (deliveryNote is null)
+                    continue;
+                warehouseIds.AddRange(deliveryNote.Items.Select(item => item.WarehouseId));
+            }
+            foreach (var warehouseId in warehouseIds.Distinct())
+            {
+                var (success, _) = await deliveryRunAppService.ConfirmWarehousePickAsync(request.Id, warehouseId).ConfigureAwait(false);
+                if (success) continue;
+                return new CommonActionResultModel { Success = false, ErrorMessage = "Error.DeliveryRunCannotConfirmPick" };
+            }
+        }
+
+        var result = await deliveryRunAppService.HandOverAsync(request.Id).ConfigureAwait(false);
+
+        return DeliveryRunActionResultMapper.Map(result);
+    }
 }
 
 public sealed class CloseDeliveryRunHandler(IDeliveryRunAppService deliveryRunAppService)

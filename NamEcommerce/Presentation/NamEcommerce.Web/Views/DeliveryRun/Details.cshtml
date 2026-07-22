@@ -1,7 +1,9 @@
 @model DeliveryRunDetailsModel
+@using System.Globalization
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @{
     ViewData["Title"] = "Chi tiết chuyến giao " + Model.Code;
+
     var status = (DeliveryRunStatus)Model.Status;
     var statusTuple = Model.IsDeliveryCompleted
         ? ("success", "bi-check-circle-fill")
@@ -15,37 +17,29 @@
                 DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
                 _ => ("secondary", "bi-question-circle")
             });
-    var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
-        || User.IsInRole(SystemUserRoleNames.WarehouseManager);
-    var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
-        || User.IsInRole(SystemUserRoleNames.Cashier);
-    var driverAccepted = Model.DriverCachedOnUtc.HasValue;
+
+    var driverAccepted = Model.DriverCachedOn.HasValue;
     var offlineReady = driverAccepted || Model.PaperManifestIssued;
+
     var allWarehousesPicked = Model.PickingManifest.Count == 0 || Model.PickingManifest.All(g => g.Confirmed);
-    var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
-    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && driverAccepted && offlineReady && allWarehousesPicked && !Model.IsDeliveryCompleted;
-    var canClose = canManageDeliveryRun
-        && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
-        && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
-    var canCancel = canManageDeliveryRun && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled;
+
+    var canHandOver = status == DeliveryRunStatus.ReadyForHandover
+        && offlineReady && !Model.IsDeliveryCompleted;
+
     var deliveredItems = Model.Items
         .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
         .ToList();
     var missingCashReviewCount = deliveredItems.Count(item => item.AmountToCollect > 0 && !item.CashCollectedAmount.HasValue);
     var expectedCashAmount = deliveredItems.Sum(item => item.CashCollectedAmount ?? 0m);
-    var canReviewCashCollected = canConfirmDeliveryRunCashHandover
-        && !Model.CashHandoverConfirmedOnUtc.HasValue
-        && status != DeliveryRunStatus.Cancelled;
-    var canReconcileDeliveryRunItems = canManageDeliveryRun && status != DeliveryRunStatus.Cancelled;
-    var showItemActions = canReviewCashCollected || canReconcileDeliveryRunItems;
-    var deliveryProgressPercent = Model.Items.Count == 0
-        ? 0
+
+    var deliveryProgressPercent = Model.Items.Count == 0 ? 0
         : (int)Math.Round((decimal)Model.DeliveredItemCount * 100 / Model.Items.Count);
-    var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
+
+    var canConfirmCashHandover = Model.CanConfirmDeliveryRunCashHandover
         && expectedCashAmount > 0
         && missingCashReviewCount == 0
         && (Model.IsDeliveryCompleted || status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled)
-        && !Model.CashHandoverConfirmedOnUtc.HasValue;
+        && !Model.CashHandoverConfirmedOn.HasValue;
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
@@ -65,52 +59,58 @@
 <div class="content-card">
     <div class="content-card-header mb-3">
         <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
-            @if (Model.PaperManifestIssued && canManageDeliveryRun)
+            @if (Model.CanManageDeliveryRun)
             {
-                <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-printer me-1"></i>In phiếu giấy
-                </a>
-            }
-            else if (canIssuePaperManifest)
-            {
-                <form asp-action="IssuePaperManifest" method="post" target="_blank">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                if (Model.PaperManifestIssued)
+                {
+                    <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-printer me-1"></i>In phiếu giấy
-                    </button>
-                </form>
-            }
-            @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.IsDeliveryCompleted)
-            {
-                <form asp-action="HandOver" method="post">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)"
-                            title="@(!driverAccepted ? "Cần người giao nhận chuyến trước" : !allWarehousesPicked ? "Cần xác nhận lấy đủ hàng ở tất cả kho trước khi bàn giao" : null)">
-                        <i class="bi bi-truck me-1"></i>Bàn giao
-                    </button>
-                </form>
-            }
-            @if (canClose)
-            {
-                <form asp-action="Close" method="post">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bi bi-check-circle me-1"></i>Đóng chuyến
-                    </button>
-                </form>
-            }
-            @if (canCancel)
-            {
-                <form asp-action="Cancel" method="post" onsubmit="return confirm('Hủy chuyến giao này?');">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="bi bi-x-circle me-1"></i>Hủy chuyến
-                    </button>
-                </form>
+                    </a>
+                }
+                else if (Model.CanIssuePaperManifest)
+                {
+                    <form asp-action="IssuePaperManifest" method="post" target="_blank" id="issuePaperManifestForm">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-printer me-1"></i>In phiếu giấy
+                        </button>
+                    </form>
+                }
+                if (status == DeliveryRunStatus.ReadyForHandover && !Model.IsDeliveryCompleted)
+                {
+                    <form asp-action="HandOver" method="post" id="handOverForm">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        @if (!allWarehousesPicked)
+                        {
+                            <input type="hidden" name="setProductsPicked" value="true" />
+                        }
+                        <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)">
+                            <i class="bi bi-truck me-1"></i>Bàn giao
+                        </button>
+                    </form>
+                }
+                if (Model.CanCloseIfDelivered && Model.IsDeliveryCompleted)
+                {
+                    <form asp-action="Close" method="post" id="closeForm">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-check-circle me-1"></i>Đóng chuyến
+                        </button>
+                    </form>
+                }
+                if (Model.CanCancel)
+                {
+                    <form asp-action="Cancel" method="post" id="cancelForm">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-x-circle me-1"></i>Hủy chuyến
+                        </button>
+                    </form>
+                }
             }
         </div>
     </div>
-    @if (status == DeliveryRunStatus.ReadyForHandover && !driverAccepted && !Model.IsDeliveryCompleted)
+    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady && !Model.IsDeliveryCompleted)
     {
         <div class="alert alert-warning d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle fs-5"></i>
@@ -130,12 +130,12 @@
                         <span class="text-muted">Tài khoản</span>
                         <span class="fw-bold text-muted">@Model.AssignedDeliveryUsername</span>
                     </div>
-                    @if (Model.HandedOverOnUtc.HasValue)
+                    @if (Model.HandedOverOn.HasValue)
                     {
                         <hr />
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">Đã bàn giao</span>
-                            <span class="fw-bold text-muted">@Model.HandedOverOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            <span class="fw-bold text-muted">@Model.HandedOverOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                         </div>
                     }
                 </div>
@@ -148,10 +148,10 @@
                         <span class="fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Thiếu khai báo</span>
+                        <span class="text-muted">Phiếu ghi nợ</span>
                         <span class="fw-bold @(missingCashReviewCount > 0 ? "text-warning" : "text-muted")">@missingCashReviewCount phiếu</span>
                     </div>
-                    @if (Model.CashHandoverConfirmedOnUtc.HasValue)
+                    @if (Model.CashHandoverConfirmedOn.HasValue)
                     {
                         <hr />
                         <div class="d-flex justify-content-between mb-2">
@@ -164,7 +164,7 @@
                             </span>
                             <span class="fw-bold text-muted">
                                 @((Model.CashHandoverAmount ?? 0m).DisplayCurrencyWithSymbol())
-                                <span class="small text-muted fw-normal d-block">@Model.CashHandoverConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                <span class="small text-muted fw-normal d-block">@Model.CashHandoverConfirmedOn.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
                             </span>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(Model.CashHandoverNote))
@@ -175,15 +175,18 @@
                     else if (canConfirmCashHandover)
                     {
                         <hr />
-                        <form asp-action="ConfirmCashHandover" method="post">
+                        <form asp-action="ConfirmCashHandover" method="post" id="confirmCashHandoverForm">
                             <input type="hidden" name="id" value="@Model.Id" />
                             <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
-                            <div class="d-flex align-items-center gap-2">
-                                <input name="amount" class="form-control text-end" data-decimal="currency" value="@expectedCashAmount.DisplayCurrency()" placeholder="Nhập số tiền nhận"
-                                       data-val="true" data-val-required="Vui lòng nhập số tiền nhận"
-                                       data-val-range="Số tiền nhận phải lớn hơn 0" data-val-range-min="0.001"
-                                       data-val-number="Số tiền nhận phải là số" />
-                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền" />
+                            <div class="d-flex align-items-start gap-2">
+                                <div>
+                                    <input name="amount" class="form-control text-end" data-decimal="currency" value="@expectedCashAmount.DisplayCurrency()" placeholder="Nhập số tiền nhận"
+                                           data-val="true" data-val-required="Vui lòng nhập số tiền nhận"
+                                           data-val-range="Số tiền nhận phải lớn hơn 0" data-val-range-min="0.001"
+                                           data-val-number="Số tiền nhận phải là số" />
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="amount" data-valmsg-replace="true"></span>
+                                </div>
+                                <input name="note" class="form-control ui-w-100" placeholder="Ghi chú" />
                                 <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                                     <i class="bi bi-cash-coin me-1"></i>Xác nhận
                                 </button>
@@ -210,7 +213,7 @@
                     <h5 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Trạng thái</h5>
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <span class="status-badge @statusTuple.Item1">
-                            <i class="bi @statusTuple.Item2 me-1"></i>@Model.StatusName
+                            <i class="bi @statusTuple.Item2 me-1"></i>@Model.DeliveryStatusInfo
                         </span>
                         <span class="small text-muted">@Model.DeliveredItemCount/@Model.Items.Count phiếu đã giao</span>
                     </div>
@@ -219,14 +222,14 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Người giao đã xem</span>
-                        <span class="fw-bold @(Model.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted") text-end">
-                            @if (Model.DriverCachedOnUtc.HasValue)
+                        <span class="fw-bold @(Model.DriverCachedOn.HasValue ? "text-success" : "text-muted") text-end">
+                            @if (Model.DriverCachedOn.HasValue)
                             {
-                                <span class="text-muted fw-bold">@Model.DriverCachedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                <span class="text-muted fw-bold">@Model.DriverCachedOn.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
                             }
                             else
                             {
-                                @(Model.DriverCachedOnUtc.HasValue ? "Có" : "Chưa")
+                                @(Model.DriverCachedOn.HasValue ? "Có" : "Chưa")
                             }
                         </span>
                     </div>
@@ -277,25 +280,32 @@
                                         </div>
                                     }
                                 </div>
-                                @if (canManageDeliveryRun && !group.Confirmed)
+                                @if (Model.CanManageDeliveryRun && !group.Confirmed)
                                 {
                                     <form asp-action="ConfirmWarehousePick" method="post">
                                         <input type="hidden" name="id" value="@Model.Id" />
                                         <input type="hidden" name="warehouseId" value="@group.WarehouseId" />
-                                        <button type="submit" class="btn btn-sm btn-outline-success" disabled="@(!driverAccepted)"
-                                                title="@(!driverAccepted ? "Cần người giao nhận chuyến trước khi kho lấy hàng" : null)">
-                                            <i class="bi bi-check2 me-1"></i>Đã lấy đủ
+                                        <button type="submit" class="btn btn-sm btn-outline-success" disabled="@(!offlineReady)">
+                                            <i class="bi bi-check2 me-1"></i>Xác nhận đủ hàng
                                         </button>
                                     </form>
                                 }
                             </div>
                             <table class="table table-sm mb-0">
                                 <tbody>
-                                    @foreach (var product in group.Products)
+                                    @for (var i = 0; i < group.Products.Count; i++)
                                     {
+                                        var product = group.Products[i];
                                         <tr>
-                                            <td class="ps-0">@product.ProductName</td>
-                                            <td class="text-end text-nowrap fw-medium">@product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces) @product.UnitMeasurement</td>
+                                            <td class="ps-0 @(i == group.Products.Count - 1 ? "border-bottom-0" : "")">
+                                                @product.ProductName
+                                            </td>
+                                            <td class="text-end text-nowrap fw-medium @(i == group.Products.Count - 1 ? "border-bottom-0" : "")">
+                                                @product.TotalQuantity.DisplayQuantity(product.QuantityDecimalPlaces)
+                                                <span class="text-muted">
+                                                    @product.UnitMeasurement
+                                                </span>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -309,7 +319,7 @@
     <div class="content-card-header">
         <h5>Phiếu giao hàng</h5>
     </div>
-    <div class="content-card-body-flush pb-3">
+    <div class="content-card-body-flush">
         <div class="table-responsive">
             <table class="table data-table align-middle">
                 <thead>
@@ -319,10 +329,11 @@
                         <th>Khách hàng</th>
                         <th>Địa chỉ giao</th>
                         <th class="text-end">Tiền COD</th>
-                        <th class="text-end">Shipper thu</th>
-                        @if (showItemActions)
+                        <th class="text-end pe-3">Shipper thu</th>
+                        @if ((Model.CanReconcileDeliveryRunItems && Model.Items.Any(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation))
+                            || Model.CanConfirmDeliveryRunCashHandover && Model.CanReviewCashCollected && Model.Items.Any(item => item.DeliveryNoteStatus == (int) DeliveryNoteStatus.Delivered))
                         {
-                            <th class="text-end">Cập nhật</th>
+                            <th class="text-end pe-3">Cập nhật</th>
                         }
                     </tr>
                 </thead>
@@ -346,7 +357,7 @@
                             </td>
                             <td>@item.ShippingAddress</td>
                             <td class="text-end fw-medium text-nowrap">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
-                            <td class="text-end fw-medium">
+                            <td class="text-end fw-medium pe-3">
                                 @if (!isDelivered && item.SettlementApproval == 1)
                                 {
                                     <span class="status-badge warning small"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt số tiền thu</span>
@@ -372,23 +383,26 @@
                                     @(0m.DisplayCurrencyWithSymbol())
                                 }
                             </td>
-                            @if (showItemActions)
+                            @if ((Model.CanReconcileDeliveryRunItems && Model.Items.Any(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation))
+                                || (Model.CanConfirmDeliveryRunCashHandover && Model.CanReviewCashCollected && isDelivered))
                             {
-                                <td class="text-end">
-                                    @if (canReconcileDeliveryRunItems && item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
+                                <td class="text-end pe-3">
+                                    @if (Model.CanReconcileDeliveryRunItems && item.DeliveryNoteStatus == (int)DeliveryNoteStatus.PendingConfirmation)
                                     {
-                                        <form asp-action="ReconcileDeliveryNote" method="post" class="">
+                                        <form asp-action="ReconcileDeliveryNote" method="post" class="reconcileForm @(item.AmountToCollect > 0 ? "hasAmountToCollect" : "")">
                                             <input type="hidden" name="id" value="@Model.Id" />
                                             <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
-                                            <div class="d-flex justify-content-end gap-2">
+                                            <div class="d-flex justify-content-end gap-1">
                                                 @if (item.AmountToCollect > 0)
                                                 {
-                                                    <input name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140"
-                                                           placeholder="Nhập số tiền đã thu"
-                                                           value="@((item.CashCollectedAmount ?? item.AmountToCollect).DisplayCurrency())"
-                                                           data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập số tiền đã thu"
-                                                           data-val-range="Số tiền thu phải lớn hơn 0" data-val-range-min="0.001" data-val-number="Số tiền thu phải là số" />
-
+                                                    <div>
+                                                        <input name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140"
+                                                               placeholder="Nhập số tiền đã thu"
+                                                               value="@((item.CashCollectedAmount ?? item.AmountToCollect).DisplayCurrency())"
+                                                               data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập số tiền đã thu"
+                                                               data-val-range="Số tiền thu phải lớn hơn 0" data-val-range-min="0.001" data-val-number="Số tiền thu phải là số" />
+                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="cashCollectedAmount" data-valmsg-replace="true"></span>
+                                                    </div>
                                                     <button type="submit" class="btn btn-sm btn-primary text-nowrap">
                                                         <i class="bi bi-cash-coin me-1"></i>Xác nhận đã thu
                                                     </button>
@@ -404,14 +418,22 @@
                                             <span class="small text-danger field-validation-valid d-block text-start" data-valmsg-for="cashCollectedAmount" data-valmsg-replace="true"></span>
                                         </form>
                                     }
-                                    else if (canReviewCashCollected && isDelivered)
+                                    else if (Model.CanConfirmDeliveryRunCashHandover && Model.CanReviewCashCollected && isDelivered)
                                     {
-                                        <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-2">
+                                        <form asp-action="UpdateDeliveredNoteCashCollected" method="post" class="d-flex justify-content-end gap-1 updateAmounCashForm">
                                             <input type="hidden" name="id" value="@Model.Id" />
                                             <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
-                                            <input type="number" name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140" min="0" max="@item.AmountToCollect" step="1000" value="@(item.CashCollectedAmount ?? 0m)" />
+                                            <div>
+                                                <input name="cashCollectedAmount" class="form-control form-control-sm text-end ui-w-140"
+                                                       value="" placeholder="Nhập số tiền đã thu"
+                                                       data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập số tiền đã thu"
+                                                       data-val-range="Số tiền thu phải lớn hơn 0 và nhỏ hơn @item.AmountToCollect.DisplayCurrency()"
+                                                       data-val-range-min="0.001" data-val-range-max="@item.AmountToCollect.ToString(CultureInfo.InvariantCulture)"
+                                                       data-val-number="Số tiền thu phải là số" />
+                                                <span class="small text-danger field-validation-valid" data-valmsg-for="cashCollectedAmount" data-valmsg-replace="true"></span>
+                                            </div>
                                             <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-save me-1"></i>Lưu
+                                                <i class="bi bi-save me-1"></i>Thay đổi
                                             </button>
                                         </form>
                                     }
@@ -427,4 +449,131 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script type="module" defer>
+        import { confirm } from '/modules/modals.js';
+
+        const reconcileForms = document.querySelectorAll('.reconcileForm');
+        if (reconcileForms) {
+            Array.from(reconcileForms).forEach(form => {
+                const submitBtn = form.querySelector('[type=submit]');
+                if(!submitBtn) return;
+                submitBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+
+                    if (!$(form).valid()) 
+                        return;
+
+                    let confirmed;
+                    if (form.classList.contains('hasAmountToCollect')) {
+                        const amountToCollectEl = form.querySelector('[name=cashCollectedAmount]');
+                        confirmed = await confirm('Đã thu tiền', `Xác nhận đã thu ${amountToCollectEl?.value}đ`);
+                    } else {
+                        confirmed = await confirm('Đã giao hàng', 'Xác nhận đã giao hàng cho khách');
+                    }
+                    if(!confirmed)
+                        return;
+
+                    showPageLoading();
+                    form.submit();
+                });
+            });
+        }
+
+        const updateAmounCashForms = document.querySelectorAll('.updateAmounCashForm');
+        if (updateAmounCashForms) {
+            Array.from(updateAmounCashForms).forEach(form => {
+                const submitBtn = form.querySelector('[type=submit]');
+                if(!submitBtn) return;
+                submitBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+
+                    if (!$(form).valid()) 
+                        return;
+
+                    const amountToCollectEl = form.querySelector('[name=cashCollectedAmount]');
+                    const confirmed = await confirm('Thay đổi số tiền đã thu', `Xác nhận thay đổi số tiền đã thu thành ${amountToCollectEl?.value}đ`);
+                    if(!confirmed)
+                        return;
+
+                    showPageLoading();
+                    form.submit();
+                });
+            });
+        }
+
+        const confirmCashHandoverForm = document.getElementById('confirmCashHandoverForm');
+        if (confirmCashHandoverForm) {
+            const submitBtn = confirmCashHandoverForm.querySelector('[type=submit]');
+            if(submitBtn){
+                submitBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+
+                    if (!$(confirmCashHandoverForm).valid())
+                        return;
+
+                    const amountEl = confirmCashHandoverForm.querySelector('[name=amount]');
+                    const confirmed = await confirm('Đã nhận tiền', `Xác nhận đã nhận ${amountEl?.value}đ`);
+                    if (!confirmed)
+                        return;
+
+                    showPageLoading();
+                    confirmCashHandoverForm.submit();
+                });
+            }
+        }
+
+        const closeForm = document.getElementById('closeForm');
+        if (closeForm) {
+            closeForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const confirmed = await confirm('Đóng chuyến giao', 'Xác nhận đóng chuyến giao này?');
+                if (!confirmed) return;
+                showPageLoading();
+                closeForm.submit();
+            });
+        }
+
+
+        const issuePaperManifestForm = document.getElementById('issuePaperManifestForm');
+        if (issuePaperManifestForm) {
+            issuePaperManifestForm.addEventListener('submit', async (e) => {
+                showPageLoading();
+                setTimeout(() => location.reload(), 700);
+            });
+        }
+
+        const cancelForm = document.getElementById('closeForm');
+        if (cancelForm) {
+            cancelForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const confirmed = await confirm('Hủy chuyến giao', 'Xác nhận hủy chuyến giao này?');
+                if (!confirmed) return;
+                showPageLoading();
+                cancelForm.submit();
+            });
+        }
+
+        const handOverForm = document.getElementById('handOverForm');
+        if (handOverForm) {
+            handOverForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                let confirmed;
+                @if (allWarehousesPicked)
+                    {
+                        <text>
+                                confirmed = true;
+                        </text>
+                }
+                    else
+                    {
+                        <text>
+                                confirmed = await confirm('Bàn giao cho người giao hàng', 'Xác nhận hàng hóa đã được lấy đầy đủ và tiến hành bàn giao cho người giao hàng?');
+                        </text>
+                }
+                                                                        if (!confirmed) return;
+                showPageLoading();
+                handOverForm.submit();
+            });
+        }
+    </script>
 }

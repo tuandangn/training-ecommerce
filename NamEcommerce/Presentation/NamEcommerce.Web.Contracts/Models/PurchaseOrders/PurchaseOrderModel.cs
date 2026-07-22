@@ -35,6 +35,7 @@ public sealed class PurchaseOrderModel
     public bool CanChangeDate { get; set; }
     public bool CanChangeFees { get; set; }
     public bool CanChangeVendor { get; set; }
+    public bool CanAllocation { get; set; }
 
     [Serializable]
     public sealed record ItemModel(Guid Id)

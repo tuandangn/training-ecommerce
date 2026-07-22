@@ -45,6 +45,7 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
     public bool CanChangeDate { get; init; }
     public bool CanChangeFees { get; init; }
     public bool CanChangeVendor { get; init; }
+    public bool CanAllocation { get; init; }
 }
 
 [Serializable]

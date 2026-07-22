@@ -31,7 +31,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
             ExpenseType = expenseType,
             SortBy = sortBy,
             SortDesc = sortDesc
-        }).ConfigureAwait(false);
+        });
 
         return View(model);
     }
@@ -62,7 +62,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
             Amount = dto.Amount,
             ExpenseType = dto.ExpenseType,
             IncurredDate = dto.IncurredDate
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success) return RedirectToAction(nameof(List));
 
@@ -74,7 +74,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var model = await mediator.Send(new GetExpenseByIdQuery(id)).ConfigureAwait(false);
+        var model = await mediator.Send(new GetExpenseByIdQuery(id));
         if (model is null) return NotFound();
 
         ViewData["IsSystemGenerated"] = model.IsSystemGenerated;
@@ -111,7 +111,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
             Amount = dto.Amount,
             ExpenseType = dto.ExpenseType,
             IncurredDate = dto.IncurredDate
-        }).ConfigureAwait(false);
+        });
 
         if (result.Success) return RedirectToAction(nameof(List));
 
@@ -124,7 +124,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await mediator.Send(new DeleteExpenseCommand(id)).ConfigureAwait(false);
+        await mediator.Send(new DeleteExpenseCommand(id));
         return RedirectToAction(nameof(List));
     }
 
@@ -136,7 +136,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
         {
             Year = year ?? now.Year,
             Month = month ?? now.Month
-        }).ConfigureAwait(false);
+        });
 
         return View(model);
     }
@@ -146,7 +146,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> UpsertBudget(UpsertExpenseBudgetCommand command)
     {
-        var result = await mediator.Send(command).ConfigureAwait(false);
+        var result = await mediator.Send(command);
         if (result.Success)
             return RedirectToAction(nameof(Budgets), new { year = command.Year, month = command.Month });
 

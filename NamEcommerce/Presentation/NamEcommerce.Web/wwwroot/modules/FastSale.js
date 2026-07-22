@@ -567,6 +567,7 @@ class FastSale {
         if (this.fulfillmentMode !== 'deliverNow') {
             return '';
         }
+        console.log(item);
         const warehouses = item.availableWarehouses || [];
         const options = ['<option value="">Chọn kho</option>'];
         for (const warehouse of warehouses) {

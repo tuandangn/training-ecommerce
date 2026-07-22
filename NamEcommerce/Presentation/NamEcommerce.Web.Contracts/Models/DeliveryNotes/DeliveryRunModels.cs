@@ -81,36 +81,57 @@ public sealed record DeliveryRunCandidateDeliveryNoteModel
     public DateTime CreatedOnUtc { get; init; }
 }
 
+[Serializable]
 public sealed class DeliveryRunDetailsModel
 {
-    public required Guid Id { get; init; }
-    public required string Code { get; init; }
-    public required Guid AssignedDeliveryUserId { get; init; }
-    public required string AssignedDeliveryUsername { get; init; }
-    public required string AssignedDeliveryFullName { get; init; }
-    public required int Status { get; init; }
-    public required string StatusName { get; init; }
-    public int DeliveredItemCount { get; init; }
+    public Guid Id { get; init; }
+    public string Code { get; init; } = string.Empty;
+
+    public int Status { get; init; }
+    public string DeliveryStatusInfo { get; init; } = string.Empty;
+
     public bool IsDeliveryCompleted { get; init; }
+
+    public IList<DeliveryRunItemModel> Items { get; init; } = [];
+    public IList<DeliveryRunWarehousePickGroupModel> PickingManifest { get; init; } = [];
+
+    public Guid AssignedDeliveryUserId { get; init; }
+    public string AssignedDeliveryUsername { get; init; } = string.Empty;
+    public string AssignedDeliveryFullName { get; init; } = string.Empty;
+
+    public int DeliveredItemCount { get; init; }
+
     public Guid? PreparedByUserId { get; init; }
-    public DateTime? PreparedOnUtc { get; init; }
+    public DateTime? PreparedOn { get; init; }
+
     public Guid? HandedOverByUserId { get; init; }
-    public DateTime? HandedOverOnUtc { get; init; }
-    public DateTime? DriverCachedOnUtc { get; init; }
+    public DateTime? HandedOverOn { get; init; }
+
+    public DateTime? DriverCachedOn { get; init; }
     public string? DriverCacheDeviceId { get; init; }
+
     public bool PaperManifestIssued { get; init; }
     public DateTime? PaperManifestIssuedOnUtc { get; init; }
+
     public Guid? CashHandoverConfirmedByUserId { get; init; }
     public string? CashHandoverConfirmedByUsername { get; init; }
     public string? CashHandoverConfirmedByFullName { get; init; }
-    public DateTime? CashHandoverConfirmedOnUtc { get; init; }
+    public DateTime? CashHandoverConfirmedOn { get; init; }
     public decimal? CashHandoverAmount { get; init; }
     public string? CashHandoverNote { get; init; }
+
     public string? Note { get; init; }
-    public required DateTime CreatedOnUtc { get; init; }
-    public DateTime? UpdatedOnUtc { get; init; }
-    public IList<DeliveryRunItemModel> Items { get; init; } = [];
-    public IList<DeliveryRunWarehousePickGroupModel> PickingManifest { get; init; } = [];
+
+    public DateTime CreatedOn { get; init; }
+    public DateTime? UpdatedOn { get; init; }
+
+    public bool CanManageDeliveryRun { get; set; }
+    public bool CanConfirmDeliveryRunCashHandover { get; set; }
+    public bool CanIssuePaperManifest { get; set; }
+    public bool CanCloseIfDelivered { get; set; }
+    public bool CanCancel { get; set; }
+    public bool CanReviewCashCollected { get; set; }
+    public bool CanReconcileDeliveryRunItems { get; set; }
 }
 
 public sealed record DeliveryRunWarehousePickGroupModel

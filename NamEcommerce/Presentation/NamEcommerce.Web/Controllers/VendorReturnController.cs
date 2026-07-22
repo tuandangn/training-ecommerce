@@ -157,7 +157,7 @@ public sealed class VendorReturnController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
-        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery());
 
         return View(model);
     }

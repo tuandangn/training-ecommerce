@@ -407,6 +407,8 @@ public sealed class CustomerDebtManager(
 
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
         => Task.FromResult(paymentReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.Amount));
+    public Task<decimal> GetTotalDebtByOrderAsync(Guid orderId)
+        => Task.FromResult(debtReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.TotalAmount));
 
     public Task<decimal> GetTotalPaidByDeliveryNoteAsync(Guid deliveryNoteId)
         => Task.FromResult(paymentReader.DataSource.Where(p => p.DeliveryNoteId == deliveryNoteId).Sum(p => p.Amount));

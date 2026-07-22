@@ -10,6 +10,8 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
@@ -20,7 +22,7 @@ public sealed class DeliveryRunModelFactory(
     IProductAppService productAppService,
     IUnitMeasurementAppService unitMeasurementAppService,
     IWarehouseAppService warehouseAppService,
-    AppConfig appConfig) : IDeliveryRunModelFactory
+    AppConfig appConfig, ICurrentUserService currentUserService) : IDeliveryRunModelFactory
 {
     public async Task<DeliveryRunListModel> PrepareDeliveryRunListModelAsync(DeliveryRunSearchModel searchModel)
     {
@@ -58,31 +60,79 @@ public sealed class DeliveryRunModelFactory(
         return model;
     }
 
-    public async Task<DeliveryRunDetailsModel> PrepareDeliveryRunDetailsModelAsync(Guid id)
+    public async Task<DeliveryRunDetailsModel?> PrepareDeliveryRunDetailsModelAsync(Guid id)
     {
-        var run = await deliveryRunAppService.GetByIdAsync(id).ConfigureAwait(false)
-                  ?? throw new ArgumentException("Delivery run not found");
-        var currentNotes = new Dictionary<Guid, DeliveryNoteAppDto>();
-        foreach (var item in run.Items)
+        var deliveryRun = await deliveryRunAppService.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryRun is null)
+            return null;
+
+        var currentDeliveryNotes = new Dictionary<Guid, DeliveryNoteAppDto>();
+        foreach (var item in deliveryRun.Items)
         {
-            var note = await deliveryNoteAppService.GetByIdAsync(item.DeliveryNoteId).ConfigureAwait(false);
-            if (note is not null)
-                currentNotes[item.DeliveryNoteId] = note;
+            var deliveryNote = await deliveryNoteAppService.GetByIdAsync(item.DeliveryNoteId).ConfigureAwait(false);
+            if (deliveryNote is not null)
+                currentDeliveryNotes[item.DeliveryNoteId] = deliveryNote;
         }
 
-        var productIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.ProductId)).Distinct().ToList();
+        var productIds = currentDeliveryNotes.SelectMany(note => note.Value.Items.Select(item => item.ProductId)).Distinct().ToList();
         var products = await productAppService.GetProductsByIdsAsync(productIds).ConfigureAwait(false);
 
         var unitMeasurementIds = products.Select(product => product.UnitMeasurementId).OfType<Guid>().Distinct().ToList();
         var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
 
-        var warehouseIds = currentNotes.SelectMany(note => note.Value.Items.Select(item => item.WarehouseId)).OfType<Guid>().Distinct().ToList();
+        var warehouseIds = currentDeliveryNotes.SelectMany(note => note.Value.Items.Select(item => item.WarehouseId)).OfType<Guid>().Distinct().ToList();
         var warehouses = (await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false))
             .Where(warehouse => warehouseIds.Contains(warehouse.Id)).ToList();
 
-        var itemModels = run.Items.Select(item =>
+        var itemModels = deliveryRun.Items.Select(item => PrepareDeliveryRunItemModel(item)).ToList();
+        var progress = GetProgressInfo((DeliveryRunStatus)deliveryRun.Status, itemModels);
+
+        return new DeliveryRunDetailsModel
         {
-            currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+            Id = deliveryRun.Id,
+            Code = deliveryRun.Code,
+            AssignedDeliveryUserId = deliveryRun.AssignedDeliveryUserId,
+            AssignedDeliveryUsername = deliveryRun.AssignedDeliveryUsername,
+            AssignedDeliveryFullName = deliveryRun.AssignedDeliveryFullName,
+            Status = deliveryRun.Status,
+            DeliveryStatusInfo = progress.StatusName,
+            DeliveredItemCount = progress.DeliveredItemCount,
+            IsDeliveryCompleted = progress.IsCompleted,
+            PreparedByUserId = deliveryRun.PreparedByUserId,
+            PreparedOn = DateTimeHelper.ToLocalTime(deliveryRun.PreparedOnUtc),
+            HandedOverByUserId = deliveryRun.HandedOverByUserId,
+            HandedOverOn = DateTimeHelper.ToLocalTime(deliveryRun.HandedOverOnUtc),
+            DriverCachedOn = DateTimeHelper.ToLocalTime(deliveryRun.DriverCachedOnUtc),
+            DriverCacheDeviceId = deliveryRun.DriverCacheDeviceId,
+            PaperManifestIssued = deliveryRun.PaperManifestIssued,
+            PaperManifestIssuedOnUtc = deliveryRun.PaperManifestIssuedOnUtc,
+            CashHandoverConfirmedByUserId = deliveryRun.CashHandoverConfirmedByUserId,
+            CashHandoverConfirmedByUsername = deliveryRun.CashHandoverConfirmedByUsername,
+            CashHandoverConfirmedByFullName = deliveryRun.CashHandoverConfirmedByFullName,
+            CashHandoverConfirmedOn = DateTimeHelper.ToLocalTime(deliveryRun.CashHandoverConfirmedOnUtc),
+            CashHandoverAmount = deliveryRun.CashHandoverAmount,
+            CashHandoverNote = deliveryRun.CashHandoverNote,
+            Note = deliveryRun.Note,
+            CreatedOn = DateTimeHelper.ToLocalTime(deliveryRun.CreatedOnUtc),
+            UpdatedOn = DateTimeHelper.ToLocalTime(deliveryRun.UpdatedOnUtc),
+            Items = itemModels,
+            PickingManifest = BuildPickingManifest(deliveryRun.WarehousePicks, currentDeliveryNotes.Values.ToList(), products, unitMeasurements, warehouses),
+            CanManageDeliveryRun = await currentUserService.IsAdminAsync().ConfigureAwait(false) ||
+                await currentUserService.IsWarehouseManager().ConfigureAwait(false),
+            CanConfirmDeliveryRunCashHandover = await currentUserService.IsAdminAsync().ConfigureAwait(false) ||
+                await currentUserService.IsInRole(SystemUserRoleNames.Cashier).ConfigureAwait(false),
+            CanIssuePaperManifest = deliveryRun.CanIssuePaperManifest,
+            CanCancel= deliveryRun.CanCancel,
+            CanCloseIfDelivered = deliveryRun.CanCloseIfDelivered,
+            CanReviewCashCollected = deliveryRun.CanReviewCashCollected,
+            CanReconcileDeliveryRunItems = deliveryRun.CanReconcileDeliveryRunItems
+        };
+
+        #region Local methods
+
+        DeliveryRunItemModel PrepareDeliveryRunItemModel(DeliveryRunItemAppDto item)
+        {
+            currentDeliveryNotes.TryGetValue(item.DeliveryNoteId, out var note);
             var productItems = note?.Items.Select(noteItem =>
             {
                 var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
@@ -158,40 +208,9 @@ public sealed class DeliveryRunModelFactory(
                 SettlementItems = settlementItems,
                 SettlementProductLines = BuildSettlementProductLines(settlementItems)
             };
-        }).ToList();
-        var progress = GetProgressInfo((DeliveryRunStatus)run.Status, itemModels);
+        }
 
-        return new DeliveryRunDetailsModel
-        {
-            Id = run.Id,
-            Code = run.Code,
-            AssignedDeliveryUserId = run.AssignedDeliveryUserId,
-            AssignedDeliveryUsername = run.AssignedDeliveryUsername,
-            AssignedDeliveryFullName = run.AssignedDeliveryFullName,
-            Status = run.Status,
-            StatusName = progress.StatusName,
-            DeliveredItemCount = progress.DeliveredItemCount,
-            IsDeliveryCompleted = progress.IsCompleted,
-            PreparedByUserId = run.PreparedByUserId,
-            PreparedOnUtc = run.PreparedOnUtc,
-            HandedOverByUserId = run.HandedOverByUserId,
-            HandedOverOnUtc = run.HandedOverOnUtc,
-            DriverCachedOnUtc = run.DriverCachedOnUtc,
-            DriverCacheDeviceId = run.DriverCacheDeviceId,
-            PaperManifestIssued = run.PaperManifestIssued,
-            PaperManifestIssuedOnUtc = run.PaperManifestIssuedOnUtc,
-            CashHandoverConfirmedByUserId = run.CashHandoverConfirmedByUserId,
-            CashHandoverConfirmedByUsername = run.CashHandoverConfirmedByUsername,
-            CashHandoverConfirmedByFullName = run.CashHandoverConfirmedByFullName,
-            CashHandoverConfirmedOnUtc = run.CashHandoverConfirmedOnUtc,
-            CashHandoverAmount = run.CashHandoverAmount,
-            CashHandoverNote = run.CashHandoverNote,
-            Note = run.Note,
-            CreatedOnUtc = run.CreatedOnUtc,
-            UpdatedOnUtc = run.UpdatedOnUtc,
-            Items = itemModels,
-            PickingManifest = BuildPickingManifest(run.WarehousePicks, currentNotes.Values.ToList(), products, unitMeasurements, warehouses)
-        };
+        #endregion
     }
 
     public async Task<DeliveryMobileIndexModel> PrepareDeliveryMobileIndexModelAsync(Guid currentUserId, string currentUserFullName,
@@ -312,7 +331,7 @@ public sealed class DeliveryRunModelFactory(
         var itemList = items.ToList();
         var summary = string.Join(", ", itemList
             .Take(2)
-            .Select(item => $"{item.ProductName} x {item.Quantity:#,##0.##}"));
+            .Select(item => $"{item.ProductName} x {item.Quantity.DisplayQuantity()}"));
         if (itemList.Count <= 2)
             return summary;
 
@@ -452,7 +471,7 @@ public sealed class DeliveryRunModelFactory(
                             UnitMeasurement = unitMeasurement?.Name ?? string.Empty
                         };
                     })
-                    .ToList<DeliveryRunProductLineModel>();
+                    .ToList();
 
                 return new DeliveryRunWarehousePickGroupModel
                 {

@@ -11,8 +11,7 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Application.Contracts.Security;
-using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Settings;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -22,19 +21,17 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IOrderAppService _orderAppService;
-    private readonly IAuthorizationAppService _authorizationAppService;
-    private readonly ICurrentUserService _currentUserService;
+    private readonly PurchaseOrderSettings _purchaseOrderSettings;
 
-    public PurchaseOrderController(IMediator mediator,
+    public PurchaseOrderController(IMediator mediator, IOrderAppService orderAppService,
         IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
-        IOrderAppService orderAppService, IAuthorizationAppService authorizationAppService, ICurrentUserService currentUserService)
+        PurchaseOrderSettings purchaseOrderSettings)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
         _purchaseOrderAppService = purchaseOrderAppService;
         _orderAppService = orderAppService;
-        _authorizationAppService = authorizationAppService;
-        _currentUserService = currentUserService;
+        _purchaseOrderSettings = purchaseOrderSettings;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -56,19 +53,19 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
     {
-        var model = await _mediator.Send(query).ConfigureAwait(false);
+        var model = await _mediator.Send(query);
         return View(model);
     }
 
     public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         return Json(result);
     }
 
     public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         return Json(result);
     }
 
@@ -76,9 +73,20 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return this.JsonError(LocalizeError(result.ErrorMessage!));
+
+        if (_purchaseOrderSettings.CreateFromShortageAutoApproved)
+        {
+            foreach (var purchaseOrderInfo in result.Items)
+            {
+                if (!purchaseOrderInfo.CreatedNew)
+                    continue;
+                await _mediator.Send(new SubmitsPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+                await _mediator.Send(new ApprovesPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+            }
+        }
 
         return this.JsonOk(result.Items, Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value);
     }
@@ -169,7 +177,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
     public async Task<IActionResult> QuickCreate([FromBody] QuickCreatePurchaseOrderCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return this.JsonError(LocalizeError(result.ErrorMessage!));
 
@@ -225,7 +233,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
     public async Task<IActionResult> RecordSettlementPayment(RecordPurchaseOrderSettlementPaymentCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (result.Success)
             NotifySuccess("Msg.SaveSuccess");
         else
@@ -239,7 +247,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Copy(Guid id)
     {
-        var result = await _mediator.Send(new CopyPurchaseOrderCommand(id)).ConfigureAwait(false);
+        var result = await _mediator.Send(new CopyPurchaseOrderCommand(id));
         if (result.Success && result.CreatedId.HasValue)
         {
             NotifySuccess("Msg.SaveSuccess");
@@ -254,7 +262,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Split([FromBody] SplitPurchaseOrderCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (result.Success && result.CreatedId.HasValue)
             return this.JsonOk(new { newPurchaseOrderId = result.CreatedId.Value });
 
@@ -621,9 +629,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
+        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
         var productIds = items.Select(i => i.ProductId).Distinct();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         return Json(items.Select(item => new
@@ -649,7 +657,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrderItemId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId)).ConfigureAwait(false);
+        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
 
         return Json(allocations.Select(a => new
         {
@@ -682,7 +690,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             DirectShipAddress = request.DirectShipAddress,
             DirectShipContactName = request.DirectShipContactName,
             DirectShipContactPhone = request.DirectShipContactPhone
-        }).ConfigureAwait(false);
+        });
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -694,7 +702,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> ReleaseAllocationsForPurchaseOrderItem([FromBody] ReleaseAllocationsOfPurchaseOrderItemCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
@@ -713,7 +721,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
         }
 
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 

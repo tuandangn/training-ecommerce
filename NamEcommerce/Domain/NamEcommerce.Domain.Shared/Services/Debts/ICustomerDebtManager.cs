@@ -46,5 +46,7 @@ public interface ICustomerDebtManager
 
     Task<decimal> GetTotalPaidByOrderAsync(Guid orderId);
 
+    Task<decimal> GetTotalDebtByOrderAsync(Guid orderId);
+
     Task<decimal> GetTotalPaidByDeliveryNoteAsync(Guid deliveryNoteId);
 }

@@ -1,5 +1,4 @@
 
-
 namespace NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 
 [Serializable]
@@ -12,6 +11,7 @@ public sealed record DeliveryNoteAppDto
     public required string? OrderCode { get; set; }
 
     public string? WarehouseName { get; set; }
+
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
     public string? AssignedDeliveryFullName { get; init; }

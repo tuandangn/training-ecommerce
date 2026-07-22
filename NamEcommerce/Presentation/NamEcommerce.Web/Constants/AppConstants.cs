@@ -6,4 +6,5 @@ public static class AppConstants
     public const string AppConfigSectionName = "AppConfig";
     public const string CultureConfigSectionName = "CultureConfig";
     public const string WarehouseSettingSectionName = "Settings:Warehouse";
+    public const string PurchaseOrderSettingSectionName = "Settings:PurchaseOrder";
 }

@@ -151,7 +151,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     {
         try
         {
-            var result = await _mediator.Send(command).ConfigureAwait(false);
+            var result = await _mediator.Send(command);
             return result.Success
                 ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
                 : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
@@ -168,7 +168,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     {
         try
         {
-            var result = await _mediator.Send(command).ConfigureAwait(false);
+            var result = await _mediator.Send(command);
             return result.Success
                 ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
                 : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });

@@ -17,7 +17,6 @@ using NamEcommerce.Domain.Shared.Services.Users;
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
 public sealed class DeliveryRunManager(
-    IDbContext dbContext,
     IRepository<DeliveryRun> runRepository,
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryRun> runReader,
@@ -29,7 +28,7 @@ public sealed class DeliveryRunManager(
 {
     private string GenerateCode()
     {
-        var prefix = $"DVR-{DateTime.UtcNow:yyyyMMdd}";
+        var prefix = $"CHG-{DateTime.UtcNow:yyyyMMdd}";
         return entityCodeGenerator.Next(prefix, () => runReader.SecuredDataSource.Count(run => run.Code.StartsWith(prefix)));
     }
 
@@ -84,7 +83,6 @@ public sealed class DeliveryRunManager(
                 note.AmountToCollect);
         }
 
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
         foreach (var note in notes.Where(note => note.AssignedDeliveryUserId != dto.AssignedDeliveryUserId))
         {
             await deliveryNoteManager.AssignDeliveryUserAsync(new AssignDeliveryUserDto
@@ -97,7 +95,6 @@ public sealed class DeliveryRunManager(
         }
 
         var inserted = await runRepository.InsertAsync(run).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -123,7 +120,7 @@ public sealed class DeliveryRunManager(
     {
         var run = await runRepository.GetByIdAsync(id).ConfigureAwait(false)
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
-        if (!run.DriverCachedOnUtc.HasValue)
+        if (!run.DriverCachedOnUtc.HasValue && !run.PaperManifestIssued)
             throw new NamEcommerceDomainException("Error.DeliveryRunDriverNotAccepted");
 
         var warehouseIds = GetRunWarehouseIds(run);
@@ -137,7 +134,6 @@ public sealed class DeliveryRunManager(
 
     public async Task HandOverAsync(Guid id)
     {
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
         var run = await runRepository.GetByIdAsync(id).ConfigureAwait(false)
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
@@ -147,7 +143,6 @@ public sealed class DeliveryRunManager(
             await deliveryNoteManager.MarkDeliveringAsync(item.DeliveryNoteId).ConfigureAwait(false);
 
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     private List<Guid> GetRunWarehouseIds(DeliveryRun run)
@@ -203,13 +198,8 @@ public sealed class DeliveryRunManager(
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var confirmedOnUtc = DateTime.UtcNow;
-        run.ConfirmCashHandover(
-            currentUser?.Id,
-            currentUser?.Username,
-            currentUser?.FullName,
-            dto.Amount,
-            dto.Note,
-            confirmedOnUtc);
+        run.ConfirmCashHandover(currentUser?.Id, currentUser?.Username, currentUser?.FullName,
+            dto.Amount, dto.Note, confirmedOnUtc);
         await RecordCodPaymentsAsync(run, deliveredNotes, currentUser?.Id, confirmedOnUtc, dto.Note)
             .ConfigureAwait(false);
         await runRepository.UpdateAsync(run).ConfigureAwait(false);

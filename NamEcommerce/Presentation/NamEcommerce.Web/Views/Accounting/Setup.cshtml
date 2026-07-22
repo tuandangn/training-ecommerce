@@ -1,13 +1,14 @@
+@using System.Globalization
 @using NamEcommerce.Application.Contracts.Dtos.Finance
 @model AccountingSetupAppDto
 @{
     ViewData[ViewConstants.PageTitle] = "Khai báo kế toán";
-    var taxRateOptions = new List<SelectListItem>
+    var taxRateOptions = new List<(string taxRateName, decimal taxRateValue)>
     {
-        new("0% — Không chịu thuế GTGT", "0"),
-        new("5%", "0.05"),
-        new("8%", "0.08"),
-        new("10%", "0.10")
+        ("0% — Không chịu thuế GTGT", 0),
+        ("5%", 0.05m),
+        ("8%", 0.08m),
+        ("10%", 0.10m)
     };
 }
 
@@ -42,65 +43,67 @@
         {
             <div class="alert alert-success border-0">
                 <i class="bi bi-lock-fill me-2"></i>
-                Khai báo đã được <strong>xác nhận và khóa</strong> vào @Model.FinalizedOnUtc?.ToString("dd/MM/yyyy HH:mm").
+                Khai báo đã được <strong>xác nhận và khóa</strong> vào @Model.FinalizedOnUtc?.ToString(ViewConstants.DefaultDateTimeFormat).
                 Chỉ có thể cập nhật ước tính thuế TNDN.
             </div>
         }
-
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
         <div class="content-card p-4">
             <form asp-action="Setup" method="post">
                 <fieldset @(Model.IsFinalized ? "disabled" : "")>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tháng bắt đầu năm tài chính</label>
-                            <select name="FiscalYearStartMonth" class="form-select"
-                                    value="@Model.FiscalYearStartMonth">
+                            <select asp-for="FiscalYearStartMonth" class="form-select">
                                 @for (int m = 1; m <= 12; m++)
                                 {
                                     <option value="@m" selected="@(Model.FiscalYearStartMonth == m)">Tháng @m</option>
                                 }
                             </select>
+                            <span asp-validation-for="FiscalYearStartMonth" class="small text-danger"></span>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Ngày bắt đầu năm tài chính</label>
-                            <select name="FiscalYearStartDay" class="form-select">
+                            <select asp-for="FiscalYearStartDay" class="form-select">
                                 @for (int d = 1; d <= 28; d++)
                                 {
                                     <option value="@d" selected="@(Model.FiscalYearStartDay == d)">Ngày @d</option>
                                 }
                             </select>
+                            <span asp-validation-for="FiscalYearStartDay" class="small text-danger"></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Ngày bắt đầu sử dụng hệ thống kế toán <span class="text-danger">*</span></label>
-                        <input type="date" name="AccountingStartDate" class="form-control"
-                               value="@Model.AccountingStartDate.ToString("yyyy-MM-dd")" required />
+                        <input type="date" asp-for="AccountingStartDate" class="form-control" required />
+                        <span asp-validation-for="AccountingStartDate" class="small text-danger"></span>
                         <div class="form-text">Số liệu trước ngày này sẽ không được đưa vào báo cáo.</div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tiền mặt quỹ đầu kỳ (TK 111)</label>
-                            <input name="OpeningCash" class="form-control no-additional-element"
-                                   data-decimal="currency" value="@Model.OpeningCash" />
+                            <input asp-for="OpeningCash" value="@Model.OpeningCash.DisplayCurrency()" class="form-control no-additional-element" data-decimal="currency" />
+                            <span asp-validation-for="OpeningCash" class="small text-danger"></span>
                             <div class="form-text">Tiền mặt tại cửa hàng tại thời điểm bắt đầu.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Vốn chủ sở hữu đầu kỳ (TK 411+421)</label>
-                            <input name="OpeningEquity" class="form-control no-additional-element"
-                                   data-decimal="currency" value="@Model.OpeningEquity" />
+                            <input asp-for="OpeningEquity" value="@Model.OpeningEquity.DisplayCurrency()" class="form-control no-additional-element" data-decimal="currency" />
+                            <span asp-validation-for="OpeningEquity" class="small text-danger"></span>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Thuế GTGT mặc định</label>
-                        <select name="DefaultTaxRate" class="form-select">
+                        <select asp-for="DefaultTaxRate" class="form-select">
                             @foreach (var opt in taxRateOptions)
                             {
-                                <option value="@opt.Value" selected="@(Model.DefaultTaxRate.ToString("0.##") == opt.Value)">@opt.Text</option>
+                                <option value="@opt.taxRateValue.ToString(CultureInfo.InvariantCulture)" selected="@(Model.DefaultTaxRate == opt.taxRateValue)">@opt.taxRateName</option>
                             }
                         </select>
+                        <span asp-validation-for="DefaultTaxRate" class="small text-danger"></span>
                         <div class="form-text">Giá trị mặc định khi lập phiếu — có thể thay đổi từng dòng.</div>
                     </div>
 
@@ -148,23 +151,13 @@
 {
     <form class="d-none" id="finalizeForm" asp-action="Finalize" method="post">
     </form>
-
-    @section Scripts {
-        <script>
-            document.getElementById('btnFinalize')?.addEventListener('click', function () {
-                if (confirm('Sau khi xác nhận, bạn sẽ không thể sửa các số liệu đầu kỳ. Tiếp tục?')) {
-                    document.getElementById('finalizeForm').submit();
-                }
-            });
-        </script>
-    }
 }
 
 @if (Model.IsFinalized)
 {
     @section Scripts {
         <script>
-            document.getElementById('btnUpdateProvision')?.addEventListener('click', async function () {
+            document.getElementById('btnUpdateProvision')?.addEventListener('click', async function() {
                 const amount = parseFloat(document.getElementById('provisionInput').value) || null;
                 const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
                 const resp = await fetch('@Url.Action("UpdateProvision")', {
@@ -177,5 +170,21 @@
                 else alert(data.message || 'Có lỗi xảy ra.');
             });
         </script>
+    }
+}
+else
+{
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+        @if (Model.IsConfigured)
+        {
+            <script>
+                document.getElementById('btnFinalize')?.addEventListener('click', function() {
+                    if (confirm('Sau khi xác nhận, bạn sẽ không thể sửa các số liệu đầu kỳ. Tiếp tục?')) {
+                        document.getElementById('finalizeForm').submit();
+                    }
+                });
+            </script>
+        }
     }
 }

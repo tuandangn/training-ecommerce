@@ -218,7 +218,8 @@
                 </div>
                 <div class="content-card-body">
                     <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
-                        <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch" checked="@(Model.CustomerId == CachedValuesService.DefaultCustomerId && Model.AmountAlreadyPaidForOrder == 0)" />
+                        <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch" 
+                            checked="@(Model.CustomerId == CachedValuesService.DefaultCustomerId && Model.AmountAlreadyPaidForOrder == 0)" />
                         <label class="form-check-label ms-2 fw-medium" asp-for="ShowPrice" for="showPriceSwitch">
                             Hiển thị giá trên phiếu
                         </label>
@@ -612,7 +613,7 @@
                     const availableQuantity = formatQuantity(warehouse.quantityAvailable);
                     const suggestedQuantity = formatQuantity(warehouse.suggestedQuantity);
                     const stateClass = warehouse.quantityAvailable <= 0 ? 'is-empty' : '';
-                    return `<div class="warehouse-allocation-line ${stateClass}">
+                    return `<div class="warehouse-allocation-line ${stateClass} justify-content-between">
                         <div class="warehouse-allocation-name text-truncate" title="${warehouseName}">${warehouseName}</div>
                         <div class="warehouse-allocation-meta">Tồn ${availableQuantity}</div>
                         <input type="hidden" name="Items[${itemIndex}].WarehouseAllocations[${index}].WarehouseId" value="${warehouseId}" />

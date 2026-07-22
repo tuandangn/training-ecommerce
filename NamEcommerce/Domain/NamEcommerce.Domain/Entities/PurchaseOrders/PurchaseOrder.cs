@@ -184,7 +184,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         => Status == PurchaseOrderStatus.Draft
            || Status == PurchaseOrderStatus.Submitted
            || (Status == PurchaseOrderStatus.Approved && !_items.Any(item => item.QuantityReceived > 0));
-    public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
+    public bool CanReceiveGoods() => Status is PurchaseOrderStatus.Approved or PurchaseOrderStatus.Receiving;
     private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
     {
@@ -203,6 +203,10 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         return Enum.IsDefined(toStatus);
     }
+    public bool CanAllocation() => Status is PurchaseOrderStatus.Draft
+            or PurchaseOrderStatus.Submitted
+            or PurchaseOrderStatus.Approved
+            or PurchaseOrderStatus.Receiving;
     internal void ChangeStatus(PurchaseOrderStatus status, Guid? actingUserId = null)
     {
         if (!CanChangeStatusTo(status))

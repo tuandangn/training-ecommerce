@@ -41,6 +41,7 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
     public decimal TotalAmount { get; set; }
     public bool CanAddItems { get; init; }
     public bool CanReceiveGoods { get; init; }
+    public bool CanAllocation { get; init; }
 
     public IList<PurchaseOrderItemDto> Items { get; } = [];
     public Guid? CreatedByUserId { get; init; }

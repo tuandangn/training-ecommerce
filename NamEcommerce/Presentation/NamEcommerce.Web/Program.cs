@@ -109,7 +109,6 @@ using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Mvc.Filters;
 using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Services.Catalog;
-using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.Dashboard;
 using NamEcommerce.Web.Services.Debts;
 using NamEcommerce.Web.Services.DeliveryNotes;
@@ -179,6 +178,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
+
+    services.Configure<PurchaseOrderSettings>(options => builder.Configuration.Bind(AppConstants.PurchaseOrderSettingSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<PurchaseOrderSettings>>().Value);
 
     services.Configure<BankTransferPaymentSettings>(options => configuration.GetSection(BankTransferPaymentSettings.SectionName).Bind(options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<BankTransferPaymentSettings>>().Value);
@@ -336,7 +338,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
     services.AddScoped<IWebHelper, WebHelper>();
-    services.AddScoped<ICustomerPortalQrCodeService, CustomerPortalQrCodeService>();
     services.AddScoped<INotificationService, TempDataNotificationService>();
     services.AddScoped<ISystemNotificationRealtimePublisher, SignalRSystemNotificationRealtimePublisher>();
     services.AddSingleton<ICachedValuesService, CachedValuesService>();
