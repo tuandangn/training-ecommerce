@@ -1105,22 +1105,11 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<CommonActionResultDto> ReleasePoItemAllocationForOrderItemAsync(ReleaseAllocationsOfPurchaseOrderItemAppDto dto)
     {
-        try
-        {
-            await _purchaseOrderAllocationManager
-                .ReleaseAllocationsOfPurchaseOrderItemAsync((dto.PurchaseOrderId, dto.PurchaseOrderItemId))
-                .ConfigureAwait(false);
+        await _purchaseOrderAllocationManager
+            .ReleaseAllocationsOfPurchaseOrderItemAsync((dto.PurchaseOrderId, dto.PurchaseOrderItemId))
+            .ConfigureAwait(false);
 
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
-        catch (Exception)
-        {
-            return CommonActionResultDto.CreateError("Error.UnexpectedError");
-        }
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)

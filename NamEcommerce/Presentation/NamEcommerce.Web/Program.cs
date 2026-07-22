@@ -179,6 +179,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
 
+    services.Configure<PurchaseOrderSettings>(options => builder.Configuration.Bind(AppConstants.PurchaseOrderSettingSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<PurchaseOrderSettings>>().Value);
+
     services.Configure<BankTransferPaymentSettings>(options => configuration.GetSection(BankTransferPaymentSettings.SectionName).Bind(options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<BankTransferPaymentSettings>>().Value);
 

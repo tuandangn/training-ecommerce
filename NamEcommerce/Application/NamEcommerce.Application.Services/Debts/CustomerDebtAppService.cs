@@ -119,6 +119,9 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
         => _debtManager.GetTotalPaidByOrderAsync(orderId);
 
+    public Task<decimal> GetTotalDebtByOrderAsync(Guid orderId)
+        => _debtManager.GetTotalDebtByOrderAsync(orderId);
+
     public async Task<CreateInitialCustomerDebtResultAppDto> CreateInitialDebtAsync(CreateInitialCustomerDebtAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

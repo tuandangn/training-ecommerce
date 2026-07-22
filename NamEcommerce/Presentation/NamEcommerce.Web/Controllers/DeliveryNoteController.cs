@@ -123,7 +123,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         if (order.CustomerId == _cachedValuesService.DefaultCustomerId)
         {
-            var amountAlreadyPaidForOrder = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order.Id });
+            var prepaidAmount = await _mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = order.Id });
+
             var totalSelected = 0m;
             foreach (var deliveryNoteItem in deliveryNoteItems)
             {
@@ -136,7 +137,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 }
                 totalSelected += deliveryNoteItem.Quantity * orderItem.UnitPrice;
             }
-            var calculatedAmountToCollect = model.Surcharge + Math.Max(0, totalSelected - amountAlreadyPaidForOrder);
+            var calculatedAmountToCollect = model.Surcharge + Math.Max(0, totalSelected - prepaidAmount);
             if (calculatedAmountToCollect != model.AmountToCollect)
             {
                 AddLocalizedModelError("Error.AmountToCollectIsInvalid");

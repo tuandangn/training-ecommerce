@@ -264,21 +264,21 @@ public sealed class ProductController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> PriceHistory(GetProductPriceHistoryQuery query)
     {
-        var model = await _mediator.Send(query).ConfigureAwait(false);
+        var model = await _mediator.Send(query);
         return Json(model);
     }
 
     [HttpGet]
     public async Task<IActionResult> SalePriceReference(GetProductSalePriceReferenceQuery query)
     {
-        var model = await _mediator.Send(query).ConfigureAwait(false);
+        var model = await _mediator.Send(query);
         return Json(model);
     }
 
     [HttpGet]
     public async Task<IActionResult> PurchasePriceReference(GetProductPurchasePriceReferenceQuery query)
     {
-        var model = await _mediator.Send(query).ConfigureAwait(false);
+        var model = await _mediator.Send(query);
         return Json(model);
     }
 }

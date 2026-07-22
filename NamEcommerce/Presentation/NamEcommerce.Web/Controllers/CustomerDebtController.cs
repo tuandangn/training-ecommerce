@@ -20,7 +20,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         {
             Keywords = keywords,
             PageIndex = pageIndex
-        }).ConfigureAwait(false);
+        });
 
         return View(model);
     }
@@ -32,7 +32,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         {
             CustomerId = id,
             PageIndex = pageIndex
-        }).ConfigureAwait(false);
+        });
 
         if (model == null)
         {
@@ -45,7 +45,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsView)]
     public async Task<IActionResult> Receipt(Guid paymentId)
     {
-        var model = await _mediator.Send(new GetCustomerPaymentReceiptQuery { PaymentId = paymentId }).ConfigureAwait(false);
+        var model = await _mediator.Send(new GetCustomerPaymentReceiptQuery { PaymentId = paymentId });
         if (model == null) return NotFound();
         return View(model);
     }
@@ -59,7 +59,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
 
         try
         {
-            var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model }).ConfigureAwait(false);
+            var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model });
             return result.Success
                 ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
                 : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });

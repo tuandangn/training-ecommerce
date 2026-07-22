@@ -1002,6 +1002,9 @@
   <data name="Error.DeliveryRunItemsRequired" xml:space="preserve">
     <value>Delivery notes are required</value>
   </data>
+  <data name="Error.DeliveryRunIsNotFound" xml:space="preserve">
+    <value>Delivery note is not found</value>
+  </data>
   <data name="Error.DeliveryNoteItemDataIsInvalid" xml:space="preserve">
     <value>Delivery note item data is invalid</value>
   </data>

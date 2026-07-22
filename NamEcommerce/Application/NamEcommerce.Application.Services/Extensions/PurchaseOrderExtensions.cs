@@ -73,6 +73,7 @@ public static class PurchaseOrderExtensions
             CanChangeVendor = purchaseOrder.Status == PurchaseOrderStatus.Draft,
             CanChangeDate = purchaseOrder.Status == PurchaseOrderStatus.Draft,
             CanChangeFees = purchaseOrder.Items.Count > 0 && purchaseOrder.Status == PurchaseOrderStatus.Receiving,
+            CanAllocation = purchaseOrder.CanAllocation
         };
 
         foreach (var item in purchaseOrder.Items)

@@ -14,13 +14,13 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
 {
     public async Task<IActionResult> Index(OrderFulfillmentBoardSearchModel search)
     {
-        var model = await orderFulfillmentModelFactory.PrepareBoardModelAsync(search).ConfigureAwait(false);
+        var model = await orderFulfillmentModelFactory.PrepareBoardModelAsync(search);
         return View(model);
     }
 
     public async Task<IActionResult> OrderSchedules(Guid orderId)
     {
-        var model = await orderFulfillmentModelFactory.PrepareSchedulePanelModelAsync(orderId).ConfigureAwait(false);
+        var model = await orderFulfillmentModelFactory.PrepareSchedulePanelModelAsync(orderId);
         return PartialView("~/Views/Order/_OrderFulfillmentSchedulePanel.cshtml", model);
     }
 
@@ -29,7 +29,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
         var model = await orderFulfillmentModelFactory.PrepareBoardModelAsync(new OrderFulfillmentBoardSearchModel
         {
             Date = DateTime.Today
-        }).ConfigureAwait(false);
+        });
 
         return PartialView("~/Views/OrderFulfillment/_TopbarSchedulePanel.cshtml", model.Board);
     }
@@ -49,7 +49,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
             Mode = model.Mode,
             Note = model.Note,
             Items = model.Items.Select(ToCommandItem).ToList()
-        }).ConfigureAwait(false);
+        });
 
         return ToJson(result);
     }
@@ -72,7 +72,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
             Mode = model.Mode,
             Note = model.Note,
             Items = model.Items.Select(ToCommandItem).ToList()
-        }).ConfigureAwait(false);
+        });
 
         return ToJson(result);
     }
@@ -81,7 +81,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> SetScheduleActive(Guid id, bool isActive)
     {
-        var result = await mediator.Send(new SetOrderFulfillmentScheduleActiveCommand(id, isActive)).ConfigureAwait(false);
+        var result = await mediator.Send(new SetOrderFulfillmentScheduleActiveCommand(id, isActive));
         return ToJson(result);
     }
 
@@ -89,7 +89,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> DeleteSchedule(Guid id)
     {
-        var result = await mediator.Send(new DeleteOrderFulfillmentScheduleCommand(id)).ConfigureAwait(false);
+        var result = await mediator.Send(new DeleteOrderFulfillmentScheduleCommand(id));
         return ToJson(result);
     }
 

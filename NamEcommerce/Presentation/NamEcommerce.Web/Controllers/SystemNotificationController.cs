@@ -15,8 +15,7 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
     public async Task<IActionResult> List(SystemNotificationSearchModel searchModel)
     {
         var model = await systemNotificationModelFactory
-            .PrepareSystemNotificationListModelAsync(searchModel)
-            .ConfigureAwait(false);
+            .PrepareSystemNotificationListModelAsync(searchModel);
 
         return View(model);
     }
@@ -24,13 +23,13 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
     [HttpGet]
     public async Task<IActionResult> UnreadCount()
     {
-        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync().ConfigureAwait(false);
+        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync();
         if (!snapshot.UserId.HasValue)
             return Json(new { count = 0 });
 
         var count = await mediator.Send(new GetSystemNotificationUnreadCountQuery(
             snapshot.UserId.Value,
-            snapshot.Permissions)).ConfigureAwait(false);
+            snapshot.Permissions));
 
         return Json(new { count });
     }
@@ -38,7 +37,7 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
     [HttpGet]
     public async Task<IActionResult> Latest()
     {
-        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync().ConfigureAwait(false);
+        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync();
         if (!snapshot.UserId.HasValue)
             return Json(new { items = Array.Empty<object>() });
 
@@ -48,7 +47,7 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
             UserPermissions = snapshot.Permissions,
             PageIndex = 0,
             PageSize = 5
-        }).ConfigureAwait(false);
+        });
 
         var items = model.Data.Items.Select(item => new
         {
@@ -69,12 +68,12 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
     [HttpPost]
     public async Task<IActionResult> MarkRead(Guid id)
     {
-        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync().ConfigureAwait(false);
+        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync();
         if (!snapshot.UserId.HasValue)
             return Forbid();
 
         var result = await mediator.Send(new MarkSystemNotificationReadCommand(id, snapshot.UserId.Value))
-            .ConfigureAwait(false);
+            ;
         if (!result.Success)
             NotifyError(result.ErrorMessage ?? "Error.SystemNotificationCannotMarkRead");
 
@@ -84,12 +83,12 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
     [HttpPost]
     public async Task<IActionResult> MarkAllRead()
     {
-        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync().ConfigureAwait(false);
+        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync();
         if (!snapshot.UserId.HasValue)
             return Forbid();
 
         var result = await mediator.Send(new MarkAllSystemNotificationsReadCommand(snapshot.UserId.Value, snapshot.Permissions))
-            .ConfigureAwait(false);
+            ;
         if (result.Success)
             NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
         else
@@ -100,12 +99,12 @@ public sealed class SystemNotificationController(ISystemNotificationModelFactory
 
     public async Task<IActionResult> Open(Guid id, string? actionUrl)
     {
-        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync().ConfigureAwait(false);
+        var snapshot = await systemNotificationModelFactory.PreparePermissionSnapshotAsync();
         if (!snapshot.UserId.HasValue)
             return Forbid();
 
         var result = await mediator.Send(new MarkSystemNotificationReadCommand(id, snapshot.UserId.Value))
-            .ConfigureAwait(false);
+            ;
         if (!result.Success)
             NotifyError(result.ErrorMessage ?? "Error.SystemNotificationCannotMarkRead");
 

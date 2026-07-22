@@ -94,8 +94,7 @@ public sealed class UserManagementController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> RolePermissions(Guid roleId = default)
     {
-        var model = await _userManagementModelFactory.PrepareRolePermissionsPageModel(roleId)
-            .ConfigureAwait(false);
+        var model = await _userManagementModelFactory.PrepareRolePermissionsPageModel(roleId);
 
         if (model is null)
             return RedirectToAction(nameof(Roles));
@@ -107,7 +106,7 @@ public sealed class UserManagementController : BaseAuthorizedController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RolePermissions(UpdateRolePermissionsCommand command)
     {
-        var result = await _mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command);
 
         if (result.Success)
         {

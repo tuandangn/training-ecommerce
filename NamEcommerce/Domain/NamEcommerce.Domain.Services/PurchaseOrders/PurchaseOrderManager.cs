@@ -450,13 +450,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkUpdated();
+        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
         var allocationSources = await AddOrMergeShortageItemsAsync(purchaseOrder, items).ConfigureAwait(false);
         foreach (var allocationSource in allocationSources.Where(source => source.IsNew))
             purchaseOrder.MarkItemAdded(allocationSource.PurchaseOrderItem);
 
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        purchaseOrder.MarkUpdated();
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
         await AllocateShortageItemsAsync(allocationSources).ConfigureAwait(false);
 
         return new CreatePoFromShortageResultDto
@@ -538,8 +539,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, _productDataReader).ConfigureAwait(false);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        purchaseOrder.MarkItemAdded(purchaseOrderItem, product.Name);
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        purchaseOrder.MarkItemAdded(purchaseOrderItem, product.Name);
 
         return new AddPurchaseOrderItemResultDto
         {

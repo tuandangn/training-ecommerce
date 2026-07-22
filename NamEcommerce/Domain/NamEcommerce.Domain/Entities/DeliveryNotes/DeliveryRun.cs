@@ -31,25 +31,34 @@ public sealed record DeliveryRun : AppAggregateEntity
     }
 
     public string Code { get; private set; }
+
     public Guid AssignedDeliveryUserId { get; private set; }
     public string AssignedDeliveryUsername { get; private set; }
     public string AssignedDeliveryFullName { get; private set; }
+
     public DeliveryRunStatus Status { get; private set; }
+
     public Guid? PreparedByUserId { get; private set; }
     public DateTime? PreparedOnUtc { get; private set; }
+
     public Guid? HandedOverByUserId { get; private set; }
     public DateTime? HandedOverOnUtc { get; private set; }
+
     public DateTime? DriverCachedOnUtc { get; private set; }
     public string? DriverCacheDeviceId { get; private set; }
+
     public bool PaperManifestIssued { get; private set; }
     public DateTime? PaperManifestIssuedOnUtc { get; private set; }
+
     public Guid? CashHandoverConfirmedByUserId { get; private set; }
     public string? CashHandoverConfirmedByUsername { get; private set; }
     public string? CashHandoverConfirmedByFullName { get; private set; }
     public DateTime? CashHandoverConfirmedOnUtc { get; private set; }
     public decimal? CashHandoverAmount { get; private set; }
     public string? CashHandoverNote { get; private set; }
+
     public string? Note { get; private set; }
+
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
@@ -58,6 +67,8 @@ public sealed record DeliveryRun : AppAggregateEntity
 
     private readonly List<DeliveryRunWarehousePick> _warehousePicks = [];
     public IReadOnlyCollection<DeliveryRunWarehousePick> WarehousePicks => _warehousePicks.AsReadOnly();
+
+    #region Methods
 
     internal void AddItem(Guid deliveryNoteId, string deliveryNoteCode, string? orderCode, string customerName, string? shippingPhoneNumber,
         string shippingAddress, decimal amountToCollect)
@@ -170,4 +181,6 @@ public sealed record DeliveryRun : AppAggregateEntity
 
     private static string? TrimToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    #endregion
 }

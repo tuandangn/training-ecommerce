@@ -8,29 +8,46 @@ public sealed record DeliveryRunDto
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
+
     public required Guid AssignedDeliveryUserId { get; init; }
     public required string AssignedDeliveryUsername { get; init; }
     public required string AssignedDeliveryFullName { get; init; }
+
     public required DeliveryRunStatus Status { get; init; }
+
     public Guid? PreparedByUserId { get; init; }
     public DateTime? PreparedOnUtc { get; init; }
+
     public Guid? HandedOverByUserId { get; init; }
     public DateTime? HandedOverOnUtc { get; init; }
+
     public DateTime? DriverCachedOnUtc { get; init; }
     public string? DriverCacheDeviceId { get; init; }
+
     public bool PaperManifestIssued { get; init; }
     public DateTime? PaperManifestIssuedOnUtc { get; init; }
+
     public Guid? CashHandoverConfirmedByUserId { get; init; }
     public string? CashHandoverConfirmedByUsername { get; init; }
     public string? CashHandoverConfirmedByFullName { get; init; }
     public DateTime? CashHandoverConfirmedOnUtc { get; init; }
     public decimal? CashHandoverAmount { get; init; }
     public string? CashHandoverNote { get; init; }
+
     public string? Note { get; init; }
+
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
+
     public IList<DeliveryRunItemDto> Items { get; init; } = [];
+
     public IList<DeliveryRunWarehousePickDto> WarehousePicks { get; init; } = [];
+
+    public bool CanIssuePaperManifest { get; set; }
+    public bool CanCloseIfDelivered { get; set; }
+    public bool CanCancel { get; set; }
+    public bool CanReviewCashCollected { get; set; }
+    public bool CanReconcileDeliveryRunItems { get; set; }
 }
 
 [Serializable]

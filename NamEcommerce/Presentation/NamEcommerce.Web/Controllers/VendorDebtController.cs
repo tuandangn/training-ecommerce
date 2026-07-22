@@ -19,7 +19,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         {
             Keywords = keywords,
             PageIndex = pageIndex
-        }).ConfigureAwait(false);
+        });
 
         return View(model);
     }
@@ -31,7 +31,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         {
             VendorId = vendorId,
             PageIndex = pageIndex
-        }).ConfigureAwait(false);
+        });
         if (model == null)
         {
             NotifyError("Error.VendorDebtNotFound");
@@ -47,7 +47,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         if (!ModelState.IsValid)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var result = await _mediator.Send(new RecordVendorPaymentCommand { Model = model }).ConfigureAwait(false);
+        var result = await _mediator.Send(new RecordVendorPaymentCommand { Model = model });
         return result.Success
             ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -60,7 +60,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         if (!ModelState.IsValid)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var result = await _mediator.Send(new RecordFlexibleVendorPaymentCommand { Model = model }).ConfigureAwait(false);
+        var result = await _mediator.Send(new RecordFlexibleVendorPaymentCommand { Model = model });
         return result.Success
             ? Json(new { success = true, message = result.SuccessMessage ?? LocalizeError("Msg.SaveSuccess") })
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -73,7 +73,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         if (!ModelState.IsValid)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var result = await _mediator.Send(new RecordVendorAdvancePaymentCommand { Model = model }).ConfigureAwait(false);
+        var result = await _mediator.Send(new RecordVendorAdvancePaymentCommand { Model = model });
         return result.Success
             ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -82,7 +82,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
     public async Task<IActionResult> Receipt(Guid paymentId)
     {
-        var model = await _mediator.Send(new GetVendorPaymentReceiptQuery { PaymentId = paymentId }).ConfigureAwait(false);
+        var model = await _mediator.Send(new GetVendorPaymentReceiptQuery { PaymentId = paymentId });
         if (model == null) return NotFound();
         return View(model);
     }

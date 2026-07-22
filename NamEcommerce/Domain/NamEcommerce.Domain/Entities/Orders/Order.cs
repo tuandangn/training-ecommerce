@@ -36,7 +36,7 @@ public sealed record Order : AppAggregateEntity
 
     public string Code { get; }
     public DateTime? ExpectedShippingDateUtc { get; internal set; }
-    public NormalizableString ShippingAddress { get; internal set;  }
+    public NormalizableString ShippingAddress { get; internal set; }
     public string? ShippingPhoneNumber { get; internal set; }
     public decimal OrderSubTotal { get; private set; }
     public decimal OrderTotal { get; private set; }
@@ -75,6 +75,11 @@ public sealed record Order : AppAggregateEntity
         RaiseDomainEvent(new OrderDeleted(Id, Code, reservationItems));
     }
 
+    internal void MarkAddAdded(OrderItem orderItem)
+    {
+        RaiseDomainEvent(new OrderItemAdded(Id, orderItem.Id, orderItem.ProductId, orderItem.Quantity, orderItem.UnitPrice, orderItem.ProductName));
+    }
+
     internal void RaiseSoCancelledWithDirectShipReceived(IReadOnlyList<Guid> allocationIds)
         => RaiseDomainEvent(new SoCancelledWithDirectShipReceived(Id, allocationIds));
 
@@ -107,7 +112,7 @@ public sealed record Order : AppAggregateEntity
             ShippingPhoneNumber = customer.PhoneNumber;
     }
 
-    internal async Task AddOrderItemAsync(Guid productId, decimal unitPrice, decimal quantity, IGetByIdService<Product> byIdGetter)
+    internal async Task<OrderItem> AddOrderItemAsync(Guid productId, decimal unitPrice, decimal quantity, IGetByIdService<Product> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
@@ -126,7 +131,7 @@ public sealed record Order : AppAggregateEntity
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemAdded(Id, orderItem.Id, productId, quantity, unitPrice, product.Name));
+        return orderItem;
     }
 
     internal void UpdateOrderItem(Guid orderItemId, decimal quantity, decimal unitPrice)

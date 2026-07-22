@@ -1,4 +1,5 @@
 @model DeliveryRunDetailsModel
+@inject InfoOptions InfoOptions
 @{
     Layout = null;
 }
@@ -14,13 +15,13 @@
     <div class="print-page">
         <div class="header">
             <div>
-                <strong>CỬA HÀNG VLXD TUẤN KHÔI</strong><br />
-                Địa chỉ: Số 123 Đường ABCD, Quận XYZ, TP.HCM<br />
-                Điện thoại: 0909.123.456
+                <strong>@InfoOptions.Name</strong><br />
+                Địa chỉ: @InfoOptions.Address<br />
+                Điện thoại: @InfoOptions.PhoneNumber
             </div>
             <div class="text-right">
                 <strong>Mã chuyến: @Model.Code</strong><br />
-                Ngày @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                Ngày @DateTime.Now.ToString(ViewConstants.DefaultDateTimeFormat)
             </div>
         </div>
 

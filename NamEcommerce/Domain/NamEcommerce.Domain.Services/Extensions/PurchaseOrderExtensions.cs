@@ -23,6 +23,7 @@ public static class PurchaseOrderExtensions
             Status = purchaseOrder.Status,
             CanAddItems = purchaseOrder.CanUpdateItems(),
             CanReceiveGoods = purchaseOrder.CanReceiveGoods(),
+            CanAllocation = purchaseOrder.CanAllocation(),
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount
         };

@@ -128,7 +128,7 @@ public sealed class DeliveryNoteModelFactory(
 
         model.AvailableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
+        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
         model.IsRetailWalkInCustomer = order.CustomerId == cachedValuesService.DefaultCustomerId;
 
         var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
@@ -306,7 +306,7 @@ public sealed class DeliveryNoteModelFactory(
             CanMarkDelivered = deliveryNote.CanMarkDelivered,
             CanReject = deliveryNote.CanReject
         };
-        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
+        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
 
         var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
         var decimalPlacesByNoteItemId = model.Items.ToDictionary(item => item.Id, item => item.QuantityDecimalPlaces);

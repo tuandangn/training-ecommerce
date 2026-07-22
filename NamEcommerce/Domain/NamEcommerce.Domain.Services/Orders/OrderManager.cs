@@ -127,11 +127,13 @@ public sealed class OrderManager(
             throw new ProductIsNotFoundException(dto.ProductId);
 
         await EnsureAvailableForProductsWithoutVendorAsync([(dto.ProductId, dto.Quantity)]).ConfigureAwait(false);
-        await order.AddOrderItemAsync(dto.ProductId, dto.UnitPrice, dto.Quantity, productDataReader).ConfigureAwait(false);
+        var orderItem = await order.AddOrderItemAsync(dto.ProductId, dto.UnitPrice, dto.Quantity, productDataReader).ConfigureAwait(false);
 
         order.UpdatedOnUtc = DateTime.UtcNow;
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        order.MarkAddAdded(orderItem);
     }
 
     public async Task UpdateOrderItemAsync(UpdateOrderItemDto dto)

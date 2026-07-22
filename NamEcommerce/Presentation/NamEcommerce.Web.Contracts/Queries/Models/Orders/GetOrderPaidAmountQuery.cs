@@ -1,5 +1,3 @@
-using MediatR;
-
 namespace NamEcommerce.Web.Contracts.Queries.Models.Orders;
 
 [Serializable]

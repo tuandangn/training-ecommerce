@@ -51,191 +51,6 @@
         </nav>
     </div>
 }
-@if (Model.IsDirectShip || Model.ShortageInfo.HasShortage)
-{
-    <div class="content-card mb-3">
-        @if (Model.IsDirectShip)
-        {
-            <div class="alert alert-info d-flex align-items-center gap-2 mb-0" role="alert">
-                <i class="bi bi-truck fs-5"></i>
-                <div>
-                    <strong>Phiếu giao thẳng tới khách</strong>
-                    @{
-                        var dsStatusText = ((DeliveryNoteStatus)Model.Status) switch
-                        {
-                            DeliveryNoteStatus.Confirmed => " · Chờ khách xác nhận",
-                            DeliveryNoteStatus.Delivered => " · Khách đã nhận",
-                            DeliveryNoteStatus.Cancelled => " · Khách từ chối/hủy",
-                            _ => ""
-                        };
-                    }
-                    @dsStatusText
-                </div>
-            </div>
-        }
-        @if (Model.ShortageInfo.HasShortage)
-        {
-            var shortageNoticeViewData = new ViewDataDictionary(ViewData)
-            {
-                ["ShortageModalId"] = "deliveryNoteShortageModal",
-                ["ShortageMessage"] = $"Phiếu xuất có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi xác nhận xuất.",
-                ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?deliveryNoteId={Model.Id}",
-                ["ShortageActionText"] = "Nhập hàng thiếu",
-                ["ShortagePrimaryQuantityLabel"] = "Cần xuất",
-                ["ShortageSecondaryQuantityLabel"] = "Tồn khả dụng",
-                ["ShortageUseShippedQuantity"] = false
-            };
-            <div class="content-card-body">
-                @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
-            </div>
-        }
-    </div>
-}
-@if (settlementApprovalStatus == DeliverySettlementApprovalStatus.PendingApproval)
-{
-    var proposed = Model.ProposedAmountToCollect ?? Model.AmountToCollect;
-    var rejectedValue = Model.SettlementItems.Where(i => i.RejectedQuantity > 0).Sum(i => i.RejectedQuantity * i.UnitPrice);
-    <div class="content-card mb-3 border border-warning">
-        <div class="content-card-header bg-warning-subtle">
-            <h5 class="mb-0 text-warning-emphasis"><i class="bi bi-hourglass-split me-2"></i>Chờ duyệt số tiền thu</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Phải thu gốc (COD)</label>
-                    <div class="fw-bold">@Model.AmountToCollect.DisplayCurrencyWithSymbol()</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Giá trị hàng trả về</label>
-                    <div class="fw-bold text-danger">@rejectedValue.DisplayCurrencyWithSymbol()</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tự tính</label>
-                    <div class="fw-bold text-primary">@proposed.DisplayCurrencyWithSymbol()</div>
-                </div>
-            </div>
-            @if (Model.SettlementItems.Any(i => i.RejectedQuantity > 0))
-            {
-                <div class="table-responsive mb-3">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Hàng hóa</th>
-                                <th class="text-end">SL giao</th>
-                                <th class="text-end">Khách nhận</th>
-                                <th class="text-end">Trả về</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var line in Model.SettlementItems)
-                            {
-                                <tr>
-                                    <td>@line.ProductName</td>
-                                    <td class="text-end">@line.Quantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
-                                    <td class="text-end">@line.AcceptedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
-                                    <td class="text-end @(line.RejectedQuantity > 0 ? "text-danger fw-bold" : "text-muted")">@line.RejectedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            @if (Model.UserCanApproveSettlement)
-            {
-                <div class="border-top pt-3 d-flex justify-content-end">
-                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveSettlementModal">
-                        <i class="bi bi-check2-square me-1"></i>Duyệt số tiền thu
-                    </button>
-                </div>
-            }
-            else
-            {
-                <div class="alert alert-info mb-0">Chỉ Admin mới được duyệt số tiền thu.</div>
-            }
-        </div>
-    </div>
-    @if (Model.UserCanApproveSettlement)
-    {
-        <div class="modal fade" id="approveSettlementModal" tabindex="-1" aria-labelledby="approveSettlementModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <form asp-action="ApproveSettlement" method="post">
-                        <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="approveSettlementModalLabel">Duyệt số tiền thu</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tiền thu duyệt</label>
-                                    <input type="number" name="approvedAmountToCollect" class="form-control" min="0" step="1000" value="@proposed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chi phí trả về</label>
-                                    <input type="number" name="agreedCustomerCharge" class="form-control" min="0" step="1000" value="0" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do chi phí</label>
-                                    <input type="text" name="agreedCustomerChargeReason" class="form-control" placeholder="Nếu có chi phí trả về" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ghi chú duyệt</label>
-                                    <input type="text" name="adminNote" class="form-control" placeholder="Ghi chú (tùy chọn)" />
-                                </div>
-                            </div>
-                            <div class="small text-muted mt-2">Phần chênh lệch giữa số phải thu và số thu duyệt sẽ ghi thành công nợ khách.</div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectSettlementModal">
-                                Từ chối
-                            </button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-lg me-1"></i>Xác nhận
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="rejectSettlementModal" tabindex="-1" aria-labelledby="rejectSettlementModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <form asp-action="RejectSettlement" method="post">
-                        <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="rejectSettlementModalLabel">Từ chối số tiền thu</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                        </div>
-                        <div class="modal-body">
-                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do từ chối</label>
-                            <textarea name="reason" class="form-control" rows="3" required placeholder="Nhập lý do từ chối"></textarea>
-                            <div class="small text-muted mt-2">Từ chối sẽ hủy phiếu và yêu cầu mang hàng về kho.</div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    }
-}
-else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved && status != DeliveryNoteStatus.Delivered)
-{
-    <div class="content-card mb-3 border border-success">
-        <div class="card-body d-flex align-items-center gap-2">
-            <i class="bi bi-check-circle-fill text-success fs-5"></i>
-            <div>
-                <strong>Đã duyệt số tiền thu</strong> — chờ người giao thu @((Model.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol()) và xác nhận đã giao.
-            </div>
-        </div>
-    </div>
-}
 <div class="row g-3">
     <div class="col-lg-4 order-lg-2">
         <div class="content-card">
@@ -469,6 +284,191 @@ else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved &
         </div>
     </div>
     <div class="col-lg-8 order-lg-1">
+        @if (Model.IsDirectShip || Model.ShortageInfo.HasShortage)
+        {
+            <div class="content-card mb-3">
+                @if (Model.IsDirectShip)
+                {
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0" role="alert">
+                        <i class="bi bi-truck fs-5"></i>
+                        <div>
+                            <strong>Phiếu giao thẳng tới khách</strong>
+                            @{
+                                var dsStatusText = ((DeliveryNoteStatus)Model.Status) switch
+                                {
+                                    DeliveryNoteStatus.Confirmed => " · Chờ khách xác nhận",
+                                    DeliveryNoteStatus.Delivered => " · Khách đã nhận",
+                                    DeliveryNoteStatus.Cancelled => " · Khách từ chối/hủy",
+                                    _ => ""
+                                };
+                            }
+                            @dsStatusText
+                        </div>
+                    </div>
+                }
+                @if (Model.ShortageInfo.HasShortage)
+                {
+                    var shortageNoticeViewData = new ViewDataDictionary(ViewData)
+                    {
+                        ["ShortageModalId"] = "deliveryNoteShortageModal",
+                        ["ShortageMessage"] = $"Phiếu xuất có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi xác nhận xuất.",
+                        ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?deliveryNoteId={Model.Id}",
+                        ["ShortageActionText"] = "Nhập hàng thiếu",
+                        ["ShortagePrimaryQuantityLabel"] = "Cần xuất",
+                        ["ShortageSecondaryQuantityLabel"] = "Tồn khả dụng",
+                        ["ShortageUseShippedQuantity"] = false
+                    };
+                    <div class="content-card-body">
+                        @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
+                    </div>
+                }
+            </div>
+        }
+        @if (settlementApprovalStatus == DeliverySettlementApprovalStatus.PendingApproval)
+        {
+            var proposed = Model.ProposedAmountToCollect ?? Model.AmountToCollect;
+            var rejectedValue = Model.SettlementItems.Where(i => i.RejectedQuantity > 0).Sum(i => i.RejectedQuantity * i.UnitPrice);
+            <div class="content-card mb-3 border border-warning">
+                <div class="content-card-header bg-warning-subtle">
+                    <h5 class="mb-0 text-warning-emphasis"><i class="bi bi-hourglass-split me-2"></i>Chờ duyệt số tiền thu</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Phải thu gốc (COD)</label>
+                            <div class="fw-bold">@Model.AmountToCollect.DisplayCurrencyWithSymbol()</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Giá trị hàng trả về</label>
+                            <div class="fw-bold text-danger">@rejectedValue.DisplayCurrencyWithSymbol()</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tự tính</label>
+                            <div class="fw-bold text-primary">@proposed.DisplayCurrencyWithSymbol()</div>
+                        </div>
+                    </div>
+                    @if (Model.SettlementItems.Any(i => i.RejectedQuantity > 0))
+                    {
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Hàng hóa</th>
+                                        <th class="text-end">SL giao</th>
+                                        <th class="text-end">Khách nhận</th>
+                                        <th class="text-end">Trả về</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in Model.SettlementItems)
+                                    {
+                                        <tr>
+                                            <td>@line.ProductName</td>
+                                            <td class="text-end">@line.Quantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                            <td class="text-end">@line.AcceptedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                            <td class="text-end @(line.RejectedQuantity > 0 ? "text-danger fw-bold" : "text-muted")">@line.RejectedQuantity.DisplayQuantity(line.QuantityDecimalPlaces)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    @if (Model.UserCanApproveSettlement)
+                    {
+                        <div class="border-top pt-3 d-flex justify-content-end">
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveSettlementModal">
+                                <i class="bi bi-check2-square me-1"></i>Duyệt số tiền thu
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-0">Chỉ Admin mới được duyệt số tiền thu.</div>
+                    }
+                </div>
+            </div>
+            @if (Model.UserCanApproveSettlement)
+            {
+                <div class="modal fade" id="approveSettlementModal" tabindex="-1" aria-labelledby="approveSettlementModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content">
+                            <form asp-action="ApproveSettlement" method="post">
+                                <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="approveSettlementModalLabel">Duyệt số tiền thu</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tiền thu duyệt</label>
+                                            <input type="number" name="approvedAmountToCollect" class="form-control" min="0" step="1000" value="@proposed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chi phí trả về</label>
+                                            <input type="number" name="agreedCustomerCharge" class="form-control" min="0" step="1000" value="0" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do chi phí</label>
+                                            <input type="text" name="agreedCustomerChargeReason" class="form-control" placeholder="Nếu có chi phí trả về" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ghi chú duyệt</label>
+                                            <input type="text" name="adminNote" class="form-control" placeholder="Ghi chú (tùy chọn)" />
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mt-2">Phần chênh lệch giữa số phải thu và số thu duyệt sẽ ghi thành công nợ khách.</div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="button" class="btn btn-outline-danger" id="rejectSettlementBtn" data-bs-toggle="modal" data-bs-target="#rejectSettlementModal">
+                                        Từ chối
+                                    </button>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-lg me-1"></i>Xác nhận
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal fade" id="rejectSettlementModal" tabindex="-1" aria-labelledby="rejectSettlementModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form asp-action="RejectSettlement" method="post">
+                                <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="rejectSettlementModalLabel">Từ chối số tiền thu</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do từ chối</label>
+                                    <textarea name="reason" class="form-control" rows="3" required placeholder="Nhập lý do từ chối"></textarea>
+                                    <div class="small text-muted mt-2">Từ chối sẽ hủy phiếu và yêu cầu mang hàng về kho.</div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved && status != DeliveryNoteStatus.Delivered)
+        {
+            <div class="content-card mb-3 border border-success">
+                <div class="card-body d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    <div>
+                        <strong>Đã duyệt số tiền thu</strong> — chờ người giao thu @((Model.ApprovedAmountToCollect ?? 0m).DisplayCurrencyWithSymbol()) và xác nhận đã giao.
+                    </div>
+                </div>
+            </div>
+        }
         <div class="content-card">
             @{
                 var hasReturned = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0 || i.CompensatedReturnQuantity > 0);
@@ -494,6 +494,9 @@ else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved &
                         <button type="button" class="btn btn-outline-success btn-delivering btn-sm" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@(!Model.CanMarkDelivering)">
                             <i class="bi bi-truck me-1"></i>Đang giao
                         </button>
+                        <a asp-action="Create" asp-controller="Deliveryrun" class="btn btn-secondary btn-sm" disabled="@(!Model.CanMarkDelivering)">
+                            <i class="bi bi-plus-lg me-1"></i>Chuyến giao
+                        </a>
                     }
                     @if (status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering or DeliveryNoteStatus.Confirmed))
                     {
@@ -910,6 +913,16 @@ else if (settlementApprovalStatus == DeliverySettlementApprovalStatus.Approved &
                     const decimals = Number(decimalField.dataset.decimals) ?? 0;
                     formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
                 }
+            }
+
+            const rejectSettlementBtn = document.getElementById('rejectSettlementBtn');
+            if (rejectSettlementBtn) {
+                rejectSettlementBtn.addEventListener('click', async (e) => {
+                    const modalEl = document.getElementById('approveSettlementModal');
+                    if(!modalEl) return;
+                    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modalInstance.hide();
+                });
             }
         });
     </script>

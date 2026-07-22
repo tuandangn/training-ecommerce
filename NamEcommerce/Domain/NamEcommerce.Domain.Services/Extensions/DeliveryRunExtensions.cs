@@ -1,5 +1,7 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using System.Net.NetworkInformation;
 
 namespace NamEcommerce.Domain.Services.Extensions;
 
@@ -49,6 +51,11 @@ public static class DeliveryRunExtensions
                 ConfirmedByUserId = pick.ConfirmedByUserId,
                 ConfirmedByFullName = pick.ConfirmedByFullName,
                 ConfirmedOnUtc = pick.ConfirmedOnUtc
-            }).ToList()
+            }).ToList(),
+            CanIssuePaperManifest = run.Status == DeliveryRunStatus.ReadyForHandover && !run.PaperManifestIssued,
+            CanCloseIfDelivered = run.Status == DeliveryRunStatus.HandedToDriver,
+            CanCancel = run.Status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled,
+            CanReviewCashCollected = !run.CashHandoverConfirmedOnUtc.HasValue && run.Status != DeliveryRunStatus.Cancelled,
+            CanReconcileDeliveryRunItems = run.Status is not DeliveryRunStatus.Cancelled
         };
 }
