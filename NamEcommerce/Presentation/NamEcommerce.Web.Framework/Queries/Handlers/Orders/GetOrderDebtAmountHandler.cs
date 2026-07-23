@@ -8,5 +8,5 @@ public sealed class GetOrderDebtAmountHandler(ICustomerDebtAppService customerDe
     : IRequestHandler<GetOrderDebtAmountQuery, decimal>
 {
     public Task<decimal> Handle(GetOrderDebtAmountQuery request, CancellationToken cancellationToken)
-        => customerDebtAppService.GetTotalPaidByOrderAsync(request.OrderId);
+        => customerDebtAppService.GetTotalDebtByOrderAsync(request.OrderId);
 }
