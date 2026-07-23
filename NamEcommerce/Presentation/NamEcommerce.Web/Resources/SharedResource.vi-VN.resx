@@ -498,6 +498,9 @@
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Kho hàng không được để trống.</value>
   </data>
+  <data name="Error.MustBeAdministrator" xml:space="preserve">
+    <value>Thao tác chỉ có thể thực hiện bởi admin</value>
+  </data>
   <data name="Error.PhysicalWarehouseRequired" xml:space="preserve">
     <value>Kho hàng phải là kho vật lý.</value>
   </data>

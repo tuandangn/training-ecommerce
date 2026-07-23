@@ -1,10 +1,10 @@
-@using NamEcommerce.Domain.Shared.Services.Users
+@using NamEcommerce.Application.Contracts.Users
 @inject IWebHelper WebHelper
-@inject ICurrentUserAccessor CurrentUserAccessor
+@inject ICurrentUserService CurrentUserService
 @{
     var isAuthPage = WebHelper.IsLoginPage() || WebHelper.IsRegisterPage();
     var pageTitle = ViewData[ViewConstants.PageTitle] as string ?? Information.Name;
-    var currentUser = await CurrentUserAccessor.GetCurrentUserAsync();
+    var currentUser = await CurrentUserService.GetCurrentUserInfoAsync();
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -49,6 +49,8 @@
                         Đăng xuất
                     </a>
                 </div>
+
+                @await Component.InvokeAsync("AdminResetDataComponent")
             }
         </aside>
         <div class="main-area">

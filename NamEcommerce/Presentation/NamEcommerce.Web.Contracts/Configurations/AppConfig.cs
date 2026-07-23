@@ -16,4 +16,6 @@ public sealed class AppConfig
 
     public decimal[] TaxRates { get; set; } = [];
     public decimal DefaultTaxRate { get; set; } = 10;
+
+    public bool AllowAdminResetData { get; set; }
 }

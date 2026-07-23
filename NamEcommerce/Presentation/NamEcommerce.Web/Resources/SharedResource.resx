@@ -498,6 +498,9 @@
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Warehouse is required.</value>
   </data>
+  <data name="Error.MustBeAdministrator" xml:space="preserve">
+    <value>Must be administrator</value>
+  </data>
   <data name="Error.PhysicalWarehouseRequired" xml:space="preserve">
     <value>Physical warehouse is required.</value>
   </data>
