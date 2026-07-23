@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Data.SqlServer;
