@@ -282,7 +282,7 @@
                                 </div>
                                 @if (Model.CanManageDeliveryRun && !group.Confirmed)
                                 {
-                                    <form asp-action="ConfirmWarehousePick" method="post">
+                                    <form asp-action="ConfirmWarehousePick" method="post" class="confirmWarehouseForm">
                                         <input type="hidden" name="id" value="@Model.Id" />
                                         <input type="hidden" name="warehouseId" value="@group.WarehouseId" />
                                         <button type="submit" class="btn btn-sm btn-outline-success" disabled="@(!offlineReady)">
@@ -479,6 +479,22 @@
             });
         }
 
+
+        const confirmWarehouseForms = document.querySelectorAll('.confirmWarehouseForm');
+        if (confirmWarehouseForms) {
+            Array.from(confirmWarehouseForms).forEach(form => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const confirmed = await confirm('Đã lấy hàng', 'Xác nhận đã lấy đủ hàng ở kho này');
+                    if(!confirmed)
+                        return;
+
+                    showPageLoading();
+                    form.submit();
+                });
+            });
+        }
+
         const updateAmounCashForms = document.querySelectorAll('.updateAmounCashForm');
         if (updateAmounCashForms) {
             Array.from(updateAmounCashForms).forEach(form => {
@@ -511,11 +527,6 @@
                     if (!$(confirmCashHandoverForm).valid())
                         return;
 
-                    const amountEl = confirmCashHandoverForm.querySelector('[name=amount]');
-                    const confirmed = await confirm('Đã nhận tiền', `Xác nhận đã nhận ${amountEl?.value}đ`);
-                    if (!confirmed)
-                        return;
-
                     showPageLoading();
                     confirmCashHandoverForm.submit();
                 });
@@ -542,7 +553,7 @@
             });
         }
 
-        const cancelForm = document.getElementById('closeForm');
+        const cancelForm = document.getElementById('cancelForm');
         if (cancelForm) {
             cancelForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
