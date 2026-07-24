@@ -109,3 +109,14 @@ function getEl(id) {
     if (!el) throw new Error(`Element #${id} không tồn tại`);
     return el;
 }
+
+function reparseForm(formSelector) {
+    var $form = $(formSelector);
+
+    // Remove the cached validator data
+    $form.removeData('validator')
+        .removeData('unobtrusiveValidation');
+
+    // Re-parse the form rules
+    $.validator.unobtrusive.parse($form);
+}

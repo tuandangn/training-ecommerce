@@ -23,16 +23,16 @@
     <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
 }
 
-<div id="fastSaleApp"
-     data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
-     data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
-     data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
-     data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
-     data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
-     data-create-unpaid-sale-url="@Url.Action("CreateUnpaidSale", "Order")"
-     data-schedule-url="@Url.Action("CreateSchedule", "OrderFulfillment")"
-     data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
-     data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
+<form asp-action="QuickCreate" method="post" asp-antiforgery="true" id="fastSaleApp"
+      data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
+      data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
+      data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
+      data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
+      data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
+      data-create-unpaid-sale-url="@Url.Action("CreateUnpaidSale", "Order")"
+      data-schedule-url="@Url.Action("CreateSchedule", "OrderFulfillment")"
+      data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
+      data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
     <div class="row g-3">
         <div class="col-lg-8">
@@ -54,12 +54,17 @@
                                              data-address="@Model.CustomerAddress"
                                              data-kind="@Model.CustomerKind"
                                              data-is-system="@Model.CustomerIsSystem.ToString().ToLowerInvariant()"></div>
-                                        <input type="text" class="visually-hidden" asp-for="CustomerId" data-default="@Model.DefaultCustomerId" />
+                                        <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                         <span asp-validation-for="CustomerId" class="small text-danger"></span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="mb-3">
+                                    <div>
+                                        <label for="fastSaleNote" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.Note)</label>
+                                        <textarea asp-for="Note" class="form-control" rows="2" id="fastSaleNote" placeholder="Nhập ghi chú..."></textarea>
+                                        <span asp-validation-for="Note" class="small text-danger"></span>
+                                    </div>
+                                    <div class="d-none">
                                         <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <select id="fastSaleWarehouse" class="form-select" asp-for="WarehouseId">
                                             <option value="">Chọn kho</option>
@@ -68,15 +73,6 @@
                                                 <option value="@warehouse.Id">@warehouse.Name</option>
                                             }
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label for="fastSaleDiscount" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.OrderDiscount)</label>
-                                        <input asp-for="OrderDiscount" class="form-control" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off" disabled
-                                               data-val="true" id="fastSaleDiscount"
-                                               data-val-range="Giảm giá phải lớn hơn hoặc bằng 0" data-val-range-min=""
-                                               data-val-number="Giảm giá phải là số" />
-                                        <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                                     </div>
                                 </div>
                             </div>
@@ -140,113 +136,91 @@
                                 </div>
                             </div>
                         </div>
-                    </section>
-                </div>
-                <div class="col-12 d-none d-lg-block">
-                    <section class="content-card">
                         <div class="content-card-body">
-                            <div id="fastSaleProductBrowser" data-col-class="col-xl-4 col-sm-6"></div>
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center gap-3 mb-0">
+                                    <div class="form-label small fw-bold text-muted text-uppercase">Giao hàng</div>
+                                    <nav>
+                                        <div class="nav nav-tabs" role="tablist">
+                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navNotDelivered"
+                                                    type="button" role="tab" aria-controls="navNotDelivered" aria-selected="false"
+                                                    disabled id="fastSaleNotDelivered">
+                                                Chưa giao
+                                            </button>
+                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navDelivered"
+                                                    type="button" role="tab" aria-controls="navDelivered" aria-selected="false"
+                                                    disabled id="fastSaleDeliverNow">
+                                                Đã giao
+                                            </button>
+                                        </div>
+                                    </nav>
+                                </div>
+                                <div class="tab-content" id="navShippingContent">
+                                    <div class="tab-pane fade border rounded p-3" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                        <div class="row g-3 ship-info">
+                                            <div class="col-md-6">
+                                                <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" disabled />
+                                                <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" disabled />
+                                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center gap-3 mb-0">
+                                    <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
+                                    <nav>
+                                        <div class="nav nav-tabs" role="tablist">
+                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navUnpaid"
+                                                    type="button" role="tab" aria-controls="navUnpaid" aria-selected="false"
+                                                    disabled id="fastSaleUnpaid">
+                                                Chưa thanh toán
+                                            </button>
+                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navPayNow"
+                                                    type="button" role="tab" aria-controls="navPayNow" aria-selected="false"
+                                                    disabled id="fastSalePayNow">
+                                                Thanh toán ngay
+                                            </button>
+                                        </div>
+                                    </nav>
+                                </div>
+                                <div class="tab-content">
+                                    <div class="tab-pane fade" id="navUnpaid" role="tabpanel" aria-labelledby="navUnpaid-tab" tabindex="0">
+                                    </div>
+                                    <div class="tab-pane fade" id="navPayNow" role="tabpanel" aria-labelledby="navPayNow-tab" tabindex="0">
+                                        <div class="alert alert-warning small mt-2 mb-0 py-2 retailWalkinPaymentWarning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i> Khách bán lẻ cần thanh toán hoặc đặt cọc
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 d-flex justify-content-center">
+                                <button type="button" class="btn btn-primary" id="fastSaleComplete">
+                                    <i class="bi bi-floppy me-1"></i> Xác nhận
+                                </button>
+                            </div>
                         </div>
                     </section>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-4 d-none d-lg-block">
             <section class="content-card">
                 <div class="content-card-body">
-                    <div class="form-label small fw-bold text-muted text-uppercase">Giao hàng</div>
-                    <div class="mb-3">
-                        <div class="fast-sale-option-group" role="group">
-                            <button type="button" class="btn btn-outline-success" disabled id="fastSaleDeliverNow">
-                                <i class="bi bi-box-seam me-1"></i> Giao ngay
-                            </button>
-                            <button type="button" class="btn btn-outline-success active" disabled id="fastSaleNotDelivered">
-                                <i class="bi bi-clock-history me-1"></i> Chưa giao
-                            </button>
-                        </div>
-                    </div>
-                    <div class="ship-info d-none">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" disabled />
-                                <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" disabled />
-                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
-                    <div class="mb-3">
-                        <div class="mb-2">
-                            <div class="fast-sale-option-group" role="group">
-                                <button type="button" class="btn btn-outline-primary" disabled id="fastSalePayNow">
-                                    <i class="bi bi-credit-card-2-front me-1"></i> Thanh toán ngay
-                                </button>
-                                <button type="button" class="btn btn-outline-primary active" disabled id="fastSaleUnpaid">
-                                    <i class="bi bi-receipt me-1"></i> Chưa thanh toán
-                                </button>
-                            </div>
-                        </div>
-                        <div class="p-3 border rounded d-none" id="fastSalePaymentMethodSection">
-                            <div class="form-label small text-muted">Phương thức thanh toán</div>
-                            <div class="fast-sale-payment-methods" role="group">
-                                <button type="button" class="btn btn-outline-secondary active" id="fastSaleCashMethod" data-method="cash">
-                                    <i class="bi bi-cash-coin me-1"></i> Tiền mặt
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="fastSaleBankMethod" data-method="bank" @(Model.BankTransferEnabled ? "" : "disabled")>
-                                    <i class="bi bi-qr-code me-1"></i> Chuyển khoản
-                                </button>
-                            </div>
-                        </div>
-                        <div class="d-none" id="fastSaleQrPanel">
-                            @if (!string.IsNullOrWhiteSpace(Model.BankAccountLabel))
-                            {
-                                <div class="mt-2 text-center">
-                                    <span id="fastBankNumber" class="fw-bold text-muted text-uppercase">@Model.BankAccountLabel</span>
-                                </div>
-                            }
-                            <div class="fast-sale-qr mt-2 border rounded">
-                                <img id="fastSaleQrImage" src="" alt="VietQR" />
-                                <div class="small d-flex justify-content-between gap-2">
-                                    <span class="text-muted">Nội dung</span>
-                                    <strong id="fastSaleReference"></strong>
-                                </div>
-                                <div class="small d-flex justify-content-between gap-2 mt-1">
-                                    <span class="text-muted">Số tiền</span>
-                                    <strong id="fastSaleQrAmount"></strong>
-                                </div>
-                                <div id="fastSaleQrStatus" class="small text-muted mt-2"></div>
-                                <div id="fastSaleQrExpires" class="small text-muted"></div>
-                                <div class="d-flex align-items-center gap-2 mt-3">
-                                    <button type="button" class="btn btn-outline-primary flex-grow-1" id="fastSaleCreateQr">
-                                        <i class="bi bi-qr-code-scan me-1"></i> Tạo QR
-                                    </button>
-                                    <button type="button" class="btn btn-outline-success flex-grow-1" id="fastSaleConfirmQr" disabled>
-                                        <i class="bi bi-check2-circle me-1"></i> Xác nhận đã nhận tiền
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="fastSaleNote" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.Note)</label>
-                        <textarea asp-for="Note" class="form-control" rows="3" id="fastSaleNote" placeholder="Nhập ghi chú..."></textarea>
-                        <span asp-validation-for="Note" class="small text-danger"></span>
-                    </div>
-                    <div class="d-grid">
-                        <button type="button" class="btn btn-primary btn-lg" id="fastSaleComplete">
-                            <i class="bi bi-check2-square me-1"></i> Hoàn tất bán hàng
-                        </button>
-                    </div>
+                    <div id="fastSaleProductBrowser" data-col-class="col-12"></div>
                 </div>
             </section>
         </div>
     </div>
-</div>
+</form>
 
 <div class="offcanvas offcanvas-bottom d-lg-none ui-top-sheet" tabindex="-1" id="productBrowserOffcanvas">
     <div class="offcanvas-header border-bottom">
@@ -331,7 +305,7 @@
                         </div>
                         <div class="col-12 col-md-6 d-none" id="fastSaleScheduleDateSection">
                             <label class="form-label" for="fastSaleScheduleFrom">Ngày giao</label>
-                            <input id="fastSaleScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày giao"/>
+                            <input id="fastSaleScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày giao" />
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="fastSaleScheduleNote">Ghi chú</label>
@@ -350,6 +324,133 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ui-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thanh toán đơn hàng</h5>
+            </div>
+            <form id="paymentForm" method="post">
+                <div class="modal-body py-3">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted fw-medium">Tổng tiền hàng</span>
+                                <div>
+                                    <span class="fw-medium" id="paymentSubTotal"></span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted fw-medium">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
+                                <div>
+                                    <input asp-for="OrderDiscount" class="form-control form-control-sm border-0" placeholder="Nhập giảm giá"
+                                           data-decimal="currency" autocomplete="off" disabled style="font-size:1rem;"
+                                           data-val="true" id="fastSaleDiscount" />
+                                    <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="fw-bold text-primary">Tổng cộng</span>
+                                <div class="text-end">
+                                    <span class="fw-medium" id="paymentTotal"></span>
+                                    <span class="small text-muted d-block" id="paymentTotalHint"></span>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <div id="paymentProcessContainer">
+                        <hr />
+                        <div class="d-flex align-items-center gap-3 mt-2 mb-3 justify-content-between">
+                            <label for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Phương thức
+                            </label>
+                            <div class="fast-sale-payment-methods" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm active" id="fastSaleCashMethod" data-method="cash">
+                                    Tiền mặt
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="fastSaleBankMethod" data-method="bank" @(Model.BankTransferEnabled ? "" : "disabled")>
+                                    Chuyển khoản
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 mb-3 justify-content-between">
+                            <label asp-for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <div>
+                                <div>
+                                    <input asp-for="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
+                                           data-decimal="currency" data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0" autocomplete="off"
+                                           data-val="true" />
+                                    <span asp-validation-for="PaidAmount" class="small text-danger"></span>
+                                </div>
+                                <span class="form-text text-muted d-block text-end" id="debtAmount"></span>
+                            </div>
+                        </div>
+                        <div id="fastSaleQrPanel">
+                            @if (!string.IsNullOrWhiteSpace(Model.BankAccountLabel))
+                            {
+                                <div class="mt-2 text-center">
+                                    <span id="fastBankNumber" class="fw-bold text-muted text-uppercase">@Model.BankAccountLabel</span>
+                                </div>
+                            }
+                            <div class="fast-sale-qr mt-2 border rounded">
+                                <img id="fastSaleQrImage" src="" alt="VietQR" />
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item">
+                                        <div class="d-flex align-items-center justify-content-between gap-3">
+                                            <span class="text-muted">Nội dung</span>
+                                            <span class="fw-medium" id="fastSaleReference"></span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex align-items-center justify-content-between gap-3">
+                                            <span class="text-muted">Số tiền</span>
+                                            <span class="fw-medium" id="fastSaleQrAmount"></span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex align-items-center justify-content-between gap-3">
+                                            <span class="text-muted">Trạng thái</span>
+                                            <span class="fw-medium" id="fastSaleQrStatus"></span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex align-items-center justify-content-between gap-3">
+                                            <span class="text-muted">Hết hạn</span>
+                                            <span class="fw-medium" id="fastSaleQrExpires"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-3 justify-content-center">
+                                    <button type="button" class="btn btn-outline-primary" id="fastSaleCreateQr">
+                                        <i class="bi bi-qr-code-scan me-1"></i> Tạo QR
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success flex-grow-1 d-none" id="fastSaleConfirmQr" disabled>
+                                        <i class="bi bi-check2-circle me-1"></i> Xác nhận đã nhận tiền
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-outline-secondary" id="paymentSkip">Bỏ qua</button>
+                    <button type="submit" class="btn btn-primary d-none">
+                        <i class="bi bi-floppy me-1"></i>Xác nhận
+                    </button>
+                    <button type="button" class="btn btn-success" id="moneyReceived">
+                        <i class="bi bi-check-circle me-1"></i>Đã nhận tiền
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

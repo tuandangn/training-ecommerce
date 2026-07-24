@@ -1,5 +1,4 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -9,14 +8,11 @@ namespace NamEcommerce.Web.Services.FastSales;
 
 public sealed class FastSaleModelFactory(
     IMediator mediator,
-    ICustomerAppService customerAppService,
     IBankTransferReceivingAccountResolver receivingAccountResolver,
     BankTransferPaymentSettings bankTransferPaymentSettings) : IFastSaleModelFactory
 {
     public async Task<FastSaleModel> PrepareFastSaleModelAsync()
     {
-        var retailWalkInCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
-
         var warehouses = await mediator.Send(new GetWarehouseOptionListQuery
         {
             IncludeDirectTransit = false
@@ -26,13 +22,6 @@ public sealed class FastSaleModelFactory(
 
         return new FastSaleModel
         {
-            CustomerId = retailWalkInCustomer.Id,
-            DefaultCustomerId = retailWalkInCustomer.Id,
-            CustomerName = retailWalkInCustomer.FullName,
-            CustomerPhone = retailWalkInCustomer.PhoneNumber,
-            CustomerAddress = retailWalkInCustomer.Address,
-            CustomerKind = retailWalkInCustomer.Kind,
-            CustomerIsSystem = retailWalkInCustomer.IsSystem,
             Warehouses = warehouses.Options,
             BankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true,
             BankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)

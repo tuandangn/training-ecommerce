@@ -60,9 +60,9 @@ public sealed class FastSaleAppService(
         if (intent.CustomerId.HasValue && intent.CustomerId.Value != dto.CustomerId)
             return QuickSaleResultAppDto.CreateError("Error.PaymentIntentCustomerMismatch");
 
-        var total = CalculateTotal(dto);
-        if (intent.Amount != total || intent.Amount != dto.PaidAmount)
-            return QuickSaleResultAppDto.CreateError("Error.PaymentIntentAmountMismatch");
+        //var total = CalculateTotal(dto);
+        //if (intent.Amount != total || intent.Amount != dto.PaidAmount)
+        //    return QuickSaleResultAppDto.CreateError("Error.PaymentIntentAmountMismatch");
         if (intent.Status is BankTransferPaymentIntentStatus.Expired
             or BankTransferPaymentIntentStatus.Cancelled
             or BankTransferPaymentIntentStatus.Consumed)
@@ -123,7 +123,8 @@ public sealed class FastSaleAppService(
         var total = CalculateTotal(dto);
         if (total <= 0)
             return QuickSaleResultAppDto.CreateError("Error.TotalAmountMustBePositive");
-        if (paymentTiming == QuickSalePaymentTiming.PayNow && dto.PaidAmount != total)
+        if (customer.Kind == CustomerKind.RetailWalkIn && paymentTiming == QuickSalePaymentTiming.PayNow
+            && fulfillmentMode == QuickSaleFulfillmentMode.DeliverNow && dto.PaidAmount != total)
             return QuickSaleResultAppDto.CreateError("Error.PaymentAmountMustEqualSaleTotal");
         if (paymentTiming == QuickSalePaymentTiming.Unpaid && dto.PaidAmount != 0)
             return QuickSaleResultAppDto.CreateError("Error.PaymentAmountMustBeZeroWhenUnpaid");
@@ -186,7 +187,7 @@ public sealed class FastSaleAppService(
                     OrderId = orderId,
                     DeliveryNoteId = deliveryNote.Id,
                     CustomerDebtId = null,
-                    Amount = total,
+                    Amount = dto.PaidAmount,
                     PaymentMethod = paymentMethod!.Value,
                     PaymentType = PaymentType.DebtPayment,
                     PaidOnUtc = DateTime.UtcNow,
@@ -222,7 +223,7 @@ public sealed class FastSaleAppService(
             {
                 CustomerId = dto.CustomerId,
                 OrderId = orderId,
-                Amount = total,
+                Amount = dto.PaidAmount,
                 PaymentMethod = paymentMethod!.Value,
                 PaymentType = PaymentType.Deposit,
                 PaidOnUtc = DateTime.UtcNow,

@@ -14,24 +14,32 @@ public sealed record Customer : AppAggregateEntity
         FullName = fullName;
         PhoneNumber = phoneNumber;
         Address = address;
+        Kind = CustomerKind.Standard;
 
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     public NormalizableString FullName { get; internal set; }
     public NormalizableString Address { get; internal set; }
-    public string PhoneNumber { get; internal set; }
+    public string PhoneNumber { get; internal set; } = string.Empty;
     public string? Email { get; internal set; }
     public string? Note { get; internal set; }
-    public CustomerKind Kind { get; internal set; } = CustomerKind.Standard;
+
+    public CustomerKind Kind { get; internal set; }
     public bool IsSystem { get; internal set; }
 
     public DateTime CreatedOnUtc { get; init; }
 
+    #region Events
+
     internal void MarkCreated()
         => RaiseDomainEvent(new CustomerCreated(Id, FullName, PhoneNumber));
+
     internal void MarkUpdated()
         => RaiseDomainEvent(new CustomerUpdated(Id));
+
     internal void MarkDeleted()
         => RaiseDomainEvent(new CustomerDeleted(Id, FullName));
+
+    #endregion
 }

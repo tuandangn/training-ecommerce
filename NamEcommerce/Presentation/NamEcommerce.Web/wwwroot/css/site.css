@@ -2424,6 +2424,14 @@ body {
             border-bottom: 2px solid var(--primary);
         }
 
+        .nav-tabs .nav-link[disabled] {
+            color: var(--gray-400);
+        }
+        .nav-tabs .nav-link:hover[disabled] {
+            background-color: #fff;
+        }
+
+
 /* ============================================================
    Pager
    ============================================================ */

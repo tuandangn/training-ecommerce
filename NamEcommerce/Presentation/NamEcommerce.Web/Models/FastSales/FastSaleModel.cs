@@ -28,6 +28,9 @@ public sealed class FastSaleModel
     [Display(Name = "Số điện thoại")]
     public string? ShippingPhoneNumber { get; set; }
 
+    [Display(Name = "Số tiền")]
+    public decimal? PaidAmount { get; set; }
+
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
 
