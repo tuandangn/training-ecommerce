@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Debts;
 
@@ -27,8 +28,8 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             PaidAmount = d.PaidAmount,
             RemainingAmount = d.RemainingAmount,
             Status = d.Status,
-            DueDateUtc = d.DueDateUtc?.ToLocalTime(),
-            CreatedOnUtc = d.CreatedOnUtc.ToLocalTime(),
+            DueDateUtc = DateTimeHelper.ToLocalTime(d.DueDateUtc),
+            CreatedOnUtc = DateTimeHelper.ToLocalTime(d.CreatedOnUtc),
             Payments = d.Payments.Select(p => MapPayment(p)).ToList(),
             CreditNoteAllocations = d.CreditNoteAllocations.Select(MapAllocation).ToList()
         }).ToList();
@@ -61,7 +62,7 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             PaymentMethod = p.PaymentMethod,
             PaymentType = p.PaymentType,
             Note = p.Note,
-            PaidOnUtc = p.PaidOnUtc.ToLocalTime(),
+            PaidOnUtc = DateTimeHelper.ToLocalTime(p.PaidOnUtc),
             OrderCode = p.OrderCode,
             DeliveryNoteCode = p.DeliveryNoteCode,
             CustomerDebtId = p.CustomerDebtId
@@ -77,7 +78,7 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             Amount = creditNote.Amount,
             AppliedAmount = creditNote.AppliedAmount,
             RemainingAmount = creditNote.RemainingAmount,
-            CreatedOn = creditNote.CreatedOnUtc.ToLocalTime()
+            CreatedOn = DateTimeHelper.ToLocalTime(creditNote.CreatedOnUtc)
         };
 
     private static CreditNoteAllocationModel MapAllocation(CustomerCreditNoteAllocationAppDto allocation) =>
@@ -88,8 +89,8 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             SourceReturnId = allocation.SourceReturnId,
             SourceReturnCode = allocation.SourceReturnCode,
             Amount = allocation.Amount,
-            AppliedOn = allocation.AppliedOnUtc.ToLocalTime(),
-            ReversedOn = allocation.ReversedOnUtc?.ToLocalTime(),
+            AppliedOn = DateTimeHelper.ToLocalTime(allocation.AppliedOnUtc),
+            ReversedOn = DateTimeHelper.ToLocalTime(allocation.ReversedOnUtc),
             ReverseReason = allocation.ReverseReason
         };
 }

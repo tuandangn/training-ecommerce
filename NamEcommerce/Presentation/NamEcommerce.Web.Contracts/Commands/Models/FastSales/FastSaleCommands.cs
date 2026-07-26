@@ -15,7 +15,6 @@ public sealed class QuickSaleItemCommand
 public sealed class CreateCashQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
     public IList<QuickSaleItemCommand> Items { get; init; } = [];
     public decimal? OrderDiscount { get; init; }
     public string? Note { get; init; }
@@ -31,7 +30,6 @@ public sealed class CreateBankTransferQuickSaleCommand : ICommand<QuickSaleResul
 {
     public required Guid PaymentIntentId { get; init; }
     public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
     public IList<QuickSaleItemCommand> Items { get; init; } = [];
     public decimal? OrderDiscount { get; init; }
     public string? Note { get; init; }
@@ -46,7 +44,6 @@ public sealed class CreateBankTransferQuickSaleCommand : ICommand<QuickSaleResul
 public sealed class CreateUnpaidQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
     public IList<QuickSaleItemCommand> Items { get; init; } = [];
     public decimal? OrderDiscount { get; init; }
     public string? Note { get; init; }

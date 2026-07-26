@@ -1,4 +1,4 @@
-@model FastSaleModel
+@model OrderQuickCreateModel
 @{
     ViewData[ViewConstants.PageTitle] = "Bán nhanh";
 }
@@ -47,13 +47,7 @@
                                 <div class="col-md-6">
                                     <div>
                                         <label asp-for="CustomerId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                        <div id="fastSaleCustomerPicker"
-                                             data-id="@Model.DefaultCustomerId"
-                                             data-name="@Model.CustomerName"
-                                             data-phone="@Model.CustomerPhone"
-                                             data-address="@Model.CustomerAddress"
-                                             data-kind="@Model.CustomerKind"
-                                             data-is-system="@Model.CustomerIsSystem.ToString().ToLowerInvariant()"></div>
+                                        <div id="fastSaleCustomerPicker"></div>
                                         <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                         <span asp-validation-for="CustomerId" class="small text-danger"></span>
                                     </div>
@@ -63,16 +57,6 @@
                                         <label for="fastSaleNote" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.Note)</label>
                                         <textarea asp-for="Note" class="form-control" rows="2" id="fastSaleNote" placeholder="Nhập ghi chú..."></textarea>
                                         <span asp-validation-for="Note" class="small text-danger"></span>
-                                    </div>
-                                    <div class="d-none">
-                                        <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                        <select id="fastSaleWarehouse" class="form-select" asp-for="WarehouseId">
-                                            <option value="">Chọn kho</option>
-                                            @foreach (var warehouse in Model.Warehouses)
-                                            {
-                                                <option value="@warehouse.Id">@warehouse.Name</option>
-                                            }
-                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -112,19 +96,6 @@
                                 <div class="order-summary-row">
                                     <span class="label">Tạm tính</span>
                                     <span class="value" id="fastSaleSubtotal">0 ₫</span>
-                                </div>
-                                <div class="order-summary-row">
-                                    <span class="label">Giảm giá</span>
-                                    <span class="value" id="fastSaleDiscountDisplay">
-                                        @if (Model.OrderDiscount > 0)
-                                        {
-                                            @:-@Model.OrderDiscount.DisplayCurrencyWithSymbol()
-                                        }
-                                        else
-                                        {
-                                            @:0 @ViewConstants.DefaultCurrencySymbol
-                                        }
-                                    </span>
                                 </div>
                                 <div class="order-summary-row total">
                                     <span class="label">Tổng cộng</span>
@@ -347,7 +318,7 @@
                                 <span class="text-muted fw-medium">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                 <div>
                                     <input asp-for="OrderDiscount" class="form-control form-control-sm border-0" placeholder="Nhập giảm giá"
-                                           data-decimal="currency" autocomplete="off" disabled style="font-size:1rem;"
+                                           data-decimal="currency" autocomplete="off" style="font-size:1rem;"
                                            data-val="true" id="fastSaleDiscount" />
                                     <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                                 </div>
@@ -355,7 +326,7 @@
                         </li>
                         <li class="list-group-item">
                             <div class="d-flex align-items-center justify-content-between">
-                                <span class="fw-bold text-primary">Tổng cộng</span>
+                                <span class="fw-bold">Tổng cộng</span>
                                 <div class="text-end">
                                     <span class="fw-medium" id="paymentTotal"></span>
                                     <span class="small text-muted d-block" id="paymentTotalHint"></span>
@@ -365,19 +336,6 @@
                     </ul>
                     <div id="paymentProcessContainer">
                         <hr />
-                        <div class="d-flex align-items-center gap-3 mt-2 mb-3 justify-content-between">
-                            <label for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block">
-                                Phương thức
-                            </label>
-                            <div class="fast-sale-payment-methods" role="group">
-                                <button type="button" class="btn btn-outline-secondary btn-sm active" id="fastSaleCashMethod" data-method="cash">
-                                    Tiền mặt
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="fastSaleBankMethod" data-method="bank" @(Model.BankTransferEnabled ? "" : "disabled")>
-                                    Chuyển khoản
-                                </button>
-                            </div>
-                        </div>
                         <div class="d-flex align-items-center gap-3 mb-3 justify-content-between">
                             <label asp-for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <div>
@@ -390,7 +348,20 @@
                                 <span class="form-text text-muted d-block text-end" id="debtAmount"></span>
                             </div>
                         </div>
-                        <div id="fastSaleQrPanel">
+                        <div class="d-flex align-items-center gap-3 mt-2 mb-3 justify-content-between" id="paymentMethodContainer">
+                            <label for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Phương thức
+                            </label>
+                            <div class="fast-sale-payment-methods" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm active" id="fastSaleCashMethod" data-method="cash">
+                                    Tiền mặt
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="fastSaleBankMethod" data-method="bank" @(Model.BankTransferEnabled ? "" : "disabled")>
+                                    Chuyển khoản
+                                </button>
+                            </div>
+                        </div>
+                        <div id="fastSaleQrPanel" class="d-none">
                             @if (!string.IsNullOrWhiteSpace(Model.BankAccountLabel))
                             {
                                 <div class="mt-2 text-center">
@@ -429,9 +400,6 @@
                                     <button type="button" class="btn btn-outline-primary" id="fastSaleCreateQr">
                                         <i class="bi bi-qr-code-scan me-1"></i> Tạo QR
                                     </button>
-                                    <button type="button" class="btn btn-outline-success flex-grow-1 d-none" id="fastSaleConfirmQr" disabled>
-                                        <i class="bi bi-check2-circle me-1"></i> Xác nhận đã nhận tiền
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -442,7 +410,7 @@
                     <button type="submit" class="btn btn-primary d-none">
                         <i class="bi bi-floppy me-1"></i>Xác nhận
                     </button>
-                    <button type="button" class="btn btn-success" id="moneyReceived">
+                    <button type="button" class="btn btn-primary" id="moneyReceived">
                         <i class="bi bi-check-circle me-1"></i>Đã nhận tiền
                     </button>
                 </div>

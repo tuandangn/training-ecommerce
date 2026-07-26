@@ -526,7 +526,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 CustomerName: d.CustomerName,
                 UnitPrice: d.UnitPrice,
                 OrderCode: d.OrderCode,
-                OrderDate: d.OrderDateUtc.ToLocalTime()))
+                OrderDateUtc: d.OrderDateUtc))
             .ToList();
     }
 

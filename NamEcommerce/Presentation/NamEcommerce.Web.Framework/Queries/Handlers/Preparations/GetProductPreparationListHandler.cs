@@ -6,6 +6,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.Preparation;
 using NamEcommerce.Web.Contracts.Queries.Models.Preparations;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Preparations;
 
@@ -44,7 +45,7 @@ public sealed class GetProductPreparationListHandler(
                     Quantity = details.Quantity,
                     UnitPrice = details.UnitPrice,
                     DeliveredQuantity = details.DeliveredQuantity,
-                    ExpectedShippingDate = details.ExpectedShippingDateUtc?.ToLocalTime(),
+                    ExpectedShippingDate = DateTimeHelper.ToLocalTime(details.ExpectedShippingDateUtc),
                     IsDelivered = details.IsDelivered,
                     DeliveryNoteLinks = details.DeliveryNoteLinks.Select(link => new DeliveryNoteLinkModel(link.Id, link.Code, link.Status, link.CreatedOnUtc)).ToList()
                 };

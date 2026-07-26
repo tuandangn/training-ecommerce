@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Framework.Common;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Inventory;
 
@@ -32,7 +33,7 @@ public sealed class GetProductReservationLedgerHandler : IRequestHandler<GetProd
                 UnitPrice = item.UnitPrice,
                 Reason = item.Reason,
                 ReferenceId = item.ReferenceId,
-                CreatedOn = item.CreatedOnUtc.ToLocalTime()
+                CreatedOn = DateTimeHelper.ToLocalTime(item.CreatedOnUtc)
             })
         };
     }

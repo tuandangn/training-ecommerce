@@ -61,7 +61,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                 TotalAmount = order.TotalAmount,
                 IsFinished = order.IsFinished,
                 ExpectedShippingDate = DateTimeHelper.ToLocalTime(order.ExpectedShippingDateUtc),
-                CreatedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc.ToLocalTime()),
+                CreatedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc),
                 CanUpdateInfo = order.CanUpdateInfo,
                 Items = order.Items.Select(item => new OrderListModel.OrderItemSummaryModel
                 {

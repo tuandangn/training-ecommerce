@@ -21,8 +21,8 @@ public sealed class CheckExistingDraftsHandler(IShortageAggregationAppService sh
                 Id = draft.Id,
                 VendorId = draft.VendorId,
                 Code = draft.Code,
-                CreatedOn = draft.CreatedOnUtc.ToLocalTime(),
-                ExpectedDeliveryDate = draft.ExpectedDeliveryDateUtc?.ToLocalTime()
+                CreatedOn = DateTimeHelper.ToLocalTime(draft.CreatedOnUtc),
+                ExpectedDeliveryDate = DateTimeHelper.ToLocalTime(draft.ExpectedDeliveryDateUtc)
             }).ToList()
         };
     }
@@ -58,8 +58,8 @@ public sealed class CheckRelatedPurchaseOrdersHandler(IShortageAggregationAppSer
                     Status = purchaseOrder.Status,
                     StatusName = GetStatusName(purchaseOrder.Status),
                     StatusClass = GetStatusClass(purchaseOrder.Status),
-                    CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
-                    ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
+                    CreatedOn = DateTimeHelper.ToLocalTime(purchaseOrder.CreatedOnUtc),
+                    ExpectedDeliveryDate = DateTimeHelper.ToLocalTime(purchaseOrder.ExpectedDeliveryDateUtc),
                     TotalAmount = purchaseOrder.TotalAmount,
                     ItemCount = purchaseOrder.ItemCount,
                     CanAllocate = purchaseOrder.CanAllocate,

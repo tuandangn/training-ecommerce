@@ -5,6 +5,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.PurchaseOrders;
 
@@ -40,7 +41,7 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             WarehouseId = purchaseOrder.WarehouseId,
             Status = purchaseOrder.Status,
             Note = purchaseOrder.Note,
-            ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
+            ExpectedDeliveryDate = DateTimeHelper.ToLocalTime(purchaseOrder.ExpectedDeliveryDateUtc),
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
             AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,

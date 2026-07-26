@@ -297,6 +297,9 @@
   <data name="Error.CustomerIsNotFound" xml:space="preserve">
     <value>Customer not found.</value>
   </data>
+  <data name="Error.CustomerRequired" xml:space="preserve">
+    <value>Customer is required</value>
+  </data>
   <data name="Error.CustomerCannotBeDeleted" xml:space="preserve">
     <value>Customer cannot be deleted because they have existing orders.</value>
   </data>

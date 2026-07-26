@@ -103,7 +103,7 @@ public sealed class FastSaleAppService(
         if (expectedPaymentMethod.HasValue && (PaymentMethod)dto.PaymentMethod != expectedPaymentMethod.Value)
             return QuickSaleResultAppDto.CreateError("Error.PaymentMethodInvalid");
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
             return QuickSaleResultAppDto.CreateError("Error.CustomerIsNotFound");
 
@@ -112,12 +112,15 @@ public sealed class FastSaleAppService(
             && customer.Kind == CustomerKind.RetailWalkIn && customer.IsSystem)
             return QuickSaleResultAppDto.CreateError("Error.RetailOrderCannotLeaveDebt");
 
-        var warehouseIds = GetWarehouseIdsToValidate(dto, fulfillmentMode);
-        foreach (var warehouseId in warehouseIds)
+        if (dto.FulfillmentMode == (int)QuickSaleFulfillmentMode.DeliverNow)
         {
-            var warehouse = await warehouseReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
-            if (warehouse is null)
-                return QuickSaleResultAppDto.CreateError("Error.WarehouseIsNotFound");
+            var warehouseIds = dto.Items.Select(item => item.WarehouseId).Distinct().ToList();
+            foreach (var warehouseId in warehouseIds)
+            {
+                var warehouse = await warehouseReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+                if (warehouse is null)
+                    return QuickSaleResultAppDto.CreateError("Error.WarehouseIsNotFound");
+            }
         }
 
         var total = CalculateTotal(dto);
@@ -131,7 +134,7 @@ public sealed class FastSaleAppService(
 
         foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
-            var product = await productReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
+            var product = await productReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
             if (product is null)
                 return QuickSaleResultAppDto.CreateError("Error.ProductIsNotFound");
         }
@@ -139,7 +142,7 @@ public sealed class FastSaleAppService(
         if (fulfillmentMode != QuickSaleFulfillmentMode.DeliverNow)
             return new QuickSaleResultAppDto { Success = true };
 
-        foreach (var itemGroup in dto.Items.GroupBy(item => new { item.ProductId, WarehouseId = ResolveItemWarehouseId(item, dto) }))
+        foreach (var itemGroup in dto.Items.GroupBy(item => new { item.ProductId, WarehouseId = item.WarehouseId }))
         {
             if (itemGroup.Key.WarehouseId == Guid.Empty)
                 return QuickSaleResultAppDto.CreateError("Error.WarehouseRequired");
@@ -305,7 +308,7 @@ public sealed class FastSaleAppService(
             Items = order.Items.Select((item, index) => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = item.Id,
-                WarehouseId = ResolveItemWarehouseId(dto.Items[index], dto),
+                WarehouseId = dto.Items[index].WarehouseId,
                 Quantity = item.Quantity
             }).ToList()
         }).ConfigureAwait(false);
@@ -317,23 +320,4 @@ public sealed class FastSaleAppService(
 
     private static decimal CalculateTotal(CreateQuickSaleAppDto dto)
         => dto.Items.Sum(item => item.Quantity * item.UnitPrice) - (dto.OrderDiscount ?? 0);
-
-    private static Guid ResolveItemWarehouseId(QuickSaleItemAppDto item, CreateQuickSaleAppDto dto)
-        => item.WarehouseId == Guid.Empty ? dto.WarehouseId : item.WarehouseId;
-
-    private static IReadOnlyCollection<Guid> GetWarehouseIdsToValidate(
-        CreateQuickSaleAppDto dto,
-        QuickSaleFulfillmentMode fulfillmentMode)
-    {
-        if (fulfillmentMode != QuickSaleFulfillmentMode.DeliverNow)
-            return dto.WarehouseId == Guid.Empty ? [] : [dto.WarehouseId];
-
-        return dto.Items
-            .Select(item => ResolveItemWarehouseId(item, dto))
-            .Where(id => id != Guid.Empty)
-            .Append(dto.WarehouseId)
-            .Where(id => id != Guid.Empty)
-            .Distinct()
-            .ToList();
-    }
 }

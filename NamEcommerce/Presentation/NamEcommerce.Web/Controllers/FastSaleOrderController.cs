@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
 using NamEcommerce.Web.Contracts.Models.FastSales;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -32,7 +36,13 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.PaymentIntentIsNotFound") });
 
-        return Json(new { success = true, intent = result.Intent });
+        return Json(new
+        {
+            success = true,
+            intent = result.Intent,
+            status = ((BankTransferPaymentIntentStatus)result.Intent!.Status).GetDisplayText(),
+            expiresAt = DateTimeHelper.ToLocalTime(result.Intent!.ExpiresAtUtc).ToString(ViewConstants.DefaultDateTimeFormat)
+        });
     }
 
     [HttpPost]
@@ -42,7 +52,13 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.BankTransferIntentConfirmFailed") });
 
-        return Json(new { success = true, intent = result.Intent });
+        return Json(new
+        {
+            success = true,
+            intent = result.Intent,
+            status = ((BankTransferPaymentIntentStatus)result.Intent!.Status).GetDisplayText(),
+            expiresAt = DateTimeHelper.ToLocalTime(result.Intent!.ExpiresAtUtc).ToString(ViewConstants.DefaultDateTimeFormat)
+        });
     }
 
     [HttpPost]

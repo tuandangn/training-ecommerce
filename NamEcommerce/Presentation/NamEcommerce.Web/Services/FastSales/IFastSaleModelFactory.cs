@@ -4,5 +4,5 @@ namespace NamEcommerce.Web.Services.FastSales;
 
 public interface IFastSaleModelFactory
 {
-    Task<FastSaleModel> PrepareFastSaleModelAsync();
+    Task<OrderQuickCreateModel> PrepareFastSaleModelAsync();
 }

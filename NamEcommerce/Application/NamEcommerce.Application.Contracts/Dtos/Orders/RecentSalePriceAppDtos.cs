@@ -6,4 +6,4 @@ public sealed record RecentSalePriceAppDto(
     string? CustomerName,
     decimal UnitPrice,
     string OrderCode,
-    DateTime OrderDate);
+    DateTime OrderDateUtc);

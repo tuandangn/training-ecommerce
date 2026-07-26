@@ -14,6 +14,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
@@ -372,7 +373,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     PaymentMethodText = ((PaymentMethod)payment.PaymentMethod).GetDisplayText(),
                     PaymentTypeText = ((PaymentType)payment.PaymentType).GetDisplayText(),
                     Note = payment.Note,
-                    PaidOn = payment.PaidOnUtc.ToLocalTime()
+                    PaidOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc)
                 })
                 .ToList()
         };
@@ -484,7 +485,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = audit.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(audit.CreatedOnUtc),
                 Title = GetPurchaseOrderItemChangeTitle(audit),
                 Description = GetPurchaseOrderItemChangeDescription(audit),
                 Icon = GetPurchaseOrderItemChangeIcon(audit),
@@ -524,7 +525,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = debt.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(debt.CreatedOnUtc),
                 Title = "Ghi công nợ",
                 Description = $"{debt.Code} - {debt.TotalAmount.DisplayCurrency()}",
                 Icon = "bi-receipt",
@@ -539,7 +540,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             var paymentMethod = (PaymentMethod)payment.PaymentMethod;
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = payment.PaidOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc),
                 Title = "Thanh toán NCC",
                 Description = string.IsNullOrWhiteSpace(payment.Note)
                     ? $"{payment.Code} - {payment.Amount.DisplayCurrency()} - {paymentMethod.GetDisplayText()}"

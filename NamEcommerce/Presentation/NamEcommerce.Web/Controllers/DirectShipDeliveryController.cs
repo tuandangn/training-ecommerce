@@ -6,6 +6,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
 namespace NamEcommerce.Web.Controllers;
@@ -39,7 +40,7 @@ public sealed class DirectShipDeliveryController(IMediator mediator, IDirectShip
                     ? deliveryNote.CustomerPhone
                     : deliveryNote.ShippingPhoneNumber,
                 ShippingAddress = deliveryNote.ShippingAddress,
-                CreatedOn = deliveryNote.CreatedOnUtc.ToLocalTime(),
+                CreatedOn = DateTimeHelper.ToLocalTime(deliveryNote.CreatedOnUtc),
                 Items = deliveryNote.Items.Select(i => new PendingDirectShipDeliveryItemModel
                 {
                     ProductName = i.ProductName,

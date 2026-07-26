@@ -1,6 +1,7 @@
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Extensions;
 
@@ -97,7 +98,7 @@ public static class ShortageModelMapper
             VendorId = dto.VendorId,
             VendorName = dto.VendorName,
             DisplayOrder = dto.DisplayOrder,
-            LastPurchaseDate = dto.LastPurchaseDateUtc?.ToLocalTime(),
+            LastPurchaseDate = DateTimeHelper.ToLocalTime(dto.LastPurchaseDateUtc),
             LastUnitPrice = dto.LastUnitPrice,
             IsPreferred = dto.IsPreferred
         };
@@ -111,7 +112,7 @@ public static class ShortageModelMapper
             PurchaseOrderCode = dto.PurchaseOrderCode,
             AllocatedQuantity = dto.AllocatedQuantity,
             ReceivedQuantity = dto.ReceivedQuantity,
-            ExpectedReceiveDate = dto.ExpectedReceiveDateUtc?.ToLocalTime()
+            ExpectedReceiveDate = DateTimeHelper.ToLocalTime(dto.ExpectedReceiveDateUtc)
         };
     }
 }

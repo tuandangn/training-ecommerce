@@ -340,7 +340,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         {
             PurchaseOrderId = po.PurchaseOrderId,
             PurchaseOrderCode = po.PurchaseOrderCode,
-            PlacedOn = po.PlacedOnUtc.ToLocalTime(),
+            PlacedOnUtc = po.PlacedOnUtc,
             VendorId = po.VendorId,
             MatchScore = po.MatchScore,
             IsFullMatch = po.IsFullMatch,

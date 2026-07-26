@@ -38,8 +38,7 @@ public sealed record QuickSaleItemAppDto
 [Serializable]
 public sealed record CreateQuickSaleAppDto
 {
-    public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid CustomerId { get; init; }
     public IList<QuickSaleItemAppDto> Items { get; init; } = [];
     public decimal? OrderDiscount { get; init; }
     public string? Note { get; init; }
@@ -61,21 +60,20 @@ public sealed record CreateQuickSaleAppDto
 
         var fulfillmentMode = (QuickSaleFulfillmentMode)FulfillmentMode;
         var paymentTiming = (QuickSalePaymentTiming)PaymentTiming;
-
-        if (fulfillmentMode == QuickSaleFulfillmentMode.DeliverNow
-            && WarehouseId == Guid.Empty
-            && Items.Any(item => item.WarehouseId == Guid.Empty))
-        {
+        if (fulfillmentMode == QuickSaleFulfillmentMode.DeliverNow && Items.Any(item => item.WarehouseId == Guid.Empty))
             return (false, "Error.WarehouseRequired");
-        }
+
         if (Items.Count == 0)
             return (false, "Error.OrderItemRequired");
+
         if (OrderDiscount is < 0)
             return (false, "Error.OrderDiscountCannotBeNegative");
+
         if (paymentTiming == QuickSalePaymentTiming.PayNow && PaidAmount <= 0)
             return (false, "Error.PaymentAmountMustBePositive");
         if (paymentTiming == QuickSalePaymentTiming.Unpaid && PaidAmount != 0)
             return (false, "Error.PaymentAmountMustBeZeroWhenUnpaid");
+
         if (fulfillmentMode == QuickSaleFulfillmentMode.NotDelivered)
         {
             if (string.IsNullOrWhiteSpace(ShippingAddress))

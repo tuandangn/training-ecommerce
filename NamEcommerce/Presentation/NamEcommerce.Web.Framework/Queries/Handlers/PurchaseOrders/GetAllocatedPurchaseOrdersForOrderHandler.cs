@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.PurchaseOrders;
 
@@ -41,8 +42,8 @@ public sealed class GetAllocatedPurchaseOrdersForOrderHandler
                 StatusClass = GetStatusClass(purchaseOrder.Status),
                 VendorId = purchaseOrder.VendorId,
                 VendorName = purchaseOrder.VendorName,
-                PlacedOn = purchaseOrder.PlacedOnUtc.ToLocalTime(),
-                ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
+                PlacedOn = DateTimeHelper.ToLocalTime(purchaseOrder.PlacedOnUtc),
+                ExpectedDeliveryDate = DateTimeHelper.ToLocalTime(purchaseOrder.ExpectedDeliveryDateUtc),
                 Items = purchaseOrder.Items.Select(item => new OrderAllocatedPurchaseOrderItemModel
                 {
                     OrderItemId = item.OrderItemId,

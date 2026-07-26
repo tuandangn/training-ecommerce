@@ -175,7 +175,6 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ICustomerPortalNotificationSender, MockEmailCustomerPortalNotificationSender>();
         services.AddScoped<ICustomerPaymentProvider, MockCustomerPaymentProvider>();
 
-        services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
         services.AddScoped<EntityCodeGenerator>();
 
         services.AddMediatR(config =>

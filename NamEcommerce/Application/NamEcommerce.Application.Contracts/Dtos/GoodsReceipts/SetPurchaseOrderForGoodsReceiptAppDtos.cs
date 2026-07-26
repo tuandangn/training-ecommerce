@@ -17,7 +17,7 @@ public sealed record SuggestedPurchaseOrderForGoodsReceiptAppDto
     public required string PurchaseOrderCode { get; init; }
 
     /// <summary>Ngày đặt hàng — local time.</summary>
-    public required DateTime PlacedOn { get; init; }
+    public required DateTime PlacedOnUtc { get; init; }
     public required Guid VendorId { get; init; }
 
     /// <summary>Điểm khớp 0–100. 100 = tất cả items của GR đều được fulfill đủ số lượng.</summary>

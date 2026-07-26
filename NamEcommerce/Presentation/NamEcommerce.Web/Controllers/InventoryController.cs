@@ -9,6 +9,7 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
@@ -179,7 +180,7 @@ public sealed class InventoryController : BaseAuthorizedController
             ProductName = item.ProductName,
             WarehouseId = item.WarehouseId,
             WarehouseName = item.WarehouseName,
-            OccurredAt = item.OccurredAtUtc.ToLocalTime(),
+            OccurredAt = DateTimeHelper.ToLocalTime(item.OccurredAtUtc),
             SequenceNumber = item.SequenceNumber,
             MovementType = item.MovementType,
             QuantityDelta = item.QuantityDelta,

@@ -232,7 +232,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseManager, WarehouseManager>();
     services.AddScoped<IInventoryStockManager,InventoryStockManager>();
     services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
-    services.AddScoped<IProductCostingLock, SqlProductCostingLock>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IOrderItemChangeAuditManager, OrderItemChangeAuditManager>();
     services.AddScoped<IPurchaseOrderItemChangeAuditManager, PurchaseOrderItemChangeAuditManager>();

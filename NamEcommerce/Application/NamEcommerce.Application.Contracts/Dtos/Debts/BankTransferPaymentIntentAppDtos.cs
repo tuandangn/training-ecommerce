@@ -44,7 +44,7 @@ public sealed record BankTransferPaymentIntentAppDto(Guid Id)
     public required string AccountName { get; init; }
     public required string Template { get; init; }
     public required string QrImageUrl { get; init; }
-    public required int Status { get; init; }
+    public required int Status { get; set; }
     public string? Note { get; init; }
     public Guid? OrderId { get; init; }
     public Guid? DeliveryNoteId { get; init; }
