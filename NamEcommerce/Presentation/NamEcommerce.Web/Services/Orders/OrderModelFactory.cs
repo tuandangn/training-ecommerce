@@ -1,4 +1,7 @@
-﻿using MediatR;
+﻿using Azure.Core;
+using DocumentFormat.OpenXml.Spreadsheet;
+using MediatR;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
@@ -8,19 +11,22 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
-using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Domain.Shared.Services.Debts;
+using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -29,16 +35,15 @@ using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
+using NamEcommerce.Web.Models.FastSales;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
-using NamEcommerce.Application.Contracts.Inventory;
-using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Services.Orders;
 
 public sealed class OrderModelFactory(
-    AppConfig appConfig,
-    IMediator mediator,
+    AppConfig appConfig, IMediator mediator,
     IDeliveryNoteAppService deliveryNoteAppService,
     IDirectShipAppService directShipAppService,
     ICustomerDebtAppService customerDebtAppService,
@@ -50,7 +55,8 @@ public sealed class OrderModelFactory(
     IInventoryAppService inventoryAppService,
     IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
     BankTransferPaymentSettings bankTransferPaymentSettings,
-    ICustomerLedgerManager customerLedgerManager) : IOrderModelFactory
+    ICustomerLedgerManager customerLedgerManager,
+    IBankTransferReceivingAccountResolver receivingAccountResolver) : IOrderModelFactory
 {
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
@@ -71,7 +77,7 @@ public sealed class OrderModelFactory(
                 model.CustomerDisplayAddress = customer.Address;
                 model.CustomerDisplayKind = customer.Kind;
                 model.CustomerDisplayIsSystem = customer.IsSystem;
-                if (!IsRetailWalkInSystemCustomer(customer.Kind, customer.IsSystem))
+                if (!IsRetailWalkInSystemCustomer(customer.Kind))
                 {
                     model.ShippingPhoneNumber ??= customer.PhoneNumber;
                     model.ShippingAddress ??= customer.Address;
@@ -294,6 +300,82 @@ public sealed class OrderModelFactory(
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
+
+        return model;
+    }
+
+    public async Task<OrderQuickCreateModel> PrepareOrderQuickCreateModelAsync(OrderQuickCreateModel? oldModel = null)
+    {
+        var receivingAccount = await receivingAccountResolver.ResolveAsync().ConfigureAwait(false);
+
+        var model = oldModel ?? new OrderQuickCreateModel();
+
+        model.BankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
+        model.BankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
+            ? string.Empty
+            : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
+        model.ManualBankTransferConfirmEnabled = bankTransferPaymentSettings.Verification.AllowManualConfirm;
+
+        if (model.CustomerId.HasValue)
+        {
+            var customer = await mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value }).ConfigureAwait(false);
+            if (customer is null)
+                model.CustomerId = null;
+            else
+            {
+                model.CustomerDisplayName = customer.FullName;
+                model.CustomerDisplayPhone = customer.PhoneNumber;
+                model.CustomerDisplayAddress = customer.Address;
+                model.CustomerDisplayKind = customer.Kind;
+                model.CustomerDisplayIsSystem = customer.IsSystem;
+                if (!IsRetailWalkInSystemCustomer(customer.Kind))
+                {
+                    model.ShippingPhoneNumber ??= customer.PhoneNumber;
+                    model.ShippingAddress ??= customer.Address;
+                }
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            if (productIds.Count > 0)
+            {
+                var products = await mediator.Send(new GetProductsByIdsForOrderQuery
+                {
+                    Ids = productIds
+                }).ConfigureAwait(false);
+
+                model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
+
+                foreach (var item in model.Items)
+                {
+                    var product = products.First(p => p.Id == item.ProductId);
+                    item.ProductDisplayName = product.Name;
+                    item.ProductDisplayQty = product.QuantityAvailable;
+                    item.ProductDisplayPicture = product.PictureUrl;
+                    item.QuantityDecimalPlaces = product.QuantityDecimalPlaces;
+                    item.UnitMeasurement = product.UnitMeasurement;
+                    var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
+                    item.QuantityAvailable = stockInfo.QuantityAvailable;
+                    item.AvailableWarehouseStocks = stockInfo.Warehouses
+                        .Where(item => item.WarehouseId != Guid.Empty)
+                        .Select(item => new QuickCreateOrderItemModel.ProductWarehouseStockModel
+                        {
+                            Id = item.WarehouseId,
+                            Name = item.WarehouseName,
+                            QuantityOnHand = item.QuantityOnHand,
+                            QuantityReserved = item.QuantityReserved,
+                            QuantityAvailable = item.QuantityAvailable
+                        })
+                        .ToList();
+                }
+            }
+            else
+            {
+                model.Items.Clear();
+            }
+        }
 
         return model;
     }
@@ -1240,8 +1322,8 @@ public sealed class OrderModelFactory(
         return "Đã phân bổ giao thẳng";
     }
 
-    private static bool IsRetailWalkInSystemCustomer(int kind, bool isSystem)
-        => isSystem && kind == 20;
+    private static bool IsRetailWalkInSystemCustomer(int kind)
+        => kind == (int)CustomerKind.RetailWalkIn;
 
     private static string GetDebtStatusText(DebtStatus status)
         => status switch

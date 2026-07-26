@@ -1014,4 +1014,7 @@
   <data name="Error.DeliveryNoteItemDataIsInvalid" xml:space="preserve">
     <value>Dữ liệu hàng hóa có sai sót</value>
   </data>
+  <data name="Error.RetailWalkInCustomerMustPrepay" xml:space="preserve">
+    <value>Khách lẻ phải thanh toán hoặc đặt cọc trước.</value>
+  </data>
 </root>

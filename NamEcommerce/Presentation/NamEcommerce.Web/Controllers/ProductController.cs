@@ -204,7 +204,9 @@ public sealed class ProductController : BaseAuthorizedController
             quantityDecimalPlaces = productInfo.QuantityDecimalPlaces,
             picture = productInfo.PictureUrl,
             unitPrice = productInfo.UnitPrice,
+            onHandQty = productInfo.QuantityOnHand,
             availableQty = productInfo.QuantityAvailable,
+            reservedQty = productInfo.QuantityReserved,
             categoryName = productInfo.CategoryName,
             availableWarehouses = productInfo.AvailableWarehouseStocks.Select(warehouse => new
             {

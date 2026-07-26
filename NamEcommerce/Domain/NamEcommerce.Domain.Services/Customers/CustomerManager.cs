@@ -101,7 +101,7 @@ public sealed class CustomerManager : ICustomerManager
         if (existing is not null)
             return MapToDto(existing);
 
-        var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, string.Empty, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
+        var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, CustomerConsts.RETAIL_WALKIN_CUSTOMER_PHONE, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
         {
             Kind = CustomerKind.RetailWalkIn,
             IsSystem = true

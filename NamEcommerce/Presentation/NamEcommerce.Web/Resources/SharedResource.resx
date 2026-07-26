@@ -1014,4 +1014,7 @@
   <data name="Error.DeliveryNoteItemDataIsInvalid" xml:space="preserve">
     <value>Delivery note item data is invalid</value>
   </data>
+  <data name="Error.RetailWalkInCustomerMustPrepay" xml:space="preserve">
+    <value>Retail-walk-in customer must be prepay for order</value>
+  </data>
 </root>

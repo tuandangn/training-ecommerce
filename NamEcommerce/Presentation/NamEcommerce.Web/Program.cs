@@ -112,7 +112,6 @@ using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Services.Dashboard;
 using NamEcommerce.Web.Services.Debts;
 using NamEcommerce.Web.Services.DeliveryNotes;
-using NamEcommerce.Web.Services.FastSales;
 using NamEcommerce.Web.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Localizations;
@@ -351,7 +350,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
     services.AddScoped<IDeliveryRunModelFactory, DeliveryRunModelFactory>();
-    services.AddScoped<IFastSaleModelFactory, FastSaleModelFactory>();
     services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
     services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
     services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();

@@ -58,6 +58,8 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
     public string? ShippingPhoneNumber { get; set; }
     public IList<OrderItemAppDto> Items { get; } = [];
 
+    public bool SkipScheduling { get; set; }
+
     public override (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)

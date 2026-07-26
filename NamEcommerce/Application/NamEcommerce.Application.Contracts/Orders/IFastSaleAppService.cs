@@ -4,7 +4,9 @@ namespace NamEcommerce.Application.Contracts.Orders;
 
 public interface IFastSaleAppService
 {
-    Task<QuickSaleResultAppDto> CreateCashQuickSaleAsync(CreateQuickSaleAppDto dto);
-    Task<QuickSaleResultAppDto> CreateBankTransferQuickSaleAsync(CreateQuickSaleAppDto dto, Guid paymentIntentId);
-    Task<QuickSaleResultAppDto> CreateUnpaidQuickSaleAsync(CreateQuickSaleAppDto dto);
+    Task<QuickSaleResultAppDto> QuickCreateOrderAsync(QuickCreateOrderAppDto2 dto);
+
+    Task<QuickSaleResultAppDto> CreateCashQuickSaleAsync(QuickCreateOrderAppDto dto);
+    Task<QuickSaleResultAppDto> CreateBankTransferQuickSaleAsync(QuickCreateOrderAppDto dto, Guid paymentIntentId);
+    Task<QuickSaleResultAppDto> CreateUnpaidQuickSaleAsync(QuickCreateOrderAppDto dto);
 }

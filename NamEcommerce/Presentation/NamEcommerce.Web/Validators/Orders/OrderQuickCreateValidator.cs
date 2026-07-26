@@ -18,6 +18,9 @@ public sealed class OrderQuickCreateValidator : AbstractValidator<OrderQuickCrea
         RuleFor(p => p.OrderDiscount)
             .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.Discount"]]);
 
+        RuleFor(p => p.PaidAmount)
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.PaidAmount"]]);
+
         RuleFor(p => p.ShippingPhoneNumber)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Phone"]])
             .MaximumLength(50).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Phone"], 50])
@@ -25,7 +28,10 @@ public sealed class OrderQuickCreateValidator : AbstractValidator<OrderQuickCrea
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
-        RuleForEach(p => p.Items).SetValidator(new QuickCreateOrderItemValidator(localizer));
+        RuleForEach(p => p.Items).SetValidator(m => new QuickCreateOrderItemValidator(localizer));
+
+        RuleFor(p => p.Note)
+            .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
     }
 }
 
@@ -35,9 +41,6 @@ public sealed class QuickCreateOrderItemValidator : AbstractValidator<QuickCreat
     {
         RuleFor(p => p.ProductId)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Product"]]);
-
-        RuleFor(p => p.WarehouseId)
-            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Warehouse"]]);
 
         RuleFor(p => p.Quantity)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Quantity"]])

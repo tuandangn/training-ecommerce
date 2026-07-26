@@ -9,12 +9,42 @@ using NamEcommerce.Web.Contracts.Models.FastSales;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.FastSales;
 
+public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppService)
+    : IRequestHandler<QuickCreateOrderCommand, QuickSaleResultModel>
+{
+    public async Task<QuickSaleResultModel> Handle(QuickCreateOrderCommand request, CancellationToken cancellationToken)
+    {
+        var result = await fastSaleAppService.QuickCreateOrderAsync(new QuickCreateOrderAppDto2
+        {
+            CustomerId = request.CustomerId,
+            Items = request.Items.Select(item => new QuickCreateOrderAppDto2.QuickCreateOrderItemAppDto2
+            {
+                ProductId = item.ProductId,
+                WarehouseId = item.WarehouseId,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice
+            }).ToList(),
+            OrderDiscount = request.OrderDiscount,
+            Note = request.Note,
+            DeliveryNow = request.DeliveryNow,
+            PayNow = request.PayNow,
+            PaidAmount = request.PaidAmount,
+            ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber,
+            PaymentIntentId = request.PaymentIntentId
+        }).ConfigureAwait(false);
+
+        return FastSaleCommandHandlerMapper.MapResult(result);
+    }
+}
+
+
 public sealed class CreateCashQuickSaleHandler(IFastSaleAppService fastSaleAppService)
     : IRequestHandler<CreateCashQuickSaleCommand, QuickSaleResultModel>
 {
     public async Task<QuickSaleResultModel> Handle(CreateCashQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateCashQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateCashQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
@@ -37,7 +67,7 @@ public sealed class CreateBankTransferQuickSaleHandler(IFastSaleAppService fastS
 {
     public async Task<QuickSaleResultModel> Handle(CreateBankTransferQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateBankTransferQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateBankTransferQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
@@ -60,7 +90,7 @@ public sealed class CreateUnpaidQuickSaleHandler(IFastSaleAppService fastSaleApp
 {
     public async Task<QuickSaleResultModel> Handle(CreateUnpaidQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateUnpaidQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateUnpaidQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
@@ -142,7 +172,7 @@ public sealed class ProcessBankTransferProviderTransactionHandler(IBankTransferP
 
 internal static class FastSaleCommandHandlerMapper
 {
-    public static QuickSaleItemAppDto MapItem(QuickSaleItemCommand item)
+    public static QuickCreateOrderItemAppDto MapItem(QuickSaleItemCommand item)
         => new()
         {
             ProductId = item.ProductId,

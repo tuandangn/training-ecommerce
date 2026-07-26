@@ -88,7 +88,7 @@ export default class ProductBrowser {
         collapse.addEventListener('shown.bs.collapse', event => {
             if (this.#pendingChange) {
                 if (this.#state.cid === undefined)
-                    this.#setState({cid: null});
+                    this.#setState({ cid: null });
                 else
                     this.#setState({});
             }
@@ -258,10 +258,12 @@ export default class ProductBrowser {
                 }
             }
 
-            let qtyHtml = p.availableQty > 0
-                ? `<span class="text-success fw-medium">${DecimalFields.formatQuantity ? DecimalFields.formatQuantity(p.availableQty) : p.availableQty}</span>`
-                : `<span class="text-muted">0</span>`;
-            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn: ' + qtyHtml + (p.unitMeasurement ? ' ' + p.unitMeasurement : '') + '</div>';
+            let qtyHtml = '<div class="d-inline">'
+            qtyHtml += `<span class="text-success fw-medium">Tồn: ${DecimalFields.formatQuantity(p.onHandQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}</span>`;
+            if (p.reservedQty > 0)
+            qtyHtml += `<span class="text-danger">Bán: ${DecimalFields.formatQuantity(p.onHandQty, p.reservedQty)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}</span>`;
+            qtyHtml += '</div>';
+            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>' + qtyHtml + '</div>';
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`

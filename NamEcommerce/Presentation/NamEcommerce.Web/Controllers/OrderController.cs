@@ -1,7 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
@@ -10,7 +13,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Orders;
-using NamEcommerce.Web.Services.FastSales;
+using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Web.Services.Orders;
 
 namespace NamEcommerce.Web.Controllers;
@@ -19,13 +22,22 @@ public sealed partial class OrderController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IOrderModelFactory _orderModelFactory;
-    private readonly IFastSaleModelFactory _fastSaleModelFactory;
+    private readonly IProductAppService _productAppService;
+    private readonly ICachedValuesService _cachedValuesService;
+    private readonly IBankTransferPaymentIntentAppService _paymentIntentAppService;
+    private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
 
-    public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory, IFastSaleModelFactory fastSaleModelFactory)
+    public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory,
+        IProductAppService productAppService, ICachedValuesService cachedValuesService,
+        IBankTransferPaymentIntentAppService paymentIntentAppService, 
+        BankTransferPaymentSettings bankTransferPaymentSettings)
     {
         _mediator = mediator;
         _orderModelFactory = orderModelFactory;
-        _fastSaleModelFactory = fastSaleModelFactory;
+        _productAppService = productAppService;
+        _cachedValuesService = cachedValuesService;
+        _paymentIntentAppService = paymentIntentAppService;
+        _bankTransferPaymentSettings = bankTransferPaymentSettings;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));

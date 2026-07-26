@@ -6,16 +6,6 @@ import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 import DecimalFields from "/modules/DecimalFields.js";
 
-const FulfillmentMode = {
-    DeliverNow: 10,
-    NotDelivered: 20
-};
-const PaymentTiming = {
-    PayNow: 10,
-    Unpaid: 20
-};
-const EmptyGuid = '00000000-0000-0000-0000-000000000000';
-
 class FastSale {
     #deliveryNow = Symbol('deliveryNow');
     #notDelivered = Symbol('notDelivered');
@@ -32,11 +22,10 @@ class FastSale {
             createUnpaidSale: root.dataset.createUnpaidSaleUrl,
             schedule: root.dataset.scheduleUrl
         };
-        this.cart = [];
         this.selectedCustomer = null;
-        this.fulfillmentMode = this.#notDelivered;
-        this.paymentTiming = this.#unpaid;
         this.customerPicker = null;
+        this.fulfillmentMode = this.root.classList.contains('deliveryNow') ? this.#deliveryNow : this.#notDelivered;
+        this.paymentTiming = this.root.classList.contains('payNow') ? this.#payNow : this.#unpaid;
 
         this.productBrowser = null;
         this.productBrowserMobile = null;
@@ -58,9 +47,25 @@ class FastSale {
         });
 
         this.bindElements();
-        this.bindPickers();
+        const initialValues = this.bindPickers();
         this.bindEvents();
-        this.render();
+
+        this.cart = this.#getItems(this.fulfillmentMode == this.#deliveryNow);
+        if (initialValues.customer) {
+            this.customerPicker.selectCustomer({
+                id: initialValues.customer.id,
+                name: initialValues.customer.name,
+                phone: initialValues.customer.phone,
+                address: initialValues.customer.address,
+                kind: initialValues.customer.kind,
+                isSystem: initialValues.customer.isSystem
+            });
+            this.validateQuickCreateOrder();
+        } else {
+            this.render();
+            if (this.cart.length > 0)
+                this.validateQuickCreateOrder();
+        }
     }
 
     bindElements() {
@@ -74,17 +79,24 @@ class FastSale {
         this.subTotal = document.getElementById('fastSaleSubtotal');
         this.total = document.getElementById('fastSaleTotal');
         this.totalHint = document.getElementById('fastSaleTotalHint');
-        this.deliverNow = document.getElementById('fastSaleDeliverNow');
         this.notDelivered = document.getElementById('fastSaleNotDelivered');
-        this.payNow = document.getElementById('fastSalePayNow');
         this.unpaid = document.getElementById('fastSaleUnpaid');
         this.complete = document.getElementById('fastSaleComplete');
         this.customer = document.getElementById('CustomerId');
         this.shippingPhoneNumber = document.getElementById('ShippingPhoneNumber');
         this.shippingAddress = document.getElementById('ShippingAddress');
+        this.deliveryNowBtn = document.getElementById('fastSaleDeliverNow');
+        this.payNowBtn = document.getElementById('fastSalePayNow');
+        //form submit
+        this.deliveryNow = document.getElementById('DeliveryNow');
+        this.payNow = document.getElementById('PayNow');
+        this.paidAmount = document.getElementById('PaidAmount');
+        this.orderDiscount = document.getElementById('OrderDiscount');
+        this.paymentIntentId = document.getElementById('PaymentIntentId');
     }
 
     bindPickers() {
+        const initialValues = {};
         if (this.customerPickerEl) {
             this.customerPicker = new CustomerPicker(this.customerPickerEl, {
                 allowCreateNew: true
@@ -106,14 +118,7 @@ class FastSale {
 
             const initialCustomer = this.customerPickerEl.dataset;
             if (initialCustomer.id) {
-                this.customerPicker.selectCustomer({
-                    id: initialCustomer.id,
-                    name: initialCustomer.name,
-                    phone: initialCustomer.phone,
-                    address: initialCustomer.address,
-                    kind: initialCustomer.kind,
-                    isSystem: initialCustomer.isSystem
-                });
+                initialValues.customer = initialCustomer;
             }
         }
 
@@ -144,6 +149,8 @@ class FastSale {
         }
 
         this.bindQuickCustomerForm();
+
+        return initialValues;
     }
 
     applyCustomerShippingDefaults() {
@@ -200,9 +207,9 @@ class FastSale {
     }
 
     bindEvents() {
-        this.deliverNow.addEventListener('click', () => this.setFulfillmentMode(this.#deliveryNow));
+        this.deliveryNowBtn.addEventListener('click', () => this.setFulfillmentMode(this.#deliveryNow));
         this.notDelivered.addEventListener('click', () => this.setFulfillmentMode(this.#notDelivered));
-        this.payNow.addEventListener('click', () => this.setPaymentTiming(this.#payNow));
+        this.payNowBtn.addEventListener('click', () => this.setPaymentTiming(this.#payNow));
         this.unpaid.addEventListener('click', () => this.setPaymentTiming(this.#unpaid));
         this.complete.addEventListener('click', () => this.completeSale());
     }
@@ -323,14 +330,14 @@ class FastSale {
             return;
         }
 
-        const isPayNow = this.paymentTiming === this.#payNow && !this.payNow.disabled;
-
-        this.payNow.disabled = subTotal == 0 && subTotal == 0;
+        this.payNow.value = this.paymentTiming == this.#payNow;
+        this.payNowBtn.disabled = subTotal == 0 && subTotal == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
         this.#togglePaymentTabs();
 
+        this.deliveryNow.value = this.fulfillmentMode == this.#deliveryNow;
         this.notDelivered.disabled = this.cart.length === 0;
-        this.deliverNow.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
+        this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
         this.#toggleDeliveryTabs();
 
         this.renderCart();
@@ -342,7 +349,9 @@ class FastSale {
             this.totalHint.textContent = window.SoBangChu?.docSoTien(subTotal) ?? '';
         else
             this.totalHint.textContent = '';
+
         this.customer.value = this.selectedCustomer?.id ?? '';
+
         const showShippingInfo = this.cart.length > 0 && this.fulfillmentMode === this.#notDelivered;
         this.shippingAddress.disabled = !showShippingInfo;
         this.shippingPhoneNumber.disabled = !showShippingInfo;
@@ -361,12 +370,12 @@ class FastSale {
                 bootstrap.Tab.getOrCreateInstance(this.notDelivered).show();
         }
         if (this.fulfillmentMode == this.#deliveryNow)
-            if (this.deliverNow.disabled) {
-                this.deliverNow.classList.remove('active');
-                document.querySelector(this.deliverNow.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+            if (this.deliveryNowBtn.disabled) {
+                this.deliveryNowBtn.classList.remove('active');
+                document.querySelector(this.deliveryNowBtn.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
             }
             else
-                bootstrap.Tab.getOrCreateInstance(this.deliverNow).show();
+                bootstrap.Tab.getOrCreateInstance(this.deliveryNowBtn).show();
     }
     #togglePaymentTabs() {
         if (this.paymentTiming == this.#unpaid) {
@@ -378,12 +387,12 @@ class FastSale {
                 bootstrap.Tab.getOrCreateInstance(this.unpaid).show();
         }
         if (this.paymentTiming == this.#payNow) {
-            if (this.payNow.disabled) {
-                this.payNow.classList.remove('active');
-                document.querySelector(this.payNow.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+            if (this.payNowBtn.disabled) {
+                this.payNowBtn.classList.remove('active');
+                document.querySelector(this.payNowBtn.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
             }
             else
-                bootstrap.Tab.getOrCreateInstance(this.payNow).show();
+                bootstrap.Tab.getOrCreateInstance(this.payNowBtn).show();
         }
     }
 
@@ -403,8 +412,11 @@ class FastSale {
     renderCart() {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
+        document.querySelector('.warehouse-col')?.classList.toggle('d-none', this.fulfillmentMode != this.#deliveryNow);
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
+            row.setAttribute('data-unit-measurement', item.unitMeasurement);
+            row.setAttribute('data-qty-available', item.quantityAvailable);
             row.innerHTML = `
                 <td class="ps-3 fw-medium align-middle">
                     <div class="d-flex align-items-center gap-3">
@@ -432,16 +444,16 @@ class FastSale {
                         data-valmsg-for="Items[${index}].ProductId"
                         data-valmsg-replace="true"></span>
                 </td>
-                <td class="align-middle">
-                    ${this.renderWarehouseSelect(item)}
+                <td class="align-middle ${this.fulfillmentMode == this.#deliveryNow ? '' : 'd-none'}">
+                    ${this.renderWarehouseSelect(item, index)}
                 </td>
-                <td class="text-end d-none d-md-table-cell align-middle">
+                <td class="text-end d-none d-xl-table-cell align-middle">
                     <span class="fw-medium">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)}</span>
                 </td>
                 <td class="text-end align-middle">
                     <span class="text-muted">${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}</span>
                 </td>
-                <td class="text-end fw-semibold text-nowrap d-none d-md-table-cell align-middle">
+                <td class="text-end fw-semibold text-nowrap d-none d-xl-table-cell align-middle">
                     ${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}
                 </td>
                 <td class="text-center align-middle">
@@ -487,8 +499,7 @@ class FastSale {
         });
         DecimalFields.autoWrap(this.cartBody);
     }
-
-    renderWarehouseSelect(item) {
+    renderWarehouseSelect(item, index) {
         if (this.fulfillmentMode !== this.#deliveryNow) {
             return '';
         }
@@ -496,18 +507,49 @@ class FastSale {
         const options = ['<option value="">Chọn kho</option>'];
         for (const warehouse of warehouses) {
             const selected = warehouse.id === item.warehouseId ? 'selected' : '';
-            const quantity = this.formatQuantity(warehouse.quantityAvailable, item.quantityDecimalPlaces);
-            options.push(`<option value="${this.escape(warehouse.id)}" ${selected}>${this.escape(warehouse.name)} - ${quantity} ${this.escape(item.unitMeasurement)}</option>`);
+            const quantity = this.formatQuantity(warehouse.quantityOnHand, item.quantityDecimalPlaces);
+            options.push(`<option value="${this.escape(warehouse.id)}" ${selected} 
+                data-name="${warehouse.name} data-qty-onhand="${warehouse.quantityOnHand}"
+                data-qty-available="${warehouse.quantityAvailable}">
+                ${this.escape(warehouse.name)} - ${quantity} ${this.escape(item.unitMeasurement)}
+            </option>`);
         }
 
-        return `<select class="form-select form-select-sm" data-role="warehouse">${options.join('')}</select>`;
+        return `<select class="form-select form-select-sm warehouse-id" data-role="warehouse" name="Items[${index}].WarehouseId" data-val="true" data-val-required="Vui lòng chọn kho hàng">${options.join('')}</select>
+        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].WarehouseId" data-valmsg-replace="true"></span>`;
+    }
+    #getItems(deliveryNow) {
+        const rows = Array.from(this.cartBody.querySelectorAll('tr'));
+        return rows.map(row => {
+            const quantityDecimalPlaces = Number(row.querySelector('.quantityDecimalPlaces').value) || 0;
+            const warehouseSelect = row.querySelector('.warehouse-id');
+            const orderItem = {
+                productId: row.querySelector('.product-id').value,
+                name: row.querySelector('.product-name').textContent,
+                pictureUrl: row.querySelector('.product-picture')?.src,
+                quantity: parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value, quantityDecimalPlaces)),
+                unitPrice: parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value)),
+                quantityDecimalPlaces,
+                warehouseId: deliveryNow ? warehouseSelect.value : null,
+                unitMeasurement: row.getAttribute('data-unit-measurement'),
+                quantityAvailable: Number(row.getAttribute('data-qty-available')),
+                availableWarehouses: Array.from(warehouseSelect.options).filter(option => !!option.value).map(option => ({
+                    id: option.value,
+                    name: option.getAttribute('data-name'),
+                    quantityOnHand: Number(option.getAttribute('data-qty-onhand')),
+                    quantityAvailable: Number(option.getAttribute('data-qty-available'))
+                }))
+            }
+
+            return orderItem;
+        });
     }
 
     async completeSale() {
         if (!$(this.root).valid())
             return;
 
-        const isValid = this.validateQuicCreateOrder();
+        const isValid = this.validateQuickCreateOrder();
         if (!isValid) return;
 
         //payment
@@ -534,33 +576,35 @@ class FastSale {
             paymentAmount = paymentResult.amount;
             discount = paymentResult.discount;
             paymentIntentId = paymentResult.paymentIntentId;
+
+            this.paidAmount.value = paymentAmount;
+            this.orderDiscount.value = discount;
+            this.paymentIntentId.value = paymentIntentId;
         }
 
         showPageLoading();
-        const payload = this.buildSalePayload(paymentAmount, discount);
-        const url = this.resolveSaleUrl();
-        if (this.paymentTiming === this.#payNow)
-            payload.paymentIntentId = paymentIntentId;
-
+        // const payload = this.buildSalePayload(paymentAmount, discount, paymentIntentId);
+        // const url = this.resolveSaleUrl();
         this.complete.disabled = true;
-        const response = await this.postJson(url, payload);
-        this.complete.disabled = false;
+        this.root.submit();
+        // const response = await this.postJson(this.root.action, new FormData(this.root));
+        // this.complete.disabled = false;
 
-        if (!response.success) {
-            hidePageLoading();
-            return;
-        }
+        // if (!response.success) {
+        //     hidePageLoading();
+        //     return;
+        // }
 
-        if (this.fulfillmentMode === this.#notDelivered && response.orderItems?.length > 0 && this.urls.schedule) {
-            hidePageLoading();
-            this.showScheduleModal(response.orderId, response.orderItems, response.orderUrl);
-            return;
-        }
+        // if (this.fulfillmentMode === this.#notDelivered && response.orderItems?.length > 0 && this.urls.schedule) {
+        //     hidePageLoading();
+        //     this.showScheduleModal(response.orderId, response.orderItems, response.orderUrl);
+        //     return;
+        // }
 
-        window.setTimeout(() => { window.location.href = response.orderUrl || '/Order/List'; }, 500);
+        // window.setTimeout(() => { window.location.href = response.orderUrl || '/Order/List'; }, 500);
     }
 
-    validateQuicCreateOrder() {
+    validateQuickCreateOrder() {
         const validation = this.validateSaleInput();
         if (validation) {
             this.showAlert('warning', validation);
@@ -587,13 +631,12 @@ class FastSale {
         return null;
     }
 
-    buildSalePayload(paymentAmount, discount) {
+    buildSalePayload(paymentAmount, discount, paymentIntentId) {
         return {
             customerId: this.getSelectedCustomerId(),
-            warehouseId: this.getHeaderWarehouseId(),
             items: this.cart.map(item => ({
                 productId: item.productId,
-                warehouseId: this.fulfillmentMode === this.#deliveryNow ? item.warehouseId : EmptyGuid,
+                warehouseId: this.fulfillmentMode === this.#deliveryNow ? item.warehouseId : null,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
             })),
@@ -601,9 +644,10 @@ class FastSale {
             shippingPhoneNumber: this.shippingPhoneNumber.value,
             orderDiscount: discount || 0,
             note: this.note.value,
-            fulfillmentMode: this.fulfillmentMode === this.#deliveryNow ? FulfillmentMode.DeliverNow : FulfillmentMode.NotDelivered,
-            paymentTiming: this.paymentTiming === this.#payNow ? PaymentTiming.PayNow : PaymentTiming.Unpaid,
-            paidAmount: this.paymentTiming === this.#payNow ? paymentAmount : 0
+            deliveryNow: this.fulfillmentMode === this.#deliveryNow,
+            payNow: this.paymentTiming === this.#payNow,
+            paidAmount: paymentAmount,
+            paymentIntentId
         };
     }
 
@@ -944,7 +988,7 @@ class PaymentProcess {
             if (!this.#isPaymentFormValid())
                 return;
 
-            const isValid = this.#reference.validateQuicCreateOrder();
+            const isValid = this.#reference.validateQuickCreateOrder();
             if (!isValid) return;
 
             this.#endPayment(true, 0);
@@ -969,7 +1013,7 @@ class PaymentProcess {
                 return;
             }
 
-            const isValid = this.#reference.validateQuicCreateOrder();
+            const isValid = this.#reference.validateQuickCreateOrder();
             if (!isValid) return;
 
             if (this.isBank()) {

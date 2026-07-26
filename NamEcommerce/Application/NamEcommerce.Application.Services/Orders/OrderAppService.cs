@@ -620,6 +620,14 @@ public sealed class OrderAppService(IOrderManager orderManager,
         }
 
         var createOrderResult = await orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
+        if (!dto.SkipScheduling)
+        {
+            return new CreateOrderResultAppDto
+            {
+                Success = true,
+                CreatedId = createOrderResult.CreatedId
+            };
+        }
 
         var createdOrder = await orderManager.GetOrderByIdAsync(createOrderResult.CreatedId).ConfigureAwait(false);
         var defaultScheduleResult = await CreateDefaultSchedulesAsync(createdOrder, null).ConfigureAwait(false);

@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Exceptions.Finance;
 using NamEcommerce.Domain.Shared.Services.Finance;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Finance;
 
@@ -38,10 +39,10 @@ public sealed class BankAccountManager : IBankAccountManager
         return Task.FromResult(result);
     }
 
-    public Task<BankAccountDto?> GetDefaultAsync()
+    public async Task<BankAccountDto?> GetDefaultAsync()
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.IsDefault && a.IsActive);
-        return Task.FromResult(account?.ToDto());
+        var account = await _dataReader.DataSource.FirstOrDefaultAsync(a => a.IsDefault && a.IsActive).ConfigureAwait(false);
+        return account?.ToDto();
     }
 
     public async Task<CreateBankAccountResultDto> CreateAsync(CreateBankAccountDto dto)
