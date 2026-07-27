@@ -130,22 +130,13 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
-        var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
-        var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
-        var auditsTask = _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id);
-        var vendorDebtsTask = _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId);
-        var vendorPaymentsTask = _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100);
-        var vendorBalanceTask = _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId);
-        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask, auditsTask, vendorDebtsTask, vendorPaymentsTask, vendorBalanceTask).ConfigureAwait(false);
-
-        var availableWarehouses = await warehouseTask;
-        var relatedReceipts = await receiptsTask;
-        var relatedReturns = await returnsTask;
-        var itemChangeAudits = await auditsTask;
-        var vendorDebts = await vendorDebtsTask;
-        var vendorPayments = await vendorPaymentsTask;
-        var vendorBalance = await vendorBalanceTask;
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var relatedReceipts = await _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var relatedReturns = await _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var itemChangeAudits = await _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id).ConfigureAwait(false);
+        var vendorDebts = await _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
+        var vendorPayments = await _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100).ConfigureAwait(false);
+        var vendorBalance = await _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
         {

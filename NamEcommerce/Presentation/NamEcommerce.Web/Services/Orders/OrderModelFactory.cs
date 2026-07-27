@@ -486,18 +486,16 @@ public sealed class OrderModelFactory(
         if (model.AllocatedPurchaseOrders?.Items.Count is not > 0)
             return new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
 
-        var tasks = model.AllocatedPurchaseOrders.Items
-            .Select(async purchaseOrder => new
-            {
-                purchaseOrder.PurchaseOrderId,
-                Receipts = await goodsReceiptAppService
+        var purchaseOrderGoodsReceiptsMap = new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
+        foreach(var purchaseOrder in model.AllocatedPurchaseOrders.Items)
+        {
+            var goodReceipts = await goodsReceiptAppService
                     .GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrder.PurchaseOrderId)
-                    .ConfigureAwait(false)
-            })
-            .ToList();
+                    .ConfigureAwait(false);
+            purchaseOrderGoodsReceiptsMap.Add(purchaseOrder.PurchaseOrderId, goodReceipts);
+        }
 
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-        return results.ToDictionary(item => item.PurchaseOrderId, item => item.Receipts);
+        return purchaseOrderGoodsReceiptsMap;
     }
 
     private static OrderDetailsModel.OrderDeliverySummaryStatus CalculateDeliveryStatus(OrderDetailsModel model)

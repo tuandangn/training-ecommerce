@@ -1,6 +1,7 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Orders;
@@ -29,19 +30,20 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
 
     public async Task<OrderListModel> Handle(GetOrderListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
-
-        var customers = await _customerAppService.GetCustomersByIdsAsync(pagedData.Select(o => o.CustomerId)).ConfigureAwait(false);
-        var deliveryNoteTasks = pagedData.Items.ToDictionary(
-            order => order.Id,
-            order => _deliveryNoteAppService.GetByOrderIdAsync(order.Id));
-        await Task.WhenAll(deliveryNoteTasks.Values).ConfigureAwait(false);
+        var ordersData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
+        var customers = await _customerAppService.GetCustomersByIdsAsync(ordersData.Select(o => o.CustomerId)).ConfigureAwait(false);
+        var orderDeliveryNotesMap = new Dictionary<Guid, IList<DeliveryNoteAppDto>>();
+        foreach(var order in ordersData)
+        {
+            var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(order.Id).ConfigureAwait(false);
+            orderDeliveryNotesMap.Add(order.Id, deliveryNotes);
+        }
 
         var orderItemModels = new List<OrderListModel.OrderModel>();
-        foreach (var order in pagedData.Items)
+        foreach (var order in ordersData.Items)
         {
             var customer = customers.FirstOrDefault(cust => cust.Id == order.CustomerId);
-            var deliveryNotes = deliveryNoteTasks[order.Id].Result;
+            var deliveryNotes = orderDeliveryNotesMap[order.Id];
             var activeDeliveryNotes = deliveryNotes
                 .Where(deliveryNote => deliveryNote.Status != CancelledDeliveryNoteStatus)
                 .ToList();
@@ -84,7 +86,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
         {
             Keywords = request.Keywords,
             Status = request.Status,
-            Data = PagedDataModel.Create(orderItemModels, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount)
+            Data = PagedDataModel.Create(orderItemModels, ordersData.Pagination.PageIndex, ordersData.Pagination.PageSize, ordersData.Pagination.TotalCount)
         };
         return model;
     }

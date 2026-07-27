@@ -71,7 +71,6 @@ public sealed class CustomerPortalAdminAppService(
         var customers = customerReader.DataSource.ToDictionary(customer => customer.Id);
         var accounts = accountReader.DataSource
             .OrderByDescending(account => account.UpdatedOnUtc ?? account.CreatedOnUtc)
-            .ToList()
             .Select(account => MapAccount(account, customers.GetValueOrDefault(account.CustomerId)))
             .ToList();
 

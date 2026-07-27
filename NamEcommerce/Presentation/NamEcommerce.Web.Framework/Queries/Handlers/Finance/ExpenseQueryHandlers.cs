@@ -20,7 +20,7 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
         var summaryFrom = new DateTime(now.Year, now.Month, 1);
         var summaryTo = summaryFrom.AddMonths(1).AddTicks(-1);
 
-        var pagedTask = expenseAppService.GetExpensesAsync(
+        var paged = await expenseAppService.GetExpensesAsync(
             keywords: request.Keywords,
             fromDate: request.FromDate,
             toDate: request.ToDate,
@@ -28,16 +28,13 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
             pageIndex: pageIndex,
             pageSize: PageSize,
             sortBy: request.SortBy,
-            sortDesc: request.SortDesc);
+            sortDesc: request.SortDesc).ConfigureAwait(false);
 
-        var summaryTask = expenseAppService.GetExpenseSummaryAsync(summaryFrom, summaryTo);
-        var budgetsTask = budgetAppService.GetBudgetsForMonthAsync(now.Year, now.Month);
+        var summaryResult = await expenseAppService.GetExpenseSummaryAsync(summaryFrom, summaryTo).ConfigureAwait(false);
+        var budgetsResult = await budgetAppService.GetBudgetsForMonthAsync(now.Year, now.Month).ConfigureAwait(false);
 
-        await Task.WhenAll(pagedTask, summaryTask, budgetsTask).ConfigureAwait(false);
-
-        var paged = pagedTask.Result;
-        var actuals = summaryTask.Result.ToDictionary(a => a.ExpenseType, a => (a.TotalAmount, a.Count));
-        var budgets = budgetsTask.Result.ToDictionary(b => b.ExpenseType, b => b.Amount);
+        var actuals = summaryResult.ToDictionary(a => a.ExpenseType, a => (a.TotalAmount, a.Count));
+        var budgets = budgetsResult.ToDictionary(b => b.ExpenseType, b => b.Amount);
 
         var summary = Enumerable.Range(1, 5).Select(typeInt =>
         {
