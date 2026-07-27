@@ -28,18 +28,11 @@
       data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
       data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
       data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
-      data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
-      data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
-      data-create-unpaid-sale-url="@Url.Action("CreateUnpaidSale", "Order")"
-      data-schedule-url="@Url.Action("CreateSchedule", "OrderFulfillment")"
       data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
       data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()"
       class="@(Model.DeliveryNow ? "deliveryNow" : "") @(Model.PayNow ? "payNow" : "")">
-    <input type="hidden" asp-for="OrderDiscount" />
-    <input type="hidden" asp-for="DeliveryNow" />
-    <input type="hidden" asp-for="PayNow" />
-    <input type="hidden" asp-for="PaymentIntentId" />
-    <input type="hidden" asp-for="PaidAmount" />
+      <input type="hidden" asp-for="DeliveryNow" />
+      <input type="hidden" asp-for="PayNow" />
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
     <div class="row g-3">
@@ -190,35 +183,35 @@
                                     <div class="form-label small fw-bold text-muted text-uppercase">Giao hàng</div>
                                     <nav>
                                         <div class="nav nav-tabs" role="tablist">
-                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navNotDelivered"
-                                                    type="button" role="tab" aria-controls="navNotDelivered" aria-selected="false"
-                                                    disabled id="fastSaleNotDelivered">
+                                            <button class="nav-link @(Model.DeliveryNow ? "" : "active")" data-bs-toggle="tab" data-bs-target="#navNotDelivered"
+                                                    type="button" role="tab" aria-controls="navNotDelivered" aria-selected="@(Model.DeliveryNow ? "false" : "true")"
+                                                    id="fastSaleNotDelivered">
                                                 Chưa giao
                                             </button>
-                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navDelivered"
-                                                    type="button" role="tab" aria-controls="navDelivered" aria-selected="false"
-                                                    disabled id="fastSaleDeliverNow">
+                                            <button class="nav-link @(Model.DeliveryNow ? "active" : "")" data-bs-toggle="tab" data-bs-target="#navDelivered"
+                                                    type="button" role="tab" aria-controls="navDelivered" aria-selected="@(Model.DeliveryNow ? "true" : "false")"
+                                                    id="fastSaleDeliverNow">
                                                 Đã giao
                                             </button>
                                         </div>
                                     </nav>
                                 </div>
                                 <div class="tab-content" id="navShippingContent">
-                                    <div class="tab-pane fade border rounded p-3" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                    <div class="tab-pane fade border rounded p-3 @(Model.DeliveryNow ? "" : "active show")" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
                                         <div class="row g-3 ship-info">
                                             <div class="col-md-6">
                                                 <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" disabled />
+                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" />
                                                 <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
                                             </div>
                                             <div class="col-md-6">
                                                 <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" disabled />
+                                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" />
                                                 <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="tab-pane fade" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
+                                    <div class="tab-pane fade @(Model.DeliveryNow ? "active show" : "")" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
                                     </div>
                                 </div>
                             </div>
@@ -227,23 +220,23 @@
                                     <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
                                     <nav>
                                         <div class="nav nav-tabs" role="tablist">
-                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navUnpaid"
-                                                    type="button" role="tab" aria-controls="navUnpaid" aria-selected="false"
-                                                    disabled id="fastSaleUnpaid">
+                                            <button class="nav-link @(Model.PayNow ? "" : "active")" data-bs-toggle="tab" data-bs-target="#navUnpaid"
+                                                    type="button" role="tab" aria-controls="navUnpaid" aria-selected="@(Model.PayNow ? "false" : "true")"
+                                                    id="fastSaleUnpaid">
                                                 Chưa thanh toán
                                             </button>
-                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#navPayNow"
-                                                    type="button" role="tab" aria-controls="navPayNow" aria-selected="false"
-                                                    disabled id="fastSalePayNow">
+                                            <button class="nav-link @(Model.PayNow ? "active" : "")" data-bs-toggle="tab" data-bs-target="#navPayNow"
+                                                    type="button" role="tab" aria-controls="navPayNow" aria-selected="@(Model.PayNow ? "true" : "false")"
+                                                    id="fastSalePayNow">
                                                 Thanh toán ngay
                                             </button>
                                         </div>
                                     </nav>
                                 </div>
                                 <div class="tab-content">
-                                    <div class="tab-pane fade" id="navUnpaid" role="tabpanel" aria-labelledby="navUnpaid-tab" tabindex="0">
+                                    <div class="tab-pane fade @(Model.PayNow ? "" : "active show")" id="navUnpaid" role="tabpanel" aria-labelledby="navUnpaid-tab" tabindex="0">
                                     </div>
-                                    <div class="tab-pane fade" id="navPayNow" role="tabpanel" aria-labelledby="navPayNow-tab" tabindex="0">
+                                    <div class="tab-pane fade @(Model.PayNow ? "active show" : "")" id="navPayNow" role="tabpanel" aria-labelledby="navPayNow-tab" tabindex="0">
                                         <div class="alert alert-warning small mt-2 mb-0 py-2 retailWalkinPaymentWarning">
                                             <i class="bi bi-exclamation-triangle me-1"></i> Khách bán lẻ cần thanh toán hoặc đặt cọc
                                         </div>
@@ -394,10 +387,10 @@
                             <div class="d-flex align-items-center justify-content-between">
                                 <span class="text-muted fw-medium">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                 <div>
-                                    <input asp-for="OrderDiscount" class="form-control form-control-sm border-0" placeholder="Nhập giảm giá"
+                                    <input name="OrderDiscount" class="form-control form-control-sm border-0" placeholder="Nhập giảm giá"
                                            data-decimal="currency" autocomplete="off" style="font-size:1rem;"
                                            data-val="true" id="fastSaleDiscount" />
-                                    <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="OrderDiscount" data-valmsg-replace="true"></span>
                                 </div>
                             </div>
                         </li>
@@ -414,13 +407,13 @@
                     <div id="paymentProcessContainer">
                         <hr />
                         <div class="d-flex align-items-center gap-3 mb-3 justify-content-between">
-                            <label asp-for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <label name="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <div>
                                 <div>
-                                    <input asp-for="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
+                                    <input name="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
                                            data-decimal="currency" data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0" autocomplete="off"
                                            data-val="true" />
-                                    <span asp-validation-for="PaidAmount" class="small text-danger"></span>
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="PaidAmount" data-valmsg-replace="true"></span>
                                 </div>
                                 <span class="form-text text-muted d-block text-end" id="debtAmount"></span>
                             </div>

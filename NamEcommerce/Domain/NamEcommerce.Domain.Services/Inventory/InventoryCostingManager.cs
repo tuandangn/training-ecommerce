@@ -418,19 +418,19 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         await RevalueProductFromAsync(dto.ProductId, layer.OpenedAtUtc, InventoryCostRebuildTrigger.ReceiptCostAssigned, null).ConfigureAwait(false);
     }
 
-    public Task<InventoryCostSummaryDto> GetCurrentCostSummaryAsync(Guid productId)
+    public async Task<InventoryCostSummaryDto> GetCurrentCostSummaryAsync(Guid productId)
     {
         var balance = GetLastProductBalance(productId);
         var hasPendingCost = HasOpenPendingLayer(productId, DateTime.MaxValue);
 
-        return Task.FromResult(new InventoryCostSummaryDto
+        return new InventoryCostSummaryDto
         {
             ProductId = productId,
             QuantityBalance = balance.Quantity,
             ValueBalance = balance.Value,
             AverageCost = balance.AverageCost,
             Status = hasPendingCost ? InventoryCostingStatus.Pending : balance.Status
-        });
+        };
     }
 
     public Task RegisterSaleDispatchReversalAsync(RegisterSaleDispatchReversalDto dto)

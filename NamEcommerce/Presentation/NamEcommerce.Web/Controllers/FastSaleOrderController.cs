@@ -24,21 +24,15 @@ public sealed partial class OrderController : BaseAuthorizedController
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
-    public async Task<IActionResult> QuickCreate(OrderQuickCreateModel model)
+    public async Task<IActionResult> QuickCreate(OrderQuickCreateModel model, OrderQuickCreatePaymentModel paymentInfo)
     {
-        if (model.DeliveryNow)
-        {
-            ModelState.Remove(nameof(model.ShippingAddress));
-            ModelState.Remove(nameof(model.ShippingPhoneNumber));
-        }
-
         if (!ModelState.IsValid)
         {
             model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
             return View(model);
         }
 
-        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value });
+        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId!.Value });
         if (customer is null)
         {
             ModelState.AddModelError(nameof(model.CustomerId), Localizer["Error.CustomerIsNotFound"]);
@@ -125,7 +119,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         }
 
         var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
-        var orderTotal = orderSubTotal - (model.OrderDiscount ?? 0);
+        var orderTotal = orderSubTotal - (paymentInfo.OrderDiscount ?? 0);
         if (orderTotal < 0)
         {
             ModelState.AddModelError(string.Empty, Localizer["Error.OrderDiscountExceedsTotal"]);
@@ -135,13 +129,13 @@ public sealed partial class OrderController : BaseAuthorizedController
 
         if (model.PayNow)
         {
-            if (model.PaidAmount > orderTotal)
+            if (paymentInfo.PaidAmount > orderTotal)
             {
                 ModelState.AddModelError(string.Empty, Localizer["Error.PaidAmountNotExceededOrderTotal"]);
                 model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
                 return View(model);
             }
-            if (model.PaymentIntentId.HasValue)
+            if (paymentInfo.PaymentIntentId.HasValue)
             {
                 if (!_bankTransferPaymentSettings.Enabled)
                 {
@@ -149,14 +143,14 @@ public sealed partial class OrderController : BaseAuthorizedController
                     model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
                     return View(model);
                 }
-                var paymentIntent = await _paymentIntentAppService.GetByIdAsync(model.PaymentIntentId.Value);
+                var paymentIntent = await _paymentIntentAppService.GetByIdAsync(paymentInfo.PaymentIntentId.Value);
                 if (paymentIntent is null)
                 {
                     ModelState.AddModelError(string.Empty, Localizer["Error.PaymentIntentIsNotFound"]);
                     model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
                     return View(model);
                 }
-                if (paymentIntent.Amount != model.PaidAmount)
+                if (paymentIntent.Amount != paymentInfo.PaidAmount)
                 {
                     ModelState.AddModelError(string.Empty, Localizer["Error.PaidAmountMismatchPaymentIntentAmount"]);
                     model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
@@ -170,7 +164,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                 }
             }
         }
-        else if (model.PaidAmount != 0)
+        else if (paymentInfo.PaidAmount != 0)
         {
             ModelState.AddModelError(string.Empty, Localizer["Error.PaymentAmountMustBeZeroWhenUnpaid"]);
             model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
@@ -180,7 +174,7 @@ public sealed partial class OrderController : BaseAuthorizedController
 
         if (model.CustomerId == _cachedValuesService.DefaultCustomerId)
         {
-            if (!model.PayNow || model.PaidAmount == 0 || (model.DeliveryNow && model.PaidAmount != orderTotal))
+            if (!model.PayNow || paymentInfo.PaidAmount == 0 || (model.DeliveryNow && paymentInfo.PaidAmount != orderTotal))
             {
                 ModelState.AddModelError(string.Empty, Localizer["Error.RetailWalkInCustomerMustPrepay"]);
                 model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
@@ -194,11 +188,11 @@ public sealed partial class OrderController : BaseAuthorizedController
             DeliveryNow = model.DeliveryNow,
             PayNow = model.PayNow,
             Note = model.Note,
-            OrderDiscount = model.OrderDiscount,
+            OrderDiscount = paymentInfo.OrderDiscount,
             ShippingAddress = model.ShippingAddress ?? customer.Address,
             ShippingPhoneNumber = model.ShippingPhoneNumber ?? customer.PhoneNumber,
-            PaidAmount = model.PaidAmount,
-            PaymentIntentId = model.PaymentIntentId,
+            PaidAmount = paymentInfo.PaidAmount,
+            PaymentIntentId = paymentInfo.PaymentIntentId,
             Items = model.Items.Select(item => new QuickCreateOrderCommand.QuickCreateOrderItemModel
             {
                 ProductId = item.ProductId!.Value,

@@ -15,12 +15,6 @@ public sealed class OrderQuickCreateValidator : AbstractValidator<OrderQuickCrea
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Address"]])
             .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Address"], 500]);
 
-        RuleFor(p => p.OrderDiscount)
-            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.Discount"]]);
-
-        RuleFor(p => p.PaidAmount)
-            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.PaidAmount"]]);
-
         RuleFor(p => p.ShippingPhoneNumber)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Phone"]])
             .MaximumLength(50).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Phone"], 50])
@@ -49,5 +43,17 @@ public sealed class QuickCreateOrderItemValidator : AbstractValidator<QuickCreat
         RuleFor(p => p.UnitPrice)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.UnitPrice"]])
             .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
+    }
+}
+
+public sealed class OrderQuickCreatePaymentValidator : AbstractValidator<OrderQuickCreatePaymentModel>
+{
+    public OrderQuickCreatePaymentValidator(IStringLocalizer<SharedResource> localizer)
+    {
+        RuleFor(p => p.OrderDiscount)
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.Discount"]]);
+
+        RuleFor(p => p.PaidAmount)
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.PaidAmount"]]);
     }
 }

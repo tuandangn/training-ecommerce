@@ -236,9 +236,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
         }
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
 
-        var items = query
+        var items = await query
             .OrderBy(x => x.p.Name)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -255,7 +255,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 ReorderLevel = x.s.ReorderLevel,
                 MaxStockLevel = x.s.MaxStockLevel
             })
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return (total, items);
     }

@@ -21,10 +21,8 @@ public sealed class OrderQuickCreateModel
 
     public IList<QuickCreateOrderItemModel> Items { get; set; } = [];
 
+    public bool PayNow { get; set; }
     public bool DeliveryNow { get; set; }
-
-    [Display(Name = "Giảm giá")]
-    public decimal? OrderDiscount { get; set; }
 
     [Display(Name = "Địa chỉ")]
     public string? ShippingAddress { get; set; }
@@ -35,12 +33,6 @@ public sealed class OrderQuickCreateModel
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
 
-    public bool PayNow { get; set; }
-    [Display(Name = "Thanh toán")]
-    public decimal? PaidAmount { get; set; }
-
-    public Guid? PaymentIntentId { get; set; }
-
     [ValidateNever]
     public bool BankTransferEnabled { get; set; }
     [ValidateNever]
@@ -48,6 +40,15 @@ public sealed class OrderQuickCreateModel
     [ValidateNever]
     public bool ManualBankTransferConfirmEnabled { get; set; }
 }
+
+[Serializable]
+public sealed class OrderQuickCreatePaymentModel
+{
+    public decimal? PaidAmount { get; set; }
+    public Guid? PaymentIntentId { get; set; }
+    public decimal? OrderDiscount { get; set; }
+}
+
 
 [Serializable]
 public sealed class QuickCreateOrderItemModel

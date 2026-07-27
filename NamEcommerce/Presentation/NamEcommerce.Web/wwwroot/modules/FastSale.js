@@ -87,12 +87,8 @@ class FastSale {
         this.shippingAddress = document.getElementById('ShippingAddress');
         this.deliveryNowBtn = document.getElementById('fastSaleDeliverNow');
         this.payNowBtn = document.getElementById('fastSalePayNow');
-        //form submit
         this.deliveryNow = document.getElementById('DeliveryNow');
         this.payNow = document.getElementById('PayNow');
-        this.paidAmount = document.getElementById('PaidAmount');
-        this.orderDiscount = document.getElementById('OrderDiscount');
-        this.paymentIntentId = document.getElementById('PaymentIntentId');
     }
 
     bindPickers() {
@@ -212,6 +208,12 @@ class FastSale {
         this.payNowBtn.addEventListener('click', () => this.setPaymentTiming(this.#payNow));
         this.unpaid.addEventListener('click', () => this.setPaymentTiming(this.#unpaid));
         this.complete.addEventListener('click', () => this.completeSale());
+        this.root.addEventListener('formdata', e => {
+            if (this.fulfillmentMode == this.#deliveryNow) {
+                e.formData.set(this.shippingAddress.name, this.selectedCustomer.address);
+                e.formData.set(this.shippingPhoneNumber.name, this.selectedCustomer.phone);
+            }
+        });
     }
 
     setFulfillmentMode(mode) {
@@ -353,12 +355,11 @@ class FastSale {
         this.customer.value = this.selectedCustomer?.id ?? '';
 
         const showShippingInfo = this.cart.length > 0 && this.fulfillmentMode === this.#notDelivered;
-        this.shippingAddress.disabled = !showShippingInfo;
-        this.shippingPhoneNumber.disabled = !showShippingInfo;
         this.shippingAddress.closest('.ship-info').classList.toggle('d-none', !showShippingInfo);
 
         reparseForm(this.root);
-        document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning => warning.classList.toggle('d-none', !this.isRetailWalkInCustomer() || subTotal == 0));
+        document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning =>
+            warning.classList.toggle('d-none', !this.isRetailWalkInCustomer() || subTotal == 0));
     }
     #toggleDeliveryTabs() {
         if (this.fulfillmentMode == this.#notDelivered) {
@@ -554,9 +555,6 @@ class FastSale {
 
         //payment
         const subTotal = this.calculateSubtotal();
-        let paymentAmount = 0;
-        let discount;
-        let paymentIntentId;
         if (this.paymentTiming == this.#payNow && subTotal > 0) {
             const paymentResult = await this.#paymentProcess.startPayment({
                 subTotal,
@@ -573,35 +571,17 @@ class FastSale {
                 this.showAlert('warning', 'Chuyển khoản chưa được xác nhận.');
                 return;
             }
-            paymentAmount = paymentResult.amount;
-            discount = paymentResult.discount;
-            paymentIntentId = paymentResult.paymentIntentId;
 
-            this.paidAmount.value = paymentAmount;
-            this.orderDiscount.value = discount;
-            this.paymentIntentId.value = paymentIntentId;
+            this.root.addEventListener('formdata', e => {
+                e.formData.append('PaidAmount', paymentResult.amount);
+                e.formData.append('OrderDiscount', discount);
+                e.formData.append('PaymentIntentId', paymentResult.paymentIntentId);
+            });
         }
 
         showPageLoading();
-        // const payload = this.buildSalePayload(paymentAmount, discount, paymentIntentId);
-        // const url = this.resolveSaleUrl();
         this.complete.disabled = true;
         this.root.submit();
-        // const response = await this.postJson(this.root.action, new FormData(this.root));
-        // this.complete.disabled = false;
-
-        // if (!response.success) {
-        //     hidePageLoading();
-        //     return;
-        // }
-
-        // if (this.fulfillmentMode === this.#notDelivered && response.orderItems?.length > 0 && this.urls.schedule) {
-        //     hidePageLoading();
-        //     this.showScheduleModal(response.orderId, response.orderItems, response.orderUrl);
-        //     return;
-        // }
-
-        // window.setTimeout(() => { window.location.href = response.orderUrl || '/Order/List'; }, 500);
     }
 
     validateQuickCreateOrder() {
