@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
@@ -28,23 +29,18 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.VendorId == dto.VendorId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == entryType
-                    && e.ReferenceId == dto.ReferenceId.Value);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(
-            vendorId: dto.VendorId,
-            entryType: entryType,
-            amount: dto.Amount,
-            referenceType: dto.ReferenceType,
-            referenceId: dto.ReferenceId,
-            referenceCode: dto.ReferenceCode,
-            note: dto.Note,
-            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
-            createdByUserId: dto.CreatedByUserId);
+        var entry = new VendorLedgerEntry(dto.VendorId, entryType,
+            dto.Amount, dto.ReferenceType, dto.ReferenceId, dto.ReferenceCode,
+            dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
+            dto.CreatedByUserId);
 
         entry.MarkRecorded();
         return await PersistEntryAsync(entry).ConfigureAwait(false);
@@ -56,23 +52,18 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.VendorId == dto.VendorId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.Payment
-                    && e.ReferenceId == dto.ReferenceId.Value);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(
-            vendorId: dto.VendorId,
-            entryType: VendorLedgerEntryType.Payment,
-            amount: -dto.Amount,
-            referenceType: VendorLedgerReferenceType.VendorPayment,
-            referenceId: dto.ReferenceId,
-            referenceCode: dto.ReferenceCode,
-            note: dto.Note,
-            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
-            createdByUserId: dto.CreatedByUserId);
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.Payment,
+            -dto.Amount, VendorLedgerReferenceType.VendorPayment, dto.ReferenceId,
+            dto.ReferenceCode, dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
+            dto.CreatedByUserId);
 
         entry.MarkRecorded();
         return await PersistEntryAsync(entry).ConfigureAwait(false);
@@ -84,23 +75,17 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.VendorId == dto.VendorId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.ReturnCredit
-                    && e.ReferenceId == dto.ReferenceId.Value);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(
-            vendorId: dto.VendorId,
-            entryType: VendorLedgerEntryType.ReturnCredit,
-            amount: -dto.Amount,
-            referenceType: VendorLedgerReferenceType.VendorReturn,
-            referenceId: dto.ReferenceId,
-            referenceCode: dto.ReferenceCode,
-            note: dto.Note,
-            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
-            createdByUserId: dto.CreatedByUserId);
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.ReturnCredit,
+            -dto.Amount, VendorLedgerReferenceType.VendorReturn, dto.ReferenceId, dto.ReferenceCode,
+            dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc, dto.CreatedByUserId);
 
         entry.MarkRecorded();
         return await PersistEntryAsync(entry).ConfigureAwait(false);
@@ -112,23 +97,17 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.VendorId == dto.VendorId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.RefundReceipt
-                    && e.ReferenceId == dto.ReferenceId.Value);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(
-            vendorId: dto.VendorId,
-            entryType: VendorLedgerEntryType.RefundReceipt,
-            amount: dto.Amount,
-            referenceType: VendorLedgerReferenceType.VendorRefund,
-            referenceId: dto.ReferenceId,
-            referenceCode: dto.ReferenceCode,
-            note: dto.Note,
-            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
-            createdByUserId: dto.CreatedByUserId);
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.RefundReceipt, 
+            dto.Amount, VendorLedgerReferenceType.VendorRefund, dto.ReferenceId, dto.ReferenceCode,
+            dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc, dto.CreatedByUserId);
 
         entry.MarkRecorded();
         return await PersistEntryAsync(entry).ConfigureAwait(false);
@@ -138,16 +117,9 @@ public sealed class VendorLedgerManager(
     {
         dto.Verify();
 
-        var entry = new VendorLedgerEntry(
-            vendorId: dto.VendorId,
-            entryType: VendorLedgerEntryType.Correction,
-            amount: dto.Amount,
-            referenceType: VendorLedgerReferenceType.None,
-            referenceId: null,
-            referenceCode: null,
-            note: dto.Note,
-            occurredAtUtc: dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc,
-            createdByUserId: dto.CreatedByUserId);
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.Correction, dto.Amount,
+            VendorLedgerReferenceType.None, null, null, dto.Note,
+            dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc, dto.CreatedByUserId);
 
         entry.MarkRecorded();
         return await PersistEntryAsync(entry).ConfigureAwait(false);
@@ -158,16 +130,12 @@ public sealed class VendorLedgerManager(
         var balance = balanceReader.DataSource
             .Where(b => b.VendorId == vendorId)
             .Select(b => b.Balance)
-            .FirstOrDefault();
-        return Task.FromResult(balance);
+            .FirstOrDefaultAsync();
+        return balance;
     }
 
-    public Task<IPagedDataDto<VendorLedgerStatementEntryDto>> GetStatementAsync(
-        Guid vendorId,
-        DateTime? from = null,
-        DateTime? to = null,
-        int pageIndex = 0,
-        int pageSize = 30)
+    public async Task<IPagedDataDto<VendorLedgerStatementEntryDto>> GetStatementAsync(
+        Guid vendorId, DateTime? from = null, DateTime? to = null, int pageIndex = 0, int pageSize = 30)
     {
         var query = entryReader.DataSource.Where(e => e.VendorId == vendorId);
 
@@ -176,19 +144,19 @@ public sealed class VendorLedgerManager(
 
         query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
 
-        var total = query.Count();
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
             ? 0m
-            : entryReader.DataSource
+            : await entryReader.DataSource
                 .Where(e => e.VendorId == vendorId
                     && (from == null || e.OccurredAtUtc >= from.Value)
                     && (to == null || e.OccurredAtUtc <= to.Value))
                 .OrderBy(e => e.OccurredAtUtc)
                 .ThenBy(e => e.CreatedOnUtc)
                 .Take(pageIndex * pageSize)
-                .Sum(e => e.Amount);
+                .SumAsync(e => e.Amount).ConfigureAwait(false);
 
         var result = new List<VendorLedgerStatementEntryDto>(items.Count);
         foreach (var item in items)
@@ -208,13 +176,11 @@ public sealed class VendorLedgerManager(
             });
         }
 
-        return Task.FromResult(PagedDataDto.Create(result, pageIndex, pageSize, total));
+        return PagedDataDto.Create(result, pageIndex, pageSize, total);
     }
 
-    public Task<IPagedDataDto<VendorAccountBalanceDto>> GetBalancesAsync(
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15)
+    public async Task<IPagedDataDto<VendorAccountBalanceDto>> GetBalancesAsync(
+        string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
         var joined = from b in balanceReader.DataSource
                      join v in vendorReader.DataSource on b.VendorId equals v.Id
@@ -226,8 +192,8 @@ public sealed class VendorLedgerManager(
 
         joined = joined.OrderBy(x => x.v.Name);
 
-        var total = joined.Count();
-        var items = joined.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var total = await joined.CountAsync().ConfigureAwait(false);
+        var items = await joined.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var result = items.Select(x => new VendorAccountBalanceDto
         {
@@ -238,7 +204,7 @@ public sealed class VendorLedgerManager(
             LastEntryOnUtc = x.b.LastEntryOnUtc
         }).ToList();
 
-        return Task.FromResult(PagedDataDto.Create(result, pageIndex, pageSize, total));
+        return PagedDataDto.Create(result, pageIndex, pageSize, total);
     }
 
     public Task<VendorAccountBalanceDto?> GetVendorSummaryAsync(Guid vendorId)
@@ -253,9 +219,9 @@ public sealed class VendorLedgerManager(
                           VendorPhone = v.PhoneNumber,
                           Balance = b.Balance,
                           LastEntryOnUtc = b.LastEntryOnUtc
-                      }).FirstOrDefault();
+                      }).FirstOrDefaultAsync();
 
-        return Task.FromResult(result);
+        return result;
     }
 
     private async Task<VendorLedgerEntryDto> PersistEntryAsync(VendorLedgerEntry entry)
@@ -272,10 +238,10 @@ public sealed class VendorLedgerManager(
 
     private async Task UpsertBalanceAsync(Guid vendorId, decimal delta, DateTime occurredAtUtc)
     {
-        var existingId = balanceReader.DataSource
+        var existingId = await balanceReader.DataSource
             .Where(b => b.VendorId == vendorId)
             .Select(b => b.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (existingId != Guid.Empty)
         {

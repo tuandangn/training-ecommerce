@@ -37,8 +37,5 @@ public interface IInventoryStockManager
 
     Task ApplyAdjustmentAsync(Guid productId, Guid warehouseId, decimal delta, Guid adjustmentNoteId, Guid? userId);
 
-    [Obsolete("Expiry-based reservation release is replaced by per-reference ledger (StockReservationEntry). This method is a no-op.")]
-    Task<int> ReleaseExpiredReservationsAsync();
-
     Task SetStockLevelsAsync(SetStockLevelsDto dto);
 }

@@ -24,20 +24,16 @@ public sealed partial class OrderController : BaseAuthorizedController
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
-    public async Task<IActionResult> QuickCreate(OrderQuickCreateModel model, OrderQuickCreatePaymentModel paymentInfo)
+    public async Task<IActionResult> QuickCreate(OrderQuickCreateModel model, bool deliveryNow = false, bool returnJson = false)
     {
         if (!ModelState.IsValid)
-        {
-            model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-            return View(model);
-        }
+            return await ErrorResult();
 
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId!.Value });
         if (customer is null)
         {
             ModelState.AddModelError(nameof(model.CustomerId), Localizer["Error.CustomerIsNotFound"]);
-            model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-            return View(model);
+            return await ErrorResult();
         }
 
         var productIds = model.Items.Select(item => item.ProductId).OfType<Guid>().Distinct().ToList();
@@ -45,11 +41,10 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (products.Count() != productIds.Count)
         {
             ModelState.AddModelError(string.Empty, Localizer["Error.ProductIsNotFound"]);
-            model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-            return View(model);
+            return await ErrorResult();
         }
 
-        if (model.DeliveryNow)
+        if (deliveryNow)
         {
             var allHaveWarehouses = true;
             for (var i = 0; i < model.Items.Count; i++)
@@ -57,7 +52,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                 var item = model.Items[i];
                 if (item.WarehouseId.HasValue)
                 {
-                    var warehouse = _mediator.Send(new GetWarehouseByIdQuery { Id = item.WarehouseId.Value });
+                    var warehouse = await _mediator.Send(new GetWarehouseByIdQuery { Id = item.WarehouseId.Value });
                     if (warehouse is null)
                     {
                         allHaveWarehouses = false;
@@ -71,10 +66,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                 }
             }
             if (!allHaveWarehouses)
-            {
-                model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                return View(model);
-            }
+                return await ErrorResult();
 
             foreach (var productGroup in model.Items.GroupBy(item => item.ProductId).ToList())
             {
@@ -83,8 +75,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                 if (totalQuantity > stockInfo.QuantityOnHand)
                 {
                     ModelState.AddModelError(string.Empty, Localizer["Error.ProductInsufficientStock"]);
-                    model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                    return View(model);
+                    return await ErrorResult();
                 }
                 foreach (var warehouseGroup in productGroup.GroupBy(item => item.WarehouseId).ToList())
                 {
@@ -93,8 +84,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                     if (warehouseStock is null || warehouseQuantity > warehouseStock.QuantityOnHand)
                     {
                         ModelState.AddModelError(string.Empty, Localizer["Error.ProductInsufficientStock"]);
-                        model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                        return View(model);
+                        return await ErrorResult();
                     }
                 }
             }
@@ -111,105 +101,53 @@ public sealed partial class OrderController : BaseAuthorizedController
                     if (totalQuantity > stockInfo.QuantityAvailable)
                     {
                         ModelState.AddModelError(string.Empty, Localizer["Error.ProductInsufficientStock"]);
-                        model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                        return View(model);
+                        return await ErrorResult();
                     }
                 }
-            }
-        }
-
-        var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
-        var orderTotal = orderSubTotal - (paymentInfo.OrderDiscount ?? 0);
-        if (orderTotal < 0)
-        {
-            ModelState.AddModelError(string.Empty, Localizer["Error.OrderDiscountExceedsTotal"]);
-            model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-            return View(model);
-        }
-
-        if (model.PayNow)
-        {
-            if (paymentInfo.PaidAmount > orderTotal)
-            {
-                ModelState.AddModelError(string.Empty, Localizer["Error.PaidAmountNotExceededOrderTotal"]);
-                model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                return View(model);
-            }
-            if (paymentInfo.PaymentIntentId.HasValue)
-            {
-                if (!_bankTransferPaymentSettings.Enabled)
-                {
-                    ModelState.AddModelError(string.Empty, Localizer["Error.BankTransferNotAllowed"]);
-                    model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                    return View(model);
-                }
-                var paymentIntent = await _paymentIntentAppService.GetByIdAsync(paymentInfo.PaymentIntentId.Value);
-                if (paymentIntent is null)
-                {
-                    ModelState.AddModelError(string.Empty, Localizer["Error.PaymentIntentIsNotFound"]);
-                    model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                    return View(model);
-                }
-                if (paymentIntent.Amount != paymentInfo.PaidAmount)
-                {
-                    ModelState.AddModelError(string.Empty, Localizer["Error.PaidAmountMismatchPaymentIntentAmount"]);
-                    model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                    return View(model);
-                }
-                if (paymentIntent.Status == (int)BankTransferPaymentIntentStatus.ManuallyConfirmed && !_bankTransferPaymentSettings.Verification.AllowManualConfirm)
-                {
-                    ModelState.AddModelError(string.Empty, Localizer["Error.ManuallyConfirmPaymentNotAllowed"]);
-                    model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                    return View(model);
-                }
-            }
-        }
-        else if (paymentInfo.PaidAmount != 0)
-        {
-            ModelState.AddModelError(string.Empty, Localizer["Error.PaymentAmountMustBeZeroWhenUnpaid"]);
-            model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-            return View(model);
-        }
-
-
-        if (model.CustomerId == _cachedValuesService.DefaultCustomerId)
-        {
-            if (!model.PayNow || paymentInfo.PaidAmount == 0 || (model.DeliveryNow && paymentInfo.PaidAmount != orderTotal))
-            {
-                ModelState.AddModelError(string.Empty, Localizer["Error.RetailWalkInCustomerMustPrepay"]);
-                model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
-                return View(model);
             }
         }
 
         var result = await _mediator.Send(new QuickCreateOrderCommand
         {
             CustomerId = model.CustomerId!.Value,
-            DeliveryNow = model.DeliveryNow,
-            PayNow = model.PayNow,
+            DeliveryNow = deliveryNow,
             Note = model.Note,
-            OrderDiscount = paymentInfo.OrderDiscount,
-            ShippingAddress = model.ShippingAddress ?? customer.Address,
-            ShippingPhoneNumber = model.ShippingPhoneNumber ?? customer.PhoneNumber,
-            PaidAmount = paymentInfo.PaidAmount,
-            PaymentIntentId = paymentInfo.PaymentIntentId,
+            ShippingAddress = model.ShippingAddress,
+            ShippingPhoneNumber = model.ShippingPhoneNumber,
             Items = model.Items.Select(item => new QuickCreateOrderCommand.QuickCreateOrderItemModel
             {
                 ProductId = item.ProductId!.Value,
                 Quantity = item.Quantity ?? 0,
                 UnitPrice = item.UnitPrice ?? 0,
                 WarehouseId = item.WarehouseId
-            }).ToList(),
+            }).ToList()
         });
         if (!result.Success)
         {
             AddLocalizedModelError(result.ErrorMessage);
+            return await ErrorResult();
+        }
+
+        return SuccessResult(result.OrderId!.Value);
+
+        //local method
+        async ValueTask<IActionResult> ErrorResult()
+        {
+            if (returnJson)
+                return this.JsonError(GetErrorMessage());
+
+            ModelState.AddModelError(string.Empty, GetErrorMessage());
             model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
             return View(model);
         }
+        IActionResult SuccessResult(Guid createdOrderId)
+        {
+            if (returnJson)
+                return this.JsonOk(new { createdOrderId });
 
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(Details), new { id = result.OrderId });
+            NotifySuccess("Msg.SaveSuccess");
+            return RedirectToAction(nameof(Details), new { id = createdOrderId });
+        }
     }
 
     [HttpPost]

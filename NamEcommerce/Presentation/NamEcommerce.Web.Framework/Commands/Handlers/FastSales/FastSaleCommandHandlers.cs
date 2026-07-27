@@ -24,14 +24,14 @@ public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppServi
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice
             }).ToList(),
-            OrderDiscount = request.OrderDiscount,
+            OrderDiscount = 0, //request.OrderDiscount,
             Note = request.Note,
             DeliveryNow = request.DeliveryNow,
-            PayNow = request.PayNow,
-            PaidAmount = request.PaidAmount,
+            PayNow = false, //request.PayNow,
+            PaidAmount = 0, //request.PaidAmount,
             ShippingAddress = request.ShippingAddress,
             ShippingPhoneNumber = request.ShippingPhoneNumber,
-            PaymentIntentId = request.PaymentIntentId
+            PaymentIntentId = null,//request.PaymentIntentId
         }).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapResult(result);

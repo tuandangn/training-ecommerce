@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.CustomerPortal;
 using NamEcommerce.Domain.Shared.Common;
@@ -27,7 +28,7 @@ public sealed class CustomerPortalSecurityManager(
         if (customerId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.CustomerPortal.CustomerRequired");
 
-        var existing = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId);
+        var existing = await accountReader.DataSource.FirstOrDefaultAsync(account => account.CustomerId == customerId).ConfigureAwait(false);
         if (existing is not null)
             return MapToDto(existing);
 
@@ -36,28 +37,30 @@ public sealed class CustomerPortalSecurityManager(
         return MapToDto(inserted);
     }
 
-    public Task<CustomerPortalAccountDto?> GetAccountByCustomerIdAsync(Guid customerId)
+    public async Task<CustomerPortalAccountDto?> GetAccountByCustomerIdAsync(Guid customerId)
     {
-        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId);
-        return Task.FromResult(account is null ? null : MapToDto(account));
+        var account = await accountReader.DataSource.FirstOrDefaultAsync(account => account.CustomerId == customerId).ConfigureAwait(false);
+        return account is null ? null : MapToDto(account);
     }
 
     public async Task<CustomerPortalSettingsDto> GetSettingsAsync()
     {
-        var settings = settingsReader.DataSource.OrderBy(settings => settings.CreatedOnUtc).FirstOrDefault();
+        var settings = await settingsReader.DataSource.OrderBy(settings => settings.CreatedOnUtc)
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         if (settings is not null)
             return MapToDto(settings);
 
-        var inserted = await settingsRepository.InsertAsync(new CustomerPortalSettings(otpEnabled: false)).ConfigureAwait(false);
+        var inserted = await settingsRepository.InsertAsync(new CustomerPortalSettings(otpEnabled: false))
+            .ConfigureAwait(false);
         return MapToDto(inserted);
     }
 
     public async Task<CustomerPortalSettingsDto> UpdateSettingsAsync(bool otpEnabled, Guid? updatedByUserId, DateTime nowUtc)
     {
-        var existingId = settingsReader.DataSource
+        var existingId = await settingsReader.DataSource
             .OrderBy(s => s.CreatedOnUtc)
             .Select(s => s.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         var settings = existingId != Guid.Empty
             ? await settingsRepository.GetByIdAsync(existingId).ConfigureAwait(false) ?? new CustomerPortalSettings(otpEnabled: false)
             : new CustomerPortalSettings(otpEnabled: false);
@@ -73,10 +76,10 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true)
     {
-        var existingAccountId = accountReader.DataSource
+        var existingAccountId = await accountReader.DataSource
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         var account = existingAccountId != Guid.Empty
             ? await accountRepository.GetByIdAsync(existingAccountId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
             : new CustomerPortalAccount(customerId);
@@ -93,10 +96,10 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task BlockAccountAsync(Guid customerId)
     {
-        var existingBlockId = accountReader.DataSource
+        var existingBlockId = await accountReader.DataSource
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         var account = existingBlockId != Guid.Empty
             ? await accountRepository.GetByIdAsync(existingBlockId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
             : new CustomerPortalAccount(customerId);
@@ -110,11 +113,12 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task UnblockAccountAsync(Guid customerId)
     {
-        var existingUnblockId = accountReader.DataSource
+        var existingUnblockId = await accountReader.DataSource
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Id)
-            .FirstOrDefault();
-        if (existingUnblockId == Guid.Empty) return;
+            .FirstOrDefaultAsync().ConfigureAwait(false);
+        if (existingUnblockId == Guid.Empty) 
+            return;
 
         var account = await accountRepository.GetByIdAsync(existingUnblockId).ConfigureAwait(false);
         if (account is null) return;
@@ -134,10 +138,10 @@ public sealed class CustomerPortalSecurityManager(
             return;
         }
 
-        var existingLocationId = accountReader.DataSource
+        var existingLocationId = await accountReader.DataSource
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         var account = existingLocationId != Guid.Empty
             ? await accountRepository.GetByIdAsync(existingLocationId).ConfigureAwait(false) ?? new CustomerPortalAccount(customerId)
             : new CustomerPortalAccount(customerId);
@@ -175,7 +179,7 @@ public sealed class CustomerPortalSecurityManager(
 
     public async Task<CustomerOtpChallengeDto?> GetOtpChallengeByIdAsync(Guid challengeId)
     {
-        var challenge = await otpChallengeReader.GetByIdAsync(challengeId, default).ConfigureAwait(false);
+        var challenge = await otpChallengeReader.GetByIdAsync(challengeId).ConfigureAwait(false);
         return challenge is null ? null : MapToDto(challenge);
     }
 
@@ -224,10 +228,10 @@ public sealed class CustomerPortalSecurityManager(
         challenge.MarkVerified(dto.NowUtc);
         await otpChallengeRepository.UpdateAsync(challenge).ConfigureAwait(false);
 
-        var existingLoginId = accountReader.DataSource
+        var existingLoginId = await accountReader.DataSource
             .Where(a => a.CustomerId == challenge.CustomerId)
             .Select(a => a.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
         var loginAccount = existingLoginId != Guid.Empty
             ? await accountRepository.GetByIdAsync(existingLoginId).ConfigureAwait(false) ?? new CustomerPortalAccount(challenge.CustomerId)
             : new CustomerPortalAccount(challenge.CustomerId);
@@ -246,24 +250,20 @@ public sealed class CustomerPortalSecurityManager(
         };
     }
 
-    public Task<bool> HasRecentOtpChallengeAsync(Guid customerId, Guid deliveryNoteId, TimeSpan cooldown, DateTime nowUtc)
+    public async Task<bool> HasRecentOtpChallengeAsync(Guid customerId, Guid deliveryNoteId, TimeSpan cooldown, DateTime nowUtc)
     {
         var cutoff = nowUtc.Subtract(cooldown);
-        var hasRecent = otpChallengeReader.DataSource.Any(challenge =>
+        var hasRecent = await otpChallengeReader.DataSource.AnyAsync(challenge =>
             challenge.CustomerId == customerId &&
             challenge.DeliveryNoteId == deliveryNoteId &&
             challenge.CreatedOnUtc >= cutoff &&
-            challenge.Status == CustomerOtpChallengeStatus.Pending);
+            challenge.Status == CustomerOtpChallengeStatus.Pending).ConfigureAwait(false);
 
-        return Task.FromResult(hasRecent);
+        return hasRecent;
     }
 
-    public Task<int> CountSecurityEventsAsync(
-        Guid? customerId,
-        string? ipAddress,
-        string eventType,
-        CustomerPortalSecurityEventOutcome? outcome,
-        DateTime fromUtc)
+    public async Task<int> CountSecurityEventsAsync(Guid? customerId, string? ipAddress, string eventType,
+        CustomerPortalSecurityEventOutcome? outcome, DateTime fromUtc)
     {
         var query = securityEventReader.DataSource.Where(e => e.EventType == eventType && e.CreatedOnUtc >= fromUtc);
         if (customerId.HasValue)
@@ -273,7 +273,7 @@ public sealed class CustomerPortalSecurityManager(
         if (outcome.HasValue)
             query = query.Where(e => e.Outcome == outcome.Value);
 
-        return Task.FromResult(query.Count());
+        return await query.CountAsync().ConfigureAwait(false);
     }
 
     public async Task<CustomerPortalSessionDto> CreateSessionAsync(CreateCustomerPortalSessionDto dto)
@@ -291,13 +291,15 @@ public sealed class CustomerPortalSecurityManager(
         return MapToDto(inserted);
     }
 
-    public Task<CustomerPortalSessionDto?> GetActiveSessionByTokenHashAsync(string sessionTokenHash, DateTime nowUtc)
+    public async Task<CustomerPortalSessionDto?> GetActiveSessionByTokenHashAsync(string sessionTokenHash, DateTime nowUtc)
     {
-        var session = sessionReader.DataSource.FirstOrDefault(session => session.SessionTokenHash == sessionTokenHash);
+        var session = await sessionReader.DataSource
+            .FirstOrDefaultAsync(session => session.SessionTokenHash == sessionTokenHash)
+            .ConfigureAwait(false);
         if (session is null || !session.IsActive(nowUtc))
-            return Task.FromResult<CustomerPortalSessionDto?>(null);
+            return null;
 
-        return Task.FromResult<CustomerPortalSessionDto?>(MapToDto(session));
+        return MapToDto(session);
     }
 
     public async Task TouchSessionAsync(Guid sessionId, DateTime nowUtc)
@@ -334,10 +336,10 @@ public sealed class CustomerPortalSecurityManager(
         if (deliveryNoteId == Guid.Empty)
             return;
 
-        var tokenIds = accessTokenReader.DataSource
+        var tokenIds = await accessTokenReader.DataSource
             .Where(token => token.DeliveryNoteId == deliveryNoteId && token.RevokedOnUtc == null)
             .Select(token => token.Id)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         foreach (var tokenId in tokenIds)
         {
@@ -348,16 +350,18 @@ public sealed class CustomerPortalSecurityManager(
         }
     }
 
-    public Task<DeliveryNoteAccessTokenDto?> ResolveDeliveryNoteAccessTokenAsync(string tokenHash, DateTime nowUtc)
+    public async Task<DeliveryNoteAccessTokenDto?> ResolveDeliveryNoteAccessTokenAsync(string tokenHash, DateTime nowUtc)
     {
         if (string.IsNullOrWhiteSpace(tokenHash))
-            return Task.FromResult<DeliveryNoteAccessTokenDto?>(null);
+            return null;
 
-        var token = accessTokenReader.DataSource.FirstOrDefault(token => token.TokenHash == tokenHash);
+        var token = await accessTokenReader.DataSource
+            .FirstOrDefaultAsync(token => token.TokenHash == tokenHash)
+            .ConfigureAwait(false);
         if (token is null || !token.CanUse(nowUtc))
-            return Task.FromResult<DeliveryNoteAccessTokenDto?>(null);
+            return null;
 
-        return Task.FromResult<DeliveryNoteAccessTokenDto?>(MapToDto(token));
+        return MapToDto(token);
     }
 
     public async Task MarkDeliveryNoteAccessTokenViewedAsync(Guid tokenId, DateTime nowUtc)
@@ -375,13 +379,8 @@ public sealed class CustomerPortalSecurityManager(
         dto.Verify();
 
         var securityEvent = new CustomerSecurityEvent(
-            dto.CustomerId,
-            dto.DeliveryNoteId,
-            dto.EventType,
-            dto.Outcome,
-            dto.IpAddress,
-            dto.UserAgent,
-            dto.MetadataJson);
+            dto.CustomerId, dto.DeliveryNoteId, dto.EventType, dto.Outcome,
+            dto.IpAddress, dto.UserAgent, dto.MetadataJson);
 
         var inserted = await securityEventRepository.InsertAsync(securityEvent).ConfigureAwait(false);
         return MapToDto(inserted);

@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Data.Contracts;
+﻿using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -55,10 +56,10 @@ public sealed class CategoryManager : ICategoryManager
 
         await _categoryRepository.DeleteAsync(category).ConfigureAwait(false);
 
-        var childIds = _categoryDataReader.DataSource
+        var childIds = await _categoryDataReader.DataSource
             .Where(cat => cat.ParentId == category.Id)
             .Select(cat => cat.Id)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         foreach (var childId in childIds)
         {
             var child = await _categoryRepository.GetByIdAsync(childId).ConfigureAwait(false);
@@ -69,7 +70,7 @@ public sealed class CategoryManager : ICategoryManager
         }
     }
 
-    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -77,11 +78,11 @@ public sealed class CategoryManager : ICategoryManager
                     where category.Name == name && (comparesWithCurrentId == null || category.Id != comparesWithCurrentId)
                     select category;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
-    public Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(string? keywords, int pageIndex, int pageSize)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -97,19 +98,19 @@ public sealed class CategoryManager : ICategoryManager
         query = query.OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Name);
 
-        var totalCount = query.Count();
-        var pagedData = query
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         var data = PagedDataDto.Create(pagedData.Select(category => category.ToDto()), pageIndex, pageSize, totalCount);
-        return Task.FromResult(data);
+        return data;
     }
 
     public async Task<CategoryDto?> GetCategoryByIdAsync(Guid id)
     {
-        var category = await _categoryDataReader.GetByIdAsync(id, default);
+        var category = await _categoryRepository.GetByIdAsync(id);
         if (category is null)
             return null;
 

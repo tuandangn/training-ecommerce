@@ -87,8 +87,6 @@ class FastSale {
         this.shippingAddress = document.getElementById('ShippingAddress');
         this.deliveryNowBtn = document.getElementById('fastSaleDeliverNow');
         this.payNowBtn = document.getElementById('fastSalePayNow');
-        this.deliveryNow = document.getElementById('DeliveryNow');
-        this.payNow = document.getElementById('PayNow');
     }
 
     bindPickers() {
@@ -208,12 +206,6 @@ class FastSale {
         this.payNowBtn.addEventListener('click', () => this.setPaymentTiming(this.#payNow));
         this.unpaid.addEventListener('click', () => this.setPaymentTiming(this.#unpaid));
         this.complete.addEventListener('click', () => this.completeSale());
-        this.root.addEventListener('formdata', e => {
-            if (this.fulfillmentMode == this.#deliveryNow) {
-                e.formData.set(this.shippingAddress.name, this.selectedCustomer.address);
-                e.formData.set(this.shippingPhoneNumber.name, this.selectedCustomer.phone);
-            }
-        });
     }
 
     setFulfillmentMode(mode) {
@@ -332,12 +324,10 @@ class FastSale {
             return;
         }
 
-        this.payNow.value = this.paymentTiming == this.#payNow;
         this.payNowBtn.disabled = subTotal == 0 && subTotal == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
         this.#togglePaymentTabs();
 
-        this.deliveryNow.value = this.fulfillmentMode == this.#deliveryNow;
         this.notDelivered.disabled = this.cart.length === 0;
         this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
         this.#toggleDeliveryTabs();
@@ -553,9 +543,19 @@ class FastSale {
         const isValid = this.validateQuickCreateOrder();
         if (!isValid) return;
 
+        const self = this;
+
         //payment
         const subTotal = this.calculateSubtotal();
         if (this.paymentTiming == this.#payNow && subTotal > 0) {
+        debugger;
+            showPageLoading();
+            const formData = new FormData(this.root);
+            prepareSubmitFormData(formData);
+            formData.set('returnJson', true);
+            const createOrderResult = await this.postJson(this.root.action, formData);
+
+            /*
             const paymentResult = await this.#paymentProcess.startPayment({
                 subTotal,
                 canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
@@ -577,11 +577,25 @@ class FastSale {
                 e.formData.append('OrderDiscount', discount);
                 e.formData.append('PaymentIntentId', paymentResult.paymentIntentId);
             });
+            */
+        } else {
+            this.root.addEventListener('formdata', function onFormData(e) {
+                self.root.removeEventListener('formdata', onFormData);
+                prepareSubmitFormData(e.formData);
+            });
+
+            showPageLoading();
+            this.complete.disabled = true;
+            this.root.submit();
         }
 
-        showPageLoading();
-        this.complete.disabled = true;
-        this.root.submit();
+        function prepareSubmitFormData(formData) {
+            if (self.fulfillmentMode == self.#deliveryNow) {
+                formData.set('deliveryNow', true);
+                formData.set(self.shippingAddress.name, self.selectedCustomer.address);
+                formData.set(self.shippingPhoneNumber.name, self.selectedCustomer.phone);
+            }
+        }
     }
 
     validateQuickCreateOrder() {

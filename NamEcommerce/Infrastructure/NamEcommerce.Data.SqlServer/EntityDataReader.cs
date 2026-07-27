@@ -50,7 +50,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _dbContext.GetDataAsync<TEntity>();
 
-    public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<TEntity?> GetByIdAsync(Guid id)
         => DataSource.FirstOrDefaultAsync(e => e.Id == id);
 
     public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)

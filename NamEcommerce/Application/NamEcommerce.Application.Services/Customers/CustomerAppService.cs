@@ -68,7 +68,7 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<CustomerAppDto?> GetCustomerByIdAsync(Guid id)
     {
-        var dto = await _customerDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var dto = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (dto == null) return null;
 
         return new CustomerAppDto(dto.Id)

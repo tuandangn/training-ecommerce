@@ -7,13 +7,8 @@ public sealed class QuickCreateOrderCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid CustomerId { get; init; }
     public required IList<QuickCreateOrderItemModel> Items { get; init; }
-    public decimal? OrderDiscount { get; set; }
 
     public required bool DeliveryNow { get; init; }
-
-    public required bool PayNow { get; init; }
-    public Guid? PaymentIntentId { get; set; }
-    public required decimal? PaidAmount { get; init; }
 
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
@@ -28,7 +23,6 @@ public sealed class QuickCreateOrderCommand : ICommand<QuickSaleResultModel>
         public decimal Quantity { get; init; }
         public decimal UnitPrice { get; init; }
     }
-
 }
 
 [Serializable]

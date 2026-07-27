@@ -215,7 +215,7 @@ public sealed class CustomerPortalAppService(
         if (!IsOrderRequestPriced(request))
             return CustomerPortalConversionResultAppDto.Fail("Error.CustomerPortal.OrderRequest.NotFullyPriced");
 
-        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
         var createDto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
@@ -739,7 +739,7 @@ public sealed class CustomerPortalAppService(
         if (request is null || request.CustomerId != customerId)
             return null;
 
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
         return await MapReturnRequestDetailsAsync(request, deliveryNote).ConfigureAwait(false);
     }
 

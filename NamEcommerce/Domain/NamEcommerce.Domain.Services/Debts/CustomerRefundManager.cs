@@ -10,6 +10,7 @@ using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -23,7 +24,7 @@ public sealed class CustomerRefundManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PC-KH-{DateTime.UtcNow:yyMM}";
-        return Task.FromResult(entityCodeGenerator.Next(prefix, () => refundReader.SecuredDataSource.Count(r => r.Code.StartsWith(prefix))));
+        return entityCodeGenerator.NextAsync(prefix, () => refundReader.SecuredDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     public async Task<CustomerRefundDto> CreateAsync(CreateCustomerRefundDto dto)
@@ -31,14 +32,14 @@ public sealed class CustomerRefundManager(
         dto.Verify();
 
         // Idempotency: đã có refund cho CustomerReturn này rồi thì trả về
-        var existing = refundReader.DataSource
-            .FirstOrDefault(r => r.CustomerReturnId == dto.CustomerReturnId
-                              && r.Status != CustomerRefundStatus.Cancelled);
+        var existing = await refundReader.DataSource
+            .FirstOrDefaultAsync(r => r.CustomerReturnId == dto.CustomerReturnId && r.Status != CustomerRefundStatus.Cancelled)
+            .ConfigureAwait(false);
         if (existing != null)
             return MapToDto(existing);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId, default).ConfigureAwait(false)
+        var customerReturn = await refundRepository.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
         var refund = new CustomerRefund(
@@ -89,16 +90,13 @@ public sealed class CustomerRefundManager(
 
     public async Task<CustomerRefundDto?> GetByIdAsync(Guid id)
     {
-        var refund = await refundReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var refund = await refundReader.GetByIdAsync(id).ConfigureAwait(false);
         return refund == null ? null : MapToDto(refund);
     }
 
-    public Task<IPagedDataDto<CustomerRefundDto>> GetListAsync(
-        Guid? customerId = null,
-        int? status = null,
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15)
+    public async Task<IPagedDataDto<CustomerRefundDto>> GetListAsync(
+        Guid? customerId = null, int? status = null, string? keywords = null,
+        int pageIndex = 0, int pageSize = 15)
     {
         var query = refundReader.DataSource;
 
@@ -113,13 +111,13 @@ public sealed class CustomerRefundManager(
 
         query = query.OrderByDescending(r => r.CreatedOnUtc);
 
-        var total = query.Count();
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize)
-            .ToList()
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = (await query.Skip(pageIndex * pageSize).Take(pageSize)
+            .ToListAsync().ConfigureAwait(false))
             .Select(MapToDto)
             .ToList();
 
-        return Task.FromResult(PagedDataDto.Create(items, pageIndex, pageSize, total));
+        return PagedDataDto.Create(items, pageIndex, pageSize, total);
     }
 
     private static CustomerRefundDto MapToDto(CustomerRefund r) => new()

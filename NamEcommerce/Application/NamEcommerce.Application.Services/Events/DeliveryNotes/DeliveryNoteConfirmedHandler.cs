@@ -17,7 +17,7 @@ public sealed class DeliveryNoteConfirmedHandler(
         if (notification is null)
             return;
 
-        var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(notification.DeliveryNoteId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return;
 

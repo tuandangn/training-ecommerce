@@ -21,9 +21,6 @@ public sealed class OrderQuickCreateModel
 
     public IList<QuickCreateOrderItemModel> Items { get; set; } = [];
 
-    public bool PayNow { get; set; }
-    public bool DeliveryNow { get; set; }
-
     [Display(Name = "Địa chỉ")]
     public string? ShippingAddress { get; set; }
 

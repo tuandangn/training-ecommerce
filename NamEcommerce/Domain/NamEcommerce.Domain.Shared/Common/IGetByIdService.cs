@@ -2,5 +2,5 @@
 
 public interface IGetByIdService<TEntity> where TEntity : AppEntity
 {
-    Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TEntity?> GetByIdAsync(Guid id);
 }

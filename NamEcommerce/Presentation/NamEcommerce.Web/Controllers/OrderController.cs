@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Debts;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
@@ -26,11 +27,12 @@ public sealed partial class OrderController : BaseAuthorizedController
     private readonly ICachedValuesService _cachedValuesService;
     private readonly IBankTransferPaymentIntentAppService _paymentIntentAppService;
     private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
+    private readonly IWarehouseAppService _warehouseAppService;
 
     public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory,
         IProductAppService productAppService, ICachedValuesService cachedValuesService,
-        IBankTransferPaymentIntentAppService paymentIntentAppService, 
-        BankTransferPaymentSettings bankTransferPaymentSettings)
+        IBankTransferPaymentIntentAppService paymentIntentAppService,
+        BankTransferPaymentSettings bankTransferPaymentSettings, IWarehouseAppService warehouseAppService)
     {
         _mediator = mediator;
         _orderModelFactory = orderModelFactory;
@@ -38,6 +40,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         _cachedValuesService = cachedValuesService;
         _paymentIntentAppService = paymentIntentAppService;
         _bankTransferPaymentSettings = bankTransferPaymentSettings;
+        _warehouseAppService = warehouseAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));

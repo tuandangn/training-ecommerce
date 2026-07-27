@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Exceptions.Finance;
 using NamEcommerce.Domain.Shared.Services.Finance;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Finance;
 
@@ -20,10 +21,10 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
         _dataReader = dataReader;
     }
 
-    public Task<AccountingSetupDto?> GetAsync()
+    public async Task<AccountingSetupDto?> GetAsync()
     {
-        var setup = _dataReader.DataSource.FirstOrDefault();
-        return Task.FromResult(setup?.ToDto());
+        var setup = await _dataReader.DataSource.FirstOrDefaultAsync().ConfigureAwait(false);
+        return setup?.ToDto();
     }
 
     public async Task<AccountingSetupDto> SaveAsync(SaveAccountingSetupDto dto)
@@ -31,7 +32,7 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var existingId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        var existingId = await _dataReader.DataSource.Select(x => x.Id).FirstOrDefaultAsync().ConfigureAwait(false);
         if (existingId == Guid.Empty)
         {
             var setup = new AccountingSetup(
@@ -52,7 +53,7 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
 
     public async Task FinalizeAsync()
     {
-        var setupId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        var setupId = await _dataReader.DataSource.Select(x => x.Id).FirstOrDefaultAsync().ConfigureAwait(false);
         if (setupId == Guid.Empty) throw new AccountingSetupNotFoundException();
         var setup = await _repository.GetByIdAsync(setupId).ConfigureAwait(false)
             ?? throw new AccountingSetupNotFoundException();
@@ -62,7 +63,7 @@ public sealed class AccountingSetupManager : IAccountingSetupManager
 
     public async Task UpdateCorporateTaxProvisionAsync(decimal? amount)
     {
-        var setupId = _dataReader.DataSource.Select(x => x.Id).FirstOrDefault();
+        var setupId = await _dataReader.DataSource.Select(x => x.Id).FirstOrDefaultAsync().ConfigureAwait(false);
         if (setupId == Guid.Empty) throw new AccountingSetupNotFoundException();
         var setup = await _repository.GetByIdAsync(setupId).ConfigureAwait(false)
             ?? throw new AccountingSetupNotFoundException();

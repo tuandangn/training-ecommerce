@@ -52,10 +52,10 @@ public sealed class PermissionAppService(
         var existing = current.ToDictionary(rp => rp.PermissionId);
 
         foreach (var rp in current.Where(rp => !desired.Contains(rp.PermissionId)))
-            await rolePermissionRepository.DeleteAsync(rp, cancellationToken).ConfigureAwait(false);
+            await rolePermissionRepository.DeleteAsync(rp).ConfigureAwait(false);
 
         foreach (var permissionId in desired.Where(id => !existing.ContainsKey(id)))
-            await rolePermissionRepository.InsertAsync(new RolePermission(roleId, permissionId), cancellationToken).ConfigureAwait(false);
+            await rolePermissionRepository.InsertAsync(new RolePermission(roleId, permissionId)).ConfigureAwait(false);
 
         return (true, null);
     }

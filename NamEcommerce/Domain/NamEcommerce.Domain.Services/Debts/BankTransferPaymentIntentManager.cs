@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Shared.Common;
@@ -38,15 +39,16 @@ public sealed class BankTransferPaymentIntentManager(
 
     public async Task<BankTransferPaymentIntentDto?> GetByIdAsync(Guid id)
     {
-        var intent = await intentReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var intent = await intentRepository.GetByIdAsync(id).ConfigureAwait(false);
         return intent is null ? null : MapToDto(intent);
     }
 
-    public Task<BankTransferPaymentIntentDto?> GetByReferenceCodeAsync(string referenceCode)
+    public async Task<BankTransferPaymentIntentDto?> GetByReferenceCodeAsync(string referenceCode)
     {
         var normalized = NormalizeReference(referenceCode);
-        var intent = intentReader.DataSource.FirstOrDefault(x => x.ReferenceCode == normalized);
-        return Task.FromResult(intent is null ? null : MapToDto(intent));
+        var intent = await intentReader.DataSource.FirstOrDefaultAsync(x => x.ReferenceCode == normalized)
+            .ConfigureAwait(false);
+        return intent is null ? null : MapToDto(intent);
     }
 
     public async Task<BankTransferPaymentIntentDto> ConfirmManuallyAsync(Guid id, Guid verifiedByUserId, string? note)
@@ -77,8 +79,8 @@ public sealed class BankTransferPaymentIntentManager(
             throw new NamEcommerceDomainException("Error.PaymentIntentVerificationMismatch");
         }
 
-        var duplicatedProviderTransaction = intentReader.DataSource.Any(x =>
-            x.ProviderTransactionId == dto.ProviderTransactionId && x.Id != intent.Id);
+        var duplicatedProviderTransaction = await intentReader.DataSource.AnyAsync(x =>
+            x.ProviderTransactionId == dto.ProviderTransactionId && x.Id != intent.Id).ConfigureAwait(false);
         if (duplicatedProviderTransaction)
             throw new NamEcommerceDomainException("Error.PaymentIntentProviderTransactionDuplicated");
 

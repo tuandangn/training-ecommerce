@@ -31,7 +31,7 @@ public sealed class SystemPermissionsSeeder(
             if (existing.Contains(normalized))
                 continue;
 
-            await permissionRepository.InsertAsync(new Permission(Guid.NewGuid(), name), cancellationToken)
+            await permissionRepository.InsertAsync(new Permission(Guid.NewGuid(), name))
                 .ConfigureAwait(false);
 
             existing.Add(normalized);
@@ -71,8 +71,7 @@ public sealed class SystemPermissionsSeeder(
                     continue;
 
                 await rolePermissionRepository.InsertAsync(
-                    new RolePermission(role.Id, permission.Id),
-                    cancellationToken).ConfigureAwait(false);
+                    new RolePermission(role.Id, permission.Id)).ConfigureAwait(false);
 
                 existingRolePermissions.Add((role.Id, permission.Id));
             }

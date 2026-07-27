@@ -14,7 +14,7 @@ public sealed class PurchaseOrderCancelledHandler(IEntityDataReader<PurchaseOrde
         if (notification is null)
             return;
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(notification.PurchaseOrderId, default).ConfigureAwait(false);
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(notification.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             return;
 

@@ -15,7 +15,7 @@ public sealed class SupplierSuggestionService(
 {
     public async Task<IList<SupplierSuggestionDto>> SuggestVendorsForProductAsync(Guid productId)
     {
-        var product = await productReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await productReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 

@@ -46,7 +46,7 @@ public sealed class DeliveryNoteAppService(
             };
         }
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId, default).ConfigureAwait(false);
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new CreateDeliveryNoteResultAppDto
@@ -79,7 +79,7 @@ public sealed class DeliveryNoteAppService(
                     ErrorMessage = "Error.OrderItemIsNotFound"
                 };
             }
-            var product = await productDataReader.GetByIdAsync(orderItem.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateDeliveryNoteResultAppDto
@@ -90,7 +90,7 @@ public sealed class DeliveryNoteAppService(
             }
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))

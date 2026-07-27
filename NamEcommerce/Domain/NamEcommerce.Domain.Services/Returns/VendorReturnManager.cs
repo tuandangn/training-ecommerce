@@ -1,6 +1,5 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
@@ -24,6 +23,7 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -31,7 +31,6 @@ public sealed class VendorReturnManager(
     IRepository<VendorReturn> vendorReturnRepository,
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<VendorReturn> vendorReturnDataReader,
-    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
@@ -49,14 +48,14 @@ public sealed class VendorReturnManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false);
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.VendorNotFound", dto.VendorId);
 
         GoodsReceipt? goodsReceipt = null;
         if (dto.GoodsReceiptId.HasValue)
         {
-            goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value, default).ConfigureAwait(false);
+            goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value).ConfigureAwait(false);
             if (goodsReceipt is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.GoodsReceiptNotFound", dto.GoodsReceiptId.Value);
         }
@@ -64,12 +63,12 @@ public sealed class VendorReturnManager(
         Warehouse? warehouse = null;
         if (dto.WarehouseId.HasValue)
         {
-            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId.Value);
         }
 
-        var code = GenerateCode();
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
         var vendorReturn = new VendorReturn(
@@ -86,7 +85,7 @@ public sealed class VendorReturnManager(
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
             if (product is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.ProductNotFound", itemDto.ProductId);
 
@@ -140,7 +139,7 @@ public sealed class VendorReturnManager(
             if (warehouseId.Value == Guid.Empty)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
 
-            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", warehouseId.Value);
 
@@ -157,7 +156,7 @@ public sealed class VendorReturnManager(
             });
         foreach (var item in acceptedByProduct)
         {
-            var receivedQty = GetTotalReceivedQuantity(vendorReturn, item.ProductId);
+            var receivedQty = await GetTotalReceivedQuantityAsync(vendorReturn, item.ProductId).ConfigureAwait(false);
             var previouslyReturned = await GetTotalConfirmedReturnQuantityAsync(
                 item.ProductId,
                 goodsReceiptId: vendorReturn.GoodsReceiptId,
@@ -231,8 +230,8 @@ public sealed class VendorReturnManager(
                 vendorReturn.Id,
                 reason).ConfigureAwait(false);
 
-        var linkedExpense = expenseDataReader.DataSource
-            .FirstOrDefault(e => e.SourceVendorReturnId == vendorReturn.Id);
+        var linkedExpense = await expenseDataReader.DataSource
+            .FirstOrDefaultAsync(e => e.SourceVendorReturnId == vendorReturn.Id).ConfigureAwait(false);
         if (linkedExpense is not null)
             await expenseManager.DeleteExpenseAsync(linkedExpense.Id).ConfigureAwait(false);
 
@@ -242,11 +241,11 @@ public sealed class VendorReturnManager(
 
     public async Task<VendorReturnDto?> GetByIdAsync(Guid id)
     {
-        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var vendorReturn = await vendorReturnRepository.GetByIdAsync(id).ConfigureAwait(false);
         return vendorReturn?.ToDto();
     }
 
-    public Task<(int Total, List<VendorReturnDto> Items)> GetListAsync(
+    public async Task<(int Total, List<VendorReturnDto> Items)> GetListAsync(
         Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize)
     {
         var query = vendorReturnDataReader.DataSource;
@@ -260,24 +259,23 @@ public sealed class VendorReturnManager(
         if (status.HasValue)
             query = query.Where(r => (int)r.Status == status.Value);
 
-        var total = query.Count();
-        var items = query
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = (await query
             .OrderByDescending(r => r.CreatedOnUtc)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
-            .ToList()
+            .ToListAsync().ConfigureAwait(false))
             .Select(r => r.ToDto())
             .ToList();
 
-        return Task.FromResult((total, items));
+        return (total, items);
     }
 
-    public Task<decimal> GetTotalConfirmedReturnQuantityAsync(
+    public async Task<decimal> GetTotalConfirmedReturnQuantityAsync(
         Guid productId, Guid? goodsReceiptId, Guid? purchaseOrderId, Guid? excludeReturnId = null)
     {
         var query = vendorReturnDataReader.DataSource
-            .Where(r => (int)r.Status == 2 // Confirmed
-                        && (excludeReturnId == null || r.Id != excludeReturnId));
+            .Where(r => r.Status == VendorReturnStatus.Confirmed && (excludeReturnId == null || r.Id != excludeReturnId));
 
         if (goodsReceiptId.HasValue)
             query = query.Where(r => r.GoodsReceiptId == goodsReceiptId.Value);
@@ -285,13 +283,13 @@ public sealed class VendorReturnManager(
             query = query.Where(r => r.PurchaseOrderId == purchaseOrderId.Value);
 
         decimal total = 0;
-        var confirmedReturns = query.ToList();
+        var confirmedReturns = await query.ToListAsync().ConfigureAwait(false);
         foreach (var ret in confirmedReturns)
             total += ret.Items
                 .Where(i => i.ProductId == productId)
                 .Sum(i => i.AcceptedQuantity);
 
-        return Task.FromResult(total);
+        return total;
     }
 
     public async Task FinalizeConfirmAsync(Guid returnId, Guid generatedDeliveryNoteId, decimal totalReturnAmount)
@@ -337,18 +335,20 @@ public sealed class VendorReturnManager(
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private string GenerateCode()
+    private Task<string> GenerateCodeAsync()
     {
         var prefix = $"TNCC-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.Next(prefix, () => vendorReturnDataReader.DataSource.Count(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => vendorReturnDataReader.DataSource.CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     private static void EnsureCanReverseVendorReturn(VendorReturn vendorReturn, string reason)
     {
         if (vendorReturn.Status != VendorReturnStatus.Confirmed)
+        {
             throw new ReturnCannotChangeStatusException(
                 vendorReturn.Status.ToString(),
                 nameof(VendorReturnStatus.Reversed));
+        }
         if (string.IsNullOrWhiteSpace(reason))
             throw new ReturnDataIsInvalidException("Error.VendorReturn.ReverseReasonRequired");
     }
@@ -394,24 +394,23 @@ public sealed class VendorReturnManager(
     /// Tính tổng số lượng đã nhập từ NCC cho một productId,
     /// lọc theo GoodsReceiptId (nếu có) hoặc PurchaseOrderId (nếu có).
     /// </summary>
-    private decimal GetTotalReceivedQuantity(VendorReturn vendorReturn, Guid productId)
+    private async Task<decimal> GetTotalReceivedQuantityAsync(VendorReturn vendorReturn, Guid productId)
     {
         if (vendorReturn.GoodsReceiptId.HasValue)
         {
             // Lọc trực tiếp theo GoodsReceipt cụ thể
-            return goodsReceiptDataReader.DataSource
+            return await goodsReceiptDataReader.DataSource
                 .Where(gr => gr.Id == vendorReturn.GoodsReceiptId.Value)
-                .ToList()
                 .SelectMany(gr => gr.Items.Where(item => item.ProductId == productId))
-                .Sum(i => i.Quantity);
+                .SumAsync(i => i.Quantity).ConfigureAwait(false);
         }
 
         if (vendorReturn.PurchaseOrderId.HasValue)
         {
             // Lấy tất cả GoodsReceipt gắn với PurchaseOrderId
-            var goodsReceipts = goodsReceiptDataReader.DataSource
+            var goodsReceipts = await goodsReceiptDataReader.DataSource
                 .Where(gr => gr.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value)
-                .ToList();
+                .ToListAsync().ConfigureAwait(false);
 
             if (!goodsReceipts.Any())
                 return 0;

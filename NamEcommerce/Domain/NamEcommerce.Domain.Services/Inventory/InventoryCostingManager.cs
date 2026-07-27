@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Common;
@@ -47,7 +48,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var existingLedger = GetExistingLedger(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId);
+        var existingLedger = await GetExistingLedgerAsync(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId).ConfigureAwait(false);
         if (existingLedger is not null)
         {
             await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
@@ -58,9 +59,9 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var balance = GetLastProductBalance(dto.ProductId);
-        var sequenceNumber = GetNextSequenceNumber();
-        var hasPendingCost = !dto.UnitCost.HasValue || HasOpenPendingLayer(dto.ProductId, occurredAtUtc);
+        var balance = await GetLastProductBalanceAsync(dto.ProductId).ConfigureAwait(false);
+        var sequenceNumber = await GetNextSequenceNumberAsync().ConfigureAwait(false);
+        var hasPendingCost = !dto.UnitCost.HasValue || await HasOpenPendingLayerAsync(dto.ProductId, occurredAtUtc).ConfigureAwait(false);
 
         var inboundValue = dto.UnitCost.HasValue ? dto.Quantity * dto.UnitCost.Value : 0m;
         var quantityBalance = balance.Quantity + dto.Quantity;
@@ -126,7 +127,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var existingLedger = GetExistingLedger(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId);
+        var existingLedger = await GetExistingLedgerAsync(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId).ConfigureAwait(false);
         if (existingLedger is not null)
         {
             await EnsureOutboundAllocationExistsAsync(existingLedger, null).ConfigureAwait(false);
@@ -137,11 +138,11 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var balance = GetLastProductBalance(dto.ProductId);
-        var sequenceNumber = GetNextSequenceNumber();
+        var balance = await GetLastProductBalanceAsync(dto.ProductId).ConfigureAwait(false);
+        var sequenceNumber = await GetNextSequenceNumberAsync().ConfigureAwait(false);
         var unitCost = balance.AverageCost;
         var totalCost = dto.Quantity * unitCost;
-        var hasPendingCost = HasOpenPendingLayer(dto.ProductId, occurredAtUtc);
+        var hasPendingCost = await HasOpenPendingLayerAsync(dto.ProductId, occurredAtUtc).ConfigureAwait(false);
         var status = hasPendingCost ? InventoryCostingStatus.Pending : InventoryCostingStatus.Final;
         var quantityBalance = balance.Quantity - dto.Quantity;
         var valueBalance = balance.Value - totalCost;
@@ -210,14 +211,14 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var existingLedger = GetExistingLedger(
+        var existingLedger = await GetExistingLedgerAsync(
             InventoryCostMovementType.RevertReceipt,
             InventoryCostReferenceType.GoodsReceipt,
             dto.GoodsReceiptId,
-            dto.GoodsReceiptItemId);
+            dto.GoodsReceiptItemId).ConfigureAwait(false);
         if (existingLedger is not null)
         {
-            var existingLayer = GetActiveReceiptLayer(dto.GoodsReceiptId, dto.GoodsReceiptItemId);
+            var existingLayer = await GetActiveReceiptLayerAsync(dto.GoodsReceiptId, dto.GoodsReceiptItemId).ConfigureAwait(false);
             var allocationCreated = await EnsureOutboundAllocationExistsAsync(existingLedger, existingLayer?.Id).ConfigureAwait(false);
             if (allocationCreated && existingLayer is not null && existingLayer.RemainingQuantity >= Math.Abs(existingLedger.QuantityDelta))
             {
@@ -228,13 +229,13 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             return ToMovementResult(existingLedger);
         }
 
-        var layer = _layerReader.DataSource
+        var layer = await _layerReader.DataSource
             .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
                      && l.SourceReferenceId == dto.GoodsReceiptId
                      && l.SourceReferenceItemId == dto.GoodsReceiptItemId
                      && l.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(l => l.OpenedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (layer is null)
             throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.ReceiptLayerNotFound", dto.GoodsReceiptItemId);
@@ -245,11 +246,11 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var balance = GetLastProductBalance(dto.ProductId);
-        var sequenceNumber = GetNextSequenceNumber();
+        var balance = await GetLastProductBalanceAsync(dto.ProductId).ConfigureAwait(false);
+        var sequenceNumber = await GetNextSequenceNumberAsync().ConfigureAwait(false);
         var unitCost = layer.UnitCost ?? 0m;
         var totalCost = dto.Quantity * unitCost;
-        var hasPendingCost = HasOpenPendingLayer(dto.ProductId, occurredAtUtc, layer.Id);
+        var hasPendingCost = await HasOpenPendingLayerAsync(dto.ProductId, occurredAtUtc, layer.Id).ConfigureAwait(false);
         var status = hasPendingCost ? InventoryCostingStatus.Pending : InventoryCostingStatus.Final;
         var quantityBalance = balance.Quantity - dto.Quantity;
         var valueBalance = balance.Value - totalCost;
@@ -321,11 +322,11 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var existingLedger = GetExistingLedger(
+        var existingLedger = await GetExistingLedgerAsync(
             InventoryCostMovementType.TransferIn,
             dto.ReferenceType,
             dto.ReferenceId,
-            dto.ReferenceItemId);
+            dto.ReferenceItemId).ConfigureAwait(false);
         if (existingLedger is not null)
         {
             await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
@@ -336,8 +337,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var balance = GetLastProductBalance(dto.ProductId);
-        var sequenceNumber = GetNextSequenceNumber();
+        var balance = await GetLastProductBalanceAsync(dto.ProductId).ConfigureAwait(false);
+        var sequenceNumber = await GetNextSequenceNumberAsync().ConfigureAwait(false);
         var inboundValue = dto.Quantity * dto.UnitCost;
         var quantityBalance = balance.Quantity + dto.Quantity;
         var valueBalance = balance.Value + inboundValue;
@@ -402,13 +403,13 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         if (dto.UnitCost < 0)
             throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.UnitCostCannotBeNegative");
 
-        var layer = _layerReader.DataSource
+        var layer = await _layerReader.DataSource
             .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
                      && l.SourceReferenceId == dto.GoodsReceiptId
                      && l.SourceReferenceItemId == dto.GoodsReceiptItemId
                      && l.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(l => l.OpenedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (layer is null)
             throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.PendingLayerNotFound", dto.GoodsReceiptItemId);
@@ -420,8 +421,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
     public async Task<InventoryCostSummaryDto> GetCurrentCostSummaryAsync(Guid productId)
     {
-        var balance = GetLastProductBalance(productId);
-        var hasPendingCost = HasOpenPendingLayer(productId, DateTime.MaxValue);
+        var balance = await GetLastProductBalanceAsync(productId).ConfigureAwait(false);
+        var hasPendingCost = await HasOpenPendingLayerAsync(productId, DateTime.MaxValue).ConfigureAwait(false);
 
         return new InventoryCostSummaryDto
         {
@@ -433,24 +434,27 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         };
     }
 
-    public Task RegisterSaleDispatchReversalAsync(RegisterSaleDispatchReversalDto dto)
+    public async Task RegisterSaleDispatchReversalAsync(RegisterSaleDispatchReversalDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var exists = _allocationReader.DataSource.Any(a =>
-            a.OutboundLedgerEntryId == dto.InboundLedgerEntryId && a.Quantity < 0);
-        if (exists) return Task.CompletedTask;
+        var exists = await _allocationReader.DataSource.AnyAsync(a =>
+            a.OutboundLedgerEntryId == dto.InboundLedgerEntryId && a.Quantity < 0)
+            .ConfigureAwait(false);
 
-        var originalAllocation = _allocationReader.DataSource
+        if (exists) return;
+
+        var originalAllocation = await _allocationReader.DataSource
             .Where(a => a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder
                      && a.OutboundReferenceItemId == dto.DeliveryNoteItemId
                      && a.ProductId == dto.ProductId
                      && a.CostingStatus != InventoryCostingStatus.Superseded
                      && a.Quantity > 0)
             .OrderByDescending(a => a.CreatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
-        if (originalAllocation is null) return Task.CompletedTask;
+        if (originalAllocation is null) 
+            return;
 
         var unitCost = originalAllocation.UnitCost;
         var totalCost = unitCost.HasValue ? -(dto.ReturnedQuantity * unitCost.Value) : (decimal?)null;
@@ -472,34 +476,34 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             originalAllocation.ValuationScope,
             null);
 
-        return _allocationRepository.InsertAsync(allocation);
+        await _allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
     }
 
-    public Task<InventoryCogsSummaryDto> GetCogsForReferencesAsync(InventoryCostReferenceType referenceType, IEnumerable<Guid> referenceIds)
+    public async Task<InventoryCogsSummaryDto> GetCogsForReferencesAsync(InventoryCostReferenceType referenceType, IEnumerable<Guid> referenceIds)
     {
         var ids = referenceIds.Distinct().ToArray();
         if (ids.Length == 0)
         {
-            return Task.FromResult(new InventoryCogsSummaryDto
+            return new InventoryCogsSummaryDto
             {
                 TotalCost = 0,
                 HasPendingCost = false,
                 HasRevaluedCost = false
-            });
+            };
         }
 
-        var allocations = _allocationReader.DataSource
+        var allocations = await _allocationReader.DataSource
             .Where(a => a.OutboundReferenceType == referenceType
                      && ids.Contains(a.OutboundReferenceId)
                      && a.CostingStatus != InventoryCostingStatus.Superseded)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
-        return Task.FromResult(new InventoryCogsSummaryDto
+        return new InventoryCogsSummaryDto
         {
             TotalCost = allocations.Sum(a => a.TotalCost ?? 0m),
             HasPendingCost = allocations.Any(a => a.CostingStatus == InventoryCostingStatus.Pending),
             HasRevaluedCost = allocations.Any(a => a.CostingStatus == InventoryCostingStatus.Revalued)
-        });
+        };
     }
 
     public async Task<Guid> RevalueProductFromAsync(Guid productId, DateTime fromUtc, InventoryCostRebuildTrigger trigger, Guid? requestedByUserId)
@@ -521,13 +525,13 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
         try
         {
-            var affectedEntries = _ledgerReader.DataSource
+            var affectedEntries = await _ledgerReader.DataSource
                 .Where(l => l.ProductId == productId
                          && l.CostingStatus != InventoryCostingStatus.Superseded
                          && l.OccurredAtUtc >= fromUtc)
                 .OrderBy(l => l.OccurredAtUtc)
                 .ThenBy(l => l.SequenceNumber)
-                .ToList();
+                .ToListAsync().ConfigureAwait(false);
 
             if (affectedEntries.Count == 0)
             {
@@ -537,15 +541,15 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             }
 
             var affectedEntryIds = affectedEntries.Select(e => e.Id).ToHashSet();
-            var affectedAllocations = _allocationReader.DataSource
+            var affectedAllocations = await _allocationReader.DataSource
                 .Where(a => affectedEntryIds.Contains(a.OutboundLedgerEntryId)
                          && a.CostingStatus != InventoryCostingStatus.Superseded)
-                .ToList();
-            var affectedLayers = _layerReader.DataSource
+                .ToListAsync().ConfigureAwait(false);
+            var affectedLayers = await _layerReader.DataSource
                 .Where(l => l.ProductId == productId
                          && l.CostingStatus != InventoryCostingStatus.Superseded
                          && (affectedEntryIds.Contains(l.SourceLedgerEntryId) || l.OpenedAtUtc >= fromUtc))
-                .ToList();
+                .ToListAsync().ConfigureAwait(false);
 
             var sourceLayerCosts = affectedLayers
                 .GroupBy(l => (l.SourceReferenceType, l.SourceReferenceId, l.SourceReferenceItemId))
@@ -580,7 +584,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
                 await _ledgerRepository.UpdateAsync(entry).ConfigureAwait(false);
             }
 
-            var replayState = GetReplayState(productId, fromUtc);
+            var replayState = await GetReplayStateAsync(productId, fromUtc).ConfigureAwait(false);
             foreach (var entry in affectedEntries)
             {
                 if (entry.QuantityDelta >= 0)
@@ -629,11 +633,11 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
         try
         {
-            var productIds = _ledgerReader.DataSource
+            var productIds = await _ledgerReader.DataSource
                 .Where(l => l.CostingStatus != InventoryCostingStatus.Superseded)
                 .Select(l => l.ProductId)
                 .Distinct()
-                .ToList();
+                .ToListAsync().ConfigureAwait(false);
 
             foreach (var productId in productIds)
             {
@@ -659,11 +663,11 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
     private async Task<InventoryCostingPolicy> GetActivePolicyAsync()
     {
-        var policy = _policyReader.DataSource
+        var policy = await _policyReader.DataSource
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.EffectiveFromUtc)
             .ThenByDescending(p => p.CreatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (policy is not null)
             return policy;
@@ -681,16 +685,16 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
     private async Task<InventoryCostingPolicy> GetPolicyForAsync(DateTime occurredAtUtc)
     {
-        var policy = _policyReader.DataSource
+        var policy = await _policyReader.DataSource
             .Where(p => p.EffectiveFromUtc <= occurredAtUtc)
             .OrderByDescending(p => p.EffectiveFromUtc)
             .ThenByDescending(p => p.CreatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         return policy ?? await GetActivePolicyAsync().ConfigureAwait(false);
     }
 
-    private InventoryCostLedgerEntry? GetExistingLedger(
+    private Task<InventoryCostLedgerEntry?> GetExistingLedgerAsync(
         InventoryCostMovementType movementType,
         InventoryCostReferenceType referenceType,
         Guid referenceId,
@@ -703,22 +707,22 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
                 && l.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(l => l.OccurredAtUtc)
             .ThenByDescending(l => l.SequenceNumber)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
-    private InventoryCostLayer? GetActiveReceiptLayer(Guid goodsReceiptId, Guid goodsReceiptItemId)
+    private Task<InventoryCostLayer?> GetActiveReceiptLayerAsync(Guid goodsReceiptId, Guid goodsReceiptItemId)
         => _layerReader.DataSource
             .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
                 && l.SourceReferenceId == goodsReceiptId
                 && l.SourceReferenceItemId == goodsReceiptItemId
                 && l.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(l => l.OpenedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
     private async Task EnsureInboundLayerExistsAsync(InventoryCostLedgerEntry ledgerEntry)
     {
-        var exists = _layerReader.DataSource.Any(l =>
+        var exists = await _layerReader.DataSource.AnyAsync(l =>
             l.SourceLedgerEntryId == ledgerEntry.Id
-            && l.CostingStatus != InventoryCostingStatus.Superseded);
+            && l.CostingStatus != InventoryCostingStatus.Superseded).ConfigureAwait(false);
         if (exists)
             return;
 
@@ -749,9 +753,9 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
 
     private async Task<bool> EnsureOutboundAllocationExistsAsync(InventoryCostLedgerEntry ledgerEntry, Guid? inboundLayerId)
     {
-        var exists = _allocationReader.DataSource.Any(a =>
+        var exists = await _allocationReader.DataSource.AnyAsync(a =>
             a.OutboundLedgerEntryId == ledgerEntry.Id
-            && a.CostingStatus != InventoryCostingStatus.Superseded);
+            && a.CostingStatus != InventoryCostingStatus.Superseded).ConfigureAwait(false);
         if (exists)
             return false;
 
@@ -790,52 +794,52 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             AverageCostAfter = ledgerEntry.AverageCostAfter
         };
 
-    private long GetNextSequenceNumber()
+    private async Task<long> GetNextSequenceNumberAsync()
     {
-        var lastSequence = _ledgerReader.DataSource
+        var lastSequence = await _ledgerReader.DataSource
             .OrderByDescending(l => l.SequenceNumber)
             .Select(l => (long?)l.SequenceNumber)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         return (lastSequence ?? 0) + 1;
     }
 
-    private ProductCostBalance GetLastProductBalance(Guid productId)
+    private async Task<ProductCostBalance> GetLastProductBalanceAsync(Guid productId)
     {
-        var lastEntry = _ledgerReader.DataSource
+        var lastEntry = await _ledgerReader.DataSource
             .Where(l => l.ProductId == productId && l.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(l => l.OccurredAtUtc)
             .ThenByDescending(l => l.SequenceNumber)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         return lastEntry is null
             ? new ProductCostBalance(0, 0, 0, InventoryCostingStatus.Final)
             : new ProductCostBalance(lastEntry.QuantityBalanceAfter, lastEntry.ValueBalanceAfter, lastEntry.AverageCostAfter, lastEntry.CostingStatus);
     }
 
-    private bool HasOpenPendingLayer(Guid productId, DateTime occurredAtUtc, Guid? excludedLayerId = null)
-        => _layerReader.DataSource.Any(l => l.ProductId == productId
+    private Task<bool> HasOpenPendingLayerAsync(Guid productId, DateTime occurredAtUtc, Guid? excludedLayerId = null)
+        => _layerReader.DataSource.AnyAsync(l => l.ProductId == productId
                                          && (!excludedLayerId.HasValue || l.Id != excludedLayerId.Value)
                                          && l.CostingStatus == InventoryCostingStatus.Pending
                                          && l.OpenedAtUtc <= occurredAtUtc
                                          && l.RemainingQuantity > 0);
 
-    private ReplayState GetReplayState(Guid productId, DateTime fromUtc)
+    private async Task<ReplayState> GetReplayStateAsync(Guid productId, DateTime fromUtc)
     {
-        var previousEntry = _ledgerReader.DataSource
+        var previousEntry = await _ledgerReader.DataSource
             .Where(l => l.ProductId == productId
                      && l.CostingStatus != InventoryCostingStatus.Superseded
                      && l.OccurredAtUtc < fromUtc)
             .OrderByDescending(l => l.OccurredAtUtc)
             .ThenByDescending(l => l.SequenceNumber)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
-        var pendingQuantity = _layerReader.DataSource
+        var pendingQuantity = await _layerReader.DataSource
             .Where(l => l.ProductId == productId
                      && l.CostingStatus == InventoryCostingStatus.Pending
                      && l.OpenedAtUtc < fromUtc
                      && l.RemainingQuantity > 0)
-            .Sum(l => l.RemainingQuantity);
+            .SumAsync(l => l.RemainingQuantity).ConfigureAwait(false);
 
         return previousEntry is null
             ? new ReplayState(0, 0, 0, pendingQuantity)
@@ -863,7 +867,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             source.ProductId,
             source.WarehouseId,
             source.OccurredAtUtc,
-            GetNextSequenceNumber(),
+            await GetNextSequenceNumberAsync().ConfigureAwait(false),
             source.MovementType,
             quantity,
             unitCost,
@@ -931,7 +935,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             source.ProductId,
             source.WarehouseId,
             source.OccurredAtUtc,
-            GetNextSequenceNumber(),
+            await GetNextSequenceNumberAsync().ConfigureAwait(false),
             source.MovementType,
             -quantity,
             unitCost,

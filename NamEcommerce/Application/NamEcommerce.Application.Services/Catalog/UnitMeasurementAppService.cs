@@ -47,7 +47,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
 
     public async Task<UnitMeasurementAppDto?> GetUnitMeasurementByIdAsync(Guid id)
     {
-        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(id).ConfigureAwait(false);
         return unitMeasurement?.ToDto();
     }
 
@@ -102,7 +102,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
             };
         }
 
-        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (unitMeasurement == null)
         {
             return new UpdateUnitMeasurementResultAppDto
@@ -139,7 +139,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (unitMeasurement == null)
         {
             return new DeleteUnitMeasurementResultAppDto

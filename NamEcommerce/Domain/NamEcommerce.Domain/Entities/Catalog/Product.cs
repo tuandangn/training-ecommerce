@@ -87,7 +87,7 @@ public record Product : AppAggregateEntity
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var unitMeassurement = await byIdGetter.GetByIdAsync(unitMeasurementId.Value, default).ConfigureAwait(false);
+        var unitMeassurement = await byIdGetter.GetByIdAsync(unitMeasurementId.Value).ConfigureAwait(false);
         if (unitMeassurement is null)
             throw new UnitMeasurementIsNotFoundException(unitMeasurementId.Value);
 
@@ -102,7 +102,7 @@ public record Product : AppAggregateEntity
         if (ProductCategories.Any(pc => pc.CategoryId == categoryId))
             throw new ProductAlreadyInCategoryException(categoryId, Name);
 
-        var category = await byIdGetter.GetByIdAsync(categoryId, default).ConfigureAwait(false);
+        var category = await byIdGetter.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (category is null)
             throw new CategoryIsNotFoundException(categoryId);
 
@@ -126,7 +126,7 @@ public record Product : AppAggregateEntity
         if (ProductVendors.Any(pv => pv.VendorId == vendorId))
             return;
 
-        var vendor = await byIdGetter.GetByIdAsync(vendorId, default).ConfigureAwait(false);
+        var vendor = await byIdGetter.GetByIdAsync(vendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
@@ -149,7 +149,7 @@ public record Product : AppAggregateEntity
         if (ProductPictures.Any(pc => pc.PictureId == pictureId))
             return;
 
-        var picture = await byIdGetter.GetByIdAsync(pictureId, default).ConfigureAwait(false);
+        var picture = await byIdGetter.GetByIdAsync(pictureId).ConfigureAwait(false);
         if (picture is null)
             throw new PictureIsNotFoundException(pictureId);
 

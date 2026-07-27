@@ -78,7 +78,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         // Kiểm tra từng sản phẩm và kho trong danh sách item
         foreach (var item in dto.Items)
         {
-            var product = await _productDataReader.GetByIdAsync(item.ProductId, default).ConfigureAwait(false);
+            var product = await _productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateGoodsReceiptResultAppDto
@@ -90,7 +90,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
+                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
@@ -106,7 +106,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 
             if (item.WarehouseId.HasValue)
             {
-                var warehouse = await _warehouseDataReader.GetByIdAsync(item.WarehouseId.Value, default).ConfigureAwait(false);
+                var warehouse = await _warehouseDataReader.GetByIdAsync(item.WarehouseId.Value).ConfigureAwait(false);
                 if (warehouse is null)
                     return new CreateGoodsReceiptResultAppDto
                     {
@@ -119,7 +119,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         // Kiểm tra ảnh chứng từ tồn tại
         foreach (var pictureId in dto.PictureIds)
         {
-            var picture = await _pictureDataReader.GetByIdAsync(pictureId, default).ConfigureAwait(false);
+            var picture = await _pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
             if (picture is null)
                 return new CreateGoodsReceiptResultAppDto
                 {
@@ -175,7 +175,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         // Kiểm tra ảnh chứng từ tồn tại
         foreach (var pictureId in dto.PictureIds)
         {
-            var picture = await _pictureDataReader.GetByIdAsync(pictureId, default).ConfigureAwait(false);
+            var picture = await _pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
             if (picture is null)
                 return new UpdateGoodsReceiptResultAppDto
                 {
@@ -331,7 +331,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         var productNameMap = new Dictionary<Guid, string?>();
         foreach (var productId in productIds)
         {
-            var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+            var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
             if (product is not null)
                 productNameMap[productId] = product.Name;
         }

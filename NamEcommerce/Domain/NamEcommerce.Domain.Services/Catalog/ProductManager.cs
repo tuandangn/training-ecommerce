@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Media;
@@ -82,7 +83,7 @@ public sealed class ProductManager : IProductManager
         await _productRepository.DeleteAsync(product).ConfigureAwait(false);
     }
 
-    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -90,78 +91,69 @@ public sealed class ProductManager : IProductManager
                     where product.Name == name && (comparesWithCurrentId == null || product.Id != comparesWithCurrentId)
                     select product;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
-    public Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null)
+    public async Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        return Task.Run(() => queryData());
+        var query = _productDataReader.DataSource;
 
-        //local method
-        async Task<IPagedDataDto<ProductDto>> queryData()
+        if (!string.IsNullOrEmpty(keywords))
         {
-            var query = _productDataReader.DataSource;
+            var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
 
-            if (!string.IsNullOrEmpty(keywords))
-            {
-                var normalizedKeywords = TextHelper.Normalize(keywords);
-                var uppercaseKeywords = keywords.Trim().ToUpper();
-
-                var vendorIds = _vendorDataReader.DataSource
-                    .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
-                    .Select(v => v.Id)
-                    .ToList()
-                    .OfType<Guid?>()
-                    .ToList();
-
-                var categoryIds = _categoryDataReader.DataSource
-                    .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
-                    .Select(v => v.Id)
-                    .ToList()
-                    .OfType<Guid?>()
-                    .ToList();
-
-                query = query.Where(product => product.Name.ToUpper().Contains(keywords)
-                    || product.Name.ToUpper().Contains(normalizedKeywords)
-                    || product.NormalizedName.Contains(normalizedKeywords)
-                    || product.ProductVendors.Any(pv => vendorIds.Contains(pv.VendorId))
-                    || product.ProductCategories.Any(pc => categoryIds.Contains(pc.CategoryId)));
-            }
-
-            if (categoryId.HasValue)
-                query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
-
-            if (vendorId.HasValue)
-                query = query.Where(c => c.ProductVendors.Any(pv => pv.VendorId == vendorId));
-
-            query = query.OrderBy(c => c.Name);
-
-            var totalCount = query.Count();
-            var pagedData = query
-                .Skip(pageIndex * pageSize)
-                .Take(pageSize)
+            var vendorIds = (await _vendorDataReader.DataSource
+                .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
+                .Select(v => v.Id)
+                .ToListAsync().ConfigureAwait(false))
+                .OfType<Guid?>()
                 .ToList();
 
-            var data = PagedDataDto.Create(pagedData.Select(product => product.ToDto()), pageIndex, pageSize, totalCount);
-            return data;
+            var categoryIds = (await _categoryDataReader.DataSource
+                .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
+                .Select(v => v.Id)
+                .ToListAsync().ConfigureAwait(false))
+                .OfType<Guid?>()
+                .ToList();
+
+            query = query.Where(product => product.Name.ToUpper().Contains(keywords)
+                || product.Name.ToUpper().Contains(normalizedKeywords)
+                || product.NormalizedName.Contains(normalizedKeywords)
+                || product.ProductVendors.Any(pv => vendorIds.Contains(pv.VendorId))
+                || product.ProductCategories.Any(pc => categoryIds.Contains(pc.CategoryId)));
         }
+
+        if (categoryId.HasValue)
+            query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
+
+        if (vendorId.HasValue)
+            query = query.Where(c => c.ProductVendors.Any(pv => pv.VendorId == vendorId));
+
+        query = query.OrderBy(c => c.Name);
+
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        var pagedData = await query
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync().ConfigureAwait(false);
+
+        var data = PagedDataDto.Create(pagedData.Select(product => product.ToDto()), pageIndex, pageSize, totalCount);
+        return data;
     }
 
-    public Task<IEnumerable<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId)
+    public async Task<IEnumerable<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId)
     {
-        return Task.Run(async () =>
-        {
-            var query = _productDataReader.DataSource
-                .Where(p => p.ProductVendors.Any(pv => pv.VendorId == vendorId))
-                .OrderBy(p => p.Name);
+        var query = _productDataReader.DataSource
+            .Where(p => p.ProductVendors.Any(pv => pv.VendorId == vendorId))
+            .OrderBy(p => p.Name);
 
-            var list = query.ToList().Select(p => p.ToDto()).ToList();
-            return (IEnumerable<ProductDto>)list;
-        });
+        var list = (await query.ToListAsync().ConfigureAwait(false)).Select(p => p.ToDto()).ToList();
+        return list;
     }
 
     public async Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder)
@@ -243,26 +235,23 @@ public sealed class ProductManager : IProductManager
         return products.Select(p => p.ToDto()).ToList();
     }
 
-    public Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
+    public async Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
     {
-        return Task.Run(async () =>
-        {
-            var data = _priceHistoryDataReader.DataSource
-                .Where(ph => ph.ProductId == productId)
-                .OrderByDescending(ph => ph.CreatedOnUtc)
-                .Select(ph => new ProductPriceHistoryDto
-                {
-                    Id = ph.Id,
-                    OldPrice = ph.OldPrice,
-                    NewPrice = ph.NewPrice,
-                    OldCostPrice = ph.OldCostPrice,
-                    NewCostPrice = ph.NewCostPrice,
-                    Note = ph.Note,
-                    CreatedOnUtc = ph.CreatedOnUtc
-                }).ToList();
+        var data = await _priceHistoryDataReader.DataSource
+            .Where(ph => ph.ProductId == productId)
+            .OrderByDescending(ph => ph.CreatedOnUtc)
+            .Select(ph => new ProductPriceHistoryDto
+            {
+                Id = ph.Id,
+                OldPrice = ph.OldPrice,
+                NewPrice = ph.NewPrice,
+                OldCostPrice = ph.OldCostPrice,
+                NewCostPrice = ph.NewCostPrice,
+                Note = ph.Note,
+                CreatedOnUtc = ph.CreatedOnUtc
+            }).ToListAsync().ConfigureAwait(false);
 
-            return (IEnumerable<ProductPriceHistoryDto>)data;
-        });
+        return data;
     }
 
     public async Task UpdateProductPriceAsync(UpdateProductPriceDto dto)

@@ -9,14 +9,14 @@ public sealed class StagedRepository<TEntity> : IRepository<TEntity> where TEnti
         _context = context;
     }
 
-    public Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public Task<TEntity> InsertAsync(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
         _context.Add(entity);
         return Task.FromResult(entity);
     }
 
-    public Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public Task<TEntity> UpdateAsync(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
         var entry = _context.Entry(entity);
@@ -25,7 +25,7 @@ public sealed class StagedRepository<TEntity> : IRepository<TEntity> where TEnti
         return Task.FromResult(entity);
     }
 
-    public Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
         if (entity is ISoftDeletable softDeletable)
@@ -42,10 +42,10 @@ public sealed class StagedRepository<TEntity> : IRepository<TEntity> where TEnti
         return Task.CompletedTask;
     }
 
-    public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TEntity?> GetByIdAsync(Guid id)
     {
         // FindAsync bỏ qua soft-delete query filter — tự lọc để giữ semantics như DataSource
-        var entity = await _context.FindAsync<TEntity>(new object?[] { id }, cancellationToken).ConfigureAwait(false);
+        var entity = await _context.FindAsync<TEntity>(new object?[] { id }).ConfigureAwait(false);
         return entity is ISoftDeletable { IsDeleted: true } ? null : entity;
     }
 

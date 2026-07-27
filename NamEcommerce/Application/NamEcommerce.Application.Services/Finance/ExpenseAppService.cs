@@ -90,7 +90,7 @@ public class ExpenseAppService : IExpenseAppService
 
     public async Task<ExpenseAppDto?> GetExpenseByIdAsync(Guid id)
     {
-        var x = await _expenseDataReader.GetByIdAsync(id, default);
+        var x = await _expenseDataReader.GetByIdAsync(id);
         if (x is null) return null;
 
         return MapExpense(x);
@@ -120,7 +120,7 @@ public class ExpenseAppService : IExpenseAppService
         var (valid, errorMessage) = dto.Validate();
         if (!valid) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        var expense = await _expenseDataReader.GetByIdAsync(dto.Id, default);
+        var expense = await _expenseDataReader.GetByIdAsync(dto.Id);
         if (expense is null) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await _expenseManager.UpdateExpenseAsync(new UpdateExpenseDto(dto.Id)
@@ -137,7 +137,7 @@ public class ExpenseAppService : IExpenseAppService
 
     public async Task<DeleteExpenseResultAppDto> DeleteExpenseAsync(Guid id)
     {
-        var expense = await _expenseDataReader.GetByIdAsync(id, default);
+        var expense = await _expenseDataReader.GetByIdAsync(id);
         if (expense is null) return new DeleteExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await _expenseManager.DeleteExpenseAsync(id);

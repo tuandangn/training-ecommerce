@@ -1,7 +1,6 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.CustomerPortal;
-using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
@@ -23,6 +22,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -49,7 +49,7 @@ public sealed class CustomerReturnManager(
         Warehouse? warehouse = null;
         if (dto.WarehouseId.HasValue)
         {
-            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value, default).ConfigureAwait(false);
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", dto.WarehouseId.Value);
         }
@@ -125,7 +125,7 @@ public sealed class CustomerReturnManager(
             ? "Khách hàng"
             : deliveryCustomerName;
 
-        var code = GenerateCode();
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
         var customerReturn = new CustomerReturn(
@@ -143,7 +143,7 @@ public sealed class CustomerReturnManager(
 
         foreach (var itemDto in normalizedItems)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
             if (product is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.ProductNotFound", itemDto.ProductId);
 
@@ -197,7 +197,7 @@ public sealed class CustomerReturnManager(
             if (warehouseId.Value == Guid.Empty)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
 
-            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value, default).ConfigureAwait(false);
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", warehouseId.Value);
 
@@ -249,7 +249,7 @@ public sealed class CustomerReturnManager(
         });
         foreach (var item in acceptedWithoutDeliveryItemByProduct)
         {
-            var deliveredQty = GetTotalDeliveredQuantity(customerReturn.CustomerId, item.ProductId);
+            var deliveredQty = await GetTotalDeliveredQuantityAsync(customerReturn.CustomerId, item.ProductId).ConfigureAwait(false);
             var previouslyReturned = await GetTotalReservedReturnQuantityForCustomerProductAsync(
                 customerReturn.CustomerId, item.ProductId, excludeReturnId: id).ConfigureAwait(false);
             var maxAllowed = deliveredQty - previouslyReturned;
@@ -277,7 +277,7 @@ public sealed class CustomerReturnManager(
         if (!customerReturn.CompensateInNextDelivery)
             return;
 
-        var quantities = GetCompensatedQuantitiesByOrderProduct(customerReturn);
+        var quantities = await GetCompensatedQuantitiesByOrderProductAsync(customerReturn).ConfigureAwait(false);
         foreach (var item in quantities)
         {
             var alreadyReserved = await productReservationManager.GetReservedByReferenceAsync(
@@ -304,7 +304,7 @@ public sealed class CustomerReturnManager(
         if (!customerReturn.CompensateInNextDelivery)
             return;
 
-        var quantities = GetCompensatedQuantitiesByOrderProduct(customerReturn);
+        var quantities = await GetCompensatedQuantitiesByOrderProductAsync(customerReturn).ConfigureAwait(false);
         foreach (var item in quantities)
         {
             var reservedByReturn = await productReservationManager.GetReservedByReferenceAsync(
@@ -331,9 +331,9 @@ public sealed class CustomerReturnManager(
         }
     }
 
-    private List<CompensatedQuantity> GetCompensatedQuantitiesByOrderProduct(CustomerReturn customerReturn)
+    private async Task<List<CompensatedQuantity>> GetCompensatedQuantitiesByOrderProductAsync(CustomerReturn customerReturn)
     {
-        var sourceItemsById = deliveryNoteDataReader.DataSource
+        var sourceItemsById = await deliveryNoteDataReader.DataSource
             .Where(note => note.CustomerId == customerReturn.CustomerId && note.OrderId != Guid.Empty)
             .SelectMany(note => note.Items.Select(item => new
             {
@@ -342,7 +342,7 @@ public sealed class CustomerReturnManager(
                 item.ProductId,
                 item.OrderItemId
             }))
-            .ToDictionary(item => item.Id);
+            .ToDictionaryAsync(item => item.Id).ConfigureAwait(false);
 
         if (sourceItemsById.Count == 0)
             return [];
@@ -367,11 +367,11 @@ public sealed class CustomerReturnManager(
 
     public async Task<CustomerReturnDto?> GetByIdAsync(Guid id)
     {
-        var customerReturn = await customerReturnDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var customerReturn = await customerReturnRepository.GetByIdAsync(id).ConfigureAwait(false);
         return customerReturn?.ToDto();
     }
 
-    public Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(
+    public async Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(
         int pageIndex, int pageSize, Guid? customerId = null, Guid? deliveryNoteId = null, int? status = null)
     {
         var query = customerReturnDataReader.DataSource;
@@ -383,70 +383,73 @@ public sealed class CustomerReturnManager(
         if (status.HasValue)
             query = query.Where(r => (int)r.Status == status.Value);
 
-        var total = query.Count();
-        var items = query
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = (await query
             .OrderByDescending(r => r.CreatedOnUtc)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
-            .ToList()
+            .ToListAsync().ConfigureAwait(false))
             .Select(r => r.ToDto())
             .ToList();
 
-        return Task.FromResult((total, items));
+        return (total, items);
     }
 
-    public Task<decimal> GetTotalReservedReturnQuantityAsync(
+    public async Task<decimal> GetTotalReservedReturnQuantityAsync(
         Guid deliveryNoteId, Guid productId, Guid? excludeReturnId = null)
     {
-        var query = customerReturnDataReader.DataSource
+        var reservedReturns = await customerReturnDataReader.DataSource
             .Where(r => r.DeliveryNoteId == deliveryNoteId
                         && r.Status != CustomerReturnStatus.Cancelled
-                        && (excludeReturnId == null || r.Id != excludeReturnId));
+                        && (excludeReturnId == null || r.Id != excludeReturnId))
+            .ToListAsync().ConfigureAwait(false);
 
         decimal total = 0;
-        var reservedReturns = query.ToList();
         foreach (var ret in reservedReturns)
+        {
             total += ret.Items
                 .Where(i => i.ProductId == productId)
                 .Sum(i => i.AcceptedQuantity);
+        }
 
-        total += customerReturnRequestDataReader.DataSource
+        total += await customerReturnRequestDataReader.DataSource
             .Where(request => request.DeliveryNoteId == deliveryNoteId
                 && (request.Status == CustomerReturnRequestStatus.PendingReview ||
                     request.Status == CustomerReturnRequestStatus.Accepted))
             .SelectMany(request => request.Items.Where(item => item.ProductId == productId))
-            .Sum(item => item.RequestedQuantity);
+            .SumAsync(item => item.RequestedQuantity).ConfigureAwait(false);
 
-        return Task.FromResult(total);
+        return total;
     }
 
-    private Task<decimal> GetTotalReservedReturnQuantityForDeliveryNoteItemAsync(
+    private async Task<decimal> GetTotalReservedReturnQuantityForDeliveryNoteItemAsync(
         Guid deliveryNoteId,
         Guid deliveryNoteItemId,
         Guid productId,
         Guid? excludeReturnId = null,
         Guid? excludeReturnRequestId = null)
     {
-        var query = customerReturnDataReader.DataSource
+        var reservedReturns = await customerReturnDataReader.DataSource
             .Where(r => r.Status != CustomerReturnStatus.Cancelled
-                        && (excludeReturnId == null || r.Id != excludeReturnId));
+                        && (excludeReturnId == null || r.Id != excludeReturnId))
+            .ToListAsync().ConfigureAwait(false);
 
         decimal total = 0;
-        var reservedReturns = query.ToList();
         foreach (var ret in reservedReturns)
             total += ret.Items
                 .Where(i => i.DeliveryNoteItemId == deliveryNoteItemId ||
                             (!i.DeliveryNoteItemId.HasValue && ret.DeliveryNoteId == deliveryNoteId && i.ProductId == productId))
                 .Sum(i => i.AcceptedQuantity);
 
-        total += customerReturnRequestDataReader.DataSource
+        total += await customerReturnRequestDataReader.DataSource
             .Where(request => request.Status == CustomerReturnRequestStatus.PendingReview ||
                               request.Status == CustomerReturnRequestStatus.Accepted)
             .Where(request => excludeReturnRequestId == null || request.Id != excludeReturnRequestId.Value)
             .SelectMany(request => request.Items.Where(item => item.DeliveryNoteItemId == deliveryNoteItemId))
-            .Sum(item => item.RequestedQuantity);
+            .SumAsync(item => item.RequestedQuantity)
+            .ConfigureAwait(false);
 
-        return Task.FromResult(total);
+        return total;
     }
 
     /// <summary>
@@ -500,10 +503,10 @@ public sealed class CustomerReturnManager(
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private string GenerateCode()
+    private Task<string> GenerateCodeAsync()
     {
         var prefix = $"TKH-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.Next(prefix, () => customerReturnDataReader.DataSource.Count(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => customerReturnDataReader.DataSource.CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     private async Task<List<DeliveryNote>> GetDeliveredNotesForReturnAsync(Guid customerId, Guid? deliveryNoteId)
@@ -513,7 +516,7 @@ public sealed class CustomerReturnManager(
 
         if (deliveryNoteId.HasValue)
         {
-            var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value, default).ConfigureAwait(false);
+            var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value).ConfigureAwait(false);
             if (deliveryNote is null)
                 throw new DeliveryNoteNotFoundException(deliveryNoteId.Value);
             if (deliveryNote.CustomerId != customerId)
@@ -528,13 +531,13 @@ public sealed class CustomerReturnManager(
             return [deliveryNote];
         }
 
-        return deliveryNoteDataReader.DataSource
+        return await deliveryNoteDataReader.DataSource
             .Where(dn => dn.CustomerId == customerId
                          && (dn.SourceType == DeliveryNoteSourceType.ToCustomer ||
                              dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer)
                          && dn.Status == DeliveryNoteStatus.Delivered)
             .OrderBy(dn => dn.DeliveredOnUtc ?? dn.CreatedOnUtc)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
     }
 
     private static ReturnSourceItem ValidateSourceItem(
@@ -613,30 +616,29 @@ public sealed class CustomerReturnManager(
         return allocatedItems;
     }
 
-    private Task<decimal> GetTotalReservedReturnQuantityForCustomerProductAsync(
+    private async Task<decimal> GetTotalReservedReturnQuantityForCustomerProductAsync(
         Guid customerId,
         Guid productId,
         Guid? excludeReturnId = null)
     {
-        var total = customerReturnDataReader.DataSource
+        var total = await customerReturnDataReader.DataSource
             .Where(r => r.CustomerId == customerId
                         && r.Status != CustomerReturnStatus.Cancelled
                         && (excludeReturnId == null || r.Id != excludeReturnId))
-            .ToList()
             .SelectMany(r => r.Items.Where(item => item.ProductId == productId))
-            .Sum(item => item.AcceptedQuantity);
+            .SumAsync(item => item.AcceptedQuantity).ConfigureAwait(false);
 
-        total += customerReturnRequestDataReader.DataSource
+        total += await customerReturnRequestDataReader.DataSource
             .Where(request => request.CustomerId == customerId
                 && (request.Status == CustomerReturnRequestStatus.PendingReview ||
                     request.Status == CustomerReturnRequestStatus.Accepted))
             .SelectMany(request => request.Items.Where(item => item.ProductId == productId))
-            .Sum(item => item.RequestedQuantity);
+            .SumAsync(item => item.RequestedQuantity).ConfigureAwait(false);
 
-        return Task.FromResult(total);
+        return total;
     }
 
-    private decimal GetTotalDeliveredQuantity(Guid customerId, Guid productId)
+    private Task<decimal> GetTotalDeliveredQuantityAsync(Guid customerId, Guid productId)
     {
         return deliveryNoteDataReader.DataSource
             .Where(dn => dn.CustomerId == customerId
@@ -645,7 +647,7 @@ public sealed class CustomerReturnManager(
                          && dn.Status == DeliveryNoteStatus.Delivered)
             .SelectMany(dn => dn.Items)
             .Where(item => item.ProductId == productId)
-            .Sum(item => item.Quantity);
+            .SumAsync(item => item.Quantity);
     }
 
     private sealed record ReturnSourceItem(DeliveryNote DeliveryNote, DeliveryNoteItem Item);
