@@ -34,6 +34,8 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             ShippingPhoneNumber = request.ShippingPhoneNumber,
             ShowPrice = request.ShowPrice,
             Note = request.Note,
+            AppliedOrderDiscount = request.AppliedOrderDiscount,
+            AppliedOrderPrepaid = request.AppliedOrderPrepaid,
             AmountToCollect = request.AmountToCollect,
             Surcharge = request.Surcharge,
             SurchargeReason = request.SurchargeReason,

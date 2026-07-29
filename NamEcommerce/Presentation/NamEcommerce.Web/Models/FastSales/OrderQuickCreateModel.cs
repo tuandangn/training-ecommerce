@@ -19,6 +19,9 @@ public sealed class OrderQuickCreateModel
     [ValidateNever]
     public bool CustomerDisplayIsSystem { get; set; }
 
+    [Display(Name = "Giảm giá")]
+    public decimal OrderDiscount { get; set; }
+
     public IList<QuickCreateOrderItemModel> Items { get; set; } = [];
 
     [Display(Name = "Địa chỉ")]
@@ -39,11 +42,11 @@ public sealed class OrderQuickCreateModel
 }
 
 [Serializable]
-public sealed class OrderQuickCreatePaymentModel
+public sealed class OrderQuickCreateCompleteModel
 {
-    public decimal? PaidAmount { get; set; }
+    public Guid OrderId { get; set; }
+    public decimal PaidAmount { get; set; }
     public Guid? PaymentIntentId { get; set; }
-    public decimal? OrderDiscount { get; set; }
 }
 
 

@@ -5,14 +5,15 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.FastSales;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.FastSales;
 
-public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppService)
-    : IRequestHandler<QuickCreateOrderCommand, QuickSaleResultModel>
+public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppService, IOrderAppService orderAppService)
+    : IRequestHandler<QuickCreateOrderCommand, QuickCreateOrderResultModel>
 {
-    public async Task<QuickSaleResultModel> Handle(QuickCreateOrderCommand request, CancellationToken cancellationToken)
+    public async Task<QuickCreateOrderResultModel> Handle(QuickCreateOrderCommand request, CancellationToken cancellationToken)
     {
         var result = await fastSaleAppService.QuickCreateOrderAsync(new QuickCreateOrderAppDto2
         {
@@ -24,17 +25,52 @@ public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppServi
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice
             }).ToList(),
-            OrderDiscount = 0, //request.OrderDiscount,
+            OrderDiscount = request.OrderDiscount,
             Note = request.Note,
             DeliveryNow = request.DeliveryNow,
-            PayNow = false, //request.PayNow,
-            PaidAmount = 0, //request.PaidAmount,
             ShippingAddress = request.ShippingAddress,
-            ShippingPhoneNumber = request.ShippingPhoneNumber,
-            PaymentIntentId = null,//request.PaymentIntentId
+            ShippingPhoneNumber = request.ShippingPhoneNumber
         }).ConfigureAwait(false);
 
-        return FastSaleCommandHandlerMapper.MapResult(result);
+        if (!result.Success)
+        {
+            return new QuickCreateOrderResultModel
+            {
+                Success = false,
+                ErrorMessage = result.ErrorMessage
+            };
+        }
+
+        var createdOrder = await orderAppService.GetOrderByIdAsync(result.OrderId!.Value).ConfigureAwait(false);
+        return new QuickCreateOrderResultModel
+        {
+            Success = true,
+            OrderDiscount = createdOrder!.OrderDiscount ?? 0,
+            OrderSubTotal = createdOrder.OrderSubTotal,
+            OrderTotal = createdOrder.TotalAmount,
+            OrderId = createdOrder.Id,
+            OrderCode = createdOrder.Code
+        };
+    }
+}
+
+public sealed class CompleteQuickCreateOrderPaymentHandler(IFastSaleAppService fastSaleAppService, IOrderAppService orderAppService)
+    : IRequestHandler<CompleteQuickCreateOrderPaymentCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(CompleteQuickCreateOrderPaymentCommand request, CancellationToken cancellationToken)
+    {
+        var result = await fastSaleAppService.CompleteQuickCreateOrderPaymentAsync(new CompleteQuickCreateOrderPaymentAppDto
+        {
+            OrderId = request.OrderId,
+            PaidAmount = request.PaidAmount,
+            PaymentIntentId = request.PaymentIntentId
+        });
+
+        return new CommonActionResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
     }
 }
 

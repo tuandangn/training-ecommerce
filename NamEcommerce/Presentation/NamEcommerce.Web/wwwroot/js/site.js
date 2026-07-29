@@ -1,6 +1,7 @@
 ﻿'use strict';
 
 $(function () {
+    /*
     const disabledSubmitForms = [];
 
     $('form').on('submit', function (e) {
@@ -14,6 +15,7 @@ $(function () {
     $(document).ajaxComplete(function () {
         disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
     });
+    */
 
     $('.alert-dismissible').each(function () {
         let time = 3000;
@@ -53,7 +55,7 @@ function isFormValid(form) {
 }
 
 function enableSubmitButtons(form, enabled) {
-    $(form).find('[type=submit]').each(btn => {
+    $(form).find('[type=submit]').each((_, btn) => {
         if ($(btn).hasClass('noDisabled'))
             return;
         $(btn).toggleClass('disabled', !enabled).prop('disabled', !enabled);

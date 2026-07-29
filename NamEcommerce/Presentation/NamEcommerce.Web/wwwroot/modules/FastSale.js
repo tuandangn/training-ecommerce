@@ -87,8 +87,8 @@ class FastSale {
         this.shippingAddress = document.getElementById('ShippingAddress');
         this.deliveryNowBtn = document.getElementById('fastSaleDeliverNow');
         this.payNowBtn = document.getElementById('fastSalePayNow');
+        this.discountInput = document.getElementById('orderDiscount');
     }
-
     bindPickers() {
         const initialValues = {};
         if (this.customerPickerEl) {
@@ -146,7 +146,6 @@ class FastSale {
 
         return initialValues;
     }
-
     applyCustomerShippingDefaults() {
         if (this.selectedCustomer && !this.isRetailWalkInCustomer()) {
             this.shippingAddress.value = this.selectedCustomer.address ?? '';
@@ -159,7 +158,6 @@ class FastSale {
             this.shippingPhoneNumber.value = '';
         }
     }
-
     bindQuickCustomerForm() {
         const quickCustomerModalEl = document.getElementById('quickCustomerModal');
         const quickCustomerModal = quickCustomerModalEl
@@ -199,13 +197,22 @@ class FastSale {
             }
         });
     }
-
     bindEvents() {
         this.deliveryNowBtn.addEventListener('click', () => this.setFulfillmentMode(this.#deliveryNow));
         this.notDelivered.addEventListener('click', () => this.setFulfillmentMode(this.#notDelivered));
         this.payNowBtn.addEventListener('click', () => this.setPaymentTiming(this.#payNow));
         this.unpaid.addEventListener('click', () => this.setPaymentTiming(this.#unpaid));
         this.complete.addEventListener('click', () => this.completeSale());
+        const discountChanged = debounce(() => {
+            const discount = DecimalFields.getValue(this.discountInput);
+            const subTotal = this.calculateSubtotal();
+            if (discount > subTotal) {
+                this.showAlert('warning', 'Giảm giá tối đa là ' + DecimalFields.formatCurrencyWithSymbol(subTotal));
+                this.discountInput.value = subTotal;
+            }
+            this.render();
+        }, 700);
+        this.discountInput.addEventListener('input', discountChanged);
     }
 
     setFulfillmentMode(mode) {
@@ -217,7 +224,6 @@ class FastSale {
         this.productBrowserMobile?.reload();
         this.render();
     }
-
     setPaymentTiming(timing) {
         this.paymentTiming = timing;
         this.render();
@@ -279,7 +285,6 @@ class FastSale {
         const offcanvas = document.getElementById('productBrowserOffcanvas');
         bootstrap.Offcanvas.getOrCreateInstance(offcanvas)?.hide();
     }
-
     #isValidProduct(product, checkQty = 1) {
         if (!product) return false;
 
@@ -288,7 +293,6 @@ class FastSale {
 
         return product.availableVendors?.length > 0;
     }
-
     normalizeProduct(product) {
         return {
             id: product.id,
@@ -314,8 +318,13 @@ class FastSale {
 
     render() {
         const subTotal = this.calculateSubtotal();
+        const total = this.calculateTotal();
 
         if (subTotal > 0 && this.isRetailWalkInCustomer() && this.paymentTiming == this.#unpaid) {
+            this.setPaymentTiming(this.#payNow);
+            return;
+        }
+        if (this.cart.length && total == 0 && this.paymentTiming == this.#unpaid) {
             this.setPaymentTiming(this.#payNow);
             return;
         }
@@ -324,7 +333,7 @@ class FastSale {
             return;
         }
 
-        this.payNowBtn.disabled = subTotal == 0 && subTotal == 0;
+        this.payNowBtn.disabled = subTotal == 0 && total == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
         this.#togglePaymentTabs();
 
@@ -335,10 +344,10 @@ class FastSale {
         this.renderCart();
 
         this.subTotal.textContent = this.formatMoneyWithSymbol(subTotal);
-        this.total.textContent = this.formatMoneyWithSymbol(subTotal);
+        this.total.textContent = this.formatMoneyWithSymbol(total);
         this.complete.innerHTML = this.getCompleteButtonHtml();
-        if (subTotal > 0)
-            this.totalHint.textContent = window.SoBangChu?.docSoTien(subTotal) ?? '';
+        if (total > 0)
+            this.totalHint.textContent = window.SoBangChu?.docSoTien(total) ?? '';
         else
             this.totalHint.textContent = '';
 
@@ -349,7 +358,7 @@ class FastSale {
 
         reparseForm(this.root);
         document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning =>
-            warning.classList.toggle('d-none', !this.isRetailWalkInCustomer() || subTotal == 0));
+            warning.classList.toggle('d-none', !this.isRetailWalkInCustomer() || total == 0));
     }
     #toggleDeliveryTabs() {
         if (this.fulfillmentMode == this.#notDelivered) {
@@ -386,20 +395,6 @@ class FastSale {
                 bootstrap.Tab.getOrCreateInstance(this.payNowBtn).show();
         }
     }
-
-    #validateCustomer() {
-        const customer = this.selectedCustomer;
-        const customerValidator = document.querySelector('[data-valmsg-for="CustomerId"]');
-        const shippingPhoneNumberValidator = document.querySelector('[data-valmsg-for="ShippingPhoneNumber"]');
-        const shippingAddressValidator = document.querySelector('[data-valmsg-for="ShippingAddress"]');
-
-        customerValidator.textContent = customer ? '' : 'Vui lòng chọn khách hàng.';
-        shippingPhoneNumberValidator.textContent = this.shippingPhoneNumber.value ? '' : this.shippingPhoneNumber.getAttribute('data-val-required');
-        shippingAddressValidator.textContent = this.shippingAddress.value ? '' : this.shippingAddress.getAttribute('data-val-required');
-
-        return !!customer;
-    }
-
     renderCart() {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
@@ -547,47 +542,82 @@ class FastSale {
 
         //payment
         const subTotal = this.calculateSubtotal();
-        if (this.paymentTiming == this.#payNow && subTotal > 0) {
-        debugger;
+        const discount = DecimalFields.getValue(this.discountInput);
+        const total = this.calculateTotal();
+
+        if (this.paymentTiming != this.#payNow || total == 0) {
+            if (!await confirm('Tạo đơn hàng', 'Xác nhận tạo đơn hàng'))
+                return;
+
             showPageLoading();
-            const formData = new FormData(this.root);
-            prepareSubmitFormData(formData);
-            formData.set('returnJson', true);
-            const createOrderResult = await this.postJson(this.root.action, formData);
-
-            /*
-            const paymentResult = await this.#paymentProcess.startPayment({
-                subTotal,
-                canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
-                customer: {
-                    id: this.selectedCustomer.id,
-                    isRetailWalkIn: this.isRetailWalkInCustomer()
-                }
-            });
-            if (!paymentResult.success) {
-                return;
-            }
-            if (this.#paymentProcess.isPending()) {
-                this.showAlert('warning', 'Chuyển khoản chưa được xác nhận.');
-                return;
-            }
-
-            this.root.addEventListener('formdata', e => {
-                e.formData.append('PaidAmount', paymentResult.amount);
-                e.formData.append('OrderDiscount', discount);
-                e.formData.append('PaymentIntentId', paymentResult.paymentIntentId);
-            });
-            */
-        } else {
             this.root.addEventListener('formdata', function onFormData(e) {
                 self.root.removeEventListener('formdata', onFormData);
                 prepareSubmitFormData(e.formData);
             });
 
-            showPageLoading();
             this.complete.disabled = true;
             this.root.submit();
+            return;
         }
+
+        if (!await confirm('Tạo đơn hàng', 'Xác nhận tạo đơn hàng và thanh toán'))
+            return;
+
+        showPageLoading();
+
+        const formData = new FormData(this.root);
+        prepareSubmitFormData(formData);
+        formData.set('returnJson', true);
+
+        const createOrderResult = await this.postJson(this.root.action, formData);
+        if (!createOrderResult.success) {
+            hidePageLoading();
+            return;
+        }
+
+        const orderInfo = createOrderResult.data;
+
+        if (orderInfo.subTotal != subTotal || orderInfo.total != total || orderInfo.discount != discount) {
+            this.showAlert('warning', 'Thông tin đơn hàng không trùng khớp');
+            location = `/Order/Details/${orderInfo.orderId}`;
+            return;
+        }
+
+        hidePageLoading();
+        const paymentResult = await this.#paymentProcess.startPayment({
+            orderId: orderInfo.orderId,
+            orderCode: orderInfo.orderCode,
+            subTotal: orderInfo.subTotal,
+            discount: orderInfo.discount,
+            total: orderInfo.orderTotal,
+            canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
+            customer: {
+                id: this.selectedCustomer.id,
+                isRetailWalkIn: this.isRetailWalkInCustomer()
+            }
+        });
+        if (!paymentResult.success) {
+            // modal is closed by user
+            showPageLoading();
+            this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán')
+            this.#redirectToOrderPage(orderInfo.orderId);
+            return;
+        }
+
+        showPageLoading();
+        const completePaymentPayload = {
+            orderId: orderInfo.orderId,
+            paidAmount: paymentResult.amount,
+            paymentIntentId: paymentResult.paymentIntentId
+        };
+        const completeResult = await this.postJson('/Order/CompleteQuickCreateOrderPayment', completePaymentPayload);
+        if (!completeResult.success) {
+            this.showAlert('warning', 'Phát sinh lỗi khi hoàn thanh đơn');
+            this.#redirectToOrderPage(orderInfo.orderId);
+            return;
+        }
+        this.showAlert('success', this.fulfillmentMode == this.#deliveryNow ? 'Hoàn tất đơn hàng' : "Đơn hàng đã được tạo và thanh toán");
+        this.#redirectToOrderPage(orderInfo.orderId);
 
         function prepareSubmitFormData(formData) {
             if (self.fulfillmentMode == self.#deliveryNow) {
@@ -596,6 +626,9 @@ class FastSale {
                 formData.set(self.shippingPhoneNumber.name, self.selectedCustomer.phone);
             }
         }
+    }
+    #redirectToOrderPage(orderId) {
+        location = `/Order/Details/${orderId}`
     }
 
     validateQuickCreateOrder() {
@@ -611,6 +644,18 @@ class FastSale {
         }
 
         return true;
+    }
+    #validateCustomer() {
+        const customer = this.selectedCustomer;
+        const customerValidator = document.querySelector('[data-valmsg-for="CustomerId"]');
+        const shippingPhoneNumberValidator = document.querySelector('[data-valmsg-for="ShippingPhoneNumber"]');
+        const shippingAddressValidator = document.querySelector('[data-valmsg-for="ShippingAddress"]');
+
+        customerValidator.textContent = customer ? '' : 'Vui lòng chọn khách hàng.';
+        shippingPhoneNumberValidator.textContent = this.shippingPhoneNumber.value ? '' : this.shippingPhoneNumber.getAttribute('data-val-required');
+        shippingAddressValidator.textContent = this.shippingAddress.value ? '' : this.shippingAddress.getAttribute('data-val-required');
+
+        return !!customer;
     }
     validateSaleInput() {
         if (!this.getSelectedCustomerId()) return 'Vui lòng chọn khách hàng.';
@@ -686,7 +731,7 @@ class FastSale {
     }
 
     calculateTotal() {
-        return Math.max(0, this.calculateSubtotal());
+        return Math.max(0, this.calculateSubtotal() - DecimalFields.getValue(this.discountInput));
     }
 
     getCompleteButtonHtml() {
@@ -852,10 +897,13 @@ class PaymentProcess {
     #cashMethod = Symbol('cash');
 
     #subTotal;
-    #amount;
     #discount;
+    #total;
+    #amount;
     #canChangePaidAmount;
 
+    #orderId;
+    #orderCode;
     #customer;
 
     #paymentMethod;
@@ -888,11 +936,14 @@ class PaymentProcess {
         this.modal = bootstrap.Modal.getOrCreateInstance(this.root);
 
         this.form = document.getElementById('paymentForm');
+        this.orderId = this.form.querySelector('#OrderId');
+        this.deliveryWaiting = this.form.querySelector('#DeliveryWaiting');
+        this.paymentIntentId = this.form.querySelector('#paymentIntentId');
         this.paymentSubTotal = this.form.querySelector('#paymentSubTotal');
+        this.paymentDiscount = this.form.querySelector('#paymentDiscount');
         this.paymentTotal = this.form.querySelector('#paymentTotal');
         this.paymentTotalHint = this.form.querySelector('#paymentTotalHint');
         this.skipPaymentBtn = this.form.querySelector('#paymentSkip');
-        this.discountInput = this.form.querySelector('#fastSaleDiscount');
         this.paidAmountInput = this.form.querySelector('#paidAmount');
         this.debtAmount = this.form.querySelector('#debtAmount');
         this.paymentProcessContainer = this.form.querySelector('#paymentProcessContainer');
@@ -934,35 +985,34 @@ class PaymentProcess {
         return this.#paymentMethod == this.#cashMethod;
     }
 
-    async startPayment({ subTotal, canChangePaidAmount, customer }) {
+    async startPayment({ orderId, orderCode,
+        subTotal, discount, total,
+        canChangePaidAmount, customer,
+        deliveryWaiting
+    }) {
         if (subTotal <= 0)
             throw new Error('Số tiền thanh toán không đúng');
 
-        this.#subTotal = subTotal;
-        this.#canChangePaidAmount = canChangePaidAmount;
+        this.#orderId = orderId;
+        this.#orderCode = orderCode;
         this.#customer = customer;
+
+        this.#subTotal = subTotal || 0;
+        this.#discount = discount || 0;
+        this.#total = total || 0;
+
+        this.#canChangePaidAmount = canChangePaidAmount;
 
         this.#resetPaymentIntent();
         this.#saleInputVersion = 0;
         this.#pollRequestSeq = 0;
         this.#amount = 0;
-        this.#discount = 0;
-        this.discountInput.value = 0;
         this.#setPaymentMethod(this.#cashMethod);
         this.paidAmountInput.value = 0;
 
         const self = this;
 
         //event listeners
-        const onDiscountChanged = debounce(async () => {
-            this.#discount = DecimalFields.getValue(this.discountInput);
-            this.render();
-            if (this.isBank())
-                await this.#createPaymentQrCode();
-            else
-                this.#resetPaymentIntent();
-        }, 700);
-
         const onAmountChanged = this.#canChangePaidAmount ? debounce(async () => {
             const total = this.#calculateTotal();
             const amount = DecimalFields.getValue(this.paidAmountInput);
@@ -1021,6 +1071,21 @@ class PaymentProcess {
             this.#endPayment(true, this.#amount);
         }
 
+        const onCloseModal = async () => {
+            this.root.classList.add('d-none');
+            let confirmed;
+            if (this.#reference.isRetailWalkInCustomer()) {
+                confirmed = await confirm('Bỏ qua thanh toán', 'Đơn hàng chưa thể hoàn thành nếu bạn chưa thanh toán, bạn có muốn tiếp tục?');
+            } else {
+                confirmed = await confirm('Bỏ qua thanh toán', 'Xác nhận sẽ thanh toán đơn hàng sau?');
+            }
+            if (!confirmed) {
+                this.root.classList.remove('d-none');
+                return;
+            }
+            this.modal.hide();
+        };
+
         const setCashPayment = () => this.#setPaymentMethod(this.#cashMethod);
         const setBankPayment = () => this.#setPaymentMethod(this.#bankMethod);
 
@@ -1030,31 +1095,26 @@ class PaymentProcess {
 
             this.createQr.addEventListener('click', createQr);
             this.moneyReceivedBtn.addEventListener('click', confirmMoneyReceived);
-            this.discountInput.addEventListener('input', onDiscountChanged);
             this.paidAmountInput.addEventListener('input', onAmountChanged);
             this.form.addEventListener('submit', onPaymentSubmit);
             this.cashMethod.addEventListener('click', setCashPayment);
             this.bankMethod.addEventListener('click', setBankPayment);
+            this.skipPaymentBtn.addEventListener('click', onCloseModal);
 
             this.root.addEventListener('show.bs.modal', function onShow() {
                 self.root.removeEventListener('show.bs.modal', onShow);
-                self.skipPaymentBtn.addEventListener('click', function onClick() {
-                    self.skipPaymentBtn.removeEventListener('click', onClick);
-                    self.modal.hide();
-                });
-
                 self.render();
             });
 
             this.root.addEventListener('hidden.bs.modal', function onHidden(e) {
                 self.root.removeEventListener('hidden.bs.modal', onHidden);
-                self.discountInput.removeEventListener('input', onDiscountChanged);
                 self.paidAmountInput.removeEventListener('input', onAmountChanged);
                 self.createQr.removeEventListener('click', createQr);
                 self.moneyReceivedBtn.removeEventListener('click', confirmMoneyReceived);
                 self.form.removeEventListener('submit', this.onPaymentSubmit);
                 self.cashMethod.removeEventListener('click', setCashPayment);
                 self.bankMethod.removeEventListener('click', setBankPayment);
+                self.skipPaymentBtn.removeEventListener('click', onCloseModal);
                 self.root.classList.remove('d-none');
                 self.debtAmount.classList.add('d-none');
 
@@ -1092,10 +1152,9 @@ class PaymentProcess {
     }
 
     async render() {
-        let discount = DecimalFields.getValue(this.discountInput);
+        let discount = this.#discount;
         if (discount > this.#subTotal)
             discount = this.#subTotal;
-        this.discountInput.value = discount;
         const total = this.#calculateTotal();
         if (total == 0) {
             if (!this.isCash()) {
@@ -1107,6 +1166,7 @@ class PaymentProcess {
         this.bankMethod.disabled = total == 0;
 
         this.paymentSubTotal.textContent = DecimalFields.formatCurrency(this.#subTotal);
+        this.paymentDiscount.textContent = DecimalFields.formatCurrency(this.#discount);
         this.paymentTotal.textContent = DecimalFields.formatCurrencyWithSymbol(total);
         this.paymentTotalHint.classList.toggle('d-none', total <= 0);
         if (total > 0) {
@@ -1118,10 +1178,6 @@ class PaymentProcess {
         this.paidAmountInput.closest('div.d-flex').classList.toggle('d-none', !this.#canChangePaidAmount);
 
         this.paymentProcessContainer.classList.toggle('d-none', total == 0);
-
-        this.discountInput.setAttribute('data-val-range', `Giảm giá phải nhỏ hơn ${DecimalFields.formatCurrencyWithSymbol(this.#subTotal)}`);
-        this.discountInput.setAttribute('data-val-range-min', 0);
-        this.discountInput.setAttribute('data-val-range-max', this.#subTotal);
 
         this.#amount = total;
 
@@ -1149,7 +1205,7 @@ class PaymentProcess {
     }
 
     #calculateTotal() {
-        return Math.max(this.#subTotal - DecimalFields.getValue(this.discountInput));
+        return Math.max(this.#subTotal - this.#discount);
     }
 
     async #setPaymentMethod(method) {
@@ -1208,7 +1264,8 @@ class PaymentProcess {
         const saleInputVersion = this.#saleInputVersion;
         const response = await this.#reference.postJson(this.#urls.createIntent, {
             customerId: this.#customer.id,
-            amount
+            amount,
+            note: this.#getPaymentNote()
         });
         if (this.#saleInputVersion !== saleInputVersion)
             return;
@@ -1220,6 +1277,9 @@ class PaymentProcess {
         this.#paymentIntent = response.intent;
         this.#paymentIntentConfirmed = false;
         this.#startIntentPolling();
+    }
+    #getPaymentNote() {
+        return `Thanh toán đơn hàng ${this.#orderCode}`;
     }
     async #confirmPaymentIntent() {
         if (!this.#paymentIntent) return;

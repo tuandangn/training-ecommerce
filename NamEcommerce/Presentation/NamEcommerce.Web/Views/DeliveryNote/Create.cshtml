@@ -1,6 +1,6 @@
+@using System.Globalization
 @model CreateDeliveryNoteModel
 @inject IWebHelper WebHelper
-@inject ICachedValuesService CachedValuesService
 @{
     ViewData[ViewConstants.PageTitle] = "Tạo phiếu xuất kho";
 }
@@ -8,7 +8,6 @@
 @section TitleSection {
     <h1 class="topbar-page-title">
         Tạo phiếu xuất
-        <span class="text-muted">Đơn hàng @Model.OrderCode</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
@@ -25,7 +24,7 @@
     <link rel="stylesheet" href="~/css/pages/deliverynote-create.css" asp-append-version="true" />
 }
 
-<form asp-action="Create" method="post" id="createDeliveryForm">
+<form method="post" id="createDeliveryForm">
     <input type="hidden" asp-for="OrderId" />
 
     <div class="row g-4">
@@ -213,26 +212,31 @@
                 <div class="content-card-header">
                     <h5 class="mb-0 fw-bold">
                         <i class="bi bi-wallet2 me-2 text-primary"></i>
-                        Tổng kết thanh toán
+                        Thông tin thanh toán
                     </h5>
                 </div>
                 <div class="content-card-body">
                     <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
-                        <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch" 
-                            checked="@(Model.CustomerId == CachedValuesService.DefaultCustomerId && Model.AmountAlreadyPaidForOrder == 0)" />
+                        <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch"
+                               checked="@(Model.IsRetailWalkInCustomer || Model.CanApplyPrepaidAmount == 0)"
+                               disabled="@(Model.IsRetailWalkInCustomer)"/>
+                        @if (Model.IsRetailWalkInCustomer)
+                        {
+                            <input type="hidden" name="@Html.NameFor(m => m.ShowPrice)" value="true" />
+                        }
                         <label class="form-check-label ms-2 fw-medium" asp-for="ShowPrice" for="showPriceSwitch">
-                            Hiển thị giá trên phiếu
+                            Hiển thị giá
                         </label>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-xl-6 mb-3">
+                        <div class="col-xl-7 mb-3">
                             <label asp-for="Surcharge" class="form-label small fw-bold text-muted text-uppercase mb-2" for="surchargeInput"></label>
                             <div class="input-group">
                                 <input asp-for="Surcharge" class="form-control text-end" id="surchargeInput" placeholder="0" data-decimal="currency" />
                                 <span class="input-group-text bg-white">đ</span>
                             </div>
                         </div>
-                        <div class="col-xl-6">
+                        <div class="col-xl-5">
                             <label asp-for="SurchargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2" for="SurchargeReason"></label>
                             <input asp-for="SurchargeReason" class="form-control" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)" />
                         </div>
@@ -243,14 +247,38 @@
                             <span class="text-muted small">Tiền hàng:</span>
                             <span class="fw-bold" id="breakdown-items">0đ</span>
                         </div>
-                        @if (Model.AmountAlreadyPaidForOrder > 0)
+                        @if (Model.CanAppliedOrderDiscount > 0)
                         {
-                            <div class="d-flex justify-content-between mb-2 @(Model.ShowPrice ? "" : "d-none")" id="paidAmount">
-                                <span class="text-muted small">Đã thanh toán<span id="breakdown-paid-total"> (tổng @Model.AmountAlreadyPaidForOrder.DisplayCurrencyWithSymbol())</span>:</span>
-                                <span class="fw-bold text-success" id="breakdown-paid">0 đ</span>
+                            <div class="d-flex justify-content-between mb-2 d-none" id="appliedOrderDiscount">
+                                <span class="text-muted small">
+                                    Giảm giá
+                                    @if (Model.AppliedOrderDiscount > 0) {
+                                        <span id="breakdown-discount-total" class="d-none">(còn @Model.CanAppliedOrderDiscount.DisplayCurrencyWithSymbol())</span>
+                                    } else {
+                                        <span id="breakdown-discount-total" class="d-none">(tổng @Model.OrderDiscount.DisplayCurrencyWithSymbol())</span>
+                                    }
+                                    :
+                                </span>
+                                <span class="fw-bold text-success" id="breakdown-discount">0 đ</span>
+                                <input type="hidden" asp-for="ApplyingOrderDiscount" value="0"/>
                             </div>
                         }
-                        <div class="d-flex justify-content-between mb-2 @(Model.AmountAlreadyPaidForOrder > 0 ? "" : "pt-2 border-top")">
+                        @if (Model.CanApplyPrepaidAmount > 0)
+                        {
+                            <div class="d-flex justify-content-between mb-2 @(Model.ShowPrice ? "" : "d-none")" id="paidAmount">
+                                <span class="text-muted small">Đã thanh toán
+                                    @if (Model.AppliedPrepaidAmount > 0) {
+                                        <span id="breakdown-paid-total">(còn @Model.CanApplyPrepaidAmount.DisplayCurrencyWithSymbol())</span>
+                                    } else {
+                                        <span id="breakdown-paid-total">(tổng @Model.PrepaidAmount.DisplayCurrencyWithSymbol())</span>
+                                    }
+                                :
+                            </span>
+                                <span class="fw-bold text-success" id="breakdown-paid">0 đ</span>
+                                <input type="hidden" asp-for="ApplyingPrepaidAmount" value="0"/>
+                            </div>
+                        }
+                        <div class="d-flex justify-content-between mb-2 @(Model.CanApplyPrepaidAmount > 0 ? "" : "pt-2 border-top")" id="surchageAmount">
                             <span class="text-muted small">Phụ phí:</span>
                             <span class="fw-bold" id="breakdown-surcharge">0đ</span>
                         </div>
@@ -262,7 +290,7 @@
                     <div>
                         <label asp-for="AmountToCollect" class="form-label small fw-bold text-primary text-uppercase mb-2" for="amountToCollectInput">Số tiền phải thu</label>
                         <div class="input-group">
-                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" readonly="@(Model.CustomerId == CachedValuesService.DefaultCustomerId)" id="amountToCollectInput" data-decimal="currency" />
+                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" readonly="@(Model.IsRetailWalkInCustomer)" id="amountToCollectInput" data-decimal="currency" />
                             <span class="input-group-text bg-primary text-white border-primary">đ</span>
                         </div>
                         <span asp-validation-for="AmountToCollect" class="text-danger small"></span>
@@ -288,7 +316,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             const $showPriceSwitch = $('#showPriceSwitch');
             const $surchargeInput = $('#surchargeInput');
             const $amountToCollectInput = $('#amountToCollectInput');
@@ -301,13 +329,23 @@
             const $breakdownPaid = $('#breakdown-paid');
             const $breakdownTotal = $('#breakdown-total');
 
+            const $applyingDiscountInput = $('#@Html.IdFor(m => m.ApplyingOrderDiscount)');
+            const $breakdownDiscount = $('#breakdown-discount');
+            const $breakdownDiscountTotal = $('#breakdown-discount-total');
+
+            const $applyingPaidForOrderAmount = $('#@Html.IdFor(m => m.ApplyingPrepaidAmount)');
             const $moneySummary = $('#moneySummary');
+            const $surchageAmount = $('#surchageAmount');
             const $paidAmount = $('#paidAmount');
             const $productsPrice = $('#productsPrice');
+            const $appliedOrderDiscount = $('#appliedOrderDiscount');
             const $warehouseSelect = $('#WarehouseId');
+
             const stockAvailabilityUrl = '@Url.Action("GetCreateStockAvailability", "DeliveryNote")';
             let stockAvailabilityRequestId = 0;
-            const amountAlreadyPaidForOrder = parseFloat('@Model.AmountAlreadyPaidForOrder.ToString(System.Globalization.CultureInfo.InvariantCulture)') || 0;
+
+            const canApplyOrderPrepaid = parseFloat('@Model.CanApplyPrepaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)') || 0;
+            const canApplyOrderDiscount =  parseFloat('@Model.CanAppliedOrderDiscount.ToString(CultureInfo.InvariantCulture)') || 0;
 
             function formatCurrency(amount, withSymbol) {
                 if (withSymbol)
@@ -317,7 +355,7 @@
 
             function calculateAmount() {
                 let totalSelected = 0;
-                $('.item-row').each(function() {
+                $('.item-row').each(function () {
                     const isSelected = $(this).find('.item-checkbox').is(':checked');
                     if (isSelected) {
                         const qty = parseFloat(DecimalFields.stripFormatting($(this).find('.quantity-input').val(), 2)) || 0;
@@ -329,38 +367,63 @@
                 const surcharge = parseFloat(DecimalFields.stripFormatting($surchargeInput.val())) || 0;
                 const showPrice = $showPriceSwitch.is(':checked');
 
-                var includeProductTotal = showPrice || @(Model.CustomerId == CachedValuesService.DefaultCustomerId && Model.AmountAlreadyPaidForOrder == 0 ? "true" : "false");
+                var includeProductTotal = true;//showPrice || @(Model.IsRetailWalkInCustomer && Model.CanApplyPrepaidAmount == 0 ? "true" : "false");
 
-                let amountToCollect = surcharge;
-                let infoText = 'Tự động tính theo phụ phí';
-
+                let amountToCollect = 0;
+                let infoText;
                 if (includeProductTotal) {
-                    amountToCollect += Math.max(0, totalSelected - amountAlreadyPaidForOrder);
-                    infoText = `Tổng tiền hàng (${formatCurrency(totalSelected, true)}) + Phụ phí (${formatCurrency(surcharge, true)})`;
+                    amountToCollect = totalSelected;
+                    infoText = `Tổng tiền hàng (${formatCurrency(totalSelected, true)})`;
+                    if (totalSelected > 0 && canApplyOrderDiscount > 0) {
+                        var appliedDiscount = Math.min(canApplyOrderDiscount, totalSelected);
+                        amountToCollect = Math.max(0, totalSelected - canApplyOrderDiscount);
+                        $applyingDiscountInput.val(appliedDiscount);
+                        infoText += ` - Giảm giá (${formatCurrency(canApplyOrderDiscount, true)})`;
+                        $breakdownDiscount.text(formatCurrency(-appliedDiscount, true));
+                        $breakdownDiscountTotal.toggleClass('d-none', appliedDiscount == canApplyOrderDiscount);
+                        $appliedOrderDiscount.removeClass('d-none');
+                    }
+                    if (amountToCollect > 0 && canApplyOrderPrepaid > 0) {
+                        var appliedPrepaid = Math.min(amountToCollect, canApplyOrderPrepaid);
+                        amountToCollect = Math.max(0, amountToCollect - canApplyOrderPrepaid);
+                        infoText += ` − Đã thanh toán (${formatCurrency(canApplyOrderPrepaid, true)})`;
+                        $applyingPaidForOrderAmount.val(appliedPrepaid);
+                        $breakdownPaid.text(formatCurrency(-appliedPrepaid, true));
+                        $('#breakdown-paid-total').toggleClass('d-none', appliedPrepaid == canApplyOrderPrepaid);
+                    }
+                    if (surcharge > 0) {
+                        amountToCollect += surcharge;
+                        infoText += ` + Phụ phí (${formatCurrency(surcharge, true)})`;
+                    }
                     $selectedTotalContainer.show();
                     $selectedTotalText.text(formatCurrency(totalSelected, true));
                     $paidAmount.removeClass('d-none');
                     $productsPrice.removeClass('d-none');
                 } else {
+                    let amountToCollect = surcharge;
+                    infoText = 'Tự động tính theo phụ phí';
+                    $applyingDiscountInput.val(0);
+                    $applyingPaidForOrderAmount.val(0);
                     $paidAmount.addClass('d-none');
                     $selectedTotalContainer.hide();
                     $productsPrice.addClass('d-none');
+                    $appliedOrderDiscount.addClass('d-none');
+                    $breakdownDiscountTotal.addClass('d-none');
                 }
+                $surchageAmount.toggleClass('d-none', surcharge == 0);
 
-                if (amountAlreadyPaidForOrder > 0) {
-                    infoText += ` − Đã thanh toán (${formatCurrency(amountAlreadyPaidForOrder, true)})`;
-                }
                 $moneySummary.toggleClass('d-none', amountToCollect <= 0);
 
                 $amountToCollectInput.val(formatCurrency(amountToCollect));
-                $calculationInfo.html(`<i class="bi bi-info-circle me-1"></i> ${infoText}`);
+                if (amountToCollect == 0 || !showPrice)
+                    $calculationInfo.html(`<i class="bi bi-info-circle me-1"></i> ${infoText}`);
+                else
+                    $calculationInfo.html('');
 
                 // Update breakdown
                 $breakdownItems.text(formatCurrency(totalSelected, true));
                 $breakdownSurcharge.text(formatCurrency(surcharge, true));
                 $breakdownTotal.text(formatCurrency(amountToCollect, true));
-                $breakdownPaid.text(formatCurrency(Math.min(amountAlreadyPaidForOrder, totalSelected), true));
-                $('#breakdown-paid-total').toggleClass('d-none', Math.min(amountAlreadyPaidForOrder, totalSelected) == amountAlreadyPaidForOrder);
             }
 
             function parseQuantity(value) {
@@ -474,7 +537,7 @@
                 const requestId = ++stockAvailabilityRequestId;
                 const warehouseId = $warehouseSelect.val();
                 if (!warehouseId) {
-                    $('.item-row').each(function() {
+                    $('.item-row').each(function () {
                         applyStockAvailability($(this), 0, false);
                     });
                     updateSelectAllState();
@@ -483,7 +546,7 @@
                 }
 
                 const productIds = [];
-                $('.item-row').each(function() {
+                $('.item-row').each(function () {
                     const productId = $(this).attr('data-product-id');
                     if (productId && !productIds.includes(productId))
                         productIds.push(productId);
@@ -498,16 +561,16 @@
                     type: 'GET',
                     traditional: true,
                     data: { warehouseId, productIds },
-                    success: function(response) {
+                    success: function (response) {
                         if (requestId !== stockAvailabilityRequestId)
                             return;
 
                         const availabilityByProductId = {};
-                        (response.items || []).forEach(function(item) {
+                        (response.items || []).forEach(function (item) {
                             availabilityByProductId[String(item.productId).toLowerCase()] = parseFloat(item.quantityAvailable) || 0;
                         });
 
-                        $('.item-row').each(function() {
+                        $('.item-row').each(function () {
                             const $row = $(this);
                             const productId = String($row.attr('data-product-id')).toLowerCase();
                             applyStockAvailability($row, availabilityByProductId[productId] || 0, true);
@@ -516,11 +579,11 @@
                         updateSelectAllState();
                         calculateAmount();
                     },
-                    error: function() {
+                    error: function () {
                         if (requestId !== stockAvailabilityRequestId)
                             return;
 
-                        $('.item-row').each(function() {
+                        $('.item-row').each(function () {
                             const $row = $(this);
                             $row
                                 .removeClass('stock-row-empty stock-row-short')
@@ -543,7 +606,7 @@
 
             function getAllocatedQuantity($row) {
                 let total = 0;
-                $row.find('.allocation-quantity-input').each(function() {
+                $row.find('.allocation-quantity-input').each(function () {
                     total += parseQuantity($(this).val());
                 });
                 return total;
@@ -574,7 +637,7 @@
 
                 let remainingQuantity = requiredQuantity;
                 const suggestedByWarehouseId = {};
-                ordered.forEach(function(warehouse) {
+                ordered.forEach(function (warehouse) {
                     const quantity = Math.min(remainingQuantity, warehouse.quantityAvailable);
                     suggestedByWarehouseId[String(warehouse.warehouseId).toLowerCase()] = Math.max(0, quantity);
                     remainingQuantity -= quantity;
@@ -607,22 +670,22 @@
                     return;
                 }
 
-                const allocationHtml = allocationWarehouses.map(function(warehouse, index) {
+                const allocationHtml = allocationWarehouses.map(function (warehouse, index) {
                     const warehouseName = escapeHtml(warehouse.warehouseName);
                     const warehouseId = escapeHtml(warehouse.warehouseId);
                     const availableQuantity = formatQuantity(warehouse.quantityAvailable);
                     const suggestedQuantity = formatQuantity(warehouse.suggestedQuantity);
                     const stateClass = warehouse.quantityAvailable <= 0 ? 'is-empty' : '';
                     return `<div class="warehouse-allocation-line ${stateClass} justify-content-between">
-                        <div class="warehouse-allocation-name text-truncate" title="${warehouseName}">${warehouseName}</div>
-                        <div class="warehouse-allocation-meta">Tồn ${availableQuantity}</div>
-                        <input type="hidden" name="Items[${itemIndex}].WarehouseAllocations[${index}].WarehouseId" value="${warehouseId}" />
-                        <input class="form-control form-control-sm text-end warehouse-allocation-input allocation-quantity-input"
-                               name="Items[${itemIndex}].WarehouseAllocations[${index}].Quantity"
-                               value="${suggestedQuantity}"
-                               data-available-quantity="${warehouse.quantityAvailable}"
-                               data-decimal="quantity" data-decimals="${parseInt($row.attr('data-decimalplaces') || '0', 10)}" />
-                    </div>`;
+                                                                        <div class="warehouse-allocation-name text-truncate" title="${warehouseName}">${warehouseName}</div>
+                                                                        <div class="warehouse-allocation-meta">Tồn ${availableQuantity}</div>
+                                                                        <input type="hidden" name="Items[${itemIndex}].WarehouseAllocations[${index}].WarehouseId" value="${warehouseId}" />
+                                                                        <input class="form-control form-control-sm text-end warehouse-allocation-input allocation-quantity-input"
+                                                                               name="Items[${itemIndex}].WarehouseAllocations[${index}].Quantity"
+                                                                               value="${suggestedQuantity}"
+                                                                               data-available-quantity="${warehouse.quantityAvailable}"
+                                                                               data-decimal="quantity" data-decimals="${parseInt($row.attr('data-decimalplaces') || '0', 10)}" />
+                                                                    </div>`;
                 }).join('');
                 $row.find('.warehouse-allocation-list').html(allocationHtml);
 
@@ -649,7 +712,7 @@
                 const allocatedQuantity = getAllocatedQuantity($row);
                 const totalAvailable = getAvailableQuantity($row);
                 const firstWarehouseId = $row.find('.allocation-quantity-input')
-                    .filter(function() { return parseQuantity($(this).val()) > 0; })
+                    .filter(function () { return parseQuantity($(this).val()) > 0; })
                     .first()
                     .siblings('input[name$=".WarehouseId"]')
                     .val();
@@ -659,7 +722,7 @@
                 });
 
                 $row.removeClass('stock-row-empty stock-row-short');
-                $row.find('.warehouse-allocation-line').each(function() {
+                $row.find('.warehouse-allocation-line').each(function () {
                     const $line = $(this);
                     const $input = $line.find('.allocation-quantity-input');
                     const quantity = parseQuantity($input.val());
@@ -718,7 +781,7 @@
                 const requestId = ++stockAvailabilityRequestId;
                 const warehouseId = $warehouseSelect.val();
                 const productIds = [];
-                $('.item-row').each(function() {
+                $('.item-row').each(function () {
                     const productId = $(this).attr('data-product-id');
                     if (productId && !productIds.includes(productId))
                         productIds.push(productId);
@@ -733,16 +796,16 @@
                     type: 'GET',
                     traditional: true,
                     data: { warehouseId, productIds },
-                    success: function(response) {
+                    success: function (response) {
                         if (requestId !== stockAvailabilityRequestId)
                             return;
 
                         const availabilityByProductId = {};
-                        (response.items || []).forEach(function(item) {
+                        (response.items || []).forEach(function (item) {
                             availabilityByProductId[String(item.productId).toLowerCase()] = item.warehouses || [];
                         });
 
-                        $('.item-row').each(function() {
+                        $('.item-row').each(function () {
                             const $row = $(this);
                             const productId = String($row.attr('data-product-id')).toLowerCase();
                             renderWarehouseAllocations($row, availabilityByProductId[productId] || [], true);
@@ -751,11 +814,11 @@
                         updateSelectAllState();
                         calculateAmount();
                     },
-                    error: function() {
+                    error: function () {
                         if (requestId !== stockAvailabilityRequestId)
                             return;
 
-                        $('.item-row').each(function() {
+                        $('.item-row').each(function () {
                             const $row = $(this);
                             $row
                                 .removeClass('stock-row-empty stock-row-short')
@@ -789,17 +852,17 @@
             }
 
             // Events
-            $('.item-checkbox').on('change', function() {
+            $('.item-checkbox').on('change', function () {
                 updateSelectAllState();
                 calculateAmount();
             });
 
-            $('.quantity-input').on('change input', function() {
+            $('.quantity-input').on('change input', function () {
                 clampQuantityInput($(this));
                 calculateAmount();
             });
 
-            $(document).on('change input', '.allocation-quantity-input', function() {
+            $(document).on('change input', '.allocation-quantity-input', function () {
                 refreshRowAllocation($(this).closest('.item-row'));
                 updateSelectAllState();
                 calculateAmount();
@@ -816,9 +879,9 @@
             loadStockAvailability();
 
             // Select all
-            $('#selectAll').change(function() {
+            $('#selectAll').change(function () {
                 var checked = $(this).is(':checked');
-                $('.item-checkbox').each(function() {
+                $('.item-checkbox').each(function () {
                     const $row = $(this).closest('.item-row');
                     const canSelect = $row.attr('data-stock-loaded') !== 'true' || getAvailableQuantity($row) > 0;
                     $(this).prop('checked', checked && canSelect);
@@ -828,14 +891,14 @@
             });
 
             // Handle individual checkbox change to uncheck selectAll
-            $('.item-checkbox').change(function() {
+            $('.item-checkbox').change(function () {
                 updateSelectAllState();
             });
 
             // Validation on submit
-            $('#createDeliveryForm').submit(function(e) {
+            $('#createDeliveryForm').submit(function (e) {
                 var hasSelected = false;
-                $('.item-checkbox:checked').each(function() {
+                $('.item-checkbox:checked').each(function () {
                     hasSelected = true;
                     var row = $(this).closest('tr');
                     var qty = parseFloat(DecimalFields.stripFormatting(row.find('.quantity-input').val(), 2));
@@ -868,6 +931,8 @@
                     e.preventDefault();
                     return false;
                 }
+
+                showPageLoading();
             });
         });
     </script>

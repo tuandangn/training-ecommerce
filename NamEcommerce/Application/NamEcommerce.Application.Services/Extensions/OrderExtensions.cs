@@ -16,6 +16,7 @@ public static class OrderExtensions
             CustomerName = order.CustomerName,
             CustomerAddress = order.CustomerAddress,
             CustomerPhone = order.CustomerPhone,
+            IsRetailWalkInCustomer = order.IsRetailWalkInCustomer,
             OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
@@ -31,7 +32,11 @@ public static class OrderExtensions
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCancelOrder = order.CanCompleteOrder,
-            CanCompleteOrder = order.CanCompleteOrder
+            CanCompleteOrder = order.CanCompleteOrder,
+            CanProcess = order.CanProcess,
+            ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount,
+            HadPaid = order.HadPaid
         };
         foreach (var orderItem in order.Items)
         {

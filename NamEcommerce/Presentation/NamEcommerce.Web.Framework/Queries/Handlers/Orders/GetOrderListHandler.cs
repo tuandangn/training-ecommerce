@@ -78,7 +78,8 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                         .SelectMany(deliveryNote => deliveryNote.Items)
                         .Where(deliveryNoteItem => deliveryNoteItem.OrderItemId == item.Id)
                         .Sum(deliveryNoteItem => deliveryNoteItem.Quantity)
-                }).ToList()
+                }).ToList(),
+                PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment
             });
         }
 

@@ -18,6 +18,7 @@ public static class OrderExtensions
             CustomerName = order.CustomerInfo.FullName,
             CustomerPhone = order.CustomerInfo.PhoneNumber,
             CustomerAddress = order.CustomerInfo.Address,
+            IsRetailWalkInCustomer = order.CustomerInfo.IsRetailWalkInCustomer,
             CreatedByUserId = order.CreatedByUserId,
             CreatedByUsername = order.CreatedByUsername,
             Note = order.Note,
@@ -28,7 +29,12 @@ public static class OrderExtensions
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateOrderItems = order.CanUpdateOrderItems(),
             CanUpdateInfo = order.CanUpdateInfo(),
-            CanCompleteOrder = order.CanCompleteOrder()
+            CanCompleteOrder = order.CanCompleteOrder(),
+            CanProcess = order.CanProcess(),
+            ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount ?? 0,
+            HasPayments = order.HasPayments(),
+            HadPaid = order.HadPaid()
         };
 
         foreach (var orderItem in order.OrderItems)

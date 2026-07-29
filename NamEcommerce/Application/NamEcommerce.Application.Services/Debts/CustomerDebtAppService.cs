@@ -64,9 +64,9 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         };
     }
 
-    public async Task<PagedDataAppDto<CustomerDebtSummaryAppDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataAppDto<CustomerDebtSummaryAppDto>> GetCustomersWithDebtsAsync(int pageIndex = 0, int pageSize = 15, string? keywords = null)
     {
-        var paged = await _debtManager.GetCustomersWithDebtsAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var paged = await _debtManager.GetCustomersWithDebtsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var mappedItems = paged.Items.Select(s => new CustomerDebtSummaryAppDto
         {
             CustomerId = s.CustomerId,
@@ -79,7 +79,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
             DepositBalance = s.DepositBalance,
             DebtCount = s.DebtCount
         }).ToList();
-        return (PagedDataAppDto<CustomerDebtSummaryAppDto>)PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
+        return PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
     }
 
     public async Task<CustomerDebtsByCustomerAppDto?> GetDebtsByCustomerIdAsync(Guid customerId)
@@ -102,18 +102,22 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         };
     }
 
-    public async Task<PagedDataAppDto<CustomerDebtAppDto>> GetDebtsAsync(Guid? customerId = null, string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataAppDto<CustomerDebtAppDto>> GetDebtsAsync(int pageIndex = 0, int pageSize = 15, Guid? customerId = null, string? keywords = null)
     {
-        var paged = await _debtManager.GetDebtsAsync(customerId, keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var paged = await _debtManager.GetDebtsAsync(pageIndex, pageSize, customerId, keywords).ConfigureAwait(false);
         var mappedItems = paged.Items.Select(d => d.ToDto()).ToList();
-        return (PagedDataAppDto<CustomerDebtAppDto>)PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
+        return PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
     }
 
-    public async Task<PagedDataAppDto<CustomerPaymentAppDto>> GetPaymentsAsync(Guid? customerId = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataAppDto<CustomerPaymentAppDto>> GetPaymentsAsync(
+        int pageIndex = 0, int pageSize = 15, 
+        Guid? customerId = null, Guid? orderId = null)
     {
-        var paged = await _debtManager.GetPaymentsAsync(customerId, pageIndex, pageSize).ConfigureAwait(false);
-        var mappedItems = paged.Items.Select(p => p.ToDto()).ToList();
-        return (PagedDataAppDto<CustomerPaymentAppDto>)PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
+        var pagedData = await _debtManager.GetPaymentsAsync(pageIndex, pageSize, customerId, orderId)
+            .ConfigureAwait(false);
+
+        var mappedItems = pagedData.Items.Select(p => p.ToDto()).ToList();
+        return PagedDataAppDto.Create(mappedItems, pagedData.PagerInfo.PageIndex, pagedData.PagerInfo.PageSize, pagedData.PagerInfo.TotalCount);
     }
 
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)

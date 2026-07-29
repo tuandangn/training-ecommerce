@@ -49,29 +49,22 @@ public sealed class BankTransferPaymentIntentAppService(
         if (receivingAccount?.IsConfigured != true)
             return BankTransferPaymentIntentResultAppDto.CreateError("Error.BankTransferAccountNotConfigured");
 
-        try
+        var intent = await paymentIntentManager.CreateAsync(new CreateBankTransferPaymentIntentDto
         {
-            var intent = await paymentIntentManager.CreateAsync(new CreateBankTransferPaymentIntentDto
-            {
-                Amount = dto.Amount,
-                CustomerId = dto.CustomerId,
-                Note = dto.Note,
-                BankId = receivingAccount.BankId,
-                AccountNo = receivingAccount.AccountNo,
-                AccountName = receivingAccount.AccountName,
-                Template = string.IsNullOrWhiteSpace(settings.Template) ? "compact2" : settings.Template,
-                TransferContentPrefix = string.IsNullOrWhiteSpace(settings.TransferContentPrefix)
-                    ? "QS"
-                    : settings.TransferContentPrefix,
-                IntentExpiryMinutes = settings.IntentExpiryMinutes
-            }).ConfigureAwait(false);
+            Amount = dto.Amount,
+            CustomerId = dto.CustomerId,
+            Note = dto.Note,
+            BankId = receivingAccount.BankId,
+            AccountNo = receivingAccount.AccountNo,
+            AccountName = receivingAccount.AccountName,
+            Template = string.IsNullOrWhiteSpace(settings.Template) ? "compact2" : settings.Template,
+            TransferContentPrefix = string.IsNullOrWhiteSpace(settings.TransferContentPrefix)
+                ? "QS"
+                : settings.TransferContentPrefix,
+            IntentExpiryMinutes = settings.IntentExpiryMinutes
+        }).ConfigureAwait(false);
 
-            return BankTransferPaymentIntentResultAppDto.CreateSuccess(MapToDto(intent));
-        }
-        catch (Exception ex)
-        {
-            return BankTransferPaymentIntentResultAppDto.CreateError(ex.Message);
-        }
+        return BankTransferPaymentIntentResultAppDto.CreateSuccess(MapToDto(intent));
     }
 
     public async Task<BankTransferPaymentIntentResultAppDto> ConfirmManuallyAsync(ManualConfirmBankTransferPaymentIntentAppDto dto)

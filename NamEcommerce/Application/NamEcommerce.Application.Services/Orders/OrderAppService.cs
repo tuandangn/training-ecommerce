@@ -607,7 +607,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
             ShippingAddress = dto.ShippingAddress,
-            ShippingPhoneNumber = dto.ShippingPhoneNumber
+            ShippingPhoneNumber = dto.ShippingPhoneNumber,
+            RequiresPayOff = dto.RequiresPayOff
         };
         foreach (var orderItem in dto.Items)
         {
@@ -620,7 +621,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
         }
 
         var createOrderResult = await orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
-        if (!dto.SkipScheduling)
+        if (dto.SkipScheduling)
         {
             return new CreateOrderResultAppDto
             {

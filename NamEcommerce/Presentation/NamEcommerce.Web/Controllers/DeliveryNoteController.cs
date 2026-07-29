@@ -62,38 +62,37 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Create(Guid orderId, string? selected = null)
     {
-        try
+        var order = await _orderAppService.GetOrderByIdAsync(orderId);
+        if (order is null)
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId);
+            NotifyError("Error.OrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
 
-            if (!string.IsNullOrEmpty(selected))
+        var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId);
+
+        if (!string.IsNullOrEmpty(selected))
+        {
+            var ids = selected.Split([','], StringSplitOptions.RemoveEmptyEntries)
+                              .Select(s =>
+                              {
+                                  if (Guid.TryParse(s, out var g)) return (Guid?)g; return null;
+                              })
+                              .Where(g => g.HasValue)
+                              .Select(g => g!.Value)
+                              .ToHashSet();
+
+            if (ids.Any())
             {
-                var ids = selected.Split([','], StringSplitOptions.RemoveEmptyEntries)
-                                  .Select(s =>
-                                  {
-                                      if (Guid.TryParse(s, out var g)) return (Guid?)g; return null;
-                                  })
-                                  .Where(g => g.HasValue)
-                                  .Select(g => g!.Value)
-                                  .ToHashSet();
-
-                if (ids.Any())
+                // Set selection based on provided ids; default deselect those not included
+                foreach (var item in model.Items)
                 {
-                    // Set selection based on provided ids; default deselect those not included
-                    foreach (var item in model.Items)
-                    {
-                        item.Selected = ids.Contains(item.OrderItemId);
-                    }
+                    item.Selected = ids.Contains(item.OrderItemId);
                 }
             }
+        }
 
-            return View(model);
-        }
-        catch (Exception)
-        {
-            NotifyError("Error.DeliveryNoteCreateFailed");
-            return RedirectToAction("List", "Order");
-        }
+        return View(model);
     }
 
     [HttpPost]
@@ -112,6 +111,11 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             NotifyError("Error.OrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
+        if (!order.CanProcess)
+        {
+            NotifyError("Error.OrderCannotProcess");
+            return View(model);
+        }
 
         var deliveryNoteItems = BuildCreateDeliveryNoteItems(model);
         if (!deliveryNoteItems.Any())
@@ -121,11 +125,31 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return View(model);
         }
 
+
+        var orderDiscount = order.OrderDiscount ?? 0;
+        var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(order.Id);
+
+        var appliedOrderDiscount = deliveryNotes.Sum(d => d.AppliedOrderDiscount);
+        if (appliedOrderDiscount + model.ApplyingOrderDiscount > orderDiscount)
+        {
+            AddLocalizedModelError("Error.AppliedOrderDiscountExceedOrderDiscount");
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            return View(model);
+        }
+
+        var appliedOrderPaidAmount = deliveryNotes.Sum(d => d.AppliedOrderPrepaid);
+        var orderPaidAmount = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order.Id });
+        if (appliedOrderPaidAmount + model.ApplyingPrepaidAmount > orderPaidAmount)
+        {
+            AddLocalizedModelError("Error.AppliedOrderPrepaidExceedPrepaidAmount");
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            return View(model);
+        }
+        var amountAlreadyPaidForOrder = Math.Max(0, orderPaidAmount - appliedOrderPaidAmount);
+
         if (order.CustomerId == _cachedValuesService.DefaultCustomerId)
         {
-            var prepaidAmount = await _mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = order.Id });
-
-            var totalSelected = 0m;
+            var productTotal = 0m;
             foreach (var deliveryNoteItem in deliveryNoteItems)
             {
                 var orderItem = order.Items.FirstOrDefault(item => item.Id == deliveryNoteItem.OrderItemId);
@@ -135,9 +159,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                     model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
                     return View(model);
                 }
-                totalSelected += deliveryNoteItem.Quantity * orderItem.UnitPrice;
+                productTotal += deliveryNoteItem.Quantity * orderItem.UnitPrice;
             }
-            var calculatedAmountToCollect = model.Surcharge + Math.Max(0, totalSelected - prepaidAmount);
+            var calculatedAmountToCollect = model.Surcharge + Math.Max(0, productTotal - model.ApplyingPrepaidAmount - model.ApplyingOrderDiscount);
             if (calculatedAmountToCollect != model.AmountToCollect)
             {
                 AddLocalizedModelError("Error.AmountToCollectIsInvalid");
@@ -158,7 +182,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
                 AmountToCollect = model.AmountToCollect,
-                Items = deliveryNoteItems
+                Items = deliveryNoteItems,
+                AppliedOrderDiscount = model.ApplyingOrderDiscount,
+                AppliedOrderPrepaid = model.ApplyingPrepaidAmount
             });
 
             if (result.Success)
@@ -282,13 +308,23 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Approve)]
     public async Task<IActionResult> Confirm(Guid id)
     {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
+        if (order is null)
+            return this.JsonError(LocalizeError("Error.OrderItemIsNotFound"));
+        if (!order.CanProcess)
+            return this.JsonError(LocalizeError("Error.OrderCannotProcess"));
+
         var result = await _mediator.Send(new ConfirmDeliveryNoteCommand
         {
             DeliveryNoteId = id
         });
 
         if (result.Success)
-            return Json(new { success = true });
+            return this.JsonOk();
 
         return this.JsonError(LocalizeError(result.ErrorMessage!), data: new
         {
@@ -498,12 +534,22 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
+        if (order is null)
+            return this.JsonError(LocalizeError("Error.OrderItemIsNotFound"));
+        if (!order.CanProcess)
+            return this.JsonError(LocalizeError("Error.OrderCannotProcess"));
+
         await _mediator.Send(new CancelDeliveryNoteCommand
         {
             DeliveryNoteId = id
         });
 
-        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+        return this.JsonOk(message: LocalizeError("Msg.SaveSuccess"));
     }
 
     [HttpPost]

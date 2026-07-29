@@ -258,12 +258,17 @@ export default class ProductBrowser {
                 }
             }
 
-            let qtyHtml = '<div class="d-inline">'
-            qtyHtml += `<span class="text-success fw-medium">Tồn: ${DecimalFields.formatQuantity(p.onHandQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}</span>`;
-            if (p.reservedQty > 0)
-            qtyHtml += `<span class="text-danger">Bán: ${DecimalFields.formatQuantity(p.onHandQty, p.reservedQty)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}</span>`;
-            qtyHtml += '</div>';
-            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>' + qtyHtml + '</div>';
+            let qtyInfoHtml = `<span class="text-success fw-medium d-block">
+                <i class="bi bi-boxes text-muted"></i>
+                Tồn: ${DecimalFields.formatQuantity(p.onHandQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}
+            </span>`;
+            if (p.reservedQty > 0) {
+                qtyInfoHtml += `<span class="text-danger d-block">
+                    <i class="bi bi-cart-check text-muted"></i>
+                    Bán: ${DecimalFields.formatQuantity(p.reservedQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}
+                </span>`;
+            }
+            let qtyHtml = `<div class="pb-product-stock small">${qtyInfoHtml}</div>`;
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`

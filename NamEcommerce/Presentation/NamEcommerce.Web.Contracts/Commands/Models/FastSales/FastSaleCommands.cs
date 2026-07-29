@@ -1,14 +1,15 @@
-﻿using NamEcommerce.Web.Contracts.Models.FastSales;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.FastSales;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.FastSales;
 
 [Serializable]
-public sealed class QuickCreateOrderCommand : ICommand<QuickSaleResultModel>
+public sealed class QuickCreateOrderCommand : ICommand<QuickCreateOrderResultModel>
 {
     public required Guid CustomerId { get; init; }
     public required IList<QuickCreateOrderItemModel> Items { get; init; }
-
     public required bool DeliveryNow { get; init; }
+    public decimal OrderDiscount { get; set; }
 
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
@@ -49,6 +50,14 @@ public sealed class CreateCashQuickSaleCommand : ICommand<QuickSaleResultModel>
 }
 
 [Serializable]
+public sealed class CompleteQuickCreateOrderPaymentCommand : ICommand<CommonActionResultModel>
+{
+    public required Guid OrderId { get; init; }
+    public required decimal PaidAmount { get; init; }
+    public required Guid? PaymentIntentId { get; init; }
+}
+
+[Serializable]
 public sealed class CreateBankTransferQuickSaleCommand : ICommand<QuickSaleResultModel>
 {
     public required Guid PaymentIntentId { get; init; }
@@ -80,7 +89,7 @@ public sealed class CreateUnpaidQuickSaleCommand : ICommand<QuickSaleResultModel
 public sealed class CreateBankTransferPaymentIntentCommand : ICommand<BankTransferPaymentIntentResultModel>
 {
     public required decimal Amount { get; init; }
-    public Guid? CustomerId { get; init; }
+    public Guid CustomerId { get; init; }
     public string? Note { get; init; }
 }
 

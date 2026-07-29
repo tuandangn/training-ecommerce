@@ -14,6 +14,8 @@ public sealed class CreateDeliveryNoteCommand : ICommand<CreateDeliveryNoteResul
     public decimal Surcharge { get; set; }
     public string? SurchargeReason { get; set; }
     public decimal AmountToCollect { get; set; }
+    public decimal AppliedOrderDiscount { get; set; }
+    public decimal AppliedOrderPrepaid { get; set; }
 
     public IList<CreateDeliveryNoteItemModel> Items { get; set; } = [];
 

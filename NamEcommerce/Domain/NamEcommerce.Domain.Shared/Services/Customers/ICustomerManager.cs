@@ -13,4 +13,5 @@ public interface ICustomerManager
     Task DeleteCustomerAsync(Guid id);
 
     Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync();
+    Task<bool> IsRetailWalkInCustomerAsync(Guid customerId);
 }

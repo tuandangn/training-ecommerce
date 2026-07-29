@@ -27,22 +27,22 @@ public interface ICustomerDebtManager
     Task<CustomerDebtSummaryDto?> GetCustomerDebtSummaryAsync(Guid customerId);
 
     Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(
-        string? keywords = null,
         int pageIndex = 0,
-        int pageSize = 15);
+        int pageSize = 15,
+        string? keywords = null);
 
     Task<CustomerDebtsByCustomerDto?> GetDebtsByCustomerIdAsync(Guid customerId);
 
     Task<IPagedDataDto<CustomerDebtDto>> GetDebtsAsync(
-        Guid? customerId = null,
-        string? keywords = null,
         int pageIndex = 0,
-        int pageSize = 15);
+        int pageSize = 15,
+        Guid? customerId = null,
+        string? keywords = null);
 
     Task<IPagedDataDto<CustomerPaymentDto>> GetPaymentsAsync(
-        Guid? customerId = null,
         int pageIndex = 0,
-        int pageSize = 15);
+        int pageSize = 15,
+        Guid? customerId = null, Guid? orderId = null);
 
     Task<decimal> GetTotalPaidByOrderAsync(Guid orderId);
 

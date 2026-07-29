@@ -16,9 +16,9 @@ public sealed class QuickSaleDeliverRequestedHandler(
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager,
     IDeliveryNoteManager deliveryNoteManager,
-    IOrderManager orderManager) : INotificationHandler<QuickSaleDeliverRequested>
+    IOrderManager orderManager) : INotificationHandler<DeliveryRequested>
 {
-    public async Task Handle(QuickSaleDeliverRequested notification, CancellationToken cancellationToken)
+    public async Task Handle(DeliveryRequested notification, CancellationToken cancellationToken)
     {
         var deliveryNote = await deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)

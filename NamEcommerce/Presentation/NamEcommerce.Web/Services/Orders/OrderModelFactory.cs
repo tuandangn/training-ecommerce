@@ -137,9 +137,12 @@ public sealed class OrderModelFactory(
             CompletedOn = order.CompletedOn,
             CustomerAddress = order.CustomerAddress,
             CustomerPhoneNumber = order.CustomerPhoneNumber,
+            IsRetailWalkInCustomer = order.IsRetailWalkInCustomer,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCompleteOrder = order.CanCompleteOrder,
+            PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOn
         };
         var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
@@ -162,7 +165,7 @@ public sealed class OrderModelFactory(
         model.FulfillmentSchedule = new OrderFulfillmentSchedulePanelModel
         {
             OrderId = order.Id,
-            CanUpdateSchedules = order.CanUpdateInfo,
+            CanUpdateSchedules = order.CanUpdateInfo && !model.PaymentRequired,
             AvailableItems = model.Items.Select(item => new OrderFulfillmentScheduleAvailableItemModel
             {
                 OrderItemId = item.Id,
@@ -454,12 +457,16 @@ public sealed class OrderModelFactory(
         var relatedReceipts = await GetRelatedGoodsReceiptsAsync(model).ConfigureAwait(false);
         var customerDebts = await customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
         var orderDebts = customerDebts?.Debts.Where(debt => debt.OrderId == model.Id).ToList() ?? [];
-        var customerPayments = await customerDebtAppService.GetPaymentsAsync(model.CustomerId, 0, 100).ConfigureAwait(false);
+        var customerPayments = model.IsRetailWalkInCustomer
+            ? await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, model.Id).ConfigureAwait(false)
+            : await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, null).ConfigureAwait(false);
         var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
         var expenses = await expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
         var itemChangeAudits = await orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
         var receivingAccount = await bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
-        var customerBalance = await customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
+        var customerBalance = model.IsRetailWalkInCustomer
+            ? (orderDebts.Sum(debt => debt.TotalAmount) - orderPayments.Sum(payment => payment.Amount))
+            : await customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
         var bankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
         var bankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
             ? null
@@ -524,6 +531,9 @@ public sealed class OrderModelFactory(
         OrderDetailsModel model,
         OrderDetailsModel.OrderDeliverySummaryStatus deliveryStatus)
     {
+        if (model.PaymentRequired)
+            return OrderDetailsModel.WorkflowStage.Settlement;
+
         if (model.Status is (int)OrderStatus.Completed or (int)OrderStatus.Cancelled
             || deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered)
             return OrderDetailsModel.WorkflowStage.Settlement;
@@ -550,8 +560,8 @@ public sealed class OrderModelFactory(
             || (model.AllocatedPurchaseOrders?.Items.Any(purchaseOrder => !purchaseOrder.IsFullyReceived) ?? false)
             || model.DirectShipAllocations.Any(allocation => allocation.ReceivedQuantity < allocation.AllocatedQuantity);
 
-        var deliveryStatusText = GetDeliverySummaryText(deliveryStatus);
-        var deliveryStatusClass = GetDeliverySummaryClass(deliveryStatus);
+        var deliveryStatusText = model.PaymentRequired && model.DeliveryNotes.Count > 0 ? "Chờ giao" : GetDeliverySummaryText(deliveryStatus);
+        var deliveryStatusClass = model.PaymentRequired && model.DeliveryNotes.Count > 0 ? "warning" : GetDeliverySummaryClass(deliveryStatus);
 
         return new OrderDetailsModel.WorkflowModel
         {
@@ -598,7 +608,7 @@ public sealed class OrderModelFactory(
                     Key = "settlement",
                     Title = "Kết sổ",
                     Icon = "bi-clipboard-check",
-                    Summary = ((OrderStatus)model.Status).GetDisplayText(),
+                    Summary = model.PaymentRequired ? "Chờ thanh toán" : ((OrderStatus)model.Status).GetDisplayText(),
                     IsActive = activeStage == OrderDetailsModel.WorkflowStage.Settlement,
                     IsComplete = model.Status == (int)OrderStatus.Completed
                 }

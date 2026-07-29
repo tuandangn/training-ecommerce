@@ -6,6 +6,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
 using NamEcommerce.Web.Contracts.Models.FastSales;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
@@ -107,6 +108,14 @@ public sealed partial class OrderController : BaseAuthorizedController
             }
         }
 
+        var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
+        var orderTotal = orderSubTotal - model.OrderDiscount;
+        if (orderTotal < 0)
+        {
+            ModelState.AddModelError(string.Empty, Localizer["Error.OrderDiscountExceedsTotal"]);
+            return await ErrorResult();
+        }
+
         var result = await _mediator.Send(new QuickCreateOrderCommand
         {
             CustomerId = model.CustomerId!.Value,
@@ -114,6 +123,7 @@ public sealed partial class OrderController : BaseAuthorizedController
             Note = model.Note,
             ShippingAddress = model.ShippingAddress,
             ShippingPhoneNumber = model.ShippingPhoneNumber,
+            OrderDiscount = model.OrderDiscount,
             Items = model.Items.Select(item => new QuickCreateOrderCommand.QuickCreateOrderItemModel
             {
                 ProductId = item.ProductId!.Value,
@@ -128,7 +138,7 @@ public sealed partial class OrderController : BaseAuthorizedController
             return await ErrorResult();
         }
 
-        return SuccessResult(result.OrderId!.Value);
+        return SuccessResult(result);
 
         //local method
         async ValueTask<IActionResult> ErrorResult()
@@ -140,14 +150,76 @@ public sealed partial class OrderController : BaseAuthorizedController
             model = await _orderModelFactory.PrepareOrderQuickCreateModelAsync(model);
             return View(model);
         }
-        IActionResult SuccessResult(Guid createdOrderId)
+        IActionResult SuccessResult(QuickCreateOrderResultModel info)
         {
             if (returnJson)
-                return this.JsonOk(new { createdOrderId });
+            {
+                return this.JsonOk(new
+                {
+                    orderId = info.OrderId,
+                    orderCode = info.OrderCode,
+                    total = info.OrderTotal,
+                    subTotal = info.OrderSubTotal,
+                    discount = info.OrderDiscount
+                });
+            }
 
             NotifySuccess("Msg.SaveSuccess");
-            return RedirectToAction(nameof(Details), new { id = createdOrderId });
+            return RedirectToAction(nameof(Details), new { id = info.OrderId });
         }
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
+    public async Task<IActionResult> CompleteQuickCreateOrderPayment([FromBody] OrderQuickCreateCompleteModel model)
+    {
+        if (!ModelState.IsValid)
+            return this.JsonError(GetErrorMessage());
+
+        var order = await _orderAppService.GetOrderByIdAsync(model.OrderId);
+        if (order is null)
+            return this.JsonError(Localizer["Error.OrderIsNotFound"]);
+        if (order.ProcessRequiresPayment && order.HadPaid)
+            return this.JsonError(Localizer["Error.OrderHadPaid"]);
+
+        var orderSubTotal = order.OrderSubTotal;
+        var orderTotal = order.TotalAmount;
+
+        if (model.PaidAmount > orderTotal)
+            return this.JsonError(Localizer["Error.PaidAmountExceededOrderTotal"]);
+
+        if (model.PaymentIntentId.HasValue)
+        {
+            var paymentIntent = await _paymentIntentAppService.GetByIdAsync(model.PaymentIntentId.Value);
+            if (paymentIntent is null)
+                return this.JsonError(Localizer["Error.PaymentIntentIsNotFound"]);
+
+            if (order.CustomerId != paymentIntent.CustomerId)
+                return this.JsonError(Localizer["Error.CustomerIsMismatch"]);
+
+            if (model.PaidAmount != paymentIntent.Amount)
+                return this.JsonError(Localizer["Error.PaidAmountMismatch"]);
+
+            if (paymentIntent.Amount > order.TotalAmount)
+                return this.JsonError(Localizer["Error.PaidAmountExceededOrderTotal"]);
+
+            if (!_bankTransferPaymentSettings.Enabled)
+                return this.JsonError(Localizer["Error.BankTransferNotAllowed"]);
+
+            if (paymentIntent.Status == (int)BankTransferPaymentIntentStatus.ManuallyConfirmed && !_bankTransferPaymentSettings.Verification.AllowManualConfirm)
+                return this.JsonError(Localizer["Error.ManuallyConfirmPaymentNotAllowed"]);
+        }
+
+        var result = await _mediator.Send(new CompleteQuickCreateOrderPaymentCommand
+        {
+            OrderId = model.OrderId,
+            PaidAmount = model.PaidAmount,
+            PaymentIntentId = model.PaymentIntentId,
+        });
+
+        if (result.Success)
+            return this.JsonOk();
+        return this.JsonError(result.ErrorMessage!);
     }
 
     [HttpPost]
@@ -173,7 +245,6 @@ public sealed partial class OrderController : BaseAuthorizedController
         var result = await _mediator.Send(command);
         return ToQuickSaleJson(result);
     }
-
 
     [HttpPost]
     public async Task<IActionResult> CreatePaymentIntent([FromBody] CreateBankTransferPaymentIntentCommand command)

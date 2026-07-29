@@ -19,7 +19,7 @@ public sealed class BankTransferPaymentIntentManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var referenceCode = GenerateReferenceCode(dto.TransferContentPrefix);
+        var referenceCode = await GenerateReferenceCodeAsync(dto.TransferContentPrefix).ConfigureAwait(false);
         var qrImageUrl = BuildVietQrImageUrl(dto.BankId, dto.AccountNo, dto.Template, dto.Amount, referenceCode, dto.AccountName);
         var intent = new BankTransferPaymentIntent(
             referenceCode,
@@ -114,7 +114,7 @@ public sealed class BankTransferPaymentIntentManager(
         return MapToDto(updated);
     }
 
-    private string GenerateReferenceCode(string prefix)
+    private async Task<string> GenerateReferenceCodeAsync(string prefix)
     {
         var safePrefix = NormalizeReference(prefix);
         if (safePrefix.Length > 8)
@@ -125,7 +125,7 @@ public sealed class BankTransferPaymentIntentManager(
             var candidate = $"{safePrefix}{DateTime.UtcNow:yyMMddHHmmss}{i:D2}";
             if (candidate.Length > 25)
                 candidate = candidate[..25];
-            if (!intentReader.DataSource.Any(x => x.ReferenceCode == candidate))
+            if (!await intentReader.DataSource.AnyAsync(x => x.ReferenceCode == candidate))
                 return candidate;
         }
 
@@ -180,3 +180,4 @@ public sealed class BankTransferPaymentIntentManager(
             UpdatedOnUtc = intent.UpdatedOnUtc
         };
 }
+

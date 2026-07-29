@@ -37,9 +37,10 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Id = order.Id,
             Code = order.Code,
             CustomerId = order.CustomerId,
-            CustomerName = customer?.FullName ?? order.CustomerName,
-            CustomerAddress = customer?.Address ?? order.CustomerAddress,
-            CustomerPhoneNumber = customer?.PhoneNumber ?? order.CustomerPhone,
+            CustomerName = order.CanUpdateInfo ? (customer?.FullName ?? order.CustomerName) : order.CustomerName,
+            CustomerAddress = order.CanUpdateInfo ? (customer?.Address ?? order.CustomerAddress) : order.CustomerAddress,
+            CustomerPhoneNumber = order.CanUpdateInfo ? (customer?.PhoneNumber ?? order.CustomerPhone) : order.CustomerPhone,
+            IsRetailWalkInCustomer = order.IsRetailWalkInCustomer,
             OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
@@ -52,6 +53,9 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCompleteOrder = order.CanCompleteOrder,
+            CanProcess = order.CanProcess,
+            ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId) }, cancellationToken).ConfigureAwait(false);

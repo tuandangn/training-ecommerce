@@ -2323,6 +2323,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("AmountToCollectOverrideNote")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("AppliedOrderDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AppliedOrderPrepaid")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ApprovedAgreedChargeReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -2444,8 +2450,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("PaidOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("ProposedAmountToCollect")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("RequiresPaymentToConfirm")
+                        .HasColumnType("bit");
 
                     b.Property<string>("SettlementAdminNote")
                         .HasMaxLength(500)
@@ -2519,6 +2531,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                                 .HasMaxLength(200)
                                 .HasColumnType("nvarchar(200)")
                                 .HasColumnName("CustomerName");
+
+                            b1.Property<bool>("IsRetailWalkInCustomer")
+                                .HasColumnType("bit")
+                                .HasColumnName("IsRetailWalkInCustomer");
 
                             b1.Property<string>("PhoneNumber")
                                 .IsRequired()
@@ -4141,6 +4157,18 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("OrderTotal")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("PayOffRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("PaymentIntentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ProcessRequiresPayment")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ShippingPhoneNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -4163,6 +4191,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                                 .HasMaxLength(200)
                                 .HasColumnType("nvarchar(200)")
                                 .HasColumnName("CustomerName");
+
+                            b1.Property<bool>("IsRetailWalkInCustomer")
+                                .HasColumnType("bit")
+                                .HasColumnName("IsRetailWalkInCustomer");
 
                             b1.Property<string>("PhoneNumber")
                                 .IsRequired()

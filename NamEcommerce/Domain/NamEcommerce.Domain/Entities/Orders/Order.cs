@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Values;
 using NamEcommerce.Domain.Metadata;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 
 namespace NamEcommerce.Domain.Entities.Orders;
 
@@ -44,6 +45,11 @@ public sealed record Order : AppAggregateEntity
     public OrderStatus OrderStatus { get; private set; }
     public DateTime? CompletedOnUtc { get; private set; }
     public string? Note { get; internal set; }
+
+    public bool ProcessRequiresPayment { get; private set; }
+    public bool PayOffRequired { get; set; }
+    public decimal? PaidAmount { get; private set; }
+    public Guid? PaymentIntentId { get; private set; }
 
     public Guid CustomerId { get; private set; }
     internal CustomerInfo CustomerInfo { get; private set; }
@@ -89,8 +95,10 @@ public sealed record Order : AppAggregateEntity
             RaiseDomainEvent(new OrderFullyDelivered(Id, CustomerId));
     }
 
-    internal void RequestQuickSaleDelivery(Guid deliveryNoteId, DateTime requestedAtUtc)
-        => RaiseDomainEvent(new QuickSaleDeliverRequested(Id, deliveryNoteId, requestedAtUtc));
+    internal void MarkHasPayment(decimal paidAmount, Guid? paymentIntentId) => RaiseDomainEvent(new OrderHasPayment(Id, paidAmount, paymentIntentId));
+
+    internal void RequestDelivered(Guid deliveryNoteId, DateTime requestedAtUtc)
+        => RaiseDomainEvent(new DeliveryRequested(Id, deliveryNoteId, requestedAtUtc));
 
     #endregion
 
@@ -100,12 +108,18 @@ public sealed record Order : AppAggregateEntity
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
+        if (!CanProcess())
+            throw new OrderCannotProcessException();
+
         var customer = await byIdGetter.GetByIdAsync(customerId).ConfigureAwait(false);
         if (customer is null)
             throw new CustomerIsNotFoundException(customerId);
 
         CustomerId = customerId;
-        CustomerInfo = new CustomerInfo(customer.FullName, customer.PhoneNumber, customer.Address);
+        CustomerInfo = new CustomerInfo(customer.FullName, customer.PhoneNumber, customer.Address)
+        {
+            IsRetailWalkInCustomer = customer.Kind == CustomerKind.RetailWalkIn
+        };
         if (string.IsNullOrEmpty(ShippingAddress))
             ShippingAddress = customer.Address;
         if (string.IsNullOrWhiteSpace(ShippingPhoneNumber))
@@ -183,6 +197,13 @@ public sealed record Order : AppAggregateEntity
 
     internal void SetOrderDiscount(decimal? orderDiscount)
     {
+        if ((orderDiscount.HasValue && OrderDiscount == orderDiscount)
+            || (!orderDiscount.HasValue && OrderDiscount == 0))
+            return;
+
+        if (!CanProcess())
+            throw new OrderCannotProcessException();
+
         if (!orderDiscount.HasValue)
         {
             OrderDiscount = 0;
@@ -200,6 +221,16 @@ public sealed record Order : AppAggregateEntity
         RecalculateTotal();
     }
 
+    internal void RequiresPayment(bool payOffRequired)
+        => (ProcessRequiresPayment, PayOffRequired) = (true, payOffRequired);
+    internal void OrderHasPayment(decimal paidAmount, Guid? paymentIntentId)
+    {
+        PaidAmount = (PaidAmount ?? 0) + paidAmount;
+        PaymentIntentId = paymentIntentId;
+
+        MarkHasPayment(paidAmount, paymentIntentId);
+    }
+
     private void RecalculateTotal()
     {
         OrderSubTotal = _orderItems.Sum(i => i.SubTotal);
@@ -207,21 +238,35 @@ public sealed record Order : AppAggregateEntity
     }
 
     internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
+
     internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
+        if (!CanProcess())
+            return false;
+
         if (!CanUpdateInfo())
             return false;
 
         return Enum.IsDefined(toStatus);
     }
+
     internal bool CanUpdateOrderItems()
     {
+        if (!CanProcess())
+            return false;
+
         if (!CanUpdateInfo())
             return false;
 
         return true;
     }
-    internal bool CanCompleteOrder() => OrderStatus == OrderStatus.Pending;
+
+    internal bool CanCompleteOrder() => OrderStatus == OrderStatus.Pending && CanProcess();
+
+    internal bool CanProcess() => !ProcessRequiresPayment || (PayOffRequired ? HadPaid() : PaidAmount.HasValue);
+
+    internal bool HasPayments() => PaidAmount.HasValue || PaymentIntentId.HasValue;
+    internal bool HadPaid() => PaidAmount.HasValue && PaidAmount >= OrderTotal;
 
     internal void ChangeStatus(OrderStatus status)
     {
@@ -272,6 +317,7 @@ public sealed record Order : AppAggregateEntity
 
         RaiseDomainEvent(new OrderItemDelivered(Id, orderItemId, Guid.Empty));
     }
+
     private IReadOnlyCollection<OrderReservationItem> GetReservationItems()
         => _orderItems
             .GroupBy(i => i.ProductId)

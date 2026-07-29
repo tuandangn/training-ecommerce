@@ -1,29 +1,32 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Shared.Specifications;
 using NamEcommerce.Domain.Specifications.Customers;
 using NamEcommerce.Domain.Specifications.Orders;
-using NamEcommerce.Domain.Shared.Specifications;
-using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -39,12 +42,58 @@ public sealed class OrderManager(
     ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator entityCodeGenerator,
     IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
-    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository) : IOrderManager
+    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository,
+    IBankTransferPaymentIntentManager bankTransferPaymentIntentManager) : IOrderManager
 {
-    private Task<string> GenerateCodeAsync()
+    public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
     {
-        var prefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => orderDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        ArgumentException.ThrowIfNullOrEmpty(code);
+
+        var query = from purchaseOrder in orderDataReader.DataSource
+                    where purchaseOrder.Code == code && (comparesWithCurrentId == null || purchaseOrder.Id != comparesWithCurrentId)
+                    select purchaseOrder;
+
+        return query.AnyAsync();
+    }
+
+
+    public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
+    {
+        var order = await orderRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (order is null)
+            return null;
+        return order.ToDto();
+    }
+
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status)
+        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : []);
+
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
+
+        var query = orderDataReader.DataSource;
+
+        if (status != null && status.Any())
+            query = query.Where(order => status.Contains(order.OrderStatus));
+
+        var specification = new CompositeSpecification<Order>();
+        if (!string.IsNullOrEmpty(keywords))
+        {
+            specification.Or(new OrderKeywordSearchSpec(keywords));
+
+            var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
+            var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
+            specification.Or(new OrdersOfBuyersSpec(customerIds));
+        }
+
+        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
+
+        var total = await orderDataReader.CountAsync(specification).ConfigureAwait(false);
+        var pagedData = await orderDataReader.GetPagedListAsync(specification, pageIndex, pageSize).ConfigureAwait(false);
+
+        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, total);
     }
 
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
@@ -70,8 +119,8 @@ public sealed class OrderManager(
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
-        if (dto.RequireAvailableStock)
-            await EnsureAvailableForProductsWithoutVendorAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
+        if (customer.Kind == CustomerKind.RetailWalkIn && order.OrderTotal > 0)
+            order.RequiresPayment(dto.RequiresPayOff);
 
         order.ClearDomainEvents();
         order.Place();
@@ -113,6 +162,122 @@ public sealed class OrderManager(
         return new UpdateOrderResultDto { UpdatedId = updatedOrder.Id };
     }
 
+    public async Task DeleteOrderAsync(DeleteOrderDto dto)
+    {
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        var canDeleteOrder = order.OrderStatus is OrderStatus.Pending or OrderStatus.Cancelled;
+        if (!canDeleteOrder)
+            throw new InvalidOperationException("Order cannot delete.");
+
+        var activeDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
+                                         where deliveryNote.OrderId == order.Id
+                                            && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                         select deliveryNote).AnyAsync().ConfigureAwait(false);
+        if (activeDeliveryNotes)
+            throw new InvalidOperationException("Order cannot deleted because it is processing.");
+
+        order.MarkDeleted();
+
+        await orderRepository.DeleteAsync(order).ConfigureAwait(false);
+    }
+
+
+    public async Task UpdateShippingAsync(UpdateShippingDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        if (dto.ExpectedShippingDateUtc.HasValue)
+            order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
+        order.ShippingAddress = dto.Address;
+        order.ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
+        order.UpdatedOnUtc = DateTime.UtcNow;
+        order.MarkShippingUpdated();
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
+    public async Task RequestDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        order.RequestDelivered(deliveryNoteId, requestedAtUtc);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+    public async Task MarkOrderHasPayment(Guid orderId, decimal paidAmount, Guid? paymentIntentId)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        if (order.HadPaid())
+            throw new OrderIsPaidException(orderId);
+
+        if (paymentIntentId.HasValue)
+        {
+            var paymentIntent = await bankTransferPaymentIntentManager.GetByIdAsync(paymentIntentId.Value).ConfigureAwait(false);
+            if (paymentIntent is null)
+                throw new PaymentIntentIsNotFoundException(paymentIntentId.Value);
+
+            if (paymentIntent.CustomerId.HasValue && paymentIntent.CustomerId.Value != order.CustomerId)
+                throw new PaymentIntentCustomerIsMismatchException();
+
+            if (paymentIntent.Amount != paidAmount)
+                throw new PaymentIntentCustomerIsMismatchException();
+        }
+
+        order.OrderHasPayment(paidAmount, paymentIntentId);
+    }
+
+    public async Task CompleteOrderAsync(CompleteOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        if (!order.OrderItems.Any() || !order.OrderItems.All(i => i.IsDelivered))
+            throw new OrderCannotChangeStatusException();
+
+        order.Complete();
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
+    public async Task CancelOrderAsync(CancelOrderDto dto)
+    {
+        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        var activeDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
+                                         where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                         select deliveryNote).AnyAsync().ConfigureAwait(false);
+        if (activeDeliveryNotes)
+            throw new InvalidOperationException("Order cannot cancelled because it is processing.");
+
+        order.Cancel();
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        if (dto.FullyReceivedAllocationIds.Count > 0)
+            order.RaiseSoCancelledWithDirectShipReceived(dto.FullyReceivedAllocationIds);
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
+
     public async Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -148,9 +313,9 @@ public sealed class OrderManager(
             throw new OrderIsNotFoundException(dto.OrderId);
 
         var deliveryNoteOrderItems = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                         && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote)
+                                            where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                               && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                            select deliveryNote)
                                      .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
                                      .ToListAsync().ConfigureAwait(false);
         var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
@@ -188,9 +353,9 @@ public sealed class OrderManager(
             throw new OrderCannotUpdateOrderItemsException();
 
         var hasOrderItemDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                     where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                        && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                     select deliveryNote).AnyAsync().ConfigureAwait(false);
+                                               where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                                  && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                               select deliveryNote).AnyAsync().ConfigureAwait(false);
         if (hasOrderItemDeliveryNotes)
             throw new OrderCannotUpdateOrderItemsException();
 
@@ -211,118 +376,6 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
-    public async Task CompleteOrderAsync(CompleteOrderDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null)
-            throw new OrderIsNotFoundException(dto.OrderId);
-
-        if (!order.OrderItems.Any() || !order.OrderItems.All(i => i.IsDelivered))
-            throw new OrderCannotChangeStatusException();
-
-        order.Complete();
-        order.UpdatedOnUtc = DateTime.UtcNow;
-
-        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-    }
-
-    public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
-    {
-        var order = await orderRepository.GetByIdAsync(id).ConfigureAwait(false);
-        if (order is null)
-            return null;
-        return order.ToDto();
-    }
-
-    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status)
-        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : []);
-
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
-
-        var query = orderDataReader.DataSource;
-
-        if (status != null && status.Any())
-            query = query.Where(order => status.Contains(order.OrderStatus));
-
-        var specification = new CompositeSpecification<Order>();
-        if (!string.IsNullOrEmpty(keywords))
-        {
-            specification.Or(new OrderKeywordSearchSpec(keywords));
-
-            var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
-            var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
-            specification.Or(new OrdersOfBuyersSpec(customerIds));
-        }
-
-        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
-
-        var total = await orderDataReader.CountAsync(specification).ConfigureAwait(false);
-        var pagedData = await orderDataReader.GetPagedListAsync(specification, pageIndex, pageSize).ConfigureAwait(false);
-
-        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, total);
-    }
-
-    public async Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
-    {
-        if (productId == Guid.Empty || customerId == Guid.Empty)
-            return [];
-
-        var safeTake = Math.Max(1, take);
-        var prices = await orderDataReader.DataSource
-            .Where(order => order.OrderStatus != OrderStatus.Cancelled
-                && order.CustomerId == customerId
-                && order.OrderItems.Any(item => item.ProductId == productId))
-            .OrderByDescending(order => order.CreatedOnUtc)
-            .Take(safeTake)
-            .SelectMany(order => order.OrderItems
-                .Where(item => item.ProductId == productId)
-                .Select(item => new RecentSalePriceDto(
-                    CustomerId: order.CustomerId,
-                    CustomerName: order.CustomerInfo.FullName,
-                    UnitPrice: item.UnitPrice,
-                    OrderCode: order.Code,
-                    OrderDateUtc: order.CreatedOnUtc)))
-            .Take(safeTake)
-            .ToListAsync().ConfigureAwait(false);
-
-        return prices;
-    }
-
-    public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(code);
-
-        var query = from purchaseOrder in orderDataReader.DataSource
-                    where purchaseOrder.Code == code && (comparesWithCurrentId == null || purchaseOrder.Id != comparesWithCurrentId)
-                    select purchaseOrder;
-
-        return query.AnyAsync();
-    }
-
-    public async Task UpdateShippingAsync(UpdateShippingDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        dto.Verify();
-
-        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null)
-            throw new OrderIsNotFoundException(dto.OrderId);
-
-        if (dto.ExpectedShippingDateUtc.HasValue)
-            order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
-        order.ShippingAddress = dto.Address;
-        order.ShippingPhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
-        order.UpdatedOnUtc = DateTime.UtcNow;
-        order.MarkShippingUpdated();
-
-        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-    }
 
     public async Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto)
     {
@@ -353,57 +406,40 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
-    public async Task DeleteOrderAsync(DeleteOrderDto dto)
+
+    public async Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
     {
-        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null)
-            throw new OrderIsNotFoundException(dto.OrderId);
+        if (productId == Guid.Empty || customerId == Guid.Empty)
+            return [];
 
-        var canDeleteOrder = order.OrderStatus is OrderStatus.Pending or OrderStatus.Cancelled;
-        if (!canDeleteOrder)
-            throw new InvalidOperationException("Order cannot delete.");
+        var safeTake = Math.Max(1, take);
+        var prices = await orderDataReader.DataSource
+            .Where(order => order.OrderStatus != OrderStatus.Cancelled
+                && order.CustomerId == customerId
+                && order.OrderItems.Any(item => item.ProductId == productId))
+            .OrderByDescending(order => order.CreatedOnUtc)
+            .Take(safeTake)
+            .SelectMany(order => order.OrderItems
+                .Where(item => item.ProductId == productId)
+                .Select(item => new RecentSalePriceDto(
+                    CustomerId: order.CustomerId,
+                    CustomerName: order.CustomerInfo.FullName,
+                    UnitPrice: item.UnitPrice,
+                    OrderCode: order.Code,
+                    OrderDateUtc: order.CreatedOnUtc)))
+            .Take(safeTake)
+            .ToListAsync().ConfigureAwait(false);
 
-        var activeDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                  where deliveryNote.OrderId == order.Id
-                                     && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                  select deliveryNote).AnyAsync().ConfigureAwait(false);
-        if (activeDeliveryNotes)
-            throw new InvalidOperationException("Order cannot deleted because it is processing.");
-
-        order.MarkDeleted();
-
-        await orderRepository.DeleteAsync(order).ConfigureAwait(false);
+        return prices;
     }
 
-    public async Task CancelOrderAsync(CancelOrderDto dto)
+
+    #region Helper methods
+
+    private Task<string> GenerateCodeAsync()
     {
-        var order = await orderRepository.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null)
-            throw new OrderIsNotFoundException(dto.OrderId);
-
-        var activeDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                  select deliveryNote).AnyAsync().ConfigureAwait(false);
-        if (activeDeliveryNotes)
-            throw new InvalidOperationException("Order cannot cancelled because it is processing.");
-
-        order.Cancel();
-        order.UpdatedOnUtc = DateTime.UtcNow;
-
-        if (dto.FullyReceivedAllocationIds.Count > 0)
-            order.RaiseSoCancelledWithDirectShipReceived(dto.FullyReceivedAllocationIds);
-
-        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-    }
-
-    public async Task RequestQuickSaleDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc)
-    {
-        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
-        if (order is null)
-            throw new OrderIsNotFoundException(orderId);
-
-        order.RequestQuickSaleDelivery(deliveryNoteId, requestedAtUtc);
-        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+        var prefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
+        return entityCodeGenerator.NextAsync(prefix, () => orderDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task EnsureAvailableForProductsWithoutVendorAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
@@ -435,4 +471,6 @@ public sealed class OrderManager(
             .AnyAsync(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled
                 && allocation.ReceivedQuantity > 0);
+
+    #endregion
 }

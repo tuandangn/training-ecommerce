@@ -18,6 +18,13 @@ public sealed class CreateDeliveryNoteModel
     [ValidateNever]
     public string? OrderNote { get; set; }
     [ValidateNever]
+    public decimal OrderDiscount { get; set; }
+    [ValidateNever]
+    public decimal CanAppliedOrderDiscount { get; set; }
+    [ValidateNever]
+    public decimal AppliedOrderDiscount { get; set; }
+    public decimal ApplyingOrderDiscount { get; set; }
+    [ValidateNever]
     public Guid CustomerId { get; set; }
     [ValidateNever]
     public string CustomerName { get; set; } = string.Empty;
@@ -53,7 +60,12 @@ public sealed class CreateDeliveryNoteModel
     public decimal AmountToCollect { get; set; }
 
     [ValidateNever]
-    public decimal AmountAlreadyPaidForOrder { get; set; }
+    public decimal PrepaidAmount { get; set; }
+    [ValidateNever]
+    public decimal CanApplyPrepaidAmount { get; set; }
+    [ValidateNever]
+    public decimal AppliedPrepaidAmount { get; set; }
+    public decimal ApplyingPrepaidAmount { get; set; }
 
     [ValidateNever]
     public bool IsRetailWalkInCustomer { get; set; }

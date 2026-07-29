@@ -35,6 +35,9 @@ public sealed record DeliveryNote : AppAggregateEntity
     public bool ShowPrice { get; internal set; }
     public string? Note { get; internal set; }
 
+    public bool RequiresPaymentToConfirm { get; private set; }
+    public DateTime? PaidOnUtc { get; private set; }
+
     public Guid OrderId { get; private set; }
     public string? OrderCode { get; set; }
 
@@ -52,14 +55,11 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? SurchargeReason { get; internal set; }
     public decimal AmountToCollect { get; internal set; }
     public decimal TotalAmount => _items.Sum(i => i.SubTotal);
-
-    // PRE-3: Chiết khấu thương mại — computed từ items
     public decimal TotalDiscountAmount => _items.Sum(i => i.DiscountAmount);
-
-    // PRE-4a: Thuế GTGT — computed từ items
     public decimal TotalTaxAmount => _items.Sum(i => i.TaxAmount);
+    public decimal AppliedOrderDiscount { get; set; }
+    public decimal AppliedOrderPrepaid { get; set; }
 
-    // PRE-5: Số hóa đơn GTGT
     public string? InvoiceNumber { get; internal set; }
     public string? InvoiceSeries { get; internal set; }
     public DateTime? InvoiceDate { get; internal set; }
@@ -77,7 +77,6 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
-    // Comma-separated Guids stored via EF value converter; FirstOrDefault = DeliveryProofPictureId
     public IReadOnlyCollection<Guid> DeliveryProofPictureIds { get; private set; } = [];
     public string? DeliveryReceiverName { get; private set; }
     public double? DeliveryLatitude { get; private set; }
@@ -111,10 +110,18 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     #region Method
 
-    public bool CanApprove() => !IsDirectShip && Status is DeliveryNoteStatus.Draft;
-    public bool CanMarkDelivering() => !IsDirectShip && Status is DeliveryNoteStatus.Confirmed && !AssignedDeliveryUserId.HasValue;
-    public bool CanMarkDelivered() => Status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering);
+    public void RequiresPayment() 
+        => RequiresPaymentToConfirm = true;
+    public void MarkIsPaid() 
+        => PaidOnUtc = DateTime.UtcNow;
+    public bool HasPaid() 
+        => PaidOnUtc.HasValue;
+
+    public bool CanApprove() => CanProcess() && !IsDirectShip && Status is DeliveryNoteStatus.Draft;
+    public bool CanMarkDelivering() => CanProcess() && !IsDirectShip && Status is DeliveryNoteStatus.Confirmed && !AssignedDeliveryUserId.HasValue;
+    public bool CanMarkDelivered() => CanProcess() && Status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering);
     public bool CanReject() => IsDirectShip;
+    public bool CanProcess() => !RequiresPaymentToConfirm || HasPaid();
 
     public bool CanEditShippingInfo() => Status is not (DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled);
 
@@ -175,6 +182,9 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     internal void Confirm()
     {
+        if(!CanProcess())
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Confirmed);
+
         if (Status != DeliveryNoteStatus.Draft)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Confirmed);
 
@@ -186,6 +196,9 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     internal void MarkDelivering()
     {
+        if(!CanProcess())
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivering);
+
         if (Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivering);
 
@@ -228,6 +241,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         decimal rejectedGoodsAmount = 0,
         decimal? debtAmount = null)
     {
+        if(!CanProcess())
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
         if (Status != DeliveryNoteStatus.Delivering
             && Status != DeliveryNoteStatus.Confirmed
             && Status != DeliveryNoteStatus.PendingConfirmation)
@@ -271,6 +287,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         decimal? cashCollectedAmount = null,
         IEnumerable<(Guid DeliveryNoteItemId, decimal AcceptedQuantity, decimal RejectedQuantity, string? RejectReason)>? acceptanceLines = null)
     {
+        if (!CanProcess())
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.PendingConfirmation);
+
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.PendingConfirmation);
 
@@ -323,6 +342,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         decimal rejectedGoodsAmount = 0,
         decimal? debtAmount = null)
     {
+        if (!CanProcess())
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
         if (Status == DeliveryNoteStatus.Delivered)
         {
             DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;

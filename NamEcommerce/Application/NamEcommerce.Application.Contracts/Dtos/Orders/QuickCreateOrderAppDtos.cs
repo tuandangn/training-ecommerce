@@ -2,7 +2,6 @@ using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 
-
 [Serializable]
 public sealed record QuickCreateOrderAppDto2
 {
@@ -12,10 +11,6 @@ public sealed record QuickCreateOrderAppDto2
     public string? Note { get; init; }
 
     public bool DeliveryNow { get; init; }
-
-    public bool PayNow { get; init; }
-    public Guid? PaymentIntentId { get; set; }
-    public decimal? PaidAmount { get; init; }
 
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
@@ -31,14 +26,8 @@ public sealed record QuickCreateOrderAppDto2
         if (Items.Count == 0)
             return (false, "Error.OrderItemRequired");
 
-        if (OrderDiscount is < 0)
+        if (OrderDiscount < 0)
             return (false, "Error.OrderDiscountCannotBeNegative");
-
-        if (PayNow && PaidAmount <= 0)
-            return (false, "Error.PaymentAmountMustBePositive");
-
-        if (!PayNow && PaidAmount != 0)
-            return (false, "Error.PaymentAmountMustBeZeroWhenUnpaid");
 
         if (!DeliveryNow)
         {
@@ -80,7 +69,22 @@ public sealed record QuickCreateOrderAppDto2
             return (true, null);
         }
     }
+}
 
+[Serializable]
+public sealed record CompleteQuickCreateOrderPaymentAppDto
+{
+    public required Guid OrderId { get; init; }
+    public required decimal PaidAmount { get; init; }
+    public required Guid? PaymentIntentId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (PaidAmount < 0)
+            return (false, "Error.PaidAmountCannotBeNegative");
+
+        return (true, null);
+    }
 }
 
 
@@ -186,6 +190,15 @@ public sealed record QuickSaleOrderItemResultAppDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
+}
+
+[Serializable]
+public sealed record QuickCreateOrderResultAppDto : CommonActionResultDto
+{
+    public Guid? OrderId { get; init; }
+
+    public static new QuickCreateOrderResultAppDto CreateError(string? errorMessage)
+        => new() { Success = false, ErrorMessage = errorMessage };
 }
 
 [Serializable]

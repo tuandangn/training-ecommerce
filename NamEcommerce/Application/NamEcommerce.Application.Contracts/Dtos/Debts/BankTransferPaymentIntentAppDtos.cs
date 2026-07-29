@@ -17,7 +17,7 @@ public sealed record BankTransferReceivingAccountAppDto
 public sealed record CreateBankTransferPaymentIntentAppDto
 {
     public required decimal Amount { get; init; }
-    public Guid? CustomerId { get; init; }
+    public required Guid CustomerId { get; init; }
     public string? Note { get; init; }
 
     public (bool valid, string? errorMessage) Validate()

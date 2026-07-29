@@ -27,6 +27,7 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
+    public bool IsRetailWalkInCustomer { get; set; }
 
     public required Guid? CreatedByUserId { get; init; }
     public string? CreatedByUsername { get; set; }
@@ -44,6 +45,11 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public bool CanCancelOrder { get; init; }
     public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
+    public bool CanProcess { get; set; }
+
+    public bool ProcessRequiresPayment { get; set; }
+    public decimal PaidAmount { get; set; }
+    public bool HadPaid { get; set; }
 
     public DateTime CreatedOnUtc { get; set; }
 
@@ -59,6 +65,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
     public IList<OrderItemAppDto> Items { get; } = [];
 
     public bool SkipScheduling { get; set; }
+    public bool RequiresPayOff { get; set; }
 
     public override (bool valid, string? errorMessage) Validate()
     {

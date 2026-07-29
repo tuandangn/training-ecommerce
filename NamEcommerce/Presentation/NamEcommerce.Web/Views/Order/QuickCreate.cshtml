@@ -22,6 +22,11 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
+    <style>
+        .order-summary .order-summary-row .currency-field .field-prefix {
+            right:0;
+        }
+    </style>
 }
 
 <form asp-action="QuickCreate" method="post" asp-antiforgery="true" id="fastSaleApp"
@@ -159,18 +164,34 @@
                             </div>
                         </div>
                         <div class="content-card-footer bg-white py-2">
+                            @{
+                                var subTotal = Model.Items.Sum(item => item.ItemSubTotal);
+                                var total = subTotal - Model.OrderDiscount;
+                            }
                             <div class="order-summary" id="tableFooter">
                                 <div class="order-summary-row">
                                     <span class="label">Tạm tính</span>
-                                    <span class="value" id="fastSaleSubtotal">0 ₫</span>
+                                    <span class="value" id="fastSaleSubtotal">@subTotal.DisplayCurrencyWithSymbol()</span>
+                                </div>
+                                <div class="order-summary-row">
+                                    <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
+                                    <span class="value">
+                                        <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
+                                               data-decimal="currency" autocomplete="off" id="orderDiscount" />
+                                        <span class="small text-danger" asp-validation-for="OrderDiscount"></span>
+                                    </span>
                                 </div>
                                 <div class="order-summary-row total">
                                     <span class="label">Tổng cộng</span>
                                     <span class="value">
-                                        <span id="fastSaleTotal">0 ₫</span>
+                                        <span id="fastSaleTotal">@total.DisplayCurrencyWithSymbol()</span>
                                     </span>
                                 </div>
                                 <div class="currency-hint text-end visible" id="fastSaleTotalHint">
+                                    @if (total > 0)
+                                    {
+                                        @total.DisplayVietnameseCurrencyHint()
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -382,12 +403,9 @@
                         </li>
                         <li class="list-group-item">
                             <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted fw-medium">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
+                                <span class="text-muted fw-medium">Giảm giá</span>
                                 <div>
-                                    <input name="OrderDiscount" class="form-control form-control-sm border-0" placeholder="Nhập giảm giá"
-                                           data-decimal="currency" autocomplete="off" style="font-size:1rem;"
-                                           data-val="true" id="fastSaleDiscount" />
-                                    <span class="small text-danger field-validation-valid" data-valmsg-for="OrderDiscount" data-valmsg-replace="true"></span>
+                                    <span class="fw-medium" id="paymentDiscount"></span>
                                 </div>
                             </div>
                         </li>

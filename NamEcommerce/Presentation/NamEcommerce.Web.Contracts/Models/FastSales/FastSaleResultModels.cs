@@ -10,6 +10,18 @@ public sealed record QuickSaleOrderItemResultModel
 }
 
 [Serializable]
+public sealed record QuickCreateOrderResultModel : ICommandResult
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public Guid? OrderId { get; init; }
+    public string? OrderCode { get; set; }
+    public decimal OrderTotal { get; set; }
+    public decimal OrderSubTotal { get; set; }
+    public decimal OrderDiscount { get; set; }
+}
+
+[Serializable]
 public sealed record QuickSaleResultModel : ICommandResult
 {
     public bool Success { get; init; }

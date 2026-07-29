@@ -61,6 +61,9 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
                 .HasColumnName("CustomerPhone")
                 .HasMaxLength(50)
                 .IsRequired();
+
+            customerInfoBuilder.Property(c => c.IsRetailWalkInCustomer)
+                .HasColumnName("IsRetailWalkInCustomer");
         });
 
         builder.HasMany(o => o.OrderItems).WithOne().HasForeignKey(oi => oi.OrderId);

@@ -432,6 +432,8 @@ public sealed class DirectShipManager(
             Surcharge = d.Surcharge,
             SurchargeReason = d.SurchargeReason,
             AmountToCollect = d.AmountToCollect,
+            AppliedOrderDiscount = d.AppliedOrderDiscount,
+            AppliedOrderPrepaid = d.AppliedOrderPrepaid,
             CreatedByUserId = d.CreatedByUserId,
             UpdatedOnUtc = d.UpdatedOnUtc,
             Items = d.Items.Select(i => new DeliveryNoteItemDto

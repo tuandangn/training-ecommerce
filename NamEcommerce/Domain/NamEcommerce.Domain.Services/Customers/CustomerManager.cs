@@ -163,4 +163,11 @@ public sealed class CustomerManager : ICustomerManager
             IsSystem = customer.IsSystem,
             CreatedOnUtc = customer.CreatedOnUtc
         };
+
+    public async Task<bool> IsRetailWalkInCustomerAsync(Guid customerId)
+    {
+        var customer = await _customerRepository.GetByIdAsync(customerId).ConfigureAwait(false);
+
+        return customer is { Kind: CustomerKind.RetailWalkIn };
+    }
 }

@@ -63,9 +63,6 @@ public sealed class DeliveryNoteManager(
         return summary.AverageCost;
     }
 
-    private Task<bool> IsRetailWalkInCustomerAsync(Guid customerId)
-        => customerReader.DataSource.AnyAsync(c => c.Id == customerId && c.Kind == CustomerKind.RetailWalkIn && c.IsSystem);
-
     public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -121,10 +118,17 @@ public sealed class DeliveryNoteManager(
             ShowPrice = dto.ShowPrice,
             SurchargeReason = dto.SurchargeReason,
             Note = dto.Note,
-            CustomerInfo = new CustomerInfo(order.CustomerInfo.FullName, order.CustomerInfo.PhoneNumber, order.CustomerInfo.Address),
+            AppliedOrderDiscount = dto.AppliedOrderDiscount,
+            AppliedOrderPrepaid = dto.AppliedOrderPrepaid,
+            CustomerInfo = new CustomerInfo(order.CustomerInfo.FullName, order.CustomerInfo.PhoneNumber, order.CustomerInfo.Address)
+            {
+                IsRetailWalkInCustomer = order.CustomerInfo.IsRetailWalkInCustomer
+            },
             OrderCode = order.Code,
             CreatedByUserId = order.CreatedByUserId
         };
+        if (order.ProcessRequiresPayment && !order.HasPayments())
+            deliveryNote.RequiresPayment();
         foreach (var itemDto in dto.Items)
         {
             var orderItem = orderItemsById[itemDto.OrderItemId];
@@ -154,11 +158,18 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote.Status != DeliveryNoteStatus.Draft)
             throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
 
+        if (deliveryNote.RequiresPaymentToConfirm && !deliveryNote.HasPaid())
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
+
         if (deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && deliveryNote.OrderId != Guid.Empty)
         {
             var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            if (order is null)
+                throw new OrderIsNotFoundException(deliveryNote.OrderId);
             if (order is { OrderStatus: OrderStatus.Completed or OrderStatus.Cancelled })
                 throw new DeliveryNoteOrderAlreadyClosedException(deliveryNote.OrderId, order.OrderStatus);
+            if (!order.CanProcess())
+                throw new OrderCannotProcessException();
         }
 
         deliveryNote.Confirm();
@@ -231,7 +242,7 @@ public sealed class DeliveryNoteManager(
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
 
         // Khách lẻ (tài khoản dùng chung) không được để công nợ dương: phải thu đủ số còn lại tại lúc giao.
-        if (await IsRetailWalkInCustomerAsync(deliveryNote.CustomerId).ConfigureAwait(false)
+        if (deliveryNote.CustomerInfo.IsRetailWalkInCustomer
             && (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect)
         {
             throw new RetailOrderCannotLeaveDebtException();
@@ -239,7 +250,7 @@ public sealed class DeliveryNoteManager(
 
         // Shipper (mobile) không được tự hoàn tất khi thu hụt — phải qua duyệt admin trước.
         var isMobileShipper = string.Equals(completionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
-        var hasShortfall = acceptance.RejectedGoodsAmount > 0 || 
+        var hasShortfall = acceptance.RejectedGoodsAmount > 0 ||
             (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect;
         if (isMobileShipper && hasShortfall && deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
             throw new NamEcommerceDomainException("Error.DeliverySettlement.ApprovalRequired");
@@ -441,7 +452,10 @@ public sealed class DeliveryNoteManager(
         var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, 0, 0)
         {
             OrderCode = order.Code,
-            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress),
+            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress)
+            {
+                IsRetailWalkInCustomer = order.CustomerInfo.IsRetailWalkInCustomer
+            },
             ShippingAddress = dto.ShippingAddress,
             ShippingPhoneNumber = contactPhone
         };
@@ -1142,22 +1156,23 @@ public sealed class DeliveryNoteManager(
             .Select(item => new { item.Id, item.OrderItemId })
             .ToListAsync().ConfigureAwait(false);
 
-        var returnedByOrderItems = await customerReturnReader.DataSource
-            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled 
+        var returnedByOrderItems = (await customerReturnReader.DataSource
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
                 && (!compensatedOnly || (returnNote.CompensateInNextDelivery && returnNote.Status != CustomerReturnStatus.Draft)))
             .SelectMany(returnNote => returnNote.Items)
-            .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
+            .Where(returnItem => returnItem.DeliveryNoteItemId != null)
+            .ToListAsync().ConfigureAwait(false))
             .Join(
                 validDeliveryNoteItems,
-                returnItem => returnItem.DeliveryNoteItemId!.Value,
+                returnItem => returnItem.DeliveryNoteItemId,
                 dnItem => dnItem.Id,
                 (returnItem, dnItem) => new { dnItem.OrderItemId, returnItem.AcceptedQuantity }
             )
             .GroupBy(x => x.OrderItemId)
-            .ToDictionaryAsync(
+            .ToDictionary(
                 group => (SecondaryItemId)(orderId, group.Key),
                 group => group.Sum(x => x.AcceptedQuantity)
-            ).ConfigureAwait(false);
+            );
 
         foreach (var orderItemId in orderItemIds)
         {
@@ -1282,6 +1297,8 @@ public sealed class DeliveryNoteManager(
             UpdatedOnUtc = deliveryNote.UpdatedOnUtc,
             TotalAmount = deliveryNote.TotalAmount,
             Surcharge = deliveryNote.Surcharge,
+            AppliedOrderDiscount = deliveryNote.AppliedOrderDiscount,
+            AppliedOrderPrepaid = deliveryNote.AppliedOrderPrepaid,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
             AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,
@@ -1313,10 +1330,37 @@ public sealed class DeliveryNoteManager(
                 SubTotal = i.SubTotal,
                 CostAtDispatch = i.CostAtDispatch
             }).ToList(),
+            RequiresPaymentToConfirm = deliveryNote.RequiresPaymentToConfirm,
+            HasPaid = deliveryNote.HasPaid(),
             CanApprove = deliveryNote.CanApprove(),
             CanReject = deliveryNote.CanReject(),
             CanMarkDelivering = deliveryNote.CanMarkDelivering(),
             CanMarkDelivered = deliveryNote.CanMarkDelivered(),
+            CanProcess = deliveryNote.CanProcess()
         };
+    }
+
+    public async Task MarkAsOrderIsPaid(Guid deliveryNoteId)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(deliveryNoteId);
+
+        if (!deliveryNote.RequiresPaymentToConfirm || deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.PaidOnUtc.HasValue)
+            throw new DeliveryNoteCannotMarkedAsPaidException();
+
+        deliveryNote.MarkIsPaid();
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task<Guid?> GetWaitingPaymentDeliveryNoteIdAsync(Guid orderId)
+    {
+        var deliveryNote = await deliveryNoteReader.DataSource
+            .Where(deliveryNote => deliveryNote.OrderId == orderId
+                && deliveryNote.Status == DeliveryNoteStatus.Draft
+                && deliveryNote.RequiresPaymentToConfirm && deliveryNote.PaidOnUtc == null)
+            .FirstOrDefaultAsync().ConfigureAwait(false);
+
+        return deliveryNote?.Id;
     }
 }

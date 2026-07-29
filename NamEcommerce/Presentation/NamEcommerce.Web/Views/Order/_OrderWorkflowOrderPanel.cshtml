@@ -170,7 +170,7 @@
                 <div class="order-summary-row position-relative">
                     <span class="label">
                         Giảm giá
-                        @if (Model.CanUpdateInfo)
+                        @if (Model.CanUpdateInfo && !Model.PaymentRequired)
                         {
                             <a href="#" class="text-muted stretched-link" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
                                 <i class="bi bi-pencil-square"></i>
