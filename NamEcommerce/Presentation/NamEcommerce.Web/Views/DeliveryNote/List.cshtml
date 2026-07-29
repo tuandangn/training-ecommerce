@@ -282,7 +282,7 @@
                             @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
                             {
                                 <a class="btn btn-sm btn-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id">
-                                    <i class="bi bi-check me-1"></i>Xác nhận
+                                    <i class="bi bi-check-all me-1"></i>Xác nhận
                                 </a>
                             }
                             @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)

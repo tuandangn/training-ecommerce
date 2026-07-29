@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Extensions;
@@ -66,10 +67,10 @@ public sealed class UserManager : IUserManager
         if (username is null)
             throw new ArgumentNullException(nameof(username));
 
-        var users = await _userEntityDataReader.GetAllAsync().ConfigureAwait(false);
-        return users.Any(user =>
-            user.Username == username
-            && (!comparesWithCurrentId.HasValue || comparesWithCurrentId != user.Id));
+        var user = await _userEntityDataReader.DataSource.FirstOrDefaultAsync(user => user.Username == username).ConfigureAwait(false);
+        if (user is null) 
+            return false;
+        return !comparesWithCurrentId.HasValue || comparesWithCurrentId != user.Id;
     }
 
     public async Task<UserDto?> GetUserByIdAsync(Guid id)
@@ -77,7 +78,7 @@ public sealed class UserManager : IUserManager
         if (id == Guid.Empty)
             throw new ArgumentException("User id is required", nameof(id));
 
-        var user = await _userEntityDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var user = await _userRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (user is null)
             return null;
 
@@ -85,21 +86,23 @@ public sealed class UserManager : IUserManager
         return user.ToDto(roleNames);
     }
 
-    public Task<IList<UserDto>> GetUsersAsync()
+    public async Task<IList<UserDto>> GetUsersAsync()
     {
-        var users = _userEntityDataReader.DataSource
+        var users = await _userEntityDataReader.DataSource
             .OrderBy(user => user.FullName)
             .ThenBy(user => user.Username)
-            .ToList();
-
+            .ToListAsync().ConfigureAwait(false);
         var userIds = users.Select(user => user.Id).ToHashSet();
-        var userRoles = _userRoleEntityDataReader.DataSource
+
+        var userRoles = await _userRoleEntityDataReader.DataSource
             .Where(userRole => userIds.Contains(userRole.UserId))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
+
         var roleIds = userRoles.Select(userRole => userRole.RoleId).Distinct().ToHashSet();
-        var roleNames = _roleEntityDataReader.DataSource
+        var roleNames = await _roleEntityDataReader.DataSource
             .Where(role => roleIds.Contains(role.Id))
-            .ToDictionary(role => role.Id, role => role.Name);
+            .ToDictionaryAsync(role => role.Id, role => role.Name).ConfigureAwait(false);
+
         var roleNamesByUserId = userRoles
             .Where(userRole => roleNames.ContainsKey(userRole.RoleId))
             .GroupBy(userRole => userRole.UserId)
@@ -110,11 +113,11 @@ public sealed class UserManager : IUserManager
                     .OrderBy(name => name)
                     .ToList());
 
-        IList<UserDto> result = users
+        var result = users
             .Select(user => user.ToDto(roleNamesByUserId.GetValueOrDefault(user.Id) ?? []))
             .ToList();
 
-        return Task.FromResult(result);
+        return result;
     }
 
     public async Task<UserDto?> FindUserByUserNameAndPasswordAsync(string username, string password)
@@ -128,7 +131,7 @@ public sealed class UserManager : IUserManager
         var query = from user in _userEntityDataReader.DataSource
                     where user.Username == username && !user.IsLocked
                     select user;
-        var users = query.ToList();
+        var users = await query.ToListAsync().ConfigureAwait(false);
         foreach (var user in users)
         {
             var valid = await _securityService.VerifyPasswordAsync(password, user.PasswordHash, user.PasswordSalt).ConfigureAwait(false);
@@ -146,30 +149,30 @@ public sealed class UserManager : IUserManager
     {
         await EnsureSystemRolesAsync().ConfigureAwait(false);
 
-        IList<RoleDto> roles = _roleEntityDataReader.DataSource
+        var roles = await _roleEntityDataReader.DataSource
             .OrderBy(role => role.Name)
             .Select(role => role.ToDto())
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return roles;
     }
 
-    public Task<IList<string>> GetRoleNamesByUserIdAsync(Guid userId)
+    public async Task<IList<string>> GetRoleNamesByUserIdAsync(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User id is required", nameof(userId));
 
-        var roleIds = _userRoleEntityDataReader.DataSource
+        var roleIds = await _userRoleEntityDataReader.DataSource
             .Where(userRole => userRole.UserId == userId)
             .Select(userRole => userRole.RoleId)
-            .ToList();
-        IList<string> roleNames = _roleEntityDataReader.DataSource
+            .ToListAsync().ConfigureAwait(false);
+        var roleNames = await _roleEntityDataReader.DataSource
             .Where(role => roleIds.Contains(role.Id))
             .OrderBy(role => role.Name)
             .Select(role => role.Name)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
-        return Task.FromResult(roleNames);
+        return roleNames;
     }
 
     public async Task<bool> HasUsersInRoleAsync(string roleName)
@@ -178,11 +181,12 @@ public sealed class UserManager : IUserManager
 
         await EnsureSystemRolesAsync().ConfigureAwait(false);
 
-        var roleIds = GetRoleIdsByName(roleName);
+        var roleIds = await GetRoleIdsByNameAsync(roleName).ConfigureAwait(false);
         if (roleIds.Count == 0)
             return false;
 
-        return _userRoleEntityDataReader.DataSource.Any(userRole => roleIds.Contains(userRole.RoleId));
+        return await _userRoleEntityDataReader.DataSource.AnyAsync(userRole => roleIds.Contains(userRole.RoleId))
+            .ConfigureAwait(false);
     }
 
     public async Task<bool> IsUserInRoleAsync(Guid userId, string roleName)
@@ -193,20 +197,20 @@ public sealed class UserManager : IUserManager
 
         await EnsureSystemRolesAsync().ConfigureAwait(false);
 
-        var roleIds = GetRoleIdsByName(roleName);
+        var roleIds = await GetRoleIdsByNameAsync(roleName).ConfigureAwait(false);
         if (roleIds.Count == 0)
             return false;
 
-        return _userRoleEntityDataReader.DataSource.Any(userRole => userRole.UserId == userId && roleIds.Contains(userRole.RoleId));
+        return await _userRoleEntityDataReader.DataSource.AnyAsync(userRole => userRole.UserId == userId && roleIds.Contains(userRole.RoleId)).ConfigureAwait(false);
     }
 
     public async Task EnsureSystemRolesAsync()
     {
-        var existingNormalizedNames = _roleEntityDataReader.DataSource
+        var existingNormalizedNames = await _roleEntityDataReader.DataSource
             .Select(role => string.IsNullOrWhiteSpace(role.NormalizedName)
                 ? SystemUserRoleNames.Normalize(role.Name)
                 : role.NormalizedName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase).ConfigureAwait(false);
 
         foreach (var roleName in SystemUserRoleNames.All)
         {
@@ -229,23 +233,23 @@ public sealed class UserManager : IUserManager
 
         dto.Verify();
 
-        var user = await _userRepository.GetByIdAsync(dto.UserId, default).ConfigureAwait(false);
+        var user = await _userRepository.GetByIdAsync(dto.UserId).ConfigureAwait(false);
         if (user is null)
             throw new UserIsNotFoundException(dto.UserId);
 
         await EnsureSystemRolesAsync().ConfigureAwait(false);
 
         var requestedRoleIds = dto.RoleIds.Distinct().ToHashSet();
-        var validRoleIds = _roleEntityDataReader.DataSource
+        var validRoleIds = await _roleEntityDataReader.DataSource
             .Where(role => requestedRoleIds.Contains(role.Id))
             .Select(role => role.Id)
-            .ToHashSet();
+            .ToHashSetAsync().ConfigureAwait(false);
         if (validRoleIds.Count != requestedRoleIds.Count)
             throw new UserDataIsInvalidException("Error.RoleIsNotFound");
 
-        var currentUserRoles = _userRoleEntityDataReader.DataSource
+        var currentUserRoles = await _userRoleEntityDataReader.DataSource
             .Where(userRole => userRole.UserId == dto.UserId)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         var currentRoleIds = currentUserRoles.Select(userRole => userRole.RoleId).ToHashSet();
 
         foreach (var currentUserRole in currentUserRoles.Where(userRole => !requestedRoleIds.Contains(userRole.RoleId)))
@@ -305,12 +309,11 @@ public sealed class UserManager : IUserManager
         await _userRepository.UpdateAsync(user).ConfigureAwait(false);
     }
 
-    private IReadOnlyList<Guid> GetRoleIdsByName(string roleName)
+    private async Task<IReadOnlyList<Guid>> GetRoleIdsByNameAsync(string roleName)
     {
         var normalizedName = SystemUserRoleNames.Normalize(roleName);
 
-        return _roleEntityDataReader.DataSource
-            .ToList()
+        return (await _roleEntityDataReader.DataSource.ToListAsync().ConfigureAwait(false))
             .Where(role => string.Equals(
                 string.IsNullOrWhiteSpace(role.NormalizedName)
                     ? SystemUserRoleNames.Normalize(role.Name)

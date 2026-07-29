@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Debts;
@@ -28,11 +29,13 @@ public sealed class CustomerLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.CustomerId == dto.CustomerId
                     && e.EntryType == entryType
-                    && e.ReferenceId == dto.ReferenceId.Value);
-            if (existing is not null) return MapToDto(existing);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
+            if (existing is not null) 
+                return MapToDto(existing);
         }
 
         var entry = new CustomerLedgerEntry(
@@ -56,11 +59,13 @@ public sealed class CustomerLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.CustomerId == dto.CustomerId
                     && e.EntryType == CustomerLedgerEntryType.Surcharge
-                    && e.ReferenceId == dto.ReferenceId.Value);
-            if (existing is not null) return MapToDto(existing);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
+            if (existing is not null)
+                return MapToDto(existing);
         }
 
         var entry = new CustomerLedgerEntry(
@@ -84,11 +89,13 @@ public sealed class CustomerLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.CustomerId == dto.CustomerId
                     && e.EntryType == CustomerLedgerEntryType.Payment
-                    && e.ReferenceId == dto.ReferenceId.Value);
-            if (existing is not null) return MapToDto(existing);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
+            if (existing is not null)
+                return MapToDto(existing);
         }
 
         var entry = new CustomerLedgerEntry(
@@ -112,11 +119,13 @@ public sealed class CustomerLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.CustomerId == dto.CustomerId
                     && e.EntryType == CustomerLedgerEntryType.ReturnCredit
-                    && e.ReferenceId == dto.ReferenceId.Value);
-            if (existing is not null) return MapToDto(existing);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
+            if (existing is not null)
+                return MapToDto(existing);
         }
 
         var entry = new CustomerLedgerEntry(
@@ -140,11 +149,13 @@ public sealed class CustomerLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = entryReader.DataSource
-                .FirstOrDefault(e => e.CustomerId == dto.CustomerId
+            var existing = await entryReader.DataSource
+                .FirstOrDefaultAsync(e => e.CustomerId == dto.CustomerId
                     && e.EntryType == CustomerLedgerEntryType.RefundPayout
-                    && e.ReferenceId == dto.ReferenceId.Value);
-            if (existing is not null) return MapToDto(existing);
+                    && e.ReferenceId == dto.ReferenceId.Value)
+                .ConfigureAwait(false);
+            if (existing is not null)
+                return MapToDto(existing);
         }
 
         var entry = new CustomerLedgerEntry(
@@ -186,11 +197,11 @@ public sealed class CustomerLedgerManager(
         var balance = balanceReader.DataSource
             .Where(b => b.CustomerId == customerId)
             .Select(b => b.Balance)
-            .FirstOrDefault();
-        return Task.FromResult(balance);
+            .FirstOrDefaultAsync();
+        return balance;
     }
 
-    public Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(
+    public async Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(
         Guid customerId,
         DateTime? from = null,
         DateTime? to = null,
@@ -204,19 +215,19 @@ public sealed class CustomerLedgerManager(
 
         query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
 
-        var total = query.Count();
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
             ? 0m
-            : entryReader.DataSource
+            : await entryReader.DataSource
                 .Where(e => e.CustomerId == customerId
                     && (from == null || e.OccurredAtUtc >= from.Value)
                     && (to == null || e.OccurredAtUtc <= to.Value))
                 .OrderBy(e => e.OccurredAtUtc)
                 .ThenBy(e => e.CreatedOnUtc)
                 .Take(pageIndex * pageSize)
-                .Sum(e => e.Amount);
+                .SumAsync(e => e.Amount).ConfigureAwait(false);
 
         var result = new List<CustomerLedgerStatementEntryDto>(items.Count);
         foreach (var item in items)
@@ -236,10 +247,10 @@ public sealed class CustomerLedgerManager(
             });
         }
 
-        return Task.FromResult(PagedDataDto.Create(result, pageIndex, pageSize, total));
+        return PagedDataDto.Create(result, pageIndex, pageSize, total);
     }
 
-    public Task<IPagedDataDto<CustomerAccountBalanceDto>> GetBalancesAsync(
+    public async Task<IPagedDataDto<CustomerAccountBalanceDto>> GetBalancesAsync(
         string? keywords = null,
         int pageIndex = 0,
         int pageSize = 15)
@@ -256,8 +267,8 @@ public sealed class CustomerLedgerManager(
 
         joined = joined.OrderBy(x => x.c.FullName.Value);
 
-        var total = joined.Count();
-        var items = joined.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var total = await joined.CountAsync().ConfigureAwait(false);
+        var items = await joined.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var result = items.Select(x => new CustomerAccountBalanceDto
         {
@@ -268,7 +279,7 @@ public sealed class CustomerLedgerManager(
             LastEntryOnUtc = x.b.LastEntryOnUtc
         }).ToList();
 
-        return Task.FromResult(PagedDataDto.Create(result, pageIndex, pageSize, total));
+        return PagedDataDto.Create(result, pageIndex, pageSize, total);
     }
 
     private async Task<CustomerLedgerEntryDto> PersistEntryAsync(CustomerLedgerEntry entry)
@@ -288,10 +299,10 @@ public sealed class CustomerLedgerManager(
 
     private async Task UpsertBalanceAsync(Guid customerId, decimal delta, DateTime occurredAtUtc)
     {
-        var existingId = balanceReader.DataSource
+        var existingId = await balanceReader.DataSource
             .Where(b => b.CustomerId == customerId)
             .Select(b => b.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (existingId != Guid.Empty)
         {
@@ -323,9 +334,9 @@ public sealed class CustomerLedgerManager(
         CreatedOnUtc = entry.CreatedOnUtc
     };
 
-    public Task<CustomerAccountBalanceDto?> GetCustomerSummaryAsync(Guid customerId)
+    public async Task<CustomerAccountBalanceDto?> GetCustomerSummaryAsync(Guid customerId)
     {
-        var result = (from b in balanceReader.DataSource
+        var result = await (from b in balanceReader.DataSource
                       where b.CustomerId == customerId
                       join c in customerReader.DataSource on b.CustomerId equals c.Id
                       select new CustomerAccountBalanceDto
@@ -335,8 +346,8 @@ public sealed class CustomerLedgerManager(
                           CustomerPhone = c.PhoneNumber,
                           Balance = b.Balance,
                           LastEntryOnUtc = b.LastEntryOnUtc
-                      }).FirstOrDefault();
+                      }).FirstOrDefaultAsync().ConfigureAwait(false);
 
-        return Task.FromResult(result);
+        return result;
     }
 }

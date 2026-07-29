@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Shared.Common;
@@ -18,7 +19,7 @@ public sealed class BankTransferPaymentIntentManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var referenceCode = GenerateReferenceCode(dto.TransferContentPrefix);
+        var referenceCode = await GenerateReferenceCodeAsync(dto.TransferContentPrefix).ConfigureAwait(false);
         var qrImageUrl = BuildVietQrImageUrl(dto.BankId, dto.AccountNo, dto.Template, dto.Amount, referenceCode, dto.AccountName);
         var intent = new BankTransferPaymentIntent(
             referenceCode,
@@ -38,15 +39,16 @@ public sealed class BankTransferPaymentIntentManager(
 
     public async Task<BankTransferPaymentIntentDto?> GetByIdAsync(Guid id)
     {
-        var intent = await intentReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var intent = await intentRepository.GetByIdAsync(id).ConfigureAwait(false);
         return intent is null ? null : MapToDto(intent);
     }
 
-    public Task<BankTransferPaymentIntentDto?> GetByReferenceCodeAsync(string referenceCode)
+    public async Task<BankTransferPaymentIntentDto?> GetByReferenceCodeAsync(string referenceCode)
     {
         var normalized = NormalizeReference(referenceCode);
-        var intent = intentReader.DataSource.FirstOrDefault(x => x.ReferenceCode == normalized);
-        return Task.FromResult(intent is null ? null : MapToDto(intent));
+        var intent = await intentReader.DataSource.FirstOrDefaultAsync(x => x.ReferenceCode == normalized)
+            .ConfigureAwait(false);
+        return intent is null ? null : MapToDto(intent);
     }
 
     public async Task<BankTransferPaymentIntentDto> ConfirmManuallyAsync(Guid id, Guid verifiedByUserId, string? note)
@@ -77,8 +79,8 @@ public sealed class BankTransferPaymentIntentManager(
             throw new NamEcommerceDomainException("Error.PaymentIntentVerificationMismatch");
         }
 
-        var duplicatedProviderTransaction = intentReader.DataSource.Any(x =>
-            x.ProviderTransactionId == dto.ProviderTransactionId && x.Id != intent.Id);
+        var duplicatedProviderTransaction = await intentReader.DataSource.AnyAsync(x =>
+            x.ProviderTransactionId == dto.ProviderTransactionId && x.Id != intent.Id).ConfigureAwait(false);
         if (duplicatedProviderTransaction)
             throw new NamEcommerceDomainException("Error.PaymentIntentProviderTransactionDuplicated");
 
@@ -112,7 +114,7 @@ public sealed class BankTransferPaymentIntentManager(
         return MapToDto(updated);
     }
 
-    private string GenerateReferenceCode(string prefix)
+    private async Task<string> GenerateReferenceCodeAsync(string prefix)
     {
         var safePrefix = NormalizeReference(prefix);
         if (safePrefix.Length > 8)
@@ -123,7 +125,7 @@ public sealed class BankTransferPaymentIntentManager(
             var candidate = $"{safePrefix}{DateTime.UtcNow:yyMMddHHmmss}{i:D2}";
             if (candidate.Length > 25)
                 candidate = candidate[..25];
-            if (!intentReader.DataSource.Any(x => x.ReferenceCode == candidate))
+            if (!await intentReader.DataSource.AnyAsync(x => x.ReferenceCode == candidate))
                 return candidate;
         }
 
@@ -178,3 +180,4 @@ public sealed class BankTransferPaymentIntentManager(
             UpdatedOnUtc = intent.UpdatedOnUtc
         };
 }
+

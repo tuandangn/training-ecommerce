@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
@@ -47,8 +48,8 @@ public sealed class GetProductSalePriceReferenceHandler : IRequestHandler<GetPro
                 CustomerName = price.CustomerName,
                 UnitPrice = price.UnitPrice,
                 OrderCode = price.OrderCode,
-                OrderDate = price.OrderDate,
-                OrderDateText = price.OrderDate.ToString("dd/MM/yyyy")
+                OrderDate = DateTimeHelper.ToLocalTime(price.OrderDateUtc),
+                OrderDateText = DateTimeHelper.ToLocalTime(price.OrderDateUtc).ToString("dd/MM/yyyy")
             }).ToList()
         };
     }

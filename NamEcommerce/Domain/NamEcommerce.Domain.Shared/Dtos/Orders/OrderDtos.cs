@@ -26,6 +26,7 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
+    public bool IsRetailWalkInCustomer { get; set; }
 
     public required Guid? CreatedByUserId { get; init; }
     public string? CreatedByUsername { get; set; }
@@ -42,6 +43,12 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public bool CanUpdateInfo { get; init; }
     public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
+    public bool CanProcess { get; set; }
+
+    public bool ProcessRequiresPayment { get; set; }
+    public decimal PaidAmount { get; set; }
+    public bool HasPayments { get; set; }
+    public bool HadPaid { get; set; }
 
     public IList<OrderItemDto> Items { get; } = [];
 
@@ -54,7 +61,8 @@ public sealed record CreateOrderDto : BaseOrderDto
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
     public IList<AddOrderItemDto> Items { get; } = [];
-    public bool RequireAvailableStock { get; init; } = true;
+
+    public bool RequiresPayOff { get; init; }
 
     public override void Verify()
     {

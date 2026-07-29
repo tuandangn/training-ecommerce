@@ -1,14 +1,18 @@
 @model OrderDetailsModel
 @{
     var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Delivery;
-    var canCreateDelivery = Model.Status != (int)OrderStatus.Completed
+    var canCreateDelivery = !Model.PaymentRequired
+        && Model.Status != (int)OrderStatus.Completed
         && Model.Status != (int)OrderStatus.Cancelled
         && !Model.AreAllItemsFullyCovered;
     var showInventoryColumn = Model.DeliveryWorkflow.Items.Any(item => !item.IsFullyDelivered);
 }
 
 <section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="delivery" role="tabpanel">
-    @await Html.PartialAsync("_OrderFulfillmentSchedulePanel", Model.FulfillmentSchedule)
+    @if (!Model.PaymentRequired)
+    {
+        @await Html.PartialAsync("_OrderFulfillmentSchedulePanel", Model.FulfillmentSchedule)
+    }
 
     <div class="content-card mt-3">
         <div class="content-card-header">

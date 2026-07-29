@@ -71,7 +71,6 @@ public sealed class CustomerPortalAdminAppService(
         var customers = customerReader.DataSource.ToDictionary(customer => customer.Id);
         var accounts = accountReader.DataSource
             .OrderByDescending(account => account.UpdatedOnUtc ?? account.CreatedOnUtc)
-            .ToList()
             .Select(account => MapAccount(account, customers.GetValueOrDefault(account.CustomerId)))
             .ToList();
 
@@ -84,7 +83,7 @@ public sealed class CustomerPortalAdminAppService(
         if (account is null)
             return null;
 
-        var customer = await customerReader.GetByIdAsync(customerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
         return MapAccount(account, customer);
     }
 
@@ -125,7 +124,7 @@ public sealed class CustomerPortalAdminAppService(
         if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
             return CustomerActionResultAppDto.Fail("Mật khẩu mới cần tối thiểu 8 ký tự.");
 
-        var customer = await customerReader.GetByIdAsync(customerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
         if (customer is null)
             return CustomerActionResultAppDto.Fail("Không tìm thấy khách hàng.");
 
@@ -194,11 +193,11 @@ public sealed class CustomerPortalAdminAppService(
 
     public async Task<CustomerPortalOrderRequestAdminAppDto?> GetOrderRequestAsync(Guid id)
     {
-        var request = await orderRequestReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var request = await orderRequestReader.GetByIdAsync(id).ConfigureAwait(false);
         if (request is null)
             return null;
 
-        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
         return MapOrderRequest(request, customer);
     }
 
@@ -244,7 +243,7 @@ public sealed class CustomerPortalAdminAppService(
         if (request.Items.Any(item => item.UnitPriceSnapshot <= 0))
             return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được báo giá đầy đủ.");
 
-        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
         var createDto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
@@ -292,12 +291,12 @@ public sealed class CustomerPortalAdminAppService(
 
     public async Task<CustomerPortalReturnRequestAdminAppDto?> GetReturnRequestAsync(Guid id)
     {
-        var request = await returnRequestReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var request = await returnRequestReader.GetByIdAsync(id).ConfigureAwait(false);
         if (request is null)
             return null;
 
-        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
         var mapped = MapReturnRequest(request, customer, deliveryNote);
         await PopulateReturnEvidencePicturesAsync(mapped).ConfigureAwait(false);
         return mapped;
@@ -344,7 +343,7 @@ public sealed class CustomerPortalAdminAppService(
         if (request.Status is not CustomerReturnRequestStatus.Accepted)
             return CustomerPortalConversionResultAppDto.Fail("Chỉ chuyển được yêu cầu đã chấp nhận.");
 
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return CustomerPortalConversionResultAppDto.Fail("Không tìm thấy phiếu giao hàng tham chiếu.");
         if (deliveryNote.CustomerId != request.CustomerId)
@@ -433,11 +432,11 @@ public sealed class CustomerPortalAdminAppService(
 
     public async Task<CustomerPortalPaymentIntentAdminAppDto?> GetPaymentIntentAsync(Guid id)
     {
-        var intent = await paymentIntentReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var intent = await paymentIntentReader.GetByIdAsync(id).ConfigureAwait(false);
         if (intent is null)
             return null;
 
-        var customer = await customerReader.GetByIdAsync(intent.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(intent.CustomerId).ConfigureAwait(false);
         return await MapPaymentIntentAsync(intent, customer).ConfigureAwait(false);
     }
 
@@ -689,7 +688,7 @@ public sealed class CustomerPortalAdminAppService(
 
     private async Task NotifyOrderRequestApprovedAsync(CustomerOrderRequestDto request)
     {
-        var customer = await customerReader.GetByIdAsync(request.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
         if (customer is null)
             return;
 

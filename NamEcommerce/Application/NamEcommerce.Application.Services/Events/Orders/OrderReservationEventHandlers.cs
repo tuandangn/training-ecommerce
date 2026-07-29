@@ -87,7 +87,7 @@ public sealed class OrderCompletedEventHandler(
 {
     public async Task Handle(OrderCompleted notification, CancellationToken cancellationToken)
     {
-        var order = await orderReader.GetByIdAsync(notification.OrderId, default).ConfigureAwait(false);
+        var order = await orderReader.GetByIdAsync(notification.OrderId).ConfigureAwait(false);
         if (order is null) return;
 
         var movedQuantities = deliveryNoteReader.DataSource

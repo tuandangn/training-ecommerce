@@ -7,11 +7,11 @@ public interface IRepository<TEntity> : IGetByIdService<TEntity> where TEntity :
 {
     Task<IEnumerable<TEntity>> GetAllAsync();
 
-    Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TEntity?> GetByIdAsync(Guid id);
 
-    Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default);
+    Task<TEntity> InsertAsync(TEntity entity);
 
-    Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
+    Task<TEntity> UpdateAsync(TEntity entity);
 
-    Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
+    Task DeleteAsync(TEntity entity);
 }

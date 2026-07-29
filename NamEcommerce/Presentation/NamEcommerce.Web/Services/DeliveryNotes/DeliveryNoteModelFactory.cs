@@ -9,7 +9,6 @@ using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
-using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -17,9 +16,10 @@ using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
@@ -30,12 +30,10 @@ public sealed class DeliveryNoteModelFactory(
     IPictureAppService pictureAppService,
     IUserAppService userAppService,
     IDeliveryRunAppService deliveryRunAppService,
-    IMediator mediator,
-    ICachedValuesService cachedValuesService,
     ICustomerAppService customerAppService,
     ICurrentUserService currentUserService,
     ICustomerReturnAppService customerReturnAppService,
-    AppConfig appConfig) : IDeliveryNoteModelFactory
+    IMediator mediator, AppConfig appConfig) : IDeliveryNoteModelFactory
 {
     public async Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteListSearchModel searchModel)
     {
@@ -46,7 +44,7 @@ public sealed class DeliveryNoteModelFactory(
         if (pageSize <= 0) pageSize = appConfig.DefaultPageSize;
         if (appConfig.PageSizeOptions.Contains(pageSize)) pageSize = appConfig.DefaultPageSize;
 
-        var pagedData = await deliveryNoteAppService.GetListAsync(keywords, pageNumber - 1, pageSize).ConfigureAwait(false);
+        var pagedData = await deliveryNoteAppService.GetDeliveryNotesAsync(pageNumber - 1, pageSize, keywords).ConfigureAwait(false);
 
         var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
@@ -125,18 +123,21 @@ public sealed class DeliveryNoteModelFactory(
         model.ShippingPhoneNumber = string.IsNullOrWhiteSpace(order.ShippingPhoneNumber)
             ? order.CustomerPhone ?? string.Empty
             : order.ShippingPhoneNumber;
-
+        model.IsRetailWalkInCustomer = order.IsRetailWalkInCustomer;
         model.AvailableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
-        model.IsRetailWalkInCustomer = order.CustomerId == cachedValuesService.DefaultCustomerId;
-
         var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
-        var activeDeliveryNotes = deliveryNotes
-            .Where(note => note.Status != (int)DeliveryNoteStatus.Cancelled)
-            .ToList();
+
+        model.OrderDiscount = order.OrderDiscount ?? 0;
+        model.AppliedOrderDiscount = deliveryNotes.Sum(d => d.AppliedOrderDiscount);
+        model.CanAppliedOrderDiscount = Math.Max(0, model.OrderDiscount - model.AppliedOrderDiscount);
+
+        model.AppliedPrepaidAmount = deliveryNotes.Sum(d => d.AppliedOrderPrepaid);
+        model.PrepaidAmount = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = orderId }).ConfigureAwait(false);
+        model.CanApplyPrepaidAmount = Math.Max(0, model.PrepaidAmount - model.AppliedPrepaidAmount);
+
         var returnedByDeliveryNoteItemId = new Dictionary<Guid, decimal>();
-        foreach (var deliveryNote in activeDeliveryNotes)
+        foreach (var deliveryNote in deliveryNotes)
         {
             var returnedByItem = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
             {
@@ -169,11 +170,11 @@ public sealed class DeliveryNoteModelFactory(
 
         foreach (var orderItem in order.Items)
         {
-            var deliveredQuantity = activeDeliveryNotes
+            var deliveredQuantity = deliveryNotes
                 .SelectMany(note => note.Items)
                 .Where(item => item.OrderItemId == orderItem.Id)
                 .Sum(item => item.Quantity);
-            var returnedQuantity = activeDeliveryNotes
+            var returnedQuantity = deliveryNotes
                 .SelectMany(note => note.Items)
                 .Where(item => item.OrderItemId == orderItem.Id)
                 .Sum(item => returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id));
@@ -217,9 +218,11 @@ public sealed class DeliveryNoteModelFactory(
     {
         var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
-            throw new ArgumentException("Delivery note not found");
+            throw new DeliveryNoteNotFoundException(id);
 
         var order = await orderAppService.GetOrderByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(deliveryNote.OrderId);
 
         var returnedQuantities = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
         {
@@ -272,6 +275,9 @@ public sealed class DeliveryNoteModelFactory(
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
+            OrderDiscount = order.OrderDiscount ?? 0,
+            AppliedOrderDiscount = deliveryNote.AppliedOrderDiscount,
+            AppliedPrepaidAmount = deliveryNote.AppliedOrderPrepaid,
             SettlementApproval = deliveryNote.SettlementApproval,
             UserCanApproveSettlement = await currentUserService.IsAdminAsync().ConfigureAwait(false),
             ProposedAmountToCollect = deliveryNote.ProposedAmountToCollect,
@@ -306,7 +312,7 @@ public sealed class DeliveryNoteModelFactory(
             CanMarkDelivered = deliveryNote.CanMarkDelivered,
             CanReject = deliveryNote.CanReject
         };
-        model.AmountAlreadyPaidForOrder = await mediator.Send(new GetOrderPrepaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
+        model.PrepaidAmount = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = order?.Id ?? Guid.Empty }).ConfigureAwait(false);
 
         var noteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
         var decimalPlacesByNoteItemId = model.Items.ToDictionary(item => item.Id, item => item.QuantityDecimalPlaces);

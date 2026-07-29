@@ -162,7 +162,7 @@
     font-size: 1.35rem;
 }
 
-.fast-sale-payment-methods,
+/*.fast-sale-payment-methods,
 .fast-sale-option-group {
     display: grid;
     gap: 0.5rem;
@@ -173,7 +173,7 @@
 .fast-sale-option-group .btn {
     min-height: 2.75rem;
 }
-
+*/
 .fast-sale-payment-methods .btn-primary.active,
 .fast-sale-option-group .btn-primary.active {
     background: var(--bs-primary);
@@ -199,7 +199,7 @@
     display: block;
     margin: 0 auto 0.75rem;
     object-fit: contain;
-    width: min(100%, 260px);
+    width: min(100%, 150px);
 }
 
 .fast-sale-alert {

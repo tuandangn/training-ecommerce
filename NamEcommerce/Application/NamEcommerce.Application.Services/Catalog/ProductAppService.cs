@@ -56,7 +56,7 @@ public sealed class ProductAppService : IProductAppService
 
         if (dto.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value, default).ConfigureAwait(false);
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
             if (unitMeasurement is null)
             {
                 return new CreateProductResultAppDto
@@ -102,7 +102,7 @@ public sealed class ProductAppService : IProductAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product == null)
         {
             return new DeleteProductResultAppDto
@@ -119,7 +119,7 @@ public sealed class ProductAppService : IProductAppService
 
     public async Task<ProductAppDto?> GetProductByIdAsync(Guid id)
     {
-        var product = await _productDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(id).ConfigureAwait(false);
 
         if (product is null)
             return null;
@@ -167,7 +167,7 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product == null)
         {
             return new UpdateProductResultAppDto
@@ -188,7 +188,7 @@ public sealed class ProductAppService : IProductAppService
 
         if (dto.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value, default).ConfigureAwait(false);
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
             if (unitMeasurement is null)
             {
                 return new UpdateProductResultAppDto

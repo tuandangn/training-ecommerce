@@ -10,7 +10,8 @@ export function getWarehouseSettings(settings) {
 }
 
 export let customerSettings = {
-    defaultCustomerId: null
+    defaultCustomerId: null,
+    kinds: { }
 };
 export function setCustomerSettings(settings) {
     customerSettings = Object.assign({}, customerSettings, settings);

@@ -16,7 +16,7 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
 
     public async Task<ProductStockInfoModel> Handle(GetProductStockInfoQuery request, CancellationToken cancellationToken)
     {
-        var stockItems = await _inventoryAppService.GetInventoryStocksAsync(0, int.MaxValue, request.WarehouseId, request.ProductId);
+        var stockItems = await _inventoryAppService.GetInventoryStocksAsync(0, int.MaxValue, request.WarehouseId, request.ProductId).ConfigureAwait(false);
 
         var quantityAvailable = request.WarehouseId.HasValue
             ? stockItems.Sum(item => item.QuantityAvailable)

@@ -278,7 +278,7 @@ public sealed class DeliveryRunModelFactory(
 
     private async Task<IList<DeliveryRunCandidateDeliveryNoteModel>> PrepareCandidateDeliveryNotesAsync()
     {
-        var notes = await deliveryNoteAppService.GetListAsync(null, 0, 500).ConfigureAwait(false);
+        var notes = await deliveryNoteAppService.GetDeliveryNotesAsync(0, 500, null).ConfigureAwait(false);
         var activeDeliveryNoteIds = await GetActiveDeliveryRunNoteIdsAsync().ConfigureAwait(false);
 
         return notes.Items

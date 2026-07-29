@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Notifications;
 using NamEcommerce.Web.Contracts.Queries.Models.Notifications;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Notifications;
 
@@ -49,8 +50,8 @@ public sealed class GetSystemNotificationListHandler(ISystemNotificationAppServi
             RelatedEntityId = item.RelatedEntityId,
             ActionUrl = item.ActionUrl,
             CreatedByUserId = item.CreatedByUserId,
-            CreatedOn = item.CreatedOnUtc.ToLocalTime(),
-            ReadOn = item.ReadOnUtc?.ToLocalTime()
+            CreatedOn = DateTimeHelper.ToLocalTime(item.CreatedOnUtc),
+            ReadOn = DateTimeHelper.ToLocalTime(item.ReadOnUtc)
         }).ToList();
 
         return new SystemNotificationListModel

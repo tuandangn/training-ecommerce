@@ -27,6 +27,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.GoodsReceipts;
 
@@ -54,7 +55,7 @@ public sealed class GoodsReceiptManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return Task.FromResult(entityCodeGenerator.Next(prefix, () => goodsReceiptDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
+        return entityCodeGenerator.NextAsync(prefix, () => goodsReceiptDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -63,7 +64,7 @@ public sealed class GoodsReceiptManager(
 
         dto.Verify();
 
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), currentUserAccessor, goodsReceiptDataReader);
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), currentUserAccessor, goodsReceiptRepository);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
@@ -75,7 +76,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -109,7 +110,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -145,11 +146,9 @@ public sealed class GoodsReceiptManager(
 
     public async Task<GoodsReceiptDto?> GetGoodsReceiptByIdAsync(Guid id)
     {
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(id).ConfigureAwait(false);
 
-        if (goodsReceipt is null)
-            return null;
-        return goodsReceipt.ToDto();
+        return goodsReceipt?.ToDto();
     }
 
     public async Task<IPagedDataDto<GoodsReceiptDto>> GetGoodsReceiptsAsync(int pageIndex, int pageSize, string? keywords, DateTime? fromDateUtc, DateTime? toDateUtc)
@@ -178,28 +177,28 @@ public sealed class GoodsReceiptManager(
         if (toDateUtc.HasValue)
             query = query.Where(goodsReceipt => goodsReceipt.ReceivedOnUtc <= toDateUtc);
 
-        var total = query.Count();
-        var data = query
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var data = await query
             .OrderByDescending(o => o.CreatedOnUtc)
             .Skip(pageIndex * pageSize).Take(pageSize)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         var pagedData = PagedDataDto.Create(data.Select(goodsReceipt => goodsReceipt.ToDto()), pageIndex, pageSize, total);
         return pagedData;
     }
 
-    public Task<IList<GoodsReceiptDto>> GetGoodsReceiptsByPurchaseOrderIdAsync(Guid purchaseOrderId)
+    public async Task<IList<GoodsReceiptDto>> GetGoodsReceiptsByPurchaseOrderIdAsync(Guid purchaseOrderId)
     {
         if (purchaseOrderId == Guid.Empty)
-            return Task.FromResult<IList<GoodsReceiptDto>>([]);
+            return [];
 
-        var data = goodsReceiptDataReader.DataSource
+        var data = await goodsReceiptDataReader.DataSource
             .Where(gr => gr.PurchaseOrderId == purchaseOrderId)
             .OrderByDescending(gr => gr.ReceivedOnUtc)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         IList<GoodsReceiptDto> result = data.Select(gr => gr.ToDto()).ToList();
-        return Task.FromResult(result);
+        return result;
     }
 
     public async Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto)
@@ -214,7 +213,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
             if (vendor is null)
                 throw new VendorIsNotFoundException(dto.VendorId.Value);
 
@@ -240,7 +239,7 @@ public sealed class GoodsReceiptManager(
             ? new CurrentUserInfoDto(dto.CreatedByUserId.Value, string.Empty, string.Empty)
             : null;
 
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.OpeningBalance;
@@ -266,16 +265,17 @@ public sealed class GoodsReceiptManager(
         if (goodsReceipt.SourceType == GoodsReceiptSourceType.OpeningBalance)
             throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.OpeningBalanceCannotBeDeleted");
 
-        var linkedReturns = vendorReturnReader.DataSource
+        var linkedReturns = await vendorReturnReader.DataSource
             .Where(r => r.GoodsReceiptId == dto.GoodsReceiptId)
             .Select(r => new { r.Id, r.Status })
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         if (linkedReturns.Any(r => r.Status == VendorReturnStatus.Confirmed))
             throw new GoodsReceiptHasConfirmedReturnsException(dto.GoodsReceiptId);
 
-        var linkedDebt = vendorDebtReader.DataSource
-            .FirstOrDefault(d => d.GoodsReceiptId == dto.GoodsReceiptId);
+        var linkedDebt = await vendorDebtReader.DataSource
+            .FirstOrDefaultAsync(d => d.GoodsReceiptId == dto.GoodsReceiptId)
+            .ConfigureAwait(false);
         if (linkedDebt is not null && (linkedDebt.PaidAmount > 0 || linkedDebt.RemainingAmount != linkedDebt.TotalAmount))
             throw new GoodsReceiptCannotDeleteDueToTouchedDebtException(dto.GoodsReceiptId);
 
@@ -326,7 +326,7 @@ public sealed class GoodsReceiptManager(
                 ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
                 : null;
         var goodsReceipt = await GoodsReceipt.CreateAsync(
-            Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
+            Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
@@ -334,7 +334,7 @@ public sealed class GoodsReceiptManager(
         // Gắn vendor từ PO (nếu có)
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -365,19 +365,19 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId, default).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
             ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
             : null;
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader)
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptRepository)
             .ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.Note = $"Nhap du tu don nhap {dto.PurchaseOrderCode}";
 
-        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId, default).ConfigureAwait(false)
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false)
             ?? throw new VendorIsNotFoundException(dto.VendorId);
         goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
 
@@ -398,13 +398,13 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId, default).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
                 ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
                 : null;
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
@@ -414,7 +414,7 @@ public sealed class GoodsReceiptManager(
 
         if (dto.VendorId.HasValue)
         {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value, default).ConfigureAwait(false);
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
             if (vendor is not null)
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
@@ -447,20 +447,20 @@ public sealed class GoodsReceiptManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId, default).ConfigureAwait(false)
+        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
         var createdByUser = customerReturn.CreatedByUserId.HasValue
                 ? new CurrentUserInfoDto(customerReturn.CreatedByUserId.Value, string.Empty, string.Empty)
                 : null;
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.FromCustomerReturn;
 
         foreach (var item in customerReturn.Items.Where(i => i.AcceptedQuantity > 0))
         {
-            var unitCost = ResolveCustomerReturnUnitCost(customerReturn.DeliveryNoteId, item);
+            var unitCost = await ResolveCustomerReturnUnitCostAsync(customerReturn.DeliveryNoteId, item).ConfigureAwait(false);
             await goodsReceipt.AddItemAsync(
                 item.ProductId, dto.WarehouseId, item.AcceptedQuantity, unitCost,
                 productDataReader, warehouseSettings, warehouseDataReader
@@ -477,24 +477,21 @@ public sealed class GoodsReceiptManager(
         return inserted.Id;
     }
 
-    private decimal? ResolveCustomerReturnUnitCost(Guid deliveryNoteId, CustomerReturnItem item)
+    private async Task<decimal?> ResolveCustomerReturnUnitCostAsync(Guid deliveryNoteId, CustomerReturnItem item)
     {
         if (!item.DeliveryNoteItemId.HasValue)
             return null;
 
-        var allocations = inventoryCostAllocationReader.DataSource
+        var allocations = await inventoryCostAllocationReader.DataSource
             .Where(a => a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder
                      && a.OutboundReferenceItemId == item.DeliveryNoteItemId.Value
                      && a.ProductId == item.ProductId
                      && a.CostingStatus != InventoryCostingStatus.Superseded)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         var allocation = allocations
             .Where(a => a.OutboundReferenceId == deliveryNoteId)
-            .OrderByDescending(a => a.CreatedAtUtc)
-            .FirstOrDefault()
-            ?? allocations
-                .OrderByDescending(a => a.CreatedAtUtc)
-                .FirstOrDefault();
+            .OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault() 
+            ?? allocations .OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault();
 
         if (allocation is null || allocation.CostingStatus == InventoryCostingStatus.Pending)
             return null;
@@ -504,22 +501,22 @@ public sealed class GoodsReceiptManager(
 
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
     {
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(goodsReceiptId, default).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(goodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(goodsReceiptId);
 
-        var candidateOrders = purchaseOrderDataReader.DataSource
+        var candidateOrders = await purchaseOrderDataReader.DataSource
             .Where(po => po.PlacedOnUtc < goodsReceipt.ReceivedOnUtc
                 && (goodsReceipt.VendorId == null || po.VendorId == goodsReceipt.VendorId)
                 && (po.Status == PurchaseOrderStatus.Approved || po.Status == PurchaseOrderStatus.Receiving))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         if (candidateOrders.Count == 0)
             return [];
 
         var grGroups = goodsReceipt.Items
             .GroupBy(i => (i.ProductId, i.UnitCost))
-            .Select(g => (Key: g.Key, ReceivingQty: g.Sum(i => i.Quantity)))
+            .Select(g => (g.Key, ReceivingQty: g.Sum(i => i.Quantity)))
             .ToList();
 
         var totalGrQty = grGroups.Sum(g => g.ReceivingQty);

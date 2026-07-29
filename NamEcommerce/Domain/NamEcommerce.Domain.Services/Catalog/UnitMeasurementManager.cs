@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Data.Contracts;
+﻿using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -81,7 +82,7 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         };
     }
 
-    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -89,11 +90,11 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
                     where unitMesuarement.Name == name && (comparesWithCurrentId == null || unitMesuarement.Id != comparesWithCurrentId)
                     select unitMesuarement;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
-    public Task<IPagedDataDto<UnitMeasurementDto>> GetUnitMeasurementsAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<UnitMeasurementDto>> GetUnitMeasurementsAsync(string? keywords, int pageIndex, int pageSize)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -109,13 +110,13 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         query = query.OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Name);
 
-        var totalCount = query.Count();
-        var pagedData = query
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         var data = PagedDataDto.Create(pagedData.Select(unitMeasurement => unitMeasurement.ToDto()), pageIndex, pageSize, totalCount);
-        return Task.FromResult(data);
+        return data;
     }
 }

@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Exceptions.Finance;
 using NamEcommerce.Domain.Shared.Services.Finance;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Finance;
 
@@ -20,28 +21,30 @@ public sealed class BankAccountManager : IBankAccountManager
         _dataReader = dataReader;
     }
 
-    public Task<BankAccountDto?> GetByIdAsync(Guid id)
+    public async Task<BankAccountDto?> GetByIdAsync(Guid id)
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == id);
-        return Task.FromResult(account?.ToDto());
+        var account = await _repository.GetByIdAsync(id).ConfigureAwait(false);
+        return account?.ToDto();
     }
 
-    public Task<IReadOnlyList<BankAccountDto>> GetAllAsync(bool includeInactive = false)
+    public async Task<IReadOnlyList<BankAccountDto>> GetAllAsync(bool includeInactive = false)
     {
-        var query = _dataReader.DataSource.AsEnumerable();
-        if (!includeInactive) query = query.Where(a => a.IsActive);
-        IReadOnlyList<BankAccountDto> result = query
+        var query = _dataReader.DataSource;
+        if (!includeInactive) 
+            query = query.Where(a => a.IsActive);
+        var result = (await query
             .OrderByDescending(a => a.IsDefault)
             .ThenBy(a => a.DisplayName)
+            .ToListAsync().ConfigureAwait(false))
             .Select(a => a.ToDto())
             .ToList();
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<BankAccountDto?> GetDefaultAsync()
+    public async Task<BankAccountDto?> GetDefaultAsync()
     {
-        var account = _dataReader.DataSource.FirstOrDefault(a => a.IsDefault && a.IsActive);
-        return Task.FromResult(account?.ToDto());
+        var account = await _dataReader.DataSource.FirstOrDefaultAsync(a => a.IsDefault && a.IsActive).ConfigureAwait(false);
+        return account?.ToDto();
     }
 
     public async Task<CreateBankAccountResultDto> CreateAsync(CreateBankAccountDto dto)
@@ -49,13 +52,13 @@ public sealed class BankAccountManager : IBankAccountManager
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var count = _dataReader.DataSource.Count();
+        var count = await _dataReader.DataSource.CountAsync().ConfigureAwait(false);
         var code = $"NH-{(count + 1):D3}";
 
         var account = new BankAccount(code, dto.DisplayName, dto.BankCode, dto.BankName,
             dto.AccountNumber, dto.AccountHolderName, dto.OpeningBalance);
 
-        var hasAny = _dataReader.DataSource.Any();
+        var hasAny = await _dataReader.DataSource.AnyAsync().ConfigureAwait(false);
         if (dto.SetAsDefault || !hasAny)
         {
             await ClearAllDefaultsAsync().ConfigureAwait(false);
@@ -102,7 +105,7 @@ public sealed class BankAccountManager : IBankAccountManager
 
     private async Task ClearAllDefaultsAsync()
     {
-        var defaultIds = _dataReader.DataSource.Where(a => a.IsDefault).Select(a => a.Id).ToList();
+        var defaultIds = await _dataReader.DataSource.Where(a => a.IsDefault).Select(a => a.Id).ToListAsync().ConfigureAwait(false);
         foreach (var id in defaultIds)
         {
             var a = await _repository.GetByIdAsync(id).ConfigureAwait(false);

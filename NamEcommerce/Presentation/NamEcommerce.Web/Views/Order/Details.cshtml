@@ -9,9 +9,18 @@
         Đơn bán
         <span class="text-muted">@Model.Code</span>
         <span class="text-muted small d-none d-md-inline">
-            <span class="status-badge @orderStatus.GetDisplayColor()">
-                @orderStatus.GetDisplayText()
-            </span>
+            @if (Model.PaymentRequired)
+            {
+                <span class="status-badge bg-warning text-light">
+                    Chờ thanh toán
+                </span>
+            }
+            else
+            {
+                <span class="status-badge @orderStatus.GetDisplayColor()">
+                    @orderStatus.GetDisplayText()
+                </span>
+            }
         </span>
     </h1>
     <div class="topbar-page-subtitle">
@@ -242,7 +251,7 @@
                                     <span class="fw-medium">(@Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat))</span>
                                 }
                             </label>
-                            <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control" placeholder="Ngày giao dự kiến"/>
+                            <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control" placeholder="Ngày giao dự kiến" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="ExpectedShippingDate"
                                   data-valmsg-replace="true"></span>
                         </div>
@@ -387,60 +396,76 @@
     @if (Model.CanCancelOrder)
     {
         <script>
-        (function() {
-            const cancelBtn = document.getElementById('btnCancelOrder');
-            if (!cancelBtn) return;
+            (function () {
+                const cancelBtn = document.getElementById('btnCancelOrder');
+                if (!cancelBtn) return;
 
-            @if (Model.FullyReceivedDirectShipCount > 0)
-            {
-                <text>
-            const modal = new bootstrap.Modal(document.getElementById('cancelOrderWarningModal'));
-            cancelBtn.addEventListener('click', () => {
-                document.getElementById('cancelReturnWarehouseId')?.classList.remove('is-invalid');
-                modal.show();
-            });
-            document.getElementById('btnConfirmCancelWithDs')?.addEventListener('click', submitCancel);
-                </text>
-            }
-            else
-            {
-                <text>
-            const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
-            cancelBtn.addEventListener('click', () => modal.show());
-            document.getElementById('btnConfirmCancel')?.addEventListener('click', submitCancel);
-                </text>
-            }
-
-            async function submitCancel() {
-                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
-                let returnWarehouseId = null;
                 @if (Model.FullyReceivedDirectShipCount > 0)
-                {
-                    <text>
-                const warehouseSelect = document.getElementById('cancelReturnWarehouseId');
-                returnWarehouseId = warehouseSelect?.value || null;
-                if (!returnWarehouseId) {
-                    warehouseSelect?.classList.add('is-invalid');
-                    return;
+                    {
+                        <text>
+                                const modal = new bootstrap.Modal(document.getElementById('cancelOrderWarningModal'));
+                                cancelBtn.addEventListener('click', () => {
+                                    document.getElementById('cancelReturnWarehouseId')?.classList.remove('is-invalid');
+                                modal.show();
+                                });
+                                document.getElementById('btnConfirmCancelWithDs')?.addEventListener('click', submitCancel);
+                        </text>
                 }
-                warehouseSelect?.classList.remove('is-invalid');
-                    </text>
+                    else
+                    {
+                        <text>
+                                const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+                                cancelBtn.addEventListener('click', () => modal.show());
+                                document.getElementById('btnConfirmCancel')?.addEventListener('click', submitCancel);
+                        </text>
                 }
-                try {
-                    const res = await fetch('/Order/CancelOrder', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                        body: JSON.stringify({ orderId: '@Model.Id', returnWarehouseId })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        window.location.href = data.redirectUrl || '/Order/List';
-                    } else {
-                        alert(data.message || 'Không thể hủy đơn.');
+
+                    async function submitCancel() {
+                        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                        let returnWarehouseId = null;
+                        @if (Model.FullyReceivedDirectShipCount > 0)
+                            {
+                                <text>
+                                        const warehouseSelect = document.getElementById('cancelReturnWarehouseId');
+                                        returnWarehouseId = warehouseSelect?.value || null;
+                                        if (!returnWarehouseId) {
+                                            warehouseSelect?.classList.add('is-invalid');
+                                        return;
+                                    }
+                                        warehouseSelect?.classList.remove('is-invalid');
+                                </text>
+                        }
+                            try {
+                            showPageLoading();
+                            const res = await fetch('/Order/CancelOrder', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                                body: JSON.stringify({ orderId: '@Model.Id', returnWarehouseId })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                window.location.href = data.redirectUrl || '/Order/List';
+                                return;
+                            }
+                            hidePageLoading();
+                            alert(data.message || 'Không thể hủy đơn.');
+                        } catch {
+                            hidePageLoading();
+                            alert('Lỗi kết nối, vui lòng thử lại.');
+                        }
                     }
-                } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
-            }
-        })();
+            })();
+        </script>
+    }
+    @if (Model.CanDeleteOrder)
+    {
+        <script>
+            (function () {
+                $('#deleteOrderModal form').submit(function () {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteOrderModal'))?.hide();
+                    showPageLoading();
+                });
+            })();
         </script>
     }
 }

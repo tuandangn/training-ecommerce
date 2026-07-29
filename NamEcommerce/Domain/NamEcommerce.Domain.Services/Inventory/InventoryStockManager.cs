@@ -63,11 +63,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (receivedQuantity <= 0)
             throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
-        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -98,7 +98,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
             note,
             receivedByUserId
         );
-        await _stockMovementRepository.InsertAsync(stockMovementLog, CancellationToken.None);
+        await _stockMovementRepository.InsertAsync(stockMovementLog);
 
         return new StockMovementLogDto(stockMovementLog.Id)
         {
@@ -113,22 +113,25 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity,
+    public async Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity,
         string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId, bool enforceCapacity = true)
     {
         if (targetQuantity <= 0)
-            return Task.FromResult<StockMovementLogDto?>(null);
+            return null;
 
-        var alreadyReceived = GetMovedQuantity(
+        var alreadyReceived = await GetMovedQuantityAsync(
             productId,
             warehouseId,
             StockMovementType.Inbound,
             (StockReferenceType)referenceType,
-            referenceId);
+            referenceId).ConfigureAwait(false);
         var missingQuantity = targetQuantity - alreadyReceived;
-        return missingQuantity <= 0
-            ? Task.FromResult<StockMovementLogDto?>(null)
-            : ReceiveStockAsync(productId, warehouseId, missingQuantity, note, receivedByUserId, referenceType, referenceId, enforceCapacity);
+
+        if (missingQuantity <= 0)
+            return null;
+
+        return await ReceiveStockAsync(productId, warehouseId, missingQuantity, note, receivedByUserId, referenceType, referenceId, enforceCapacity)
+            .ConfigureAwait(false);
     }
 
     public Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId)
@@ -139,11 +142,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (quantity <= 0)
             throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
-        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -189,21 +192,23 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId)
+    public async Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId)
     {
         if (targetQuantity <= 0)
-            return Task.FromResult<StockMovementLogDto?>(null);
+            return null;
 
-        var alreadyReverted = GetMovedQuantity(
+        var alreadyReverted = await GetMovedQuantityAsync(
             productId,
             warehouseId,
             StockMovementType.Revert,
             StockReferenceType.GoodsReceipt,
-            goodsReceiptId);
+            goodsReceiptId).ConfigureAwait(false);
         var missingQuantity = targetQuantity - alreadyReverted;
-        return missingQuantity <= 0
-            ? Task.FromResult<StockMovementLogDto?>(null)
-            : RevertReceiveAsync(productId, warehouseId, missingQuantity, goodsReceiptId, modifiedByUserId);
+
+        if (missingQuantity <= 0)
+            return null;
+
+        return await RevertReceiveAsync(productId, warehouseId, missingQuantity, goodsReceiptId, modifiedByUserId).ConfigureAwait(false);
     }
 
     public Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize,
@@ -236,9 +241,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
         }
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
 
-        var items = query
+        var items = await query
             .OrderBy(x => x.p.Name)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -255,7 +260,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 ReorderLevel = x.s.ReorderLevel,
                 MaxStockLevel = x.s.MaxStockLevel
             })
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return (total, items);
     }
@@ -272,7 +277,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
                     join p in productQuery on s.ProductId equals p.Id
                     join w in warehouseQuery on s.WarehouseId equals w.Id
                     select new { s, p, w };
-        var items = query
+        var items = await query
             .Select(x => new InventoryStockDto(x.s.Id)
             {
                 ProductId = x.s.ProductId,
@@ -288,7 +293,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
             })
             .OrderByDescending(x => x.UpdatedOnUtc)
             .ThenBy(x => x.ProductName)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return items;
     }
@@ -299,30 +304,31 @@ public sealed class InventoryStockManager : IInventoryStockManager
                          join w in _warehouseDataReader.DataSource on s.WarehouseId equals w.Id
                          where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
                          select s;
-        return Task.FromResult(stockQuery.Sum(x => x.QuantityOnHand));
+        return stockQuery.SumAsync(x => x.QuantityOnHand);
     }
 
-    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
+    public async Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
     {
         var stockQuery = from s in _inventoryStockDataReader.DataSource
                          join w in _warehouseDataReader.DataSource on s.WarehouseId equals w.Id
                          where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
                          select s;
-        var quantityOnHand = stockQuery.Sum(x => x.QuantityOnHand);
-        var quantityReservedByWarehouse = stockQuery.Sum(x => x.QuantityReserved);
-        var quantityReservedByOrder = _productReservationDataReader.DataSource
+        var quantityOnHand = await stockQuery.SumAsync(x => x.QuantityOnHand).ConfigureAwait(false);
+        var quantityReservedByWarehouse = await stockQuery.SumAsync(x => x.QuantityReserved).ConfigureAwait(false);
+        var quantityReservedByOrder = await _productReservationDataReader.DataSource
             .Where(x => x.ProductId == productId && (excludeOrderId == null || x.OrderId != excludeOrderId))
-            .Sum(x => x.QuantityDelta);
+            .SumAsync(x => x.QuantityDelta)
+            .ConfigureAwait(false);
 
-        return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);
+        return quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder;
     }
 
     public async Task<decimal> ComputeAvailableQuantityForOrderAsync(Guid productId, Guid orderId)
     {
         var globalAvailable = await GetGlobalAvailableQuantityForProductAsync(productId).ConfigureAwait(false);
-        var reservedForOrder = _productReservationDataReader.DataSource
+        var reservedForOrder = await _productReservationDataReader.DataSource
             .Where(x => x.ProductId == productId && x.OrderId == orderId)
-            .Sum(x => x.QuantityDelta);
+            .SumAsync(x => x.QuantityDelta).ConfigureAwait(false);
 
         return Math.Max(0, globalAvailable + reservedForOrder);
     }
@@ -366,9 +372,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
             return false;
 
         var reservedForRef = referenceId.HasValue
-            ? _stockReservationDataReader.DataSource
+            ? await _stockReservationDataReader.DataSource
                 .Where(e => e.ProductId == productId && e.WarehouseId == warehouseId && e.ReferenceId == referenceId.Value)
-                .Sum(e => e.QuantityDelta)
+                .SumAsync(e => e.QuantityDelta).ConfigureAwait(false)
             : quantity;
 
         var toRelease = Math.Min(quantity, Math.Max(0, reservedForRef));
@@ -392,11 +398,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         if (quantity <= 0) return null;
 
-        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(warehouseId);
 
@@ -413,9 +419,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
 
         if (releaseReservedStock && referenceId.HasValue)
         {
-            var reservedForRef = _stockReservationDataReader.DataSource
+            var reservedForRef = await _stockReservationDataReader.DataSource
                 .Where(e => e.ProductId == productId && e.WarehouseId == warehouseId && e.ReferenceId == referenceId.Value)
-                .Sum(e => e.QuantityDelta);
+                .SumAsync(e => e.QuantityDelta).ConfigureAwait(false);
             var toRelease = Math.Min(quantity, Math.Max(0, reservedForRef));
             if (toRelease > 0)
             {
@@ -459,31 +465,33 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public Task<StockMovementLogDto?> DispatchStockUpToAsync(Guid productId, Guid warehouseId,
+    public async Task<StockMovementLogDto?> DispatchStockUpToAsync(Guid productId, Guid warehouseId,
         decimal targetQuantity, Guid? referenceId, Guid userId, string? note = null,
         bool releaseReservedStock = false, int referenceType = (int)StockReferenceType.SalesOrder)
     {
         if (targetQuantity <= 0)
-            return Task.FromResult<StockMovementLogDto?>(null);
+            return null;
 
-        var alreadyDispatched = GetMovedQuantity(
+        var alreadyDispatched = await GetMovedQuantityAsync(
             productId,
             warehouseId,
             StockMovementType.Outbound,
             (StockReferenceType)referenceType,
-            referenceId);
+            referenceId).ConfigureAwait(false);
+
         var missingQuantity = targetQuantity - alreadyDispatched;
-        return missingQuantity <= 0
-            ? Task.FromResult<StockMovementLogDto?>(null)
-            : DispatchStockAsync(
-                productId,
-                warehouseId,
-                missingQuantity,
-                referenceId,
-                userId,
-                note,
-                releaseReservedStock,
-                referenceType);
+        if (missingQuantity <= 0)
+            return null;
+
+        return await DispatchStockAsync(
+            productId,
+            warehouseId,
+            missingQuantity,
+            referenceId,
+            userId,
+            note,
+            releaseReservedStock,
+            referenceType).ConfigureAwait(false);
     }
 
     public Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
@@ -504,15 +512,15 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (fromWarehouseId == toWarehouseId)
             return (null, null);
 
-        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        var fromWarehouse = await _warehouseDataReader.GetByIdAsync(fromWarehouseId, default).ConfigureAwait(false);
+        var fromWarehouse = await _warehouseDataReader.GetByIdAsync(fromWarehouseId).ConfigureAwait(false);
         if (fromWarehouse is null)
             throw new WarehouseIsNotFoundException(fromWarehouseId);
 
-        var toWarehouse = await _warehouseDataReader.GetByIdAsync(toWarehouseId, default).ConfigureAwait(false);
+        var toWarehouse = await _warehouseDataReader.GetByIdAsync(toWarehouseId).ConfigureAwait(false);
         if (toWarehouse is null)
             throw new WarehouseIsNotFoundException(toWarehouseId);
 
@@ -586,9 +594,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
                     join p in productQuery on l.ProductId equals p.Id
                     select new { l, p };
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
 
-        var items = query
+        var items = await query
             .OrderByDescending(x => x.l.CreatedOnUtc)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -603,27 +611,26 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 CreatedOnUtc = x.l.CreatedOnUtc,
                 Note = x.l.Note
             })
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return (total, items);
     }
 
-    [Obsolete("Expiry-based reservation release is replaced by per-reference ledger (StockReservationEntry). This method is a no-op.")]
-    public Task<int> ReleaseExpiredReservationsAsync() => Task.FromResult(0);
-
-    public Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockUpToAsync(
+    public async Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockUpToAsync(
         Guid productId, Guid fromWarehouseId, Guid toWarehouseId,
         decimal targetQuantity, decimal unitCost,
         Guid? referenceId, Guid userId, string? note = null)
     {
         if (targetQuantity <= 0)
-            return Task.FromResult<(StockMovementLogDto?, StockMovementLogDto?)>((null, null));
+            return (null, null);
 
-        var alreadyTransferred = GetMovedQuantity(productId, fromWarehouseId, StockMovementType.Transfer, StockReferenceType.StockTransfer, referenceId);
+        var alreadyTransferred = await GetMovedQuantityAsync(productId, fromWarehouseId, StockMovementType.Transfer, StockReferenceType.StockTransfer, referenceId).ConfigureAwait(false);
+
         var remaining = targetQuantity - alreadyTransferred;
-        return remaining <= 0
-            ? Task.FromResult<(StockMovementLogDto?, StockMovementLogDto?)>((null, null))
-            : TransferStockAsync(productId, fromWarehouseId, toWarehouseId, remaining, unitCost, referenceId, userId, note);
+        if (remaining <= 0)
+            return (null, null);
+
+        return await TransferStockAsync(productId, fromWarehouseId, toWarehouseId, remaining, unitCost, referenceId, userId, note).ConfigureAwait(false);
     }
 
     public (bool IsLowStock, decimal ReorderLevel) IsLowStock(InventoryStock stock)
@@ -649,10 +656,10 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         if (delta == 0) return;
 
-        var product = await _productDataReader.GetByIdAsync(productId, default).ConfigureAwait(false);
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null) throw new ProductIsNotFoundException(productId);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
         if (warehouse is null) throw new WarehouseIsNotFoundException(warehouseId);
 
         var stock = await TryGetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
@@ -695,7 +702,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return stock;
     }
 
-    private decimal GetMovedQuantity(Guid productId, Guid warehouseId,
+    private Task<decimal> GetMovedQuantityAsync(Guid productId, Guid warehouseId,
         StockMovementType movementType, StockReferenceType referenceType, Guid? referenceId)
         => _stockMovementDataReader.DataSource
             .Where(log => log.ProductId == productId
@@ -703,7 +710,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 && log.MovementType == movementType
                 && log.ReferenceType == referenceType
                 && log.ReferenceId == referenceId)
-            .Sum(log => log.Quantity);
+            .SumAsync(log => log.Quantity);
 
     private static StockMovementLogDto ToDto(StockMovementLog log, string productName)
         => new(log.Id)

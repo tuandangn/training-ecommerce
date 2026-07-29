@@ -62,6 +62,4 @@ public interface IPurchaseOrderAppService
     Task<CommonActionResultDto> AllocatePoItemForOrderItemAsync(AllocatePoItemForOrderItemAppDto dto);
 
     Task<CommonActionResultDto> ReleasePoItemAllocationForOrderItemAsync(ReleaseAllocationsOfPurchaseOrderItemAppDto dto);
-
-    Task<string> NextPurchaseOrderCodeAsync();
 }

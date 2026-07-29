@@ -11,6 +11,10 @@ public sealed record DeliveryNoteDto
     
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
+
+    public bool RequiresPaymentToConfirm { get; init; }
+    public bool HasPaid { get; init; }
+
     public Guid? AssignedDeliveryUserId { get; init; }
     public string? AssignedDeliveryUsername { get; init; }
     public string? AssignedDeliveryFullName { get; init; }
@@ -54,6 +58,8 @@ public sealed record DeliveryNoteDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
+    public decimal AppliedOrderDiscount { get; init; }
+    public decimal AppliedOrderPrepaid { get; init; }
 
     public DateTime? AmountToCollectOverriddenAt { get; init; }
     public string? AmountToCollectOverrideNote { get; init; }
@@ -69,10 +75,11 @@ public sealed record DeliveryNoteDto
     public IList<DeliveryNoteItemDto> Items { get; init; } = [];
     public IList<DeliveryNoteSettlementItemDto> SettlementItems { get; init; } = [];
 
-    public bool CanApprove { get; set; }
-    public bool CanMarkDelivering { get; set; }
-    public bool CanMarkDelivered { get; set; }
-    public bool CanReject { get; set; }
+    public bool CanApprove { get; init; }
+    public bool CanMarkDelivering { get; init; }
+    public bool CanMarkDelivered { get; init; }
+    public bool CanReject { get; init; }
+    public bool CanProcess { get; init; }
 }
 
 [Serializable]
@@ -114,6 +121,8 @@ public sealed record CreateDeliveryNoteDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
+    public decimal AppliedOrderDiscount { get; set; }
+    public decimal AppliedOrderPrepaid { get; set; }
     public IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
 
     public void Verify()
@@ -132,6 +141,10 @@ public sealed record CreateDeliveryNoteDto
             throw new NamEcommerceDomainException("Error.SurchargeCannotBeNegative");
         if (AmountToCollect < 0)
             throw new NamEcommerceDomainException("Error.AmountToCollectCannotBeNegative");
+        if (AppliedOrderDiscount < 0)
+            throw new NamEcommerceDomainException("Error.AppliedOrderDiscountCannotBeNegative");
+        if (AppliedOrderPrepaid < 0)
+            throw new NamEcommerceDomainException("Error.AppliedOrderPrepaidCannotBeNegative");
     }
 }
 

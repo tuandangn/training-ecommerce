@@ -47,6 +47,8 @@ public static class DeliveryNoteExtensions
             UpdatedOnUtc = deliveryNote.UpdatedOnUtc,
             TotalAmount = deliveryNote.TotalAmount,
             Surcharge = deliveryNote.Surcharge,
+            AppliedOrderDiscount = deliveryNote.AppliedOrderDiscount,
+            AppliedOrderPrepaid = deliveryNote.AppliedOrderPrepaid,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
             AmountToCollectOverriddenAt = deliveryNote.AmountToCollectOverriddenAt,

@@ -67,7 +67,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (warehouse == null)
         {
             return new DeleteWarehouseResultAppDto
@@ -96,7 +96,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
 
     public async Task<WarehouseAppDto?> GetWarehouseByIdAsync(Guid id)
     {
-        var warehouse = await _warehouseDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var warehouse = await _warehouseManager.GetWarehouseByIdAsync(id).ConfigureAwait(false);
         return warehouse?.ToDto();
     }
 
@@ -132,7 +132,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             };
         }
 
-        var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (warehouse == null)
         {
             return new UpdateWarehouseResultAppDto

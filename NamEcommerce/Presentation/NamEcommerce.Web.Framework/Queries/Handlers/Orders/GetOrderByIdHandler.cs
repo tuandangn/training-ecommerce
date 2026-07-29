@@ -1,10 +1,11 @@
 using MediatR;
-using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
-using NamEcommerce.Application.Contracts.Customers;
-using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -36,21 +37,25 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Id = order.Id,
             Code = order.Code,
             CustomerId = order.CustomerId,
-            CustomerName = customer?.FullName ?? order.CustomerName,
-            CustomerAddress = customer?.Address ?? order.CustomerAddress,
-            CustomerPhoneNumber = customer?.PhoneNumber ?? order.CustomerPhone,
+            CustomerName = order.CanUpdateInfo ? (customer?.FullName ?? order.CustomerName) : order.CustomerName,
+            CustomerAddress = order.CanUpdateInfo ? (customer?.Address ?? order.CustomerAddress) : order.CustomerAddress,
+            CustomerPhoneNumber = order.CanUpdateInfo ? (customer?.PhoneNumber ?? order.CustomerPhone) : order.CustomerPhone,
+            IsRetailWalkInCustomer = order.IsRetailWalkInCustomer,
             OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = order.Status,
             Note = order.Note,
-            ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
+            ExpectedShippingDate = DateTimeHelper.ToLocalTime(order.ExpectedShippingDateUtc),
             ShippingAddress = order.ShippingAddress,
             ShippingPhoneNumber = order.ShippingPhoneNumber,
-            CompletedOn = order.CompletedOnUtc?.ToLocalTime(),
+            CompletedOn = DateTimeHelper.ToLocalTime(order.CompletedOnUtc),
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCompleteOrder = order.CanCompleteOrder,
+            CanProcess = order.CanProcess,
+            ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId) }, cancellationToken).ConfigureAwait(false);

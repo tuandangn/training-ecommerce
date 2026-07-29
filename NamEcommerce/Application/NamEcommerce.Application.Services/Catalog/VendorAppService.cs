@@ -62,7 +62,7 @@ public sealed class VendorAppService : IVendorAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (vendor == null)
         {
             return new DeleteVendorResultAppDto
@@ -79,7 +79,7 @@ public sealed class VendorAppService : IVendorAppService
 
     public async Task<VendorAppDto?> GetVendorByIdAsync(Guid id)
     {
-        var vendor = await _vendorDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var vendor = await _vendorDataReader.GetByIdAsync(id).ConfigureAwait(false);
         return vendor?.ToDto();
     }
 
@@ -113,7 +113,7 @@ public sealed class VendorAppService : IVendorAppService
             };
         }
 
-        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id, default).ConfigureAwait(false);
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (vendor == null)
         {
             return new UpdateVendorResultAppDto

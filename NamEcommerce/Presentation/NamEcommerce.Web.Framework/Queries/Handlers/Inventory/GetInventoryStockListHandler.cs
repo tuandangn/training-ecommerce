@@ -1,10 +1,11 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Framework.Common;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Inventory;
 
@@ -66,7 +67,7 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
             TotalReservedByOrder = item.TotalReservedByOrder,
             QuantityAvailable = item.QuantityAvailable,
             CurrentUnitCost = item.CurrentUnitCost,
-            UpdatedOn = item.UpdatedOnUtc.ToLocalTime(),
+            UpdatedOn = DateTimeHelper.ToLocalTime(item.UpdatedOnUtc),
             ReorderLevel = item.ReorderLevel,
             MaxStockLevel = item.MaxStockLevel,
             CostHistory = item.CostHistory.Select(MapCostHistory).ToList()
@@ -81,7 +82,7 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
             TotalReservedByOrder = item.TotalReservedByOrder,
             QuantityAvailable = item.QuantityAvailable,
             CurrentUnitCost = item.CurrentUnitCost,
-            UpdatedOn = item.UpdatedOnUtc.ToLocalTime(),
+            UpdatedOn = DateTimeHelper.ToLocalTime(item.UpdatedOnUtc),
             Warehouses = item.Warehouses.Select(MapItem).ToList(),
             CostHistory = item.CostHistory.Select(MapCostHistory).ToList()
         };
@@ -93,7 +94,7 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
             ProductName = item.ProductName,
             WarehouseId = item.WarehouseId,
             WarehouseName = item.WarehouseName,
-            OccurredAt = item.OccurredAtUtc.ToLocalTime(),
+            OccurredAt = DateTimeHelper.ToLocalTime(item.OccurredAtUtc),
             SequenceNumber = item.SequenceNumber,
             MovementType = item.MovementType,
             QuantityDelta = item.QuantityDelta,

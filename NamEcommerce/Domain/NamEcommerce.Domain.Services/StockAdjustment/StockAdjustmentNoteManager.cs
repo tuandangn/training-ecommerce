@@ -14,6 +14,8 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.Users;
+using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Domain.Services.StockAdjustment;
 
@@ -22,17 +24,15 @@ public sealed class StockAdjustmentNoteManager(
     IEntityDataReader<StockAdjustmentNote> noteDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
-    IEntityDataReader<InventoryStock> stockDataReader,
     ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator entityCodeGenerator,
-    IDbContext dbContext,
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager) : IStockAdjustmentNoteManager
 {
-    private string GenerateCode()
+    private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PKK-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.Next(prefix, () => noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => noteDataReader.DataSource.CountAsync(n => n.Code.StartsWith(prefix)));
     }
 
     public async Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto)
@@ -40,19 +40,19 @@ public sealed class StockAdjustmentNoteManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId, default).ConfigureAwait(false);
+        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
         if (warehouse is null)
             throw new Shared.Exceptions.NamEcommerceDomainException("Error.StockAdjustment.WarehouseNotFound");
 
-        var code = GenerateCode();
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var note = new StockAdjustmentNote(code, dto.WarehouseId, warehouse.Name, dto.Note, currentUser?.Id);
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
             if (product is null)
-                throw new Shared.Exceptions.NamEcommerceDomainException($"Error.StockAdjustment.ProductNotFound");
+                throw new NamEcommerceDomainException($"Error.StockAdjustment.ProductNotFound");
 
             note.AddItem(itemDto.ProductId, product.Name, itemDto.SystemQuantity, itemDto.PhysicalQuantity);
         }
@@ -65,8 +65,6 @@ public sealed class StockAdjustmentNoteManager(
     {
         var note = await noteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (note is null) throw new StockAdjustmentNoteNotFoundException(id);
-
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
 
         var occurredAtUtc = DateTime.UtcNow;
         foreach (var item in note.Items.Where(i => i.Delta != 0))
@@ -111,7 +109,6 @@ public sealed class StockAdjustmentNoteManager(
 
         note.Approve();
         await noteRepository.UpdateAsync(note).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)
@@ -125,11 +122,11 @@ public sealed class StockAdjustmentNoteManager(
 
     public async Task<StockAdjustmentNoteDto?> GetByIdAsync(Guid id)
     {
-        var note = await noteDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var note = await noteDataReader.GetByIdAsync(id).ConfigureAwait(false);
         return note?.ToDto();
     }
 
-    public Task<IPagedDataDto<StockAdjustmentNoteDto>> GetListAsync(
+    public async Task<IPagedDataDto<StockAdjustmentNoteDto>> GetListAsync(
         int pageIndex, int pageSize, string? keywords, Guid? warehouseId, StockAdjustmentStatus? status)
     {
         var query = noteDataReader.DataSource;
@@ -143,11 +140,11 @@ public sealed class StockAdjustmentNoteManager(
 
         query = query.OrderByDescending(n => n.CreatedOnUtc);
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
         if (total == 0)
-            return Task.FromResult(PagedDataDto.Create(new List<StockAdjustmentNoteDto>(), pageIndex, pageSize, 0));
+            return PagedDataDto.Create(new List<StockAdjustmentNoteDto>(), pageIndex, pageSize, 0);
 
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        return Task.FromResult(PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, total));
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
+        return PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, total);
     }
 }

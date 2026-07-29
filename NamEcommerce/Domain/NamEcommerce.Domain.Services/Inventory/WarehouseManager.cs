@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Services.Extensions;
@@ -62,7 +63,7 @@ public sealed class WarehouseManager : IWarehouseManager
         await _warehouseRepository.DeleteAsync(warehouse).ConfigureAwait(false);
     }
 
-    public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(code);
 
@@ -70,11 +71,11 @@ public sealed class WarehouseManager : IWarehouseManager
                     where warehouse.Code == code && (comparesWithCurrentId == null || warehouse.Id != comparesWithCurrentId)
                     select warehouse;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
-    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -82,20 +83,20 @@ public sealed class WarehouseManager : IWarehouseManager
                     where warehouse.Name == name && (comparesWithCurrentId == null || warehouse.Id != comparesWithCurrentId)
                     select warehouse;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
     public async Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id)
     {
-        var warehouse = await _warehouseDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var warehouse = await _warehouseRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(id);
 
         return warehouse.ToDto();
     }
 
-    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords = null, WarehouseType[]? types = null)
+    public async Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords = null, WarehouseType[]? types = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -117,21 +118,21 @@ public sealed class WarehouseManager : IWarehouseManager
 
         query = query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name.Value);
 
-        var totalCount = query.Count();
-        var pagedData = query
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         var data = PagedDataDto.Create(pagedData.Select(warehouse => warehouse.ToDto()), pageIndex, pageSize, totalCount);
-        return Task.FromResult(data);
+        return data;
     }
 
-    public Task<bool> DirectShipTransitExistsAsync()
+    public async Task<bool> DirectShipTransitExistsAsync()
     {
-        var exists = _warehouseDataReader.DataSource
-            .Any(w => w.WarehouseType == WarehouseType.DirectTransit);
-        return Task.FromResult(exists);
+        var exists = await _warehouseDataReader.DataSource
+            .AnyAsync(w => w.WarehouseType == WarehouseType.DirectTransit).ConfigureAwait(false);
+        return exists;
     }
 
     public async Task<UpdateWarehouseResultDto> UpdateWarehouseAsync(UpdateWarehouseDto dto)

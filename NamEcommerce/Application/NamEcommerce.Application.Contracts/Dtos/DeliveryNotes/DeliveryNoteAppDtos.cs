@@ -55,6 +55,8 @@ public sealed record DeliveryNoteAppDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
+    public decimal AppliedOrderDiscount { get; init; }
+    public decimal AppliedOrderPrepaid { get; init; }
 
     public DateTime? AmountToCollectOverriddenAt { get; init; }
     public string? AmountToCollectOverrideNote { get; init; }
@@ -129,6 +131,8 @@ public sealed record CreateDeliveryNoteAppDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
+    public decimal AppliedOrderDiscount { get; init; }
+    public decimal AppliedOrderPrepaid { get; init; }
     public IList<CreateDeliveryNoteItemAppDto> Items { get; init; } = [];
 
     public (bool valid, string? errorMessage) Validate()
@@ -149,6 +153,10 @@ public sealed record CreateDeliveryNoteAppDto
             return (false, "Error.SurchargeCannotBeNegative");
         if (AmountToCollect < 0)
             return (false, "Error.AmountToCollectCannotBeNegative");
+        if (AppliedOrderDiscount < 0)
+            return (false, "Error.AppliedOrderDiscountCannotBeNegative");
+        if (AppliedOrderPrepaid < 0)
+            return (false, "Error.AppliedOrderPrepaidCannotBeNegative");
 
         return (true, string.Empty);
     }

@@ -14,6 +14,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
@@ -129,22 +130,13 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
-        var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
-        var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
-        var auditsTask = _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id);
-        var vendorDebtsTask = _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId);
-        var vendorPaymentsTask = _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100);
-        var vendorBalanceTask = _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId);
-        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask, auditsTask, vendorDebtsTask, vendorPaymentsTask, vendorBalanceTask).ConfigureAwait(false);
-
-        var availableWarehouses = await warehouseTask;
-        var relatedReceipts = await receiptsTask;
-        var relatedReturns = await returnsTask;
-        var itemChangeAudits = await auditsTask;
-        var vendorDebts = await vendorDebtsTask;
-        var vendorPayments = await vendorPaymentsTask;
-        var vendorBalance = await vendorBalanceTask;
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var relatedReceipts = await _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var relatedReturns = await _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var itemChangeAudits = await _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id).ConfigureAwait(false);
+        var vendorDebts = await _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
+        var vendorPayments = await _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100).ConfigureAwait(false);
+        var vendorBalance = await _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
         {
@@ -372,7 +364,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     PaymentMethodText = ((PaymentMethod)payment.PaymentMethod).GetDisplayText(),
                     PaymentTypeText = ((PaymentType)payment.PaymentType).GetDisplayText(),
                     Note = payment.Note,
-                    PaidOn = payment.PaidOnUtc.ToLocalTime()
+                    PaidOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc)
                 })
                 .ToList()
         };
@@ -484,7 +476,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = audit.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(audit.CreatedOnUtc),
                 Title = GetPurchaseOrderItemChangeTitle(audit),
                 Description = GetPurchaseOrderItemChangeDescription(audit),
                 Icon = GetPurchaseOrderItemChangeIcon(audit),
@@ -524,7 +516,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = debt.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(debt.CreatedOnUtc),
                 Title = "Ghi công nợ",
                 Description = $"{debt.Code} - {debt.TotalAmount.DisplayCurrency()}",
                 Icon = "bi-receipt",
@@ -539,7 +531,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             var paymentMethod = (PaymentMethod)payment.PaymentMethod;
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = payment.PaidOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc),
                 Title = "Thanh toán NCC",
                 Description = string.IsNullOrWhiteSpace(payment.Note)
                     ? $"{payment.Code} - {payment.Amount.DisplayCurrency()} - {paymentMethod.GetDisplayText()}"

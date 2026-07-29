@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using NamEcommerce.Data.Contracts;
-using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -27,8 +24,9 @@ public sealed class DirectShipManager(
     IRepository<PurchaseOrderItemAllocation> allocationRepository,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IRepository<DirectShipAddressChangeLog> changeLogRepository,
+    IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
-    IEntityDataReader<PurchaseOrder> purchaseOrderReader,
+    IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<Warehouse> warehouseReader,
     IDeliveryNoteManager deliveryNoteManager,
@@ -123,7 +121,7 @@ public sealed class DirectShipManager(
 
     public async Task RejectDeliveryAsync(Guid deliveryNoteId, Guid returnWarehouseId, string reason)
     {
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId, default)
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
         EnsureCanRejectDirectShipDelivery(deliveryNote);
@@ -134,16 +132,16 @@ public sealed class DirectShipManager(
 
     public async Task HandleSoCancelledForReceivedDirectShipAsync(Guid orderId, Guid returnWarehouseId, Guid userId, string? reason)
     {
-        var deliveryNoteIds = deliveryNoteReader.DataSource
+        var deliveryNoteIds = await deliveryNoteReader.DataSource
             .Where(d => d.OrderId == orderId
                 && d.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
                 && d.Status == DeliveryNoteStatus.Confirmed)
             .Select(d => d.Id)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         foreach (var deliveryNoteId in deliveryNoteIds)
         {
-            var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId, default)
+            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId)
                 ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
             var note = string.IsNullOrWhiteSpace(reason)
@@ -178,37 +176,33 @@ public sealed class DirectShipManager(
         await changeLogRepository.InsertAsync(changeLog).ConfigureAwait(false);
     }
 
-    public Task<IList<DeliveryNoteDto>> GetPendingDeliveriesAsync(string? keywords, DateTime? fromDateUtc, DateTime? toDateUtc)
+    public async Task<IList<DeliveryNoteDto>> GetPendingDeliveriesAsync(string? keywords, DateTime? fromDateUtc, DateTime? toDateUtc)
     {
-        return Task.Run(async () =>
+        var query = deliveryNoteReader.DataSource
+            .Where(d => d.SourceType == DeliveryNoteSourceType.DirectShipToCustomer && d.Status == DeliveryNoteStatus.Confirmed);
+
+        if (!string.IsNullOrWhiteSpace(keywords))
         {
-            var query = deliveryNoteReader.DataSource
-                .Where(d => d.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
-                         && d.Status == DeliveryNoteStatus.Confirmed);
+            var kw = keywords.Trim().ToLower();
+            query = query.Where(d =>
+                d.Code.ToLower().Contains(kw) ||
+                d.CustomerInfo.FullName.Value.ToLower().Contains(kw) ||
+                d.ShippingAddress.Value.ToLower().Contains(kw));
+        }
 
-            if (!string.IsNullOrWhiteSpace(keywords))
-            {
-                var kw = keywords.Trim().ToLower();
-                query = query.Where(d =>
-                    d.Code.ToLower().Contains(kw) ||
-                    d.CustomerInfo.FullName.Value.ToLower().Contains(kw) ||
-                    d.ShippingAddress.Value.ToLower().Contains(kw));
-            }
+        if (fromDateUtc.HasValue)
+            query = query.Where(d => d.CreatedOnUtc >= fromDateUtc.Value);
 
-            if (fromDateUtc.HasValue)
-                query = query.Where(d => d.CreatedOnUtc >= fromDateUtc.Value);
+        if (toDateUtc.HasValue)
+            query = query.Where(d => d.CreatedOnUtc <= toDateUtc.Value);
 
-            if (toDateUtc.HasValue)
-                query = query.Where(d => d.CreatedOnUtc <= toDateUtc.Value);
+        var results = await query
+            .OrderByDescending(d => d.CreatedOnUtc)
+            .ToListAsync().ConfigureAwait(false);
 
-            var results = query
-                .OrderByDescending(d => d.CreatedOnUtc)
-                .ToList();
+        var dtos = results.Select(MapDeliveryNote).ToList();
 
-            IList<DeliveryNoteDto> dtos = results.Select(MapDeliveryNote).ToList();
-
-            return dtos;
-        });
+        return dtos;
     }
 
     public async Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(IReadOnlyList<SecondaryItemId> orderItemIds)
@@ -278,7 +272,7 @@ public sealed class DirectShipManager(
 
     private async Task<PurchaseOrderItem> ResolvePurchaseOrderItem(SecondaryItemId purchaseOrderItemId)
     {
-        var purchaseOrder = await purchaseOrderReader.GetByIdAsync(purchaseOrderItemId.PrimaryId).ConfigureAwait(false);
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(purchaseOrderItemId.PrimaryId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderItemId.PrimaryId);
 
@@ -339,7 +333,7 @@ public sealed class DirectShipManager(
 
     private async Task<Warehouse> ResolveReturnWarehouseAsync(Guid returnWarehouseId)
     {
-        var warehouse = await warehouseReader.GetByIdAsync(returnWarehouseId, default)
+        var warehouse = await warehouseReader.GetByIdAsync(returnWarehouseId)
             ?? throw new WarehouseIsNotFoundException(returnWarehouseId);
 
         if (!warehouse.IsActive || warehouse.WarehouseType != WarehouseType.Physical)
@@ -438,6 +432,8 @@ public sealed class DirectShipManager(
             Surcharge = d.Surcharge,
             SurchargeReason = d.SurchargeReason,
             AmountToCollect = d.AmountToCollect,
+            AppliedOrderDiscount = d.AppliedOrderDiscount,
+            AppliedOrderPrepaid = d.AppliedOrderPrepaid,
             CreatedByUserId = d.CreatedByUserId,
             UpdatedOnUtc = d.UpdatedOnUtc,
             Items = d.Items.Select(i => new DeliveryNoteItemDto

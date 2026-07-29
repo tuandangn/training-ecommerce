@@ -1,4 +1,7 @@
-﻿using MediatR;
+﻿using Azure.Core;
+using DocumentFormat.OpenXml.Spreadsheet;
+using MediatR;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
@@ -8,19 +11,22 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
-using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Domain.Shared.Services.Debts;
+using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -29,15 +35,15 @@ using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
+using NamEcommerce.Web.Models.FastSales;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
-using NamEcommerce.Application.Contracts.Inventory;
 
 namespace NamEcommerce.Web.Services.Orders;
 
 public sealed class OrderModelFactory(
-    AppConfig appConfig,
-    IMediator mediator,
+    AppConfig appConfig, IMediator mediator,
     IDeliveryNoteAppService deliveryNoteAppService,
     IDirectShipAppService directShipAppService,
     ICustomerDebtAppService customerDebtAppService,
@@ -49,7 +55,8 @@ public sealed class OrderModelFactory(
     IInventoryAppService inventoryAppService,
     IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
     BankTransferPaymentSettings bankTransferPaymentSettings,
-    ICustomerLedgerManager customerLedgerManager) : IOrderModelFactory
+    ICustomerLedgerManager customerLedgerManager,
+    IBankTransferReceivingAccountResolver receivingAccountResolver) : IOrderModelFactory
 {
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
@@ -70,7 +77,7 @@ public sealed class OrderModelFactory(
                 model.CustomerDisplayAddress = customer.Address;
                 model.CustomerDisplayKind = customer.Kind;
                 model.CustomerDisplayIsSystem = customer.IsSystem;
-                if (!IsRetailWalkInSystemCustomer(customer.Kind, customer.IsSystem))
+                if (!IsRetailWalkInSystemCustomer(customer.Kind))
                 {
                     model.ShippingPhoneNumber ??= customer.PhoneNumber;
                     model.ShippingAddress ??= customer.Address;
@@ -130,9 +137,12 @@ public sealed class OrderModelFactory(
             CompletedOn = order.CompletedOn,
             CustomerAddress = order.CustomerAddress,
             CustomerPhoneNumber = order.CustomerPhoneNumber,
+            IsRetailWalkInCustomer = order.IsRetailWalkInCustomer,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCompleteOrder = order.CanCompleteOrder,
+            PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment,
+            PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOn
         };
         var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
@@ -155,7 +165,7 @@ public sealed class OrderModelFactory(
         model.FulfillmentSchedule = new OrderFulfillmentSchedulePanelModel
         {
             OrderId = order.Id,
-            CanUpdateSchedules = order.CanUpdateInfo,
+            CanUpdateSchedules = order.CanUpdateInfo && !model.PaymentRequired,
             AvailableItems = model.Items.Select(item => new OrderFulfillmentScheduleAvailableItemModel
             {
                 OrderItemId = item.Id,
@@ -180,10 +190,10 @@ public sealed class OrderModelFactory(
                 DeliveryConfirmationStatus = dn.DeliveryConfirmationStatus,
                 WarehouseId = dn.Items.FirstOrDefault()?.WarehouseId ?? Guid.Empty,
                 WarehouseName = dn.WarehouseName,
-                CreatedOn = dn.CreatedOnUtc.ToLocalTime(),
-                UpdatedOn = dn.UpdatedOnUtc?.ToLocalTime(),
-                DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime(),
-                ConfirmedAt = dn.ConfirmedAtUtc?.ToLocalTime(),
+                CreatedOn = DateTimeHelper.ToLocalTime(dn.CreatedOnUtc),
+                UpdatedOn = DateTimeHelper.ToLocalTime(dn.UpdatedOnUtc),
+                DeliveredOn = DateTimeHelper.ToLocalTime(dn.DeliveredOnUtc),
+                ConfirmedAt = DateTimeHelper.ToLocalTime(dn.ConfirmedAtUtc),
                 ConfirmedNote = dn.ConfirmedNote,
                 DeliveryProofPictureId = dn.DeliveryProofPictureId,
                 DeliveryReceiverName = dn.DeliveryReceiverName,
@@ -297,6 +307,82 @@ public sealed class OrderModelFactory(
         return model;
     }
 
+    public async Task<OrderQuickCreateModel> PrepareOrderQuickCreateModelAsync(OrderQuickCreateModel? oldModel = null)
+    {
+        var receivingAccount = await receivingAccountResolver.ResolveAsync().ConfigureAwait(false);
+
+        var model = oldModel ?? new OrderQuickCreateModel();
+
+        model.BankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
+        model.BankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
+            ? string.Empty
+            : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
+        model.ManualBankTransferConfirmEnabled = bankTransferPaymentSettings.Verification.AllowManualConfirm;
+
+        if (model.CustomerId.HasValue)
+        {
+            var customer = await mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value }).ConfigureAwait(false);
+            if (customer is null)
+                model.CustomerId = null;
+            else
+            {
+                model.CustomerDisplayName = customer.FullName;
+                model.CustomerDisplayPhone = customer.PhoneNumber;
+                model.CustomerDisplayAddress = customer.Address;
+                model.CustomerDisplayKind = customer.Kind;
+                model.CustomerDisplayIsSystem = customer.IsSystem;
+                if (!IsRetailWalkInSystemCustomer(customer.Kind))
+                {
+                    model.ShippingPhoneNumber ??= customer.PhoneNumber;
+                    model.ShippingAddress ??= customer.Address;
+                }
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            if (productIds.Count > 0)
+            {
+                var products = await mediator.Send(new GetProductsByIdsForOrderQuery
+                {
+                    Ids = productIds
+                }).ConfigureAwait(false);
+
+                model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
+
+                foreach (var item in model.Items)
+                {
+                    var product = products.First(p => p.Id == item.ProductId);
+                    item.ProductDisplayName = product.Name;
+                    item.ProductDisplayQty = product.QuantityAvailable;
+                    item.ProductDisplayPicture = product.PictureUrl;
+                    item.QuantityDecimalPlaces = product.QuantityDecimalPlaces;
+                    item.UnitMeasurement = product.UnitMeasurement;
+                    var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
+                    item.QuantityAvailable = stockInfo.QuantityAvailable;
+                    item.AvailableWarehouseStocks = stockInfo.Warehouses
+                        .Where(item => item.WarehouseId != Guid.Empty)
+                        .Select(item => new QuickCreateOrderItemModel.ProductWarehouseStockModel
+                        {
+                            Id = item.WarehouseId,
+                            Name = item.WarehouseName,
+                            QuantityOnHand = item.QuantityOnHand,
+                            QuantityReserved = item.QuantityReserved,
+                            QuantityAvailable = item.QuantityAvailable
+                        })
+                        .ToList();
+                }
+            }
+            else
+            {
+                model.Items.Clear();
+            }
+        }
+
+        return model;
+    }
+
     private async Task PrepareDeliveryProofPicturesAsync(OrderDetailsModel model)
     {
         foreach (var deliveryNote in model.DeliveryNotes.Where(note => note.DeliveryProofPictureId.HasValue))
@@ -340,10 +426,10 @@ public sealed class OrderModelFactory(
                 Status = customerReturn.Status,
                 StatusText = GetCustomerReturnStatusText((CustomerReturnStatus)customerReturn.Status),
                 StatusClass = GetCustomerReturnStatusClass((CustomerReturnStatus)customerReturn.Status),
-                ReturnDate = customerReturn.ReturnDate.ToLocalTime(),
-                ConfirmedOn = customerReturn.ConfirmedOnUtc?.ToLocalTime(),
-                CreatedOn = customerReturn.CreatedOnUtc.ToLocalTime(),
-                UpdatedOn = customerReturn.UpdatedOnUtc?.ToLocalTime(),
+                ReturnDate = DateTimeHelper.ToLocalTime(customerReturn.ReturnDate),
+                ConfirmedOn = DateTimeHelper.ToLocalTime(customerReturn.ConfirmedOnUtc),
+                CreatedOn = DateTimeHelper.ToLocalTime(customerReturn.CreatedOnUtc),
+                UpdatedOn = DateTimeHelper.ToLocalTime(customerReturn.UpdatedOnUtc),
                 AdditionalCost = customerReturn.AdditionalCost,
                 GrossRefundAmount = customerReturn.Items.Sum(item => item.AcceptedTotal),
                 NetRefundAmount = customerReturn.NetRefundAmount,
@@ -371,12 +457,16 @@ public sealed class OrderModelFactory(
         var relatedReceipts = await GetRelatedGoodsReceiptsAsync(model).ConfigureAwait(false);
         var customerDebts = await customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
         var orderDebts = customerDebts?.Debts.Where(debt => debt.OrderId == model.Id).ToList() ?? [];
-        var customerPayments = await customerDebtAppService.GetPaymentsAsync(model.CustomerId, 0, 100).ConfigureAwait(false);
+        var customerPayments = model.IsRetailWalkInCustomer
+            ? await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, model.Id).ConfigureAwait(false)
+            : await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, null).ConfigureAwait(false);
         var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
         var expenses = await expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
         var itemChangeAudits = await orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
         var receivingAccount = await bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
-        var customerBalance = await customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
+        var customerBalance = model.IsRetailWalkInCustomer
+            ? (orderDebts.Sum(debt => debt.TotalAmount) - orderPayments.Sum(payment => payment.Amount))
+            : await customerLedgerManager.GetBalanceAsync(model.CustomerId).ConfigureAwait(false);
         var bankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true;
         var bankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
             ? null
@@ -403,18 +493,16 @@ public sealed class OrderModelFactory(
         if (model.AllocatedPurchaseOrders?.Items.Count is not > 0)
             return new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
 
-        var tasks = model.AllocatedPurchaseOrders.Items
-            .Select(async purchaseOrder => new
-            {
-                purchaseOrder.PurchaseOrderId,
-                Receipts = await goodsReceiptAppService
+        var purchaseOrderGoodsReceiptsMap = new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
+        foreach(var purchaseOrder in model.AllocatedPurchaseOrders.Items)
+        {
+            var goodReceipts = await goodsReceiptAppService
                     .GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrder.PurchaseOrderId)
-                    .ConfigureAwait(false)
-            })
-            .ToList();
+                    .ConfigureAwait(false);
+            purchaseOrderGoodsReceiptsMap.Add(purchaseOrder.PurchaseOrderId, goodReceipts);
+        }
 
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-        return results.ToDictionary(item => item.PurchaseOrderId, item => item.Receipts);
+        return purchaseOrderGoodsReceiptsMap;
     }
 
     private static OrderDetailsModel.OrderDeliverySummaryStatus CalculateDeliveryStatus(OrderDetailsModel model)
@@ -443,6 +531,9 @@ public sealed class OrderModelFactory(
         OrderDetailsModel model,
         OrderDetailsModel.OrderDeliverySummaryStatus deliveryStatus)
     {
+        if (model.PaymentRequired)
+            return OrderDetailsModel.WorkflowStage.Settlement;
+
         if (model.Status is (int)OrderStatus.Completed or (int)OrderStatus.Cancelled
             || deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered)
             return OrderDetailsModel.WorkflowStage.Settlement;
@@ -469,8 +560,8 @@ public sealed class OrderModelFactory(
             || (model.AllocatedPurchaseOrders?.Items.Any(purchaseOrder => !purchaseOrder.IsFullyReceived) ?? false)
             || model.DirectShipAllocations.Any(allocation => allocation.ReceivedQuantity < allocation.AllocatedQuantity);
 
-        var deliveryStatusText = GetDeliverySummaryText(deliveryStatus);
-        var deliveryStatusClass = GetDeliverySummaryClass(deliveryStatus);
+        var deliveryStatusText = model.PaymentRequired && model.DeliveryNotes.Count > 0 ? "Chờ giao" : GetDeliverySummaryText(deliveryStatus);
+        var deliveryStatusClass = model.PaymentRequired && model.DeliveryNotes.Count > 0 ? "warning" : GetDeliverySummaryClass(deliveryStatus);
 
         return new OrderDetailsModel.WorkflowModel
         {
@@ -517,7 +608,7 @@ public sealed class OrderModelFactory(
                     Key = "settlement",
                     Title = "Kết sổ",
                     Icon = "bi-clipboard-check",
-                    Summary = ((OrderStatus)model.Status).GetDisplayText(),
+                    Summary = model.PaymentRequired ? "Chờ thanh toán" : ((OrderStatus)model.Status).GetDisplayText(),
                     IsActive = activeStage == OrderDetailsModel.WorkflowStage.Settlement,
                     IsComplete = model.Status == (int)OrderStatus.Completed
                 }
@@ -695,8 +786,8 @@ public sealed class OrderModelFactory(
                 PaidAmount = debt.PaidAmount,
                 RemainingAmount = debt.RemainingAmount,
                 StatusText = GetDebtStatusText((DebtStatus)debt.Status),
-                DueDate = debt.DueDateUtc?.ToLocalTime(),
-                CreatedOn = debt.CreatedOnUtc.ToLocalTime()
+                DueDate = DateTimeHelper.ToLocalTime(debt.DueDateUtc),
+                CreatedOn = DateTimeHelper.ToLocalTime(debt.CreatedOnUtc)
             })
             .ToList();
 
@@ -709,7 +800,7 @@ public sealed class OrderModelFactory(
                 Description = expense.Description,
                 ExpenseTypeText = GetExpenseTypeText((ExpenseType)expense.ExpenseType),
                 Amount = expense.Amount,
-                IncurredDate = expense.IncurredDate.ToLocalTime()
+                IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDate)
             })
             .ToList();
 
@@ -723,7 +814,7 @@ public sealed class OrderModelFactory(
                 PaymentMethodText = ((PaymentMethod)payment.PaymentMethod).GetDisplayText(),
                 PaymentTypeText = ((PaymentType)payment.PaymentType).GetDisplayText(),
                 Note = payment.Note,
-                PaidOn = payment.PaidOnUtc.ToLocalTime()
+                PaidOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc)
             })
             .ToList();
 
@@ -832,7 +923,7 @@ public sealed class OrderModelFactory(
         {
             timeline.Add(new OrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = audit.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(audit.CreatedOnUtc),
                 Title = GetOrderItemChangeTitle(audit),
                 Description = GetOrderItemChangeDescription(audit),
                 Icon = GetOrderItemChangeIcon(audit),
@@ -862,7 +953,7 @@ public sealed class OrderModelFactory(
                 {
                     timeline.Add(new OrderDetailsModel.TimelineEventModel
                     {
-                        OccurredOn = receipt.ReceivedOnUtc.ToLocalTime(),
+                        OccurredOn = DateTimeHelper.ToLocalTime(receipt.ReceivedOnUtc),
                         Title = "Nhận hàng từ đơn nhập",
                         Description = $"{receipt.Code} - {purchaseOrder.PurchaseOrderCode}",
                         Icon = "bi-clipboard2-check",
@@ -996,7 +1087,7 @@ public sealed class OrderModelFactory(
         {
             timeline.Add(new OrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = debt.CreatedOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(debt.CreatedOnUtc),
                 Title = "Ghi nhận công nợ",
                 Description = $"{debt.Code} - {debt.RemainingAmount.DisplayCurrencyWithSymbol()} còn lại",
                 Icon = "bi-cash-coin",
@@ -1012,7 +1103,7 @@ public sealed class OrderModelFactory(
             var description = GetPaymentTimelineDescription(payment, paymentMethod, paymentType);
             timeline.Add(new OrderDetailsModel.TimelineEventModel
             {
-                OccurredOn = payment.PaidOnUtc.ToLocalTime(),
+                OccurredOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc),
                 Title = GetPaymentTimelineTitle(payment, paymentMethod, paymentType),
                 Description = string.IsNullOrWhiteSpace(payment.Note) ? description : $"{description} - {payment.Note}",
                 Icon = GetPaymentTimelineIcon(payment, paymentMethod, paymentType),
@@ -1239,8 +1330,8 @@ public sealed class OrderModelFactory(
         return "Đã phân bổ giao thẳng";
     }
 
-    private static bool IsRetailWalkInSystemCustomer(int kind, bool isSystem)
-        => isSystem && kind == 20;
+    private static bool IsRetailWalkInSystemCustomer(int kind)
+        => kind == (int)CustomerKind.RetailWalkIn;
 
     private static string GetDebtStatusText(DebtStatus status)
         => status switch

@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Debts;
 
@@ -35,7 +36,7 @@ public sealed class GetCustomerPaymentReceiptHandler(ICustomerDebtAppService deb
             DeliveryNoteCode = payment.DeliveryNoteCode,
             Amount = payment.Amount,
             Note = payment.Note,
-            PaidOn = payment.PaidOnUtc.ToLocalTime()
+            PaidOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc)
         };
     }
 }

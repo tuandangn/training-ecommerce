@@ -15,9 +15,9 @@ public sealed class GetCustomerDebtListHandler(ICustomerDebtAppService debtAppSe
         var pageIndex0 = request.PageIndex - 1;
 
         var pagedData = await _debtAppService.GetCustomersWithDebtsAsync(
-            request.Keywords,
             pageIndex0,
-            request.PageSize).ConfigureAwait(false);
+            request.PageSize,
+            request.Keywords).ConfigureAwait(false);
 
         var items = pagedData.Items.Select(s => new CustomerDebtCustomerSummaryModel
         {

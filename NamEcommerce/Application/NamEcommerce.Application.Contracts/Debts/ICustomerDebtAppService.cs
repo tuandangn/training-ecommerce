@@ -17,23 +17,22 @@ public interface ICustomerDebtAppService
 
     Task<CustomerDebtSummaryAppDto?> GetCustomerDebtSummaryAsync(Guid customerId);
 
-    Task<PagedDataAppDto<CustomerDebtSummaryAppDto>> GetCustomersWithDebtsAsync(
-        string? keywords = null,
+    Task<IPagedDataAppDto<CustomerDebtSummaryAppDto>> GetCustomersWithDebtsAsync(
         int pageIndex = 0,
-        int pageSize = 15);
+        int pageSize = 15,
+        string? keywords = null);
 
     Task<CustomerDebtsByCustomerAppDto?> GetDebtsByCustomerIdAsync(Guid customerId);
 
-    Task<PagedDataAppDto<CustomerDebtAppDto>> GetDebtsAsync(
-        Guid? customerId = null,
-        string? keywords = null,
+    Task<IPagedDataAppDto<CustomerDebtAppDto>> GetDebtsAsync(
         int pageIndex = 0,
-        int pageSize = 15);
+        int pageSize = 15,
+        Guid? customerId = null,
+        string? keywords = null);
 
-    Task<PagedDataAppDto<CustomerPaymentAppDto>> GetPaymentsAsync(
-        Guid? customerId = null,
-        int pageIndex = 0,
-        int pageSize = 15);
+    Task<IPagedDataAppDto<CustomerPaymentAppDto>> GetPaymentsAsync(
+        int pageIndex = 0, int pageSize = 15,
+        Guid? customerId = null, Guid? orderId = null);
 
     Task<decimal> GetTotalPaidByOrderAsync(Guid orderId);
     Task<decimal> GetTotalDebtByOrderAsync(Guid orderId);

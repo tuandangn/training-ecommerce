@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.GoodsReceipts;
 
@@ -32,7 +33,7 @@ public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuer
         {
             Id = goodsReceipt.Id,
             Code = goodsReceipt.Code,
-            ReceivedOn = goodsReceipt.ReceivedOnUtc.ToLocalTime(),
+            ReceivedOn = DateTimeHelper.ToLocalTime(goodsReceipt.ReceivedOnUtc),
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,

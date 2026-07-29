@@ -12,6 +12,8 @@ using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
+using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -25,31 +27,35 @@ public sealed class CustomerDebtManager(
     IRepository<Customer> customerRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     ICustomerLedgerManager customerLedgerManager,
-    EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
+    EntityCodeGenerator entityCodeGenerator,
+    IOrderManager orderManager) : ICustomerDebtManager
 {
-    private Task<string> GenerateDebtCodeAsync()
+    private async Task<string> GenerateDebtCodeAsync()
     {
         var prefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
-        return Task.FromResult(entityCodeGenerator.Next(prefix, () => debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(prefix))));
+        return await entityCodeGenerator.NextAsync(prefix, () => debtReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)))
+            .ConfigureAwait(false);
     }
 
-    private Task<string> GeneratePaymentCodeAsync()
+    private async Task<string> GeneratePaymentCodeAsync()
     {
         var prefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
-        return Task.FromResult(entityCodeGenerator.Next(prefix, () => paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(prefix))));
+        return await entityCodeGenerator.NextAsync(prefix, () => paymentReader.SecuredDataSource.CountAsync(p => p.Code.StartsWith(prefix)))
+            .ConfigureAwait(false);
     }
 
-    private Task<string> GenerateCreditNoteCodeAsync()
+    private async Task<string> GenerateCreditNoteCodeAsync()
     {
         var prefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
-        return Task.FromResult(entityCodeGenerator.Next(prefix, () => creditNoteReader.SecuredDataSource.Count(c => c.Code.StartsWith(prefix))));
+        return await entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.SecuredDataSource.CountAsync(c => c.Code.StartsWith(prefix)))
+            .ConfigureAwait(false);
     }
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
     {
         dto.Verify();
 
-        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
@@ -83,8 +89,7 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        // 1. Check if debt already exists for this delivery note
-        var existing = debtReader.DataSource.FirstOrDefault(d => d.DeliveryNoteId == dto.DeliveryNoteId);
+        var existing = await debtReader.DataSource.FirstOrDefaultAsync(d => d.DeliveryNoteId == dto.DeliveryNoteId).ConfigureAwait(false);
         if (existing != null)
         {
             if (dto.TotalAmount > existing.TotalAmount)
@@ -96,14 +101,14 @@ public sealed class CustomerDebtManager(
             return MapToDto(existing);
         }
 
-        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
-        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId, default).ConfigureAwait(false);
-        
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
         if (deliveryNote == null) throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
-        
+
         var debt = new CustomerDebt(
             code: code,
             customerId: customer.Id,
@@ -130,11 +135,11 @@ public sealed class CustomerDebtManager(
     {
         dto.Verify();
 
-        var customer = await customerRepository.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
-        
+
         var payment = new CustomerPayment(
             code: code,
             customerId: customer.Id,
@@ -152,9 +157,12 @@ public sealed class CustomerDebtManager(
             CustomerDebtId = dto.CustomerDebtId,
             BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
         };
-
         payment.MarkCreated();
+
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
+
+        if (dto.OrderId.HasValue)
+            await orderManager.MarkOrderHasPayment(dto.OrderId.Value, dto.Amount, null).ConfigureAwait(false);
 
         await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
         {
@@ -171,16 +179,15 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto?> GetDebtByIdAsync(Guid id)
     {
-        var debt = await debtReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var debt = await debtRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (debt == null) return null;
 
-        // Load tất cả payments liên quan đến debt này
         var payments = paymentReader.DataSource
             .Where(p => p.CustomerDebtId == id)
             .OrderBy(p => p.PaidOnUtc)
             .ToList();
 
-        var allocations = GetCreditNoteAllocationsByDebtId(id);
+        var allocations = await GetCreditNoteAllocationsByDebtIdAsync(id).ConfigureAwait(false);
 
         var dto = MapToDto(debt);
         return dto with
@@ -192,19 +199,18 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
-        var payment = await paymentReader.GetByIdAsync(paymentId, default).ConfigureAwait(false);
+        var payment = await paymentRepository.GetByIdAsync(paymentId).ConfigureAwait(false);
         return payment == null ? null : MapToPaymentDto(payment);
     }
 
     public async Task<CustomerDebtSummaryDto?> GetCustomerDebtSummaryAsync(Guid customerId)
     {
-        var debts = debtReader.DataSource
+        var debts = await debtReader.DataSource
             .Where(d => d.CustomerId == customerId)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         if (debts.Count == 0) return null;
 
-        // Lấy tên khách hàng từ bản ghi đầu tiên
         var customerName = debts[0].CustomerName;
 
         return new CustomerDebtSummaryDto
@@ -225,44 +231,34 @@ public sealed class CustomerDebtManager(
     }
 
     public async Task<CustomerCreditNoteDto> ApplyCreditNoteFromCustomerReturnAsync(
-        Guid customerId,
-        Guid returnId,
-        string returnCode,
-        Guid? sourceDeliveryNoteId,
-        decimal amount)
+        Guid customerId, Guid returnId, string returnCode,
+        Guid? sourceDeliveryNoteId, decimal amount)
     {
         if (amount <= 0)
             throw new NamEcommerceDomainException("Error.CreditNote.AmountMustBePositive");
 
-        var existing = creditNoteReader.DataSource
-            .FirstOrDefault(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled);
+        var existing = await creditNoteReader.DataSource
+            .FirstOrDefaultAsync(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled)
+            .ConfigureAwait(false);
         if (existing is not null)
             return MapToCreditNoteDto(existing);
 
-        var customer = await customerRepository.GetByIdAsync(customerId, default).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(customerId).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(customerId);
 
         var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);
         var sourceId = sourceDeliveryNoteId is { } id && id != Guid.Empty ? id : (Guid?)null;
-        var creditNote = new CustomerCreditNote(
-            code,
-            customer.Id,
-            customer.FullName,
-            returnId,
-            returnCode,
-            sourceId,
-            amount);
+        var creditNote = new CustomerCreditNote(code, customer.Id, customer.FullName,
+            returnId, returnCode, sourceId, amount);
 
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
         return MapToCreditNoteDto(inserted);
     }
 
-    public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(int pageIndex = 0, int pageSize = 15, string? keywords = null)
     {
-        // Load tất cả debts vào memory rồi group (phù hợp với quy mô cửa hàng)
-        var allDebts = debtReader.DataSource.ToList();
+        var allDebts = await debtReader.DataSource.ToListAsync().ConfigureAwait(false);
 
-        // Group theo CustomerId
         var groups = allDebts
             .GroupBy(d => d.CustomerId)
             .Select(g => new
@@ -288,11 +284,12 @@ public sealed class CustomerDebtManager(
         var results = new List<CustomerDebtSummaryDto>();
         foreach (var item in page)
         {
-            var depositBalance = paymentReader.DataSource
+            var depositBalance = await paymentReader.DataSource
                 .Where(p => p.CustomerId == item.CustomerId
                          && (p.PaymentType == PaymentType.Deposit || p.PaymentType == PaymentType.General)
                          && p.AppliedAmount < p.Amount)
-                .Sum(p => p.Amount - p.AppliedAmount);
+                .SumAsync(p => p.Amount - p.AppliedAmount)
+                .ConfigureAwait(false);
 
             results.Add(new CustomerDebtSummaryDto
             {
@@ -313,21 +310,21 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtsByCustomerDto?> GetDebtsByCustomerIdAsync(Guid customerId)
     {
-        var debts = debtReader.DataSource
+        var debts = await debtReader.DataSource
             .Where(d => d.CustomerId == customerId)
             .OrderByDescending(d => d.CreatedOnUtc)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         if (debts.Count == 0) return null;
 
         var debtDtos = new List<CustomerDebtDto>();
         foreach (var debt in debts)
         {
-            var payments = paymentReader.DataSource
+            var payments = await paymentReader.DataSource
                 .Where(p => p.CustomerDebtId == debt.Id)
                 .OrderBy(p => p.PaidOnUtc)
-                .ToList();
-            var allocations = GetCreditNoteAllocationsByDebtId(debt.Id);
+                .ToListAsync().ConfigureAwait(false);
+            var allocations = await GetCreditNoteAllocationsByDebtIdAsync(debt.Id).ConfigureAwait(false);
             debtDtos.Add(MapToDto(debt) with
             {
                 Payments = payments.Select(MapToPaymentDto).ToList(),
@@ -335,26 +332,26 @@ public sealed class CustomerDebtManager(
             });
         }
 
-        var deposits = paymentReader.DataSource
+        var deposits = await paymentReader.DataSource
             .Where(p => p.CustomerId == customerId
                      && (p.PaymentType == PaymentType.Deposit || p.PaymentType == PaymentType.General)
                      && p.AppliedAmount < p.Amount)
             .OrderByDescending(p => p.PaidOnUtc)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
-        var recentPayments = paymentReader.DataSource
+        var recentPayments = await paymentReader.DataSource
             .Where(p => p.CustomerId == customerId)
             .OrderByDescending(p => p.PaidOnUtc)
             .Take(20)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         var depositBalance = deposits.Sum(p => p.Amount - p.AppliedAmount);
-        var unappliedCreditNotes = creditNoteReader.DataSource
+        var unappliedCreditNotes = await creditNoteReader.DataSource
             .Where(c => c.CustomerId == customerId
                 && c.Status != CreditNoteStatus.Cancelled
                 && c.RemainingAmount > 0)
             .OrderByDescending(c => c.CreatedOnUtc)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         return new CustomerDebtsByCustomerDto
         {
@@ -372,7 +369,7 @@ public sealed class CustomerDebtManager(
         };
     }
 
-    public async Task<IPagedDataDto<CustomerDebtDto>> GetDebtsAsync(Guid? customerId = null, string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataDto<CustomerDebtDto>> GetDebtsAsync(int pageIndex = 0, int pageSize = 15, Guid? customerId = null, string? keywords = null)
     {
         var query = debtReader.DataSource;
         if (customerId.HasValue)
@@ -385,34 +382,37 @@ public sealed class CustomerDebtManager(
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 
-        var total = query.Count();
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, total);
     }
 
-    public async Task<IPagedDataDto<CustomerPaymentDto>> GetPaymentsAsync(Guid? customerId = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataDto<CustomerPaymentDto>> GetPaymentsAsync(int pageIndex = 0, int pageSize = 15, Guid? customerId = null, Guid? orderId = null)
     {
         var query = paymentReader.DataSource;
         if (customerId.HasValue)
             query = query.Where(p => p.CustomerId == customerId.Value);
-            
+        if(orderId.HasValue)
+            query = query.Where(p => p.OrderId == orderId.Value);
+
         query = query.OrderByDescending(p => p.CreatedOnUtc);
-        
-        var total = query.Count();
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        
+
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize)
+            .ToListAsync().ConfigureAwait(false);
+
         return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, total);
     }
 
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)
-        => Task.FromResult(paymentReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.Amount));
+        => paymentReader.DataSource.Where(p => p.OrderId == orderId).SumAsync(p => p.Amount);
 
     public Task<decimal> GetTotalDebtByOrderAsync(Guid orderId)
-        => Task.FromResult(debtReader.DataSource.Where(p => p.OrderId == orderId).Sum(p => p.TotalAmount));
+        => debtReader.DataSource.Where(p => p.OrderId == orderId).SumAsync(p => p.TotalAmount);
 
     public Task<decimal> GetTotalPaidByDeliveryNoteAsync(Guid deliveryNoteId)
-        => Task.FromResult(paymentReader.DataSource.Where(p => p.DeliveryNoteId == deliveryNoteId).Sum(p => p.Amount));
+        => paymentReader.DataSource.Where(p => p.DeliveryNoteId == deliveryNoteId).SumAsync(p => p.Amount);
 
     private static CustomerDebtDto MapToDto(CustomerDebt debt)
     {
@@ -435,11 +435,12 @@ public sealed class CustomerDebtManager(
         };
     }
 
-    private IList<CustomerCreditNoteAllocationDto> GetCreditNoteAllocationsByDebtId(Guid debtId)
-        => creditNoteReader.DataSource
+    private async Task<IList<CustomerCreditNoteAllocationDto>> GetCreditNoteAllocationsByDebtIdAsync(Guid debtId)
+        => (await creditNoteReader.DataSource
             .SelectMany(c => c.Allocations)
             .Where(a => a.CustomerDebtId == debtId)
             .OrderBy(a => a.AppliedOnUtc)
+            .ToListAsync().ConfigureAwait(false))
             .Select(MapToCreditNoteAllocationDto)
             .ToList();
 

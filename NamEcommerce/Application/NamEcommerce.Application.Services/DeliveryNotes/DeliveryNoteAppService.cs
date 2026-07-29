@@ -1,8 +1,6 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
-using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Notifications;
@@ -46,7 +44,7 @@ public sealed class DeliveryNoteAppService(
             };
         }
 
-        var order = await orderDataReader.GetByIdAsync(dto.OrderId, default).ConfigureAwait(false);
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new CreateDeliveryNoteResultAppDto
@@ -79,7 +77,7 @@ public sealed class DeliveryNoteAppService(
                     ErrorMessage = "Error.OrderItemIsNotFound"
                 };
             }
-            var product = await productDataReader.GetByIdAsync(orderItem.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
             if (product is null)
             {
                 return new CreateDeliveryNoteResultAppDto
@@ -90,7 +88,7 @@ public sealed class DeliveryNoteAppService(
             }
             if (product.UnitMeasurementId.HasValue)
             {
-                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value, default).ConfigureAwait(false);
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
                 if (unitMeasurement is not null)
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
@@ -159,6 +157,8 @@ public sealed class DeliveryNoteAppService(
             Surcharge = dto.Surcharge,
             SurchargeReason = dto.SurchargeReason,
             AmountToCollect = dto.AmountToCollect,
+            AppliedOrderDiscount = dto.AppliedOrderDiscount,
+            AppliedOrderPrepaid = dto.AppliedOrderPrepaid,
             Items = dto.Items.Select(i => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = i.OrderItemId,
@@ -551,25 +551,29 @@ public sealed class DeliveryNoteAppService(
         return result?.ToDto();
     }
 
-    public async Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId)
+    public async Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId, bool includeCancelled = false)
     {
         // For simplicity, we use GetListAsync and filter it down.
         // In a real app we might add a specific domain query.
         // Assuming page 0 to MAX gets enough for a single order's notes.
         var paged = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
         return paged.Where(d => d.OrderId == orderId)
-                    .Select(d => d.ToDto())
-                    .OrderBy(d => d.CreatedOnUtc)
-                    .ToList();
+            .Where(d => includeCancelled || d.Status != DeliveryNoteStatus.Cancelled)
+            .Select(d => d.ToDto())
+            .OrderBy(d => d.CreatedOnUtc)
+            .ToList();
     }
 
-    public async Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<PagedDataAppDto<DeliveryNoteAppDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords = null, Guid? orderId = null)
     {
-        var paged = await deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+        var paged = await deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords, orderId).ConfigureAwait(false);
 
         var mappedItems = paged.Items.Select(d => d.ToDto()).ToList();
         var result = PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
 
         return (PagedDataAppDto<DeliveryNoteAppDto>)result;
     }
+
+    public Task<Guid?> GetWaitingPaymentDeliveryNoteIdAsync(Guid orderId)
+        => deliveryNoteManager.GetWaitingPaymentDeliveryNoteIdAsync(orderId);
 }

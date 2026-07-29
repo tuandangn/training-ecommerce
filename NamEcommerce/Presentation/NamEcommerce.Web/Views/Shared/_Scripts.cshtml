@@ -1,4 +1,5 @@
 ﻿@using System.Text.Json
+@using NamEcommerce.Domain.Shared.Enums.Customers
 @inject WarehouseSettings WarehouseSettings
 @inject NamEcommerce.Web.Services.Common.ICachedValuesService CachedValueService
 
@@ -18,9 +19,17 @@
 <script src="~/js/currency-hint.js" asp-append-version="true" defer></script>
 <script src="~/js/decimal-field.js" asp-append-version="true" defer></script>
 <script type="module">
-    import { setWarehouseSettings, setCustomerSettings  } from '/modules/Settings.js';
+    import { setWarehouseSettings, setCustomerSettings } from '/modules/Settings.js';
+    import { setCustomerKinds } from '/modules/CustomerInfo.js'
+
     setWarehouseSettings(@Html.Raw(JsonSerializer.Serialize(WarehouseSettings)));
-    setCustomerSettings({ defaultCustomerId: '@CachedValueService.DefaultCustomerId' });
+    setCustomerSettings({
+        defaultCustomerId: '@CachedValueService.DefaultCustomerId'
+    });
+    setCustomerKinds({
+        standard: @((int)CustomerKind.Standard),
+        retailWalkIn: @((int)CustomerKind.RetailWalkIn)
+    });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/vn.js" defer></script>
@@ -32,61 +41,61 @@
             dtFmt: 'd/m/Y H:i'
         };
 
-        window.initFlatPickrDate = function(element) {
+        window.initFlatPickrDate = function (element) {
             flatpickr(element, {
-                locale:     cfg.locale,
+                locale: cfg.locale,
                 dateFormat: 'Y-m-d',
-                altInput:   true,
-                altFormat:  cfg.dateFmt,
+                altInput: true,
+                altFormat: cfg.dateFmt,
                 allowInput: false,
                 closeOnSelect: true,
                 clickOpens: true,
-                onReady: function(selectedDates, dateStr, instance) {
+                onReady: function (selectedDates, dateStr, instance) {
                     const original = instance.input;
                     original.type = "text";
                     original.classList.add("visually-hidden");
                     instance._input?.classList.add('bg-white');
                 },
-                onChange: function(selectedDates, dateStr, instance) {
+                onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
                 }
             });
         }
-        window.initFlatPickrDateTime = function(element) {
+        window.initFlatPickrDateTime = function (element) {
             flatpickr(element, {
-                locale:      cfg.locale,
-                dateFormat:  'Y-m-d\\TH:i:S',
-                altInput:    true,
-                altFormat:   cfg.dtFmt,
-                enableTime:  true,
-                time_24hr:   true,
-                allowInput:  false,
+                locale: cfg.locale,
+                dateFormat: 'Y-m-d\\TH:i:S',
+                altInput: true,
+                altFormat: cfg.dtFmt,
+                enableTime: true,
+                time_24hr: true,
+                allowInput: false,
                 closeOnSelect: true,
                 clickOpens: true,
-                onReady: function(selectedDates, dateStr, instance) {
+                onReady: function (selectedDates, dateStr, instance) {
                     const original = instance.input;
                     original.type = "text";
                     original.classList.add("visually-hidden");
                     instance._input?.classList.add('bg-white');
                 },
-                onChange: function(selectedDates, dateStr, instance) {
+                onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
-                    if(selectedDates.length) instance.close();
+                    if (selectedDates.length) instance.close();
                 }
             });
         }
-        window.initFlatPickrControls = function(container){
-            container.querySelectorAll('input[type="date"]').forEach(function(el) {
+        window.initFlatPickrControls = function (container) {
+            container.querySelectorAll('input[type="date"]').forEach(function (el) {
                 initFlatPickrDate(el);
             });
-            container.querySelectorAll('input[type="datetime-local"]').forEach(function(el) {
+            container.querySelectorAll('input[type="datetime-local"]').forEach(function (el) {
                 initFlatPickrDateTime(el);
             });
         };
 
         initFlatPickrControls(document);
 
-        var toggle  = document.getElementById('sidebarToggle');
+        var toggle = document.getElementById('sidebarToggle');
         var sidebar = document.getElementById('appSidebar');
         var overlay = document.getElementById('sidebarOverlay');
 

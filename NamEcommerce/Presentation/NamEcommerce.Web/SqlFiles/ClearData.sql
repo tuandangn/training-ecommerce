@@ -36,3 +36,4 @@ DELETE FROM tbl.VendorAccountBalance
 DELETE FROM tbl.DeliveryRun
 DELETE FROM tbl.[OrderFulfillmentSchedule]
 DELETE FROM tbl.FixedAsset
+DELETE FROM tbl.BankTransferPaymentIntent

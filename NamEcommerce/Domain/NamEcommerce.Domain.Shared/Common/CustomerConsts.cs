@@ -3,5 +3,6 @@
 public static class CustomerConsts
 {
     public const string RETAIL_WALKIN_CUSTOMER_NAME = "Khách bán lẻ";
+    public const string RETAIL_WALKIN_CUSTOMER_PHONE = "0000000000";
     public const string RETAIL_WALKIN_CUSTOMER_ADDRESS = "Tại cửa hàng";
 }

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Services.Common;
@@ -22,21 +23,23 @@ public sealed class FixedAssetManager : IFixedAssetManager
         _codeGenerator = codeGenerator;
     }
 
-    public Task<FixedAssetDto?> GetByIdAsync(Guid id)
+    public async Task<FixedAssetDto?> GetByIdAsync(Guid id)
     {
-        var asset = _dataReader.DataSource.FirstOrDefault(a => a.Id == id);
-        return Task.FromResult(asset?.ToDto());
+        var asset = await _dataReader.GetByIdAsync(id).ConfigureAwait(false);
+        return asset?.ToDto();
     }
 
-    public Task<IReadOnlyList<FixedAssetDto>> GetAllAsync(FixedAssetStatus? status = null)
+    public async Task<IReadOnlyList<FixedAssetDto>> GetAllAsync(FixedAssetStatus? status = null)
     {
-        var query = _dataReader.DataSource.AsEnumerable();
-        if (status.HasValue) query = query.Where(a => a.Status == status.Value);
-        IReadOnlyList<FixedAssetDto> result = query
+        var query = _dataReader.DataSource;
+        if (status.HasValue) 
+            query = query.Where(a => a.Status == status.Value);
+        var result = (await query
             .OrderByDescending(a => a.CreatedOnUtc)
+            .ToListAsync().ConfigureAwait(false))
             .Select(a => a.ToDto())
             .ToList();
-        return Task.FromResult(result);
+        return result;
     }
 
     public async Task<FixedAssetDto> CreateAsync(CreateFixedAssetDto dto)
@@ -69,8 +72,7 @@ public sealed class FixedAssetManager : IFixedAssetManager
         await _repository.UpdateAsync(asset).ConfigureAwait(false);
     }
 
-    public Task<string> GenerateCodeAsync()
-        => Task.FromResult(_codeGenerator.Next("TSCĐ", () => _dataReader.DataSource.Count()));
+    public Task<string> GenerateCodeAsync() => _codeGenerator.NextAsync("TSCĐ", () => _dataReader.DataSource.CountAsync());
 }
 
 internal static class FixedAssetExtensions

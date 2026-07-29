@@ -88,7 +88,7 @@ export default class ProductBrowser {
         collapse.addEventListener('shown.bs.collapse', event => {
             if (this.#pendingChange) {
                 if (this.#state.cid === undefined)
-                    this.#setState({cid: null});
+                    this.#setState({ cid: null });
                 else
                     this.#setState({});
             }
@@ -142,7 +142,7 @@ export default class ProductBrowser {
             </div>
             <div id="collapseProductBrowser" class="accordion-collapse collapse ${this.#options.initialShow ? 'show' : ''}" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
                 <div class="accordion-body p-0 mt-3 text-muted small">
-                    <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
+                    <div class="pb-grid" style="max-height:100%; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
                 </div>
             </div>
         `;
@@ -258,10 +258,17 @@ export default class ProductBrowser {
                 }
             }
 
-            let qtyHtml = p.availableQty > 0
-                ? `<span class="text-success fw-medium">${DecimalFields.formatQuantity ? DecimalFields.formatQuantity(p.availableQty) : p.availableQty}</span>`
-                : `<span class="text-muted">0</span>`;
-            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn: ' + qtyHtml + (p.unitMeasurement ? ' ' + p.unitMeasurement : '') + '</div>';
+            let qtyInfoHtml = `<span class="text-success fw-medium d-block">
+                <i class="bi bi-boxes text-muted"></i>
+                Tồn: ${DecimalFields.formatQuantity(p.onHandQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}
+            </span>`;
+            if (p.reservedQty > 0) {
+                qtyInfoHtml += `<span class="text-danger d-block">
+                    <i class="bi bi-cart-check text-muted"></i>
+                    Bán: ${DecimalFields.formatQuantity(p.reservedQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}
+                </span>`;
+            }
+            let qtyHtml = `<div class="pb-product-stock small">${qtyInfoHtml}</div>`;
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`

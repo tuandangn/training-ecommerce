@@ -13,6 +13,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -26,10 +27,10 @@ public sealed class DeliveryRunManager(
     ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator entityCodeGenerator) : IDeliveryRunManager
 {
-    private string GenerateCode()
+    private Task<string> GenerateCodeAsync()
     {
         var prefix = $"CHG-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.Next(prefix, () => runReader.SecuredDataSource.Count(run => run.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => runReader.SecuredDataSource.CountAsync(run => run.Code.StartsWith(prefix)));
     }
 
     public async Task<DeliveryRunDto> CreateAsync(CreateDeliveryRunDto dto)
@@ -38,18 +39,18 @@ public sealed class DeliveryRunManager(
         dto.Verify();
 
         var noteIds = dto.DeliveryNoteIds.Distinct().ToList();
-        var activeNoteIds = runReader.DataSource
+        var activeNoteIds = await runReader.DataSource
             .Where(run => run.Status != DeliveryRunStatus.Closed && run.Status != DeliveryRunStatus.Cancelled)
             .SelectMany(run => run.Items)
             .Where(item => noteIds.Contains(item.DeliveryNoteId))
             .Select(item => item.DeliveryNoteId)
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         if (activeNoteIds.Count > 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunDeliveryNoteAlreadyActive");
 
-        var notes = deliveryNoteReader.DataSource
+        var notes = await deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         if (notes.Count != noteIds.Count)
             throw new NamEcommerceDomainException("Error.DeliveryNoteNotFound");
 
@@ -63,7 +64,7 @@ public sealed class DeliveryRunManager(
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var run = new DeliveryRun(
-            GenerateCode(),
+            await GenerateCodeAsync().ConfigureAwait(false),
             dto.AssignedDeliveryUserId,
             dto.AssignedDeliveryUsername,
             dto.AssignedDeliveryFullName,
@@ -123,7 +124,7 @@ public sealed class DeliveryRunManager(
         if (!run.DriverCachedOnUtc.HasValue && !run.PaperManifestIssued)
             throw new NamEcommerceDomainException("Error.DeliveryRunDriverNotAccepted");
 
-        var warehouseIds = GetRunWarehouseIds(run);
+        var warehouseIds = await GetRunWarehouseIdsAsync(run).ConfigureAwait(false);
         if (!warehouseIds.Contains(warehouseId))
             throw new NamEcommerceDomainException("Error.DeliveryRunWarehouseNotInRun");
 
@@ -138,22 +139,23 @@ public sealed class DeliveryRunManager(
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
-        run.HandOver(GetRunWarehouseIds(run), currentUser?.Id, DateTime.UtcNow);
+        var warehouseIds = await GetRunWarehouseIdsAsync(run).ConfigureAwait(false);
+        run.HandOver(warehouseIds, currentUser?.Id, DateTime.UtcNow);
         foreach (var item in run.Items)
             await deliveryNoteManager.MarkDeliveringAsync(item.DeliveryNoteId).ConfigureAwait(false);
 
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
     }
 
-    private List<Guid> GetRunWarehouseIds(DeliveryRun run)
+    private async Task<List<Guid>> GetRunWarehouseIdsAsync(DeliveryRun run)
     {
         var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
-        return deliveryNoteReader.DataSource
+        return await deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id))
             .SelectMany(note => note.Items)
             .Select(item => item.WarehouseId)
             .Distinct()
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
     }
 
     public async Task CloseAsync(Guid id)
@@ -162,9 +164,9 @@ public sealed class DeliveryRunManager(
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
 
         var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
-        var notes = deliveryNoteReader.DataSource
+        var notes = await deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         if (notes.Any(note => note.Status != DeliveryNoteStatus.Delivered && note.Status != DeliveryNoteStatus.Cancelled))
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotCloseWithOpenNotes");
@@ -184,9 +186,10 @@ public sealed class DeliveryRunManager(
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
         var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
-        var deliveredNotes = deliveryNoteReader.DataSource
+        var deliveredNotes = await deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id) && note.Status == DeliveryNoteStatus.Delivered)
-            .ToList();
+            .ToListAsync()
+            .ConfigureAwait(false);
         if (run.Status == DeliveryRunStatus.ReadyForHandover && deliveredNotes.Count == 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
@@ -235,19 +238,20 @@ public sealed class DeliveryRunManager(
 
     public async Task<DeliveryRunDto?> GetByIdAsync(Guid id)
     {
-        var run = await runReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var run = await runReader.GetByIdAsync(id).ConfigureAwait(false);
         return run?.ToDto();
     }
 
-    public Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId)
+    public async Task<DeliveryRunDto?> GetByDeliveryNoteIdAsync(Guid deliveryNoteId)
     {
-        var run = runReader.DataSource
+        var run = await runReader.DataSource
             .Where(r => r.Status != DeliveryRunStatus.Cancelled)
-            .FirstOrDefault(r => r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId));
-        return Task.FromResult(run?.ToDto());
+            .FirstOrDefaultAsync(r => r.Items.Any(item => item.DeliveryNoteId == deliveryNoteId))
+            .ConfigureAwait(false);
+        return run?.ToDto();
     }
 
-    public Task<IPagedDataDto<DeliveryRunDto>> GetListAsync(int pageIndex, int pageSize, string? keywords,
+    public async Task<IPagedDataDto<DeliveryRunDto>> GetListAsync(int pageIndex, int pageSize, string? keywords,
         Guid? assignedDeliveryUserId, DeliveryRunStatus? status)
     {
         var query = runReader.DataSource;
@@ -261,12 +265,12 @@ public sealed class DeliveryRunManager(
 
         query = query.OrderByDescending(run => run.CreatedOnUtc);
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
         if (total == 0)
-            return Task.FromResult(PagedDataDto.Create(new List<DeliveryRunDto>(), pageIndex, pageSize, 0));
+            return PagedDataDto.Create(new List<DeliveryRunDto>(), pageIndex, pageSize, 0);
 
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        return Task.FromResult(PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total));
+        var items = await  query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
+        return PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total);
     }
 
     private static decimal GetCashCollectedAmount(DeliveryNote note)

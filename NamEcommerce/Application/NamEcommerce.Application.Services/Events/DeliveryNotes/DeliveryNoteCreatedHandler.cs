@@ -18,7 +18,7 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
         if (notification is null)
             return;
 
-        var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(notification.DeliveryNoteId, default).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return;
 
@@ -40,7 +40,7 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
         //release global stock
         if (deliveryNote.OrderId != Guid.Empty)
         {
-            var order = await orderDataReader.GetByIdAsync(deliveryNote.OrderId, default).ConfigureAwait(false);
+            var order = await orderDataReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
             if (order is not null)
             {
                 foreach (var group in productGroups)

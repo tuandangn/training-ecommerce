@@ -15,6 +15,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.StockTransfer;
 
@@ -26,13 +27,12 @@ public sealed class StockTransferNoteManager(
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager,
     ICurrentUserAccessor currentUserAccessor,
-    EntityCodeGenerator entityCodeGenerator,
-    IDbContext dbContext) : IStockTransferNoteManager
+    EntityCodeGenerator entityCodeGenerator) : IStockTransferNoteManager
 {
-    private string GenerateCode()
+    private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PCT-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.Next(prefix, () => noteDataReader.DataSource.Count(n => n.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => noteDataReader.DataSource.CountAsync(n => n.Code.StartsWith(prefix)));
     }
 
     public async Task<StockTransferNoteDto> CreateAsync(CreateStockTransferNoteDto dto)
@@ -40,28 +40,28 @@ public sealed class StockTransferNoteManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var fromWarehouse = await warehouseDataReader.GetByIdAsync(dto.FromWarehouseId, default).ConfigureAwait(false);
+        var fromWarehouse = await warehouseDataReader.GetByIdAsync(dto.FromWarehouseId).ConfigureAwait(false);
         if (fromWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.FromWarehouseNotFound");
 
         if (fromWarehouse.WarehouseType == WarehouseType.DirectTransit)
             throw new NamEcommerceDomainException("Error.StockTransfer.CannotTransferFromDirectShipTransit");
 
-        var toWarehouse = await warehouseDataReader.GetByIdAsync(dto.ToWarehouseId, default).ConfigureAwait(false);
+        var toWarehouse = await warehouseDataReader.GetByIdAsync(dto.ToWarehouseId).ConfigureAwait(false);
         if (toWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.ToWarehouseNotFound");
 
         if (toWarehouse.WarehouseType == WarehouseType.DirectTransit)
             throw new NamEcommerceDomainException("Error.StockTransfer.CannotTransferToDirectShipTransit");
 
-        var code = GenerateCode();
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var note = new StockTransferNote(code, dto.FromWarehouseId, fromWarehouse.Name,
             dto.ToWarehouseId, toWarehouse.Name, dto.Note, currentUser?.Id);
 
         foreach (var itemDto in dto.Items)
         {
-            var product = await productDataReader.GetByIdAsync(itemDto.ProductId, default).ConfigureAwait(false);
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
             if (product is null)
                 throw new NamEcommerceDomainException("Error.StockTransfer.ProductNotFound");
 
@@ -82,8 +82,6 @@ public sealed class StockTransferNoteManager(
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var userId = currentUser?.Id ?? Guid.Empty;
-
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
 
         var occurredAtUtc = DateTime.UtcNow;
         foreach (var item in note.Items)
@@ -132,7 +130,6 @@ public sealed class StockTransferNoteManager(
 
         note.Approve();
         await noteRepository.UpdateAsync(note).ConfigureAwait(false);
-        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)
@@ -146,11 +143,11 @@ public sealed class StockTransferNoteManager(
 
     public async Task<StockTransferNoteDto?> GetByIdAsync(Guid id)
     {
-        var note = await noteDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var note = await noteDataReader.GetByIdAsync(id).ConfigureAwait(false);
         return note?.ToDto();
     }
 
-    public Task<IPagedDataDto<StockTransferNoteDto>> GetListAsync(
+    public async Task<IPagedDataDto<StockTransferNoteDto>> GetListAsync(
         int pageIndex, int pageSize, string? keywords, Guid? fromWarehouseId, StockTransferStatus? status)
     {
         var query = noteDataReader.DataSource;
@@ -164,11 +161,11 @@ public sealed class StockTransferNoteManager(
 
         query = query.OrderByDescending(n => n.CreatedOnUtc);
 
-        var total = query.Count();
+        var total = await query.CountAsync().ConfigureAwait(false);
         if (total == 0)
-            return Task.FromResult(PagedDataDto.Create(new List<StockTransferNoteDto>(), pageIndex, pageSize, 0));
+            return PagedDataDto.Create(new List<StockTransferNoteDto>(), pageIndex, pageSize, 0);
 
-        var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        return Task.FromResult(PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, total));
+        var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
+        return PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, total);
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Notifications;
 using NamEcommerce.Domain.Shared.Common;
@@ -33,7 +34,7 @@ public sealed class SystemNotificationManager(
         return ToDto(inserted, null);
     }
 
-    public Task<IPagedDataDto<SystemNotificationDto>> GetNotificationsAsync(SystemNotificationListFilterDto dto)
+    public async Task<IPagedDataDto<SystemNotificationDto>> GetNotificationsAsync(SystemNotificationListFilterDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         ArgumentOutOfRangeException.ThrowIfLessThan(dto.PageIndex, 0);
@@ -50,7 +51,7 @@ public sealed class SystemNotificationManager(
         if (dto.Severity.HasValue)
             query = query.Where(notification => notification.Severity == dto.Severity.Value);
 
-        var readByNotificationId = GetReadMap(dto.UserId);
+        var readByNotificationId = await GetReadMapAsync(dto.UserId).ConfigureAwait(false);
         if (dto.IsRead.HasValue && dto.UserId.HasValue)
         {
             query = dto.IsRead.Value
@@ -58,34 +59,34 @@ public sealed class SystemNotificationManager(
                 : query.Where(notification => !readByNotificationId.Keys.Contains(notification.Id));
         }
 
-        var total = query.Count();
-        var items = query
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var items = (await query
             .OrderByDescending(notification => notification.CreatedOnUtc)
             .Skip(dto.PageIndex * dto.PageSize)
             .Take(dto.PageSize)
-            .ToList()
+            .ToListAsync().ConfigureAwait(false))
             .Select(notification => ToDto(notification, readByNotificationId.GetValueOrDefault(notification.Id)))
             .ToList();
 
-        return Task.FromResult(PagedDataDto.Create(items, dto.PageIndex, dto.PageSize, total));
+        return PagedDataDto.Create(items, dto.PageIndex, dto.PageSize, total);
     }
 
-    public Task<int> CountUnreadAsync(Guid userId, IReadOnlyCollection<string> userPermissions)
+    public async Task<int> CountUnreadAsync(Guid userId, IReadOnlyCollection<string> userPermissions)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
 
         var permissions = BuildPermissionSet(userPermissions);
-        var readNotificationIds = notificationReadReader.DataSource
+        var readNotificationIds = await notificationReadReader.DataSource
             .Where(read => read.UserId == userId)
             .Select(read => read.NotificationId)
-            .ToHashSet();
+            .ToHashSetAsync().ConfigureAwait(false);
 
-        var count = notificationReader.DataSource.Count(notification =>
+        var count = await notificationReader.DataSource.CountAsync(notification =>
             permissions.Contains(notification.RequiredPermission) &&
-            !readNotificationIds.Contains(notification.Id));
+            !readNotificationIds.Contains(notification.Id)).ConfigureAwait(false);
 
-        return Task.FromResult(count);
+        return count;
     }
 
     public async Task MarkReadAsync(Guid notificationId, Guid userId)
@@ -95,12 +96,12 @@ public sealed class SystemNotificationManager(
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
 
-        var notification = await notificationReader.GetByIdAsync(notificationId, default).ConfigureAwait(false);
+        var notification = await notificationReader.GetByIdAsync(notificationId).ConfigureAwait(false);
         if (notification is null)
             throw new ArgumentException("Notification is not found.", nameof(notificationId));
 
-        var exists = notificationReadReader.DataSource.Any(read =>
-            read.NotificationId == notificationId && read.UserId == userId);
+        var exists = await notificationReadReader.DataSource.AnyAsync(read =>
+            read.NotificationId == notificationId && read.UserId == userId).ConfigureAwait(false);
         if (exists)
             return;
 
@@ -114,16 +115,16 @@ public sealed class SystemNotificationManager(
             throw new ArgumentException("UserId is required.", nameof(userId));
 
         var permissions = BuildPermissionSet(userPermissions);
-        var existingReadIds = notificationReadReader.DataSource
+        var existingReadIds = await notificationReadReader.DataSource
             .Where(read => read.UserId == userId)
             .Select(read => read.NotificationId)
-            .ToHashSet();
+            .ToHashSetAsync().ConfigureAwait(false);
 
-        var unreadIds = notificationReader.DataSource
+        var unreadIds = await notificationReader.DataSource
             .Where(notification => permissions.Contains(notification.RequiredPermission))
             .Select(notification => notification.Id)
             .Where(id => !existingReadIds.Contains(id))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
         foreach (var notificationId in unreadIds)
         {
@@ -132,15 +133,15 @@ public sealed class SystemNotificationManager(
         }
     }
 
-    private Dictionary<Guid, DateTime> GetReadMap(Guid? userId)
+    private async Task<Dictionary<Guid, DateTime>> GetReadMapAsync(Guid? userId)
     {
         if (!userId.HasValue)
             return new Dictionary<Guid, DateTime>();
 
-        return notificationReadReader.DataSource
+        return await notificationReadReader.DataSource
             .Where(read => read.UserId == userId.Value)
             .GroupBy(read => read.NotificationId)
-            .ToDictionary(group => group.Key, group => group.Max(read => read.ReadOnUtc));
+            .ToDictionaryAsync(group => group.Key, group => group.Max(read => read.ReadOnUtc)).ConfigureAwait(false);
     }
 
     private static HashSet<string> BuildPermissionSet(IEnumerable<string> permissions)

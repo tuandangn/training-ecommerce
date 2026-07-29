@@ -147,14 +147,32 @@
                                 <span class="text-muted small">Tiền hàng:</span>
                                 <span class="fw-bold small">@Model.TotalAmount.DisplayCurrencyWithSymbol()</span>
                             </div>
-                            @if (Model.AmountAlreadyPaidForOrder > 0)
+                            @if (Model.AppliedOrderDiscount > 0)
+                            {
+                                <div class="d-flex justify-content-between mb-2" id="appliedOrderDiscount">
+                                    <span class="text-muted small">
+                                        Giảm giá
+                                        @if (Model.AppliedOrderDiscount != Model.OrderDiscount)
+                                        {
+                                            <span id="breakdown-discount-total">(tổng @Model.OrderDiscount.DisplayCurrencyWithSymbol())</span>
+                                        }
+                                        :
+                                    </span>
+                                    <span class="fw-bold text-success" id="breakdown-discount">-@Model.AppliedOrderDiscount.DisplayCurrencyWithSymbol()</span>
+                                </div>
+                            }
+                            @if (Model.AppliedPrepaidAmount > 0)
                             {
                                 <div class="d-flex justify-content-between mb-2" id="paidAmount">
                                     <span class="text-muted small">
                                         Đã thanh toán
-                                        <span class="@(Model.AmountAlreadyPaidForOrder == Model.TotalAmount ? "d-none" : "")"> (tổng @Model.AmountAlreadyPaidForOrder.DisplayCurrency())</span>:
+                                        @if (Model.AppliedPrepaidAmount != Model.PrepaidAmount)
+                                        {
+                                            <span> (tổng @Model.PrepaidAmount.DisplayCurrencyWithSymbol())</span>
+                                        }
+                                        :
                                     </span>
-                                    <span class="fw-bold text-success" id="breakdown-items">@(Math.Min(Model.TotalAmount, Model.AmountAlreadyPaidForOrder).DisplayCurrencyWithSymbol())</span>
+                                    <span class="fw-bold text-success" id="breakdown-items">-@Model.AppliedPrepaidAmount.DisplayCurrencyWithSymbol()</span>
                                 </div>
                             }
                         }
@@ -500,10 +518,10 @@
                     }
                     @if (status is (DeliveryNoteStatus.PendingConfirmation or DeliveryNoteStatus.Delivering or DeliveryNoteStatus.Confirmed))
                     {
-                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open" 
-                            data-id="@Model.Id" data-needs-run-override="@needsDeliveryRunOverrideConfirmation.ToString().ToLowerInvariant()" 
-                            data-receiver-name="@Model.DeliveryReceiverName" data-cash-collected-amount="@((Model.DeliveryCashCollectedAmount ?? Model.AmountToCollect).ToString(CultureInfo.InvariantCulture))" 
-                            disabled="@(!Model.CanMarkDelivered)">
+                        <button type="button" class="btn btn-primary btn-delivered btn-sm" data-testid="delivery-mark-delivered-open"
+                                data-id="@Model.Id" data-needs-run-override="@needsDeliveryRunOverrideConfirmation.ToString().ToLowerInvariant()"
+                                data-receiver-name="@Model.DeliveryReceiverName" data-cash-collected-amount="@((Model.DeliveryCashCollectedAmount ?? Model.AmountToCollect).ToString(CultureInfo.InvariantCulture))"
+                                disabled="@(!Model.CanMarkDelivered)">
                             <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                         </button>
                     }
@@ -699,7 +717,7 @@
                         <div class="mb-0">
                             <label for="deliveryShippingAddress" class="form-label">Địa chỉ</label>
                             <textarea id="deliveryShippingAddress" name="shippingAddress" class="form-control" rows="3"
-                                data-val="true" data-val-required="Vui lòng nhập địa chỉ" data-val-maxlength="Địa chỉ không được vượt quá 1000 ký tự" data-val-maxlength-max="1000">@Model.ShippingAddress</textarea>
+                                      data-val="true" data-val-required="Vui lòng nhập địa chỉ" data-val-maxlength="Địa chỉ không được vượt quá 1000 ký tự" data-val-maxlength-max="1000">@Model.ShippingAddress</textarea>
                             <span class="text-danger small field-validation-valid" data-valmsg-for="shippingAddress" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -791,7 +809,7 @@
 
         const deliveryNoteController = new DeliveryNoteController({ hidePageLoadOnRequestEnd: false });
 
-        $(document).ready(function () {
+        $(document).ready(function() {
             // Confirm
             $('.btn-confirm').click(async function(e) {
                 e.preventDefault();
@@ -823,7 +841,7 @@
 
             $('.btn-customer-reject').click(async function(e) {
                 e.preventDefault();
-                var {id, code} = this.dataset;
+                var { id, code } = this.dataset;
                 deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code);
             });
 
@@ -845,8 +863,8 @@
 
             const editShippingInfoModalEl = document.getElementById('deliveryShippingModal');
             if (editShippingInfoModalEl) {
-                editShippingInfoModalEl.querySelector('form')?.addEventListener('submit', function(e){
-                    if(!$(this).valid()) return;
+                editShippingInfoModalEl.querySelector('form')?.addEventListener('submit', function(e) {
+                    if (!$(this).valid()) return;
                     showPageLoading();
                 });
             }
@@ -919,7 +937,7 @@
             if (rejectSettlementBtn) {
                 rejectSettlementBtn.addEventListener('click', async (e) => {
                     const modalEl = document.getElementById('approveSettlementModal');
-                    if(!modalEl) return;
+                    if (!modalEl) return;
                     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                     modalInstance.hide();
                 });

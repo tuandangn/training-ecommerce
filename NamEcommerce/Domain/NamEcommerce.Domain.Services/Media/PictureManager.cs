@@ -52,7 +52,7 @@ public sealed class PictureManager : IPictureManager
 
     public async Task<PictureDto?> GetPictureByIdAsync(Guid id)
     {
-        var picture = await _pictureDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var picture = await _pictureDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (picture is null)
             return null;
 

@@ -1,3 +1,8 @@
+using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.Debts;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Entities.Catalog;
@@ -7,6 +12,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
@@ -14,16 +20,17 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
-using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Services.Users;
-using NamEcommerce.Application.Contracts.Customers;
 
 namespace NamEcommerce.Application.Services.Orders;
 
 public sealed class FastSaleAppService(
     IOrderManager orderManager,
+    IOrderAppService orderAppService,
     IDeliveryNoteManager deliveryNoteManager,
+    IDeliveryNoteAppService deliveryNoteAppService,
     ICustomerDebtManager customerDebtManager,
+    ICustomerDebtAppService customerDebtAppService,
     IBankTransferPaymentIntentManager paymentIntentManager,
     IInventoryStockManager inventoryStockManager,
     ICustomerAppService customerAppService,
@@ -32,7 +39,127 @@ public sealed class FastSaleAppService(
     IEntityDataReader<Warehouse> warehouseReader,
     ICurrentUserAccessor currentUserAccessor) : IFastSaleAppService
 {
-    public async Task<QuickSaleResultAppDto> CreateCashQuickSaleAsync(CreateQuickSaleAppDto dto)
+    public async Task<QuickCreateOrderResultAppDto> QuickCreateOrderAsync(QuickCreateOrderAppDto2 dto)
+    {
+        var validateResult = await ValidateQuickCreateAsync(dto).ConfigureAwait(false);
+        if (!validateResult.success)
+            return QuickCreateOrderResultAppDto.CreateError(validateResult.errorMessage);
+
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer is null)
+            return QuickCreateOrderResultAppDto.CreateError("Error.CustomerIsNotFound");
+
+        var createOrderDto = new CreateOrderAppDto
+        {
+            CustomerId = dto.CustomerId,
+            Note = dto.Note,
+            OrderDiscount = dto.OrderDiscount,
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = dto.ShippingPhoneNumber,
+            SkipScheduling = dto.DeliveryNow,
+            RequiresPayOff = dto.DeliveryNow
+        };
+        foreach (var item in dto.Items)
+        {
+            createOrderDto.Items.Add(new CreateOrderAppDto.OrderItemAppDto
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice
+            });
+        }
+        var orderResult = await orderAppService.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
+        if (!orderResult.Success)
+            return QuickCreateOrderResultAppDto.CreateError(orderResult.ErrorMessage);
+
+        var createdOrder = await orderManager.GetOrderByIdAsync(orderResult.CreatedId!.Value).ConfigureAwait(false);
+        if (createdOrder is null)
+            return QuickCreateOrderResultAppDto.CreateError("Error.OrderIsNotFound");
+
+        DeliveryNoteDto? deliveryNote = null;
+        if (dto.DeliveryNow)
+        {
+            deliveryNote = await CreateDeliveryNoteAsync(dto, createdOrder.Id, createdOrder.CanProcess).ConfigureAwait(false);
+            if (createdOrder.CanProcess)
+                await orderManager.RequestDeliveryAsync(createdOrder.Id, deliveryNote.Id, DateTime.UtcNow).ConfigureAwait(false);
+        }
+        return new QuickCreateOrderResultAppDto
+        {
+            Success = true,
+            OrderId = createdOrder.Id
+        };
+    }
+
+    public async Task<CommonActionResultDto> CompleteQuickCreateOrderPaymentAsync(CompleteQuickCreateOrderPaymentAppDto dto)
+    {
+        var validateResult = dto.Validate();
+        if (!validateResult.valid)
+            return CommonActionResultDto.CreateError(validateResult.errorMessage);
+
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            return CommonActionResultDto.CreateError("Error.OrderIsNotFound");
+
+        if (order.ProcessRequiresPayment && order.HadPaid)
+            return CommonActionResultDto.CreateError("Error.OrderHadPaid");
+
+        BankTransferPaymentIntentDto? paymentIntent = null;
+        if (dto.PaymentIntentId.HasValue)
+        {
+            paymentIntent = await paymentIntentManager.GetByIdAsync(dto.PaymentIntentId.Value).ConfigureAwait(false);
+            if (paymentIntent is null)
+            {
+                return CommonActionResultDto.CreateError("Error.PaymentIntentIsNotFound");
+            }
+
+            if (paymentIntent.CustomerId.HasValue && paymentIntent.CustomerId.Value != order.CustomerId)
+                return CommonActionResultDto.CreateError("Error.PaymentIntentCustomerMismatch");
+
+            await paymentIntentManager.ExpireIfPendingAsync(paymentIntent!.Id, DateTime.UtcNow).ConfigureAwait(false);
+
+            if (paymentIntent.Status is BankTransferPaymentIntentStatus.Expired
+                or BankTransferPaymentIntentStatus.Cancelled
+                or BankTransferPaymentIntentStatus.Consumed)
+            {
+                return CommonActionResultDto.CreateError("Error.PaymentIntentCannotConsume");
+            }
+
+            if (paymentIntent.Status is not BankTransferPaymentIntentStatus.Confirmed and not BankTransferPaymentIntentStatus.ManuallyConfirmed)
+                return CommonActionResultDto.CreateError("Error.PaymentIntentIsNotConfirmed");
+        }
+
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        if (currentUser is null)
+            return CommonActionResultDto.CreateError("Error.UserRequired");
+        var deliveryNoteId = await deliveryNoteAppService.GetWaitingPaymentDeliveryNoteIdAsync(order.Id);
+
+        var payment = await customerDebtAppService.RecordPaymentAsync(new CreateCustomerPaymentAppDto
+        {
+            CustomerId = order.CustomerId,
+            OrderId = order.Id,
+            DeliveryNoteId = deliveryNoteId,
+            Amount = dto.PaidAmount,
+            PaymentMethod = dto.PaymentIntentId.HasValue ? (int)PaymentMethod.BankTransfer : (int)PaymentMethod.Cash,
+            PaymentType = deliveryNoteId.HasValue ? (int)PaymentType.DebtPayment : (int)PaymentType.Deposit,
+            PaidOnUtc = DateTime.UtcNow,
+            RecordedByUserId = currentUser!.Id,
+            Note = $"Payment for order {order.Code}"
+        }).ConfigureAwait(false);
+
+        if (dto.PaymentIntentId.HasValue)
+        {
+            if (payment is null)
+                return CommonActionResultDto.CreateError("Error.CustomerPaymentIsNotFound");
+            await paymentIntentManager.ConsumeAsync(
+                dto.PaymentIntentId.Value, order.Id, null, null, payment.Id).ConfigureAwait(false);
+        }
+
+        await orderManager.MarkOrderHasPayment(order.Id, dto.PaidAmount, dto.PaymentIntentId).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
+    }
+
+    public async Task<QuickSaleResultAppDto> CreateCashQuickSaleAsync(QuickCreateOrderAppDto dto)
     {
         var validation = await ValidateQuickSaleAsync(dto, QuickSalePaymentTiming.PayNow, PaymentMethod.Cash).ConfigureAwait(false);
         if (!validation.Success)
@@ -41,7 +168,7 @@ public sealed class FastSaleAppService(
         return await CreateQuickSaleRecordsAsync(dto, PaymentMethod.Cash, null).ConfigureAwait(false);
     }
 
-    public async Task<QuickSaleResultAppDto> CreateBankTransferQuickSaleAsync(CreateQuickSaleAppDto dto, Guid paymentIntentId)
+    public async Task<QuickSaleResultAppDto> CreateBankTransferQuickSaleAsync(QuickCreateOrderAppDto dto, Guid paymentIntentId)
     {
         var validation = await ValidateQuickSaleAsync(dto, QuickSalePaymentTiming.PayNow, PaymentMethod.BankTransfer).ConfigureAwait(false);
         if (!validation.Success)
@@ -60,9 +187,9 @@ public sealed class FastSaleAppService(
         if (intent.CustomerId.HasValue && intent.CustomerId.Value != dto.CustomerId)
             return QuickSaleResultAppDto.CreateError("Error.PaymentIntentCustomerMismatch");
 
-        var total = CalculateTotal(dto);
-        if (intent.Amount != total || intent.Amount != dto.PaidAmount)
-            return QuickSaleResultAppDto.CreateError("Error.PaymentIntentAmountMismatch");
+        //var total = CalculateTotal(dto);
+        //if (intent.Amount != total || intent.Amount != dto.PaidAmount)
+        //    return QuickSaleResultAppDto.CreateError("Error.PaymentIntentAmountMismatch");
         if (intent.Status is BankTransferPaymentIntentStatus.Expired
             or BankTransferPaymentIntentStatus.Cancelled
             or BankTransferPaymentIntentStatus.Consumed)
@@ -75,7 +202,7 @@ public sealed class FastSaleAppService(
         return await CreateQuickSaleRecordsAsync(dto, PaymentMethod.BankTransfer, paymentIntentId).ConfigureAwait(false);
     }
 
-    public async Task<QuickSaleResultAppDto> CreateUnpaidQuickSaleAsync(CreateQuickSaleAppDto dto)
+    public async Task<QuickSaleResultAppDto> CreateUnpaidQuickSaleAsync(QuickCreateOrderAppDto dto)
     {
         var validation = await ValidateQuickSaleAsync(dto, QuickSalePaymentTiming.Unpaid, null).ConfigureAwait(false);
         if (!validation.Success)
@@ -84,8 +211,50 @@ public sealed class FastSaleAppService(
         return await CreateQuickSaleRecordsAsync(dto, null, null).ConfigureAwait(false);
     }
 
+    private async Task<(bool success, string? errorMessage)> ValidateQuickCreateAsync(QuickCreateOrderAppDto2 dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var validateResult = dto.Validate();
+        if (!validateResult.valid)
+            return validateResult;
+
+        if (dto.DeliveryNow)
+        {
+            var warehouseIds = dto.Items.Select(item => item.WarehouseId).OfType<Guid>().Distinct().ToList();
+            foreach (var warehouseId in warehouseIds)
+            {
+                var warehouse = await warehouseReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+                if (warehouse is null)
+                    return (false, "Error.WarehouseIsNotFound");
+            }
+        }
+
+        foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
+        {
+            var product = await productReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            if (product is null)
+                return (false, "Error.ProductIsNotFound");
+        }
+
+        if (!dto.DeliveryNow)
+            return (true, string.Empty);
+
+        foreach (var itemGroup in dto.Items.GroupBy(item => new { item.ProductId, item.WarehouseId }))
+        {
+            var requestedQuantity = itemGroup.Sum(item => item.Quantity);
+            var stock = await inventoryStockManager
+                .GetInventoryStockForProductAsync(itemGroup.Key.ProductId, itemGroup.Key.WarehouseId!.Value)
+                .ConfigureAwait(false);
+            if (stock is null || stock.QuantityOnHand < requestedQuantity)
+                return (false, "Error.ProductInsufficientStock");
+        }
+
+        return (true, string.Empty);
+    }
+
     private async Task<QuickSaleResultAppDto> ValidateQuickSaleAsync(
-        CreateQuickSaleAppDto dto,
+        QuickCreateOrderAppDto dto,
         QuickSalePaymentTiming expectedPaymentTiming,
         PaymentMethod? expectedPaymentMethod)
     {
@@ -103,7 +272,7 @@ public sealed class FastSaleAppService(
         if (expectedPaymentMethod.HasValue && (PaymentMethod)dto.PaymentMethod != expectedPaymentMethod.Value)
             return QuickSaleResultAppDto.CreateError("Error.PaymentMethodInvalid");
 
-        var customer = await customerReader.GetByIdAsync(dto.CustomerId, default).ConfigureAwait(false);
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
             return QuickSaleResultAppDto.CreateError("Error.CustomerIsNotFound");
 
@@ -112,25 +281,29 @@ public sealed class FastSaleAppService(
             && customer.Kind == CustomerKind.RetailWalkIn && customer.IsSystem)
             return QuickSaleResultAppDto.CreateError("Error.RetailOrderCannotLeaveDebt");
 
-        var warehouseIds = GetWarehouseIdsToValidate(dto, fulfillmentMode);
-        foreach (var warehouseId in warehouseIds)
+        if (dto.FulfillmentMode == (int)QuickSaleFulfillmentMode.DeliverNow)
         {
-            var warehouse = await warehouseReader.GetByIdAsync(warehouseId, default).ConfigureAwait(false);
-            if (warehouse is null)
-                return QuickSaleResultAppDto.CreateError("Error.WarehouseIsNotFound");
+            var warehouseIds = dto.Items.Select(item => item.WarehouseId).Distinct().ToList();
+            foreach (var warehouseId in warehouseIds)
+            {
+                var warehouse = await warehouseReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+                if (warehouse is null)
+                    return QuickSaleResultAppDto.CreateError("Error.WarehouseIsNotFound");
+            }
         }
 
         var total = CalculateTotal(dto);
         if (total <= 0)
             return QuickSaleResultAppDto.CreateError("Error.TotalAmountMustBePositive");
-        if (paymentTiming == QuickSalePaymentTiming.PayNow && dto.PaidAmount != total)
+        if (customer.Kind == CustomerKind.RetailWalkIn && paymentTiming == QuickSalePaymentTiming.PayNow
+            && fulfillmentMode == QuickSaleFulfillmentMode.DeliverNow && dto.PaidAmount != total)
             return QuickSaleResultAppDto.CreateError("Error.PaymentAmountMustEqualSaleTotal");
         if (paymentTiming == QuickSalePaymentTiming.Unpaid && dto.PaidAmount != 0)
             return QuickSaleResultAppDto.CreateError("Error.PaymentAmountMustBeZeroWhenUnpaid");
 
         foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
-            var product = await productReader.GetByIdAsync(itemGroup.Key, default).ConfigureAwait(false);
+            var product = await productReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
             if (product is null)
                 return QuickSaleResultAppDto.CreateError("Error.ProductIsNotFound");
         }
@@ -138,7 +311,7 @@ public sealed class FastSaleAppService(
         if (fulfillmentMode != QuickSaleFulfillmentMode.DeliverNow)
             return new QuickSaleResultAppDto { Success = true };
 
-        foreach (var itemGroup in dto.Items.GroupBy(item => new { item.ProductId, WarehouseId = ResolveItemWarehouseId(item, dto) }))
+        foreach (var itemGroup in dto.Items.GroupBy(item => new { item.ProductId, WarehouseId = item.WarehouseId }))
         {
             if (itemGroup.Key.WarehouseId == Guid.Empty)
                 return QuickSaleResultAppDto.CreateError("Error.WarehouseRequired");
@@ -155,7 +328,7 @@ public sealed class FastSaleAppService(
     }
 
     private async Task<QuickSaleResultAppDto> CreateQuickSaleRecordsAsync(
-        CreateQuickSaleAppDto dto, PaymentMethod? paymentMethod, Guid? paymentIntentId)
+        QuickCreateOrderAppDto dto, PaymentMethod? paymentMethod, Guid? paymentIntentId)
     {
         var fulfillmentMode = (QuickSaleFulfillmentMode)dto.FulfillmentMode;
         var paymentTiming = (QuickSalePaymentTiming)dto.PaymentTiming;
@@ -186,7 +359,7 @@ public sealed class FastSaleAppService(
                     OrderId = orderId,
                     DeliveryNoteId = deliveryNote.Id,
                     CustomerDebtId = null,
-                    Amount = total,
+                    Amount = dto.PaidAmount,
                     PaymentMethod = paymentMethod!.Value,
                     PaymentType = PaymentType.DebtPayment,
                     PaidOnUtc = DateTime.UtcNow,
@@ -195,7 +368,7 @@ public sealed class FastSaleAppService(
             }
 
             var requestedAtUtc = DateTime.UtcNow;
-            await orderManager.RequestQuickSaleDeliveryAsync(orderId, deliveryNote.Id, requestedAtUtc).ConfigureAwait(false);
+            await orderManager.RequestDeliveryAsync(orderId, deliveryNote.Id, requestedAtUtc).ConfigureAwait(false);
 
             if (paymentIntentId.HasValue)
             {
@@ -222,7 +395,7 @@ public sealed class FastSaleAppService(
             {
                 CustomerId = dto.CustomerId,
                 OrderId = orderId,
-                Amount = total,
+                Amount = dto.PaidAmount,
                 PaymentMethod = paymentMethod!.Value,
                 PaymentType = PaymentType.Deposit,
                 PaidOnUtc = DateTime.UtcNow,
@@ -257,7 +430,7 @@ public sealed class FastSaleAppService(
         };
     }
 
-    private async Task<CreateOrderResultDto> CreateOrderAsync(CreateQuickSaleAppDto dto)
+    private async Task<CreateOrderResultDto> CreateOrderAsync(QuickCreateOrderAppDto dto)
     {
         var createOrderDto = new CreateOrderDto
         {
@@ -266,8 +439,7 @@ public sealed class FastSaleAppService(
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date,
             ShippingAddress = dto.ShippingAddress,
-            ShippingPhoneNumber = dto.ShippingPhoneNumber,
-            RequireAvailableStock = (QuickSaleFulfillmentMode)dto.FulfillmentMode == QuickSaleFulfillmentMode.DeliverNow
+            ShippingPhoneNumber = dto.ShippingPhoneNumber
         };
 
         foreach (var item in dto.Items)
@@ -283,7 +455,39 @@ public sealed class FastSaleAppService(
         return await orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
     }
 
-    private async Task<DeliveryNoteDto> CreateAndConfirmDeliveryNoteAsync(CreateQuickSaleAppDto dto, Guid orderId, decimal total)
+    private async Task<DeliveryNoteDto> CreateDeliveryNoteAsync(QuickCreateOrderAppDto2 dto, Guid orderId, bool confirmDeliveryNote)
+    {
+        var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new InvalidOperationException("Error.Order.QuickCreateFailed");
+
+        if (order.Items.Count != dto.Items.Count)
+            throw new InvalidOperationException("Error.OrderItemMismatch");
+
+        var deliveryNote = await deliveryNoteManager.CreateFromOrderAsync(new CreateDeliveryNoteDto
+        {
+            OrderId = orderId,
+            ShippingAddress = order.ShippingAddress ?? string.Empty,
+            ShippingPhoneNumber = order.ShippingPhoneNumber,
+            ShowPrice = true,
+            Surcharge = 0,
+            AmountToCollect = order.TotalAmount,
+            Items = order.Items.Select((item, index) => new CreateDeliveryNoteItemDto
+            {
+                OrderItemId = item.Id,
+                WarehouseId = dto.Items[index].WarehouseId!.Value,
+                Quantity = item.Quantity
+            }).ToList(),
+            Note = order.Note
+        }).ConfigureAwait(false);
+
+        if (confirmDeliveryNote)
+            await deliveryNoteManager.ConfirmAsync(deliveryNote.Id).ConfigureAwait(false);
+
+        return deliveryNote;
+    }
+
+    private async Task<DeliveryNoteDto> CreateAndConfirmDeliveryNoteAsync(QuickCreateOrderAppDto dto, Guid orderId, decimal total)
     {
         var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
@@ -304,7 +508,7 @@ public sealed class FastSaleAppService(
             Items = order.Items.Select((item, index) => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = item.Id,
-                WarehouseId = ResolveItemWarehouseId(dto.Items[index], dto),
+                WarehouseId = dto.Items[index].WarehouseId,
                 Quantity = item.Quantity
             }).ToList()
         }).ConfigureAwait(false);
@@ -314,25 +518,7 @@ public sealed class FastSaleAppService(
         return deliveryNote;
     }
 
-    private static decimal CalculateTotal(CreateQuickSaleAppDto dto)
+    private static decimal CalculateTotal(QuickCreateOrderAppDto dto)
         => dto.Items.Sum(item => item.Quantity * item.UnitPrice) - (dto.OrderDiscount ?? 0);
 
-    private static Guid ResolveItemWarehouseId(QuickSaleItemAppDto item, CreateQuickSaleAppDto dto)
-        => item.WarehouseId == Guid.Empty ? dto.WarehouseId : item.WarehouseId;
-
-    private static IReadOnlyCollection<Guid> GetWarehouseIdsToValidate(
-        CreateQuickSaleAppDto dto,
-        QuickSaleFulfillmentMode fulfillmentMode)
-    {
-        if (fulfillmentMode != QuickSaleFulfillmentMode.DeliverNow)
-            return dto.WarehouseId == Guid.Empty ? [] : [dto.WarehouseId];
-
-        return dto.Items
-            .Select(item => ResolveItemWarehouseId(item, dto))
-            .Where(id => id != Guid.Empty)
-            .Append(dto.WarehouseId)
-            .Where(id => id != Guid.Empty)
-            .Distinct()
-            .ToList();
-    }
 }

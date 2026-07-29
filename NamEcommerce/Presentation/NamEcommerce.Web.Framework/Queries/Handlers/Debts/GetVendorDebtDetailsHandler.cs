@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Debts;
 
@@ -25,8 +26,8 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             PaidAmount = d.PaidAmount,
             RemainingAmount = d.RemainingAmount,
             Status = d.Status,
-            DueDate = d.DueDateUtc?.ToLocalTime(),
-            CreatedOn = d.CreatedOnUtc.ToLocalTime(),
+            DueDate = DateTimeHelper.ToLocalTime(d.DueDateUtc),
+            CreatedOn = DateTimeHelper.ToLocalTime(d.CreatedOnUtc),
             Payments = d.Payments.Select(p => MapPayment(p)).ToList(),
             CreditNoteAllocations = d.CreditNoteAllocations.Select(MapAllocation).ToList()
         }).ToList();
@@ -59,7 +60,7 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             PaymentMethod = p.PaymentMethod,
             PaymentType = p.PaymentType,
             Note = p.Note,
-            PaidOn = p.PaidOnUtc.ToLocalTime(),
+            PaidOn = DateTimeHelper.ToLocalTime(p.PaidOnUtc),
             PurchaseOrderCode = p.PurchaseOrderCode,
             VendorDebtId = p.VendorDebtId
         };
@@ -74,7 +75,7 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             Amount = creditNote.Amount,
             AppliedAmount = creditNote.AppliedAmount,
             RemainingAmount = creditNote.RemainingAmount,
-            CreatedOn = creditNote.CreatedOnUtc.ToLocalTime()
+            CreatedOn = DateTimeHelper.ToLocalTime(creditNote.CreatedOnUtc)
         };
 
     private static CreditNoteAllocationModel MapAllocation(VendorCreditNoteAllocationAppDto allocation) =>
@@ -85,8 +86,8 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             SourceReturnId = allocation.SourceReturnId,
             SourceReturnCode = allocation.SourceReturnCode,
             Amount = allocation.Amount,
-            AppliedOn = allocation.AppliedOnUtc.ToLocalTime(),
-            ReversedOn = allocation.ReversedOnUtc?.ToLocalTime(),
+            AppliedOn = DateTimeHelper.ToLocalTime(allocation.AppliedOnUtc),
+            ReversedOn = DateTimeHelper.ToLocalTime(allocation.ReversedOnUtc),
             ReverseReason = allocation.ReverseReason
         };
 }

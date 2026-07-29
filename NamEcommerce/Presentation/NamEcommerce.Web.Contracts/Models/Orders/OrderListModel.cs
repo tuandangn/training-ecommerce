@@ -28,6 +28,7 @@ public sealed class OrderListModel
         public decimal TotalOrdered => Items.Sum(item => item.QuantityOrdered);
         public decimal TotalDeliveryNoteQuantity => Items.Sum(item => item.QuantityInDeliveryNotes);
         public decimal TotalDelivered => Items.Sum(item => item.QuantityDelivered);
+        public bool PaymentRequired { get; set; }
     }
 
     [Serializable]

@@ -8,38 +8,25 @@ namespace NamEcommerce.Web.Models.Orders;
 
 [Serializable]
 public sealed record OrderDetailsModel
-{
-    public enum WorkflowStage
-    {
-        Order = 1,
-        Preparation = 2,
-        Delivery = 3,
-        Settlement = 4
-    }
-
-    public enum OrderDeliverySummaryStatus
-    {
-        Pending = 0,
-        Shipping = 1,
-        PartialDelivered = 2,
-        Delivered = 3
-    }
-
+{    
     public required Guid Id { get; init; }
     public required string Code { get; init; }
     public required decimal OrderSubTotal { get; init; }
+    public decimal OrderDiscount { get; set; }
     public required decimal TotalAmount { get; init; }
-    public required Guid CustomerId { get; init; }
+    public int Status { get; set; }
+    public string? Note { get; set; }
+    public DateTime CreatedOn { get; set; }
 
+    public required Guid CustomerId { get; init; }
     public string? CustomerName { get; set; }
     public string? CustomerAddress { get; set; }
     public string? CustomerPhoneNumber { get; set; }
+    public bool IsRetailWalkInCustomer { get; set; }
 
-    public decimal OrderDiscount { get; set; }
-    public int Status { get; set; }
+    public IList<OrderItemModel> Items { get; init; } = [];
+
     public DateTime? CompletedOn { get; set; }
-
-    public string? Note { get; set; }
 
     public DateTime? ExpectedShippingDate { get; set; }
     public string? ShippingAddress { get; set; }
@@ -50,8 +37,10 @@ public sealed record OrderDetailsModel
     public bool CanCancelOrder { get; set; }
     public bool CanDeleteOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
+    public bool PaymentRequired { get; set; }
+    public decimal PaidAmount { get; init; }
+
     public int FullyReceivedDirectShipCount { get; set; }
-    public IList<OrderItemModel> Items { get; init; } = [];
     public bool AreAllItemsFullyCovered
     {
         get
@@ -92,6 +81,24 @@ public sealed record OrderDetailsModel
     public SettlementModel Settlement { get; set; } = new();
     public IList<TimelineEventModel> Timeline { get; set; } = [];
 
+    #region Inner classes
+
+    public enum WorkflowStage
+    {
+        Order = 1,
+        Preparation = 2,
+        Delivery = 3,
+        Settlement = 4
+    }
+
+    public enum OrderDeliverySummaryStatus
+    {
+        Pending = 0,
+        Shipping = 1,
+        PartialDelivered = 2,
+        Delivered = 3
+    }
+
     [Serializable]
     public sealed record DirectShipAllocationModel
     {
@@ -105,10 +112,6 @@ public sealed record OrderDetailsModel
         public Guid? DeliveryNoteId { get; init; }
         public string? DeliveryNoteCode { get; init; }
     }
-
-    public DateTime CreatedOn { get; set; }
-
-    #region Inner classes
 
     [Serializable]
     public sealed record ReturnWarehouseOptionModel

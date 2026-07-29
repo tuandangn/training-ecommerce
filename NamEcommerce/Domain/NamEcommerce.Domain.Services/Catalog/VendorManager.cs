@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Data.Contracts;
+﻿using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -56,7 +57,7 @@ public sealed class VendorManager : IVendorManager
         await _vendorRepository.DeleteAsync(vendor).ConfigureAwait(false);
     }
 
-    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -64,45 +65,39 @@ public sealed class VendorManager : IVendorManager
                     where vendor.Name == name && (comparesWithCurrentId == null || vendor.Id != comparesWithCurrentId)
                     select vendor;
 
-        var sameNameExists = query.FirstOrDefault() != null;
-        return Task.FromResult(sameNameExists);
+        var sameNameExists = await query.FirstOrDefaultAsync().ConfigureAwait(false) != null;
+        return sameNameExists;
     }
 
-    public Task<IPagedDataDto<VendorDto>> GetVendorsAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<VendorDto>> GetVendorsAsync(string? keywords, int pageIndex, int pageSize)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        return Task.Run(() => queryData());
+        var query = _vendorDataReader.DataSource;
 
-        //local method
-        async Task<IPagedDataDto<VendorDto>> queryData()
+        if (!string.IsNullOrEmpty(keywords))
         {
-            var query = _vendorDataReader.DataSource;
-
-            if (!string.IsNullOrEmpty(keywords))
-            {
-                var normizedKeywords = TextHelper.Normalize(keywords);
-                query = query.Where(c =>
-                    c.Name.Contains(keywords)
-                    || c.Name.Contains(normizedKeywords)
-                    || c.NormalizedName.Contains(normizedKeywords)
-                    || c.PhoneNumber.Contains(keywords)
-                    || c.NormalizedAddress.Contains(normizedKeywords)
-                );
-            }
-
-            query = query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name);
-
-            var totalCount = query.Count();
-            var pagedData = query
-                .Skip(pageIndex * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            var data = PagedDataDto.Create(pagedData.Select(vendor => vendor.ToDto()), pageIndex, pageSize, totalCount);
-            return data;
+            var normizedKeywords = TextHelper.Normalize(keywords);
+            query = query.Where(c =>
+                c.Name.Contains(keywords)
+                || c.Name.Contains(normizedKeywords)
+                || c.NormalizedName.Contains(normizedKeywords)
+                || c.PhoneNumber.Contains(keywords)
+                || c.NormalizedAddress.Contains(normizedKeywords)
+            );
         }
+
+        query = query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name);
+
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        var pagedData = await query
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync().ConfigureAwait(false);
+
+        var data = PagedDataDto.Create(pagedData.Select(vendor => vendor.ToDto()), pageIndex, pageSize, totalCount);
+        return data;
     }
 
     public async Task<UpdateVendorResultDto> UpdateVendorAsync(UpdateVendorDto dto)

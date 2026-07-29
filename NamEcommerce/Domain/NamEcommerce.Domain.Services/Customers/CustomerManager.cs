@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
+using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Customers;
 
@@ -68,7 +69,7 @@ public sealed class CustomerManager : ICustomerManager
             if (customer.IsSystem)
                 throw new CustomerCannotBeDeletedException(id);
 
-            var hasOrders = await Task.Run(() => _orderDataReader.DataSource.Any(o => o.CustomerId == id)).ConfigureAwait(false);
+            var hasOrders = await _orderDataReader.DataSource.AnyAsync(o => o.CustomerId == id).ConfigureAwait(false);
             if (hasOrders) throw new CustomerCannotBeDeletedException(id);
 
             customer.MarkDeleted();
@@ -78,7 +79,7 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task<CustomerDto?> GetCustomerByIdAsync(Guid id)
     {
-        var customer = await _customerDataReader.GetByIdAsync(id, default).ConfigureAwait(false);
+        var customer = await _customerRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (customer == null) return null;
 
         return new CustomerDto(customer.Id)
@@ -96,12 +97,13 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync()
     {
-        var existing = _customerDataReader.DataSource.FirstOrDefault(c =>
-            c.Kind == CustomerKind.RetailWalkIn && c.IsSystem);
+        var existing = await _customerDataReader.DataSource
+            .FirstOrDefaultAsync(c => c.Kind == CustomerKind.RetailWalkIn && c.IsSystem)
+            .ConfigureAwait(false);
         if (existing is not null)
             return MapToDto(existing);
 
-        var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, string.Empty, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
+        var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, CustomerConsts.RETAIL_WALKIN_CUSTOMER_PHONE, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
         {
             Kind = CustomerKind.RetailWalkIn,
             IsSystem = true
@@ -129,12 +131,11 @@ public sealed class CustomerManager : ICustomerManager
                 || c.PhoneNumber.Contains(keywords));
         }
 
-        var total = query.Count();
-        var paged = query
+        var total = await query.CountAsync().ConfigureAwait(false);
+        var paged = await query
             .OrderBy(c => c.FullName.Value)
             .ThenByDescending(c => c.CreatedOnUtc)
             .Skip(pageIndex * pageSize).Take(pageSize)
-            .ToList()
             .Select(c => new CustomerDto(c.Id)
             {
                 FullName = c.FullName,
@@ -145,7 +146,7 @@ public sealed class CustomerManager : ICustomerManager
                 Kind = (int)c.Kind,
                 IsSystem = c.IsSystem,
                 CreatedOnUtc = c.CreatedOnUtc
-            }).ToList();
+            }).ToListAsync().ConfigureAwait(false);
 
         return PagedDataDto.Create(paged, pageIndex, pageSize, total);
     }
@@ -162,4 +163,11 @@ public sealed class CustomerManager : ICustomerManager
             IsSystem = customer.IsSystem,
             CreatedOnUtc = customer.CreatedOnUtc
         };
+
+    public async Task<bool> IsRetailWalkInCustomerAsync(Guid customerId)
+    {
+        var customer = await _customerRepository.GetByIdAsync(customerId).ConfigureAwait(false);
+
+        return customer is { Kind: CustomerKind.RetailWalkIn };
+    }
 }

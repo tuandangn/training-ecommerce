@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.GoodsReceipts;
 
@@ -27,7 +28,7 @@ public sealed class GetSuggestedPurchaseOrdersForGoodsReceiptHandler
         {
             PurchaseOrderId = po.PurchaseOrderId,
             PurchaseOrderCode = po.PurchaseOrderCode,
-            PlacedOn = po.PlacedOn,
+            PlacedOn = DateTimeHelper.ToLocalTime(po.PlacedOnUtc),
             VendorId = po.VendorId,
             MatchScore = po.MatchScore,
             IsFullMatch = po.IsFullMatch,

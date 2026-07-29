@@ -51,6 +51,9 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
                 .HasColumnName("CustomerPhone")
                 .HasMaxLength(50)
                 .IsRequired();
+
+            customerInfoBuilder.Property(c => c.IsRetailWalkInCustomer)
+                .HasColumnName("IsRetailWalkInCustomer");
         });
         builder.ComplexProperty(c => c.ShippingAddress, shippingAddressProp =>
         {

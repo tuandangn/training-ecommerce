@@ -34,21 +34,15 @@ public sealed record DeliveryNoteItem : AppEntity
     public decimal Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
 
-    /// <summary>
-    /// Snapshot hiển thị chuyển tiếp. COGS authoritative nằm trong InventoryCostAllocation.
-    /// </summary>
     public decimal? CostAtDispatch { get; internal set; }
 
     public decimal SubTotal => Quantity * UnitPrice;
 
-    // PRE-3: Chiết khấu thương mại (TK 521)
-    public decimal DiscountPercent { get; internal set; }   // 0–100
-    public decimal DiscountAmount { get; internal set; }    // = SubTotal × DiscountPercent/100
+    public decimal DiscountPercent { get; internal set; }
+    public decimal DiscountAmount { get; internal set; }
 
-    // PRE-4a: Thuế GTGT đầu ra (TK 3331)
-    public decimal? TaxRate { get; internal set; }          // null / 0 / 0.05 / 0.08 / 0.10
-    public decimal TaxAmount { get; internal set; }         // = NetAmount × TaxRate
+    public decimal? TaxRate { get; internal set; }
+    public decimal TaxAmount { get; internal set; }
 
-    // Computed — không persist
     public decimal NetAmount => SubTotal - DiscountAmount;
 }

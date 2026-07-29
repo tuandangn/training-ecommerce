@@ -3,20 +3,86 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.FastSales;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.FastSales;
+
+public sealed class QuickCreateOrderHandler(IFastSaleAppService fastSaleAppService, IOrderAppService orderAppService)
+    : IRequestHandler<QuickCreateOrderCommand, QuickCreateOrderResultModel>
+{
+    public async Task<QuickCreateOrderResultModel> Handle(QuickCreateOrderCommand request, CancellationToken cancellationToken)
+    {
+        var result = await fastSaleAppService.QuickCreateOrderAsync(new QuickCreateOrderAppDto2
+        {
+            CustomerId = request.CustomerId,
+            Items = request.Items.Select(item => new QuickCreateOrderAppDto2.QuickCreateOrderItemAppDto2
+            {
+                ProductId = item.ProductId,
+                WarehouseId = item.WarehouseId,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice
+            }).ToList(),
+            OrderDiscount = request.OrderDiscount,
+            Note = request.Note,
+            DeliveryNow = request.DeliveryNow,
+            ShippingAddress = request.ShippingAddress,
+            ShippingPhoneNumber = request.ShippingPhoneNumber
+        }).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            return new QuickCreateOrderResultModel
+            {
+                Success = false,
+                ErrorMessage = result.ErrorMessage
+            };
+        }
+
+        var createdOrder = await orderAppService.GetOrderByIdAsync(result.OrderId!.Value).ConfigureAwait(false);
+        return new QuickCreateOrderResultModel
+        {
+            Success = true,
+            OrderDiscount = createdOrder!.OrderDiscount ?? 0,
+            OrderSubTotal = createdOrder.OrderSubTotal,
+            OrderTotal = createdOrder.TotalAmount,
+            OrderId = createdOrder.Id,
+            OrderCode = createdOrder.Code
+        };
+    }
+}
+
+public sealed class CompleteQuickCreateOrderPaymentHandler(IFastSaleAppService fastSaleAppService, IOrderAppService orderAppService)
+    : IRequestHandler<CompleteQuickCreateOrderPaymentCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(CompleteQuickCreateOrderPaymentCommand request, CancellationToken cancellationToken)
+    {
+        var result = await fastSaleAppService.CompleteQuickCreateOrderPaymentAsync(new CompleteQuickCreateOrderPaymentAppDto
+        {
+            OrderId = request.OrderId,
+            PaidAmount = request.PaidAmount,
+            PaymentIntentId = request.PaymentIntentId
+        });
+
+        return new CommonActionResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
+    }
+}
+
 
 public sealed class CreateCashQuickSaleHandler(IFastSaleAppService fastSaleAppService)
     : IRequestHandler<CreateCashQuickSaleCommand, QuickSaleResultModel>
 {
     public async Task<QuickSaleResultModel> Handle(CreateCashQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateCashQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateCashQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
-            WarehouseId = request.WarehouseId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
@@ -37,10 +103,9 @@ public sealed class CreateBankTransferQuickSaleHandler(IFastSaleAppService fastS
 {
     public async Task<QuickSaleResultModel> Handle(CreateBankTransferQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateBankTransferQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateBankTransferQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
-            WarehouseId = request.WarehouseId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
@@ -61,10 +126,9 @@ public sealed class CreateUnpaidQuickSaleHandler(IFastSaleAppService fastSaleApp
 {
     public async Task<QuickSaleResultModel> Handle(CreateUnpaidQuickSaleCommand request, CancellationToken cancellationToken)
     {
-        var result = await fastSaleAppService.CreateUnpaidQuickSaleAsync(new CreateQuickSaleAppDto
+        var result = await fastSaleAppService.CreateUnpaidQuickSaleAsync(new QuickCreateOrderAppDto
         {
             CustomerId = request.CustomerId,
-            WarehouseId = request.WarehouseId,
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
@@ -144,7 +208,7 @@ public sealed class ProcessBankTransferProviderTransactionHandler(IBankTransferP
 
 internal static class FastSaleCommandHandlerMapper
 {
-    public static QuickSaleItemAppDto MapItem(QuickSaleItemCommand item)
+    public static QuickCreateOrderItemAppDto MapItem(QuickSaleItemCommand item)
         => new()
         {
             ProductId = item.ProductId,
@@ -194,7 +258,9 @@ internal static class FastSaleCommandHandlerMapper
         };
 
     private static BankTransferPaymentIntentModel MapIntent(BankTransferPaymentIntentAppDto intent)
-        => new()
+    {
+        var status = (BankTransferPaymentIntentStatus)intent.Status;
+        return new()
         {
             Id = intent.Id,
             ReferenceCode = intent.ReferenceCode,
@@ -205,8 +271,12 @@ internal static class FastSaleCommandHandlerMapper
             QrImageUrl = intent.QrImageUrl,
             Status = intent.Status,
             ExpiresAtUtc = intent.ExpiresAtUtc,
-            ExpiredAtUtc = intent.ExpiredAtUtc,
             VerificationSource = intent.VerificationSource,
-            VerifiedAtUtc = intent.VerifiedAtUtc
+            VerifiedAtUtc = intent.VerifiedAtUtc,
+            IsPending = status is BankTransferPaymentIntentStatus.Pending,
+            IsCancelled = status is BankTransferPaymentIntentStatus.Cancelled,
+            IsExpired = status is BankTransferPaymentIntentStatus.Expired,
+            IsConfirmed = status is BankTransferPaymentIntentStatus.Confirmed or BankTransferPaymentIntentStatus.ManuallyConfirmed
         };
+    }
 }

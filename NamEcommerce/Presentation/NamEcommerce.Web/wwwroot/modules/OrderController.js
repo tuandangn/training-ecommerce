@@ -206,7 +206,7 @@ export default class OrderController {
             orderItem.productInfo.id = row.querySelector('.product-id').value;
             orderItem.productInfo.name = row.querySelector('.product-name').textContent;
             orderItem.productInfo.picture = row.querySelector('.product-picture')?.src;
-            orderItem.quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value), 2);
+            orderItem.quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value, 2));
             orderItem.unitPrice = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value));
 
             return orderItem;
