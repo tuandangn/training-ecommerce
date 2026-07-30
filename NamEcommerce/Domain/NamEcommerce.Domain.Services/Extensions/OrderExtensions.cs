@@ -34,6 +34,7 @@ public static class OrderExtensions
             ProcessRequiresPayment = order.ProcessRequiresPayment,
             PaidAmount = order.PaidAmount ?? 0,
             HasPayments = order.HasPayments(),
+            PayOffRequired = order.PayOffRequired,
             HadPaid = order.HadPaid()
         };
 

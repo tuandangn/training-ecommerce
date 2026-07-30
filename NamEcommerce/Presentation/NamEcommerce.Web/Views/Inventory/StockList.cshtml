@@ -51,8 +51,8 @@
                 <button type="submit" class="btn btn-primary w-100 rounded-3">Tìm kiếm</button>
             </div>
         </form>
-        <div class="d-flex align-items-center gap-2">
-            <div class="btn-group" role="group" aria-label="Chọn cách gom tồn kho">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="btn-group flex-grow-1" role="group" aria-label="Chọn cách gom tồn kho">
                 <a asp-action="StockList"
                    asp-route-keywords="@query"
                    asp-route-includeDs="@Model.IncludeDirectTransit"

@@ -65,20 +65,22 @@ public sealed class OrderManager(
         return order.ToDto();
     }
 
-    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status)
-        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : []);
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status, OrderStatus? notStatus)
+        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : [], notStatus.HasValue ? [notStatus.Value] : []);
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status)
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus>? status, IEnumerable<OrderStatus>? notStatus)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
         var query = orderDataReader.DataSource;
 
-        if (status != null && status.Any())
-            query = query.Where(order => status.Contains(order.OrderStatus));
-
         var specification = new CompositeSpecification<Order>();
+        if (status != null && status.Any())
+            specification = specification.Or(new HaveStatusOrderSpec(status));
+        if (notStatus != null && notStatus.Any())
+            specification = specification.Or(new NotHaveStatusOrderSpec(notStatus));
+
         if (!string.IsNullOrEmpty(keywords))
         {
             specification.Or(new OrderKeywordSearchSpec(keywords));
@@ -262,11 +264,11 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        var activeDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                         where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                         select deliveryNote).AnyAsync().ConfigureAwait(false);
-        if (activeDeliveryNotes)
-            throw new InvalidOperationException("Order cannot cancelled because it is processing.");
+        var hasDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
+                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                      select deliveryNote).AnyAsync().ConfigureAwait(false);
+        if (hasDeliveryNotes)
+            throw new OrderCannotChangeStatusException();
 
         order.Cancel();
         order.UpdatedOnUtc = DateTime.UtcNow;

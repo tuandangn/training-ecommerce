@@ -28,8 +28,9 @@ public sealed record OrderModel
     public bool CanUpdateInfo { get; init; }
     public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
-    public bool CanProcess { get; set; }
-    public bool ProcessRequiresPayment { get; set; }
+    public bool CanProcess { get; init; }
+    public bool ProcessRequiresPayment { get; init; }
+    public bool PayOffRequired { get; init; }
     public decimal PaidAmount { get; set; }
 
 

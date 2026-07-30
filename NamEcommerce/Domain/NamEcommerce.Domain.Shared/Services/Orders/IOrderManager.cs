@@ -8,8 +8,8 @@ namespace NamEcommerce.Domain.Shared.Services.Orders;
 public interface IOrderManager : ICodeExistCheckingService
 {
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords = null, OrderStatus? status = null, OrderStatus? notStatus = null);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords = null, IEnumerable<OrderStatus>? status = null, IEnumerable<OrderStatus>? notStatus = null);
 
     Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto);
     Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto);

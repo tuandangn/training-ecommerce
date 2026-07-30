@@ -12,6 +12,9 @@ using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.Orders;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
@@ -45,6 +48,8 @@ public sealed class ShortageQueryService(
         var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(orderId);
+        if (!order.CanProcess())
+            return [];
 
         var shortages = await BuildOrderItemShortagesAsync(order, null).ConfigureAwait(false);
 
@@ -139,6 +144,8 @@ public sealed class ShortageQueryService(
             var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
             if (order is null)
                 throw new OrderIsNotFoundException(deliveryNote.OrderId);
+            if (!order.CanProcess())
+                return [];
 
             var itemIds = deliveryNote.Items
                 .Where(item => item.OrderItemId != Guid.Empty)
@@ -149,10 +156,11 @@ public sealed class ShortageQueryService(
             return ApplyFilter(deliveryNoteShortages.Where(x => x.ShortageQuantity > 0), filter).ToList();
         }
 
-        var orders = orderReader.DataSource
-            .Where(order => order.OrderStatus != OrderStatus.Cancelled)
-            .OrderBy(order => order.CreatedOnUtc)
-            .ToList();
+        var orderSpecification = new CompositeSpecification<Order>(new NotHaveStatusOrderSpec([OrderStatus.Completed, OrderStatus.Cancelled]))
+            .AndNot(new IsPaymentRequiredOrderSpec());
+        orderSpecification.ApplyOrderBy(order => order.CreatedOnUtc);
+
+        var orders = await orderReader.GetPagedListAsync(orderSpecification, 0, int.MaxValue).ConfigureAwait(false);
 
         var result = new List<OrderItemShortageDto>();
         foreach (var order in orders)

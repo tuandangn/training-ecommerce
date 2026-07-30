@@ -1,3 +1,4 @@
+@using System.Globalization
 @model OrderDetailsModel
 @{
     var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Settlement;
@@ -5,15 +6,16 @@
     var now = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
 
     var customerBalance = Model.Settlement.CustomerAccountBalance;
-    var customerBalanceLabel = customerBalance > 0 ? "Còn nợ" : customerBalance < 0 ? "Đã ứng" : (Model.PaymentRequired ? "Chờ thanh toán" : "Đã thanh toán");
-    var customerBalanceClass = customerBalance > 0 ? "text-danger" : customerBalance < 0 ? "text-primary" : (Model.PaymentRequired ? "text-warning" : "text-success");
+    var customerBalanceLabel = Model.PaymentRequired ? "Chờ thanh toán"
+        : (customerBalance > 0 ? "Còn nợ" : customerBalance < 0 ? "Đã ứng" : "Đã thanh toán");
+    var customerBalanceClass = Model.PaymentRequired ? "text-warning"
+        : (customerBalance > 0 ? "text-danger" : customerBalance < 0 ? "text-primary" : "text-success");
     var paymentDefaultAmount = customerBalance > 0 ? customerBalance : 0m;
     var remainAmount = Math.Max(0, Model.TotalAmount - Model.PaidAmount);
     if (Model.IsRetailWalkInCustomer && Model.DeliveryNotes.Count != 0)
     {
         paymentDefaultAmount = remainAmount;
     }
-    var canChangePaymentAmount = !Model.IsRetailWalkInCustomer || Model.DeliveryNotes.Count == 0;
 }
 
 <section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="settlement" role="tabpanel">
@@ -30,19 +32,22 @@
                         <i class="bi bi-cash-coin me-1"></i>Thu tiền
                     </button>
                 }
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm chi phí
-                </button>
+                @if (!Model.PaymentRequired)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm chi phí
+                    </button>
+                }
                 @if (Model.CanCompleteOrder)
                 {
                     <button type="button" class="btn btn-sm btn-primary" id="btnCompleteOrder" data-testid="order-complete" data-order-id="@Model.Id">
                         <i class="bi bi-check-circle me-1"></i>Hoàn thành đơn
                     </button>
                 }
-                @if (Model.CanCancelOrder || Model.CanDeleteOrder)
+                @if ((Model.CanCancelOrder && !Model.PaymentRequired) || Model.CanDeleteOrder)
                 {
                     <div class="btn-group btn-group-sm">
-                        @if (Model.CanCancelOrder)
+                        @if (Model.CanCancelOrder && !Model.PaymentRequired)
                         {
                             <button type="button" class="btn btn-sm btn-outline-danger" id="btnCancelOrder">
                                 <i class="bi bi-x-circle me-1"></i>Hủy đơn
@@ -58,6 +63,10 @@
                 }
             </div>
         </div>
+        @if (Model.PaymentRequired)
+        {
+            <div class="alert alert-warning mb-0 p-2" style="text-transform:none;">Vui lòng thanh toán để đơn hàng được xử lý</div>
+        }
         <div class="content-card-body">
             <div class="workflow-metric-grid mb-3">
                 <div class="workflow-metric">
@@ -86,7 +95,9 @@
                 </div>
             }
 
-            <div class="workflow-section-title">Thanh toán</div>
+            <div class="workflow-section-title">
+                Thanh toán
+            </div>
             <div class="workflow-metric-grid mb-3">
                 <div class="workflow-metric">
                     <span>Tình trạng</span>
@@ -94,7 +105,7 @@
                 </div>
                 <div class="workflow-metric">
                     <span>Công nợ / Ứng</span>
-                    <strong class="@customerBalanceClass">@customerBalance.DisplayCurrencyWithSymbol()</strong>
+                    <strong class="@customerBalanceClass">@Math.Abs(customerBalance).DisplayCurrencyWithSymbol()</strong>
                 </div>
                 <div class="workflow-metric">
                     <span>Đã thu</span>
@@ -143,16 +154,9 @@
                 </div>
             }
 
-            <div class="workflow-section-title">Tài chính trả hàng</div>
-            @if (Model.Settlement.Returns.Count == 0)
+            @if (Model.Settlement.Returns.Count > 0)
             {
-                <div class="workflow-soft-empty mb-3">
-                    <i class="bi bi-arrow-return-left"></i>
-                    <span>Chưa có phiếu trả hàng đã xác nhận.</span>
-                </div>
-            }
-            else
-            {
+                <div class="workflow-section-title">Trả hàng</div>
                 <div class="workflow-metric-grid mb-3">
                     <div class="workflow-metric">
                         <span>Giá trị hàng trả</span>
@@ -204,16 +208,9 @@
                 </div>
             }
 
-            <div class="workflow-section-title">Công nợ</div>
-            @if (Model.Settlement.Debts.Count == 0)
+            @if (Model.Settlement.Debts.Count > 0)
             {
-                <div class="workflow-soft-empty mb-3">
-                    <i class="bi bi-cash-coin"></i>
-                    <span>Chưa có công nợ cho đơn này.</span>
-                </div>
-            }
-            else
-            {
+                <div class="workflow-section-title">Công nợ</div>
                 <div class="table-responsive mb-3">
                     <table class="table data-table mb-0">
                         <thead>
@@ -245,16 +242,9 @@
                 </div>
             }
 
-            <div class="workflow-section-title">Chi phí phát sinh</div>
-            @if (Model.Settlement.Expenses.Count == 0)
+            @if (Model.Settlement.Expenses.Count > 0)
             {
-                <div class="workflow-soft-empty mb-3">
-                    <i class="bi bi-wallet2"></i>
-                    <span>Chưa có chi phí phát sinh.</span>
-                </div>
-            }
-            else
-            {
+                <div class="workflow-section-title">Chi phí</div>
                 <div class="table-responsive mb-3">
                     <table class="table data-table mb-0">
                         <thead>
@@ -281,17 +271,9 @@
                     </table>
                 </div>
             }
-
-            <div class="workflow-section-title">Giá vốn từng lần xuất</div>
-            @if (Model.Settlement.Costs.Count == 0)
+            @if (Model.Settlement.Costs.Count > 0)
             {
-                <div class="workflow-soft-empty">
-                    <i class="bi bi-receipt-cutoff"></i>
-                    <span>Chưa có dữ liệu xuất hàng để tính giá vốn.</span>
-                </div>
-            }
-            else
-            {
+                <div class="workflow-section-title">Giá vốn</div>
                 <div class="table-responsive">
                     <table class="table data-table mb-0">
                         <thead>
@@ -345,61 +327,63 @@
                 <div class="modal-body py-3">
                     <input type="hidden" name="OrderId" value="@Model.Id" />
                     <input type="hidden" name="CustomerId" value="@Model.CustomerId" />
-                    <div class="alert alert-light border small mb-3">
-                        <div class="d-flex justify-content-between gap-3">
-                            <span>@customerBalanceLabel</span>
-                            <strong class="@customerBalanceClass">
-                                @if (Model.IsRetailWalkInCustomer)
-                                {
+                    @if (Model.IsRetailWalkInCustomer)
+                    {
+                        <div class="alert alert-light border small mb-3">
+                            <div class="d-flex justify-content-between gap-3">
+                                <span>Dư nợ</span>
+                                <strong class="text-danger">
                                     @remainAmount.DisplayCurrencyWithSymbol()
-                                }
-                                else
-                                {
-                                    @Math.Abs(customerBalance).DisplayCurrencyWithSymbol()
-                                }
-                            </strong>
+                                </strong>
+                            </div>
                         </div>
-                    </div>
+                    }
                     <div class="row g-3">
                         <div class="col-7">
                             <label class="form-label" for="orderSettlementPaymentAmount">Số tiền</label>
                             <input id="orderSettlementPaymentAmount" name="Amount" inputmode="numeric"
-                                   class="form-control" value="@(paymentDefaultAmount > 0 ? paymentDefaultAmount.ToString("0") : string.Empty)"
-                                   autocomplete="off" data-decimal="currency" placeholder="Nhập số tiền" readonly="@(!canChangePaymentAmount)"
-                                   data-val="true" data-val-required="Vui lòng nhập số tiền" inputmode="numeric"
-                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                                   class="form-control" value="@(paymentDefaultAmount > 0 ? paymentDefaultAmount.DisplayCurrency() : "0")"
+                                   autocomplete="off" data-decimal="currency" placeholder="Nhập số tiền" readonly="@(Model.PayOffRequired)"
+                                   data-val="true" data-val-required="Vui lòng nhập số tiền"
+                                   data-val-range="Số tiền phải lớn hơn 0@(Model.IsRetailWalkInCustomer ? $" và nhỏ hơn {remainAmount.DisplayCurrencyWithSymbol()}" : "")" data-val-range-min="0.001" data-val-range-max="@(Model.IsRetailWalkInCustomer ? remainAmount.ToString(CultureInfo.InvariantCulture) : "")"
                                    data-val-number="Số tiền phải là số" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Amount" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-5">
                             <label class="form-label" for="orderSettlementPaymentPaidOn">Ngày thu</label>
-                            <input id="orderSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control" value="@now" placeholder="Nhập ngày thu tiền" />
+                            <input id="orderSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control"
+                                   value="@now" placeholder="Nhập ngày thu tiền" data-min-date="@Model.CreatedOn.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="PaidOn" data-valmsg-replace="true"></span>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <label class="form-label">Hình thức</label>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="PaymentMode" id="orderSettlementCashMode" value="cash" checked />
-                                <label class="form-check-label" for="orderSettlementCashMode">Tiền mặt</label>
-                            </div>
-                            @if (Model.Settlement.BankTransferEnabled)
-                            {
+                    <div class="mt-3 @(Model.Settlement.BankTransferEnabled ? "" : "d-none")">
+                        <div class="d-flex align-items-center flex-wrap gap-3">
+                            <label class="form-label">Hình thức</label>
+                            <div class="d-flex flex-wrap gap-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="PaymentMode" id="orderSettlementQrMode" value="qr" />
-                                    <label class="form-check-label" for="orderSettlementQrMode">Mã QR</label>
+                                    <input class="form-check-input" type="radio" name="PaymentMode" id="orderSettlementCashMode" value="cash" checked />
+                                    <label class="form-check-label" for="orderSettlementCashMode">Tiền mặt</label>
                                 </div>
-                            }
+                                @if (Model.Settlement.BankTransferEnabled)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="PaymentMode" id="orderSettlementQrMode" value="qr" />
+                                        <label class="form-check-label" for="orderSettlementQrMode">Mã QR</label>
+                                    </div>
+                                }
+                            </div>
                         </div>
                         @if (Model.Settlement.BankTransferEnabled && !string.IsNullOrWhiteSpace(Model.Settlement.BankAccountLabel))
                         {
-                            <div class="text-muted small mt-1">@Model.Settlement.BankAccountLabel</div>
+                            <div class="alert alert-info mb-0 p-2">
+                                <span class="text-muted">
+                                    Tài khoản:
+                                </span>
+                                <span class="fw-medium">
+                                    @Model.Settlement.BankAccountLabel
+                                </span>
+                            </div>
                         }
-                    </div>
-                    <div class="mt-3">
-                        <label class="form-label" for="orderSettlementPaymentNote">Ghi chú</label>
-                        <textarea id="orderSettlementPaymentNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
                     </div>
                     @if (Model.Settlement.BankTransferEnabled)
                     {
@@ -413,27 +397,29 @@
                                     <div id="orderSettlementQrReference" class="fw-bold"></div>
                                     <div id="orderSettlementQrStatus" class="small text-muted mt-2"></div>
                                     <div id="orderSettlementQrExpires" class="small text-muted"></div>
-                                    <div class="d-flex flex-wrap gap-2 mt-3">
-                                        @if (Model.Settlement.ManualBankTransferConfirmEnabled)
-                                        {
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="orderSettlementQrManualConfirm">
-                                                <i class="bi bi-check2-circle me-1"></i>Xác nhận đã nhận tiền
-                                            </button>
-                                        }
-                                        <button type="button" class="btn btn-sm btn-success" id="orderSettlementQrRecord" disabled>
-                                            <i class="bi bi-floppy me-1"></i>Ghi nhận QR
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     }
+                    <div class="mt-3">
+                        <label class="form-label" for="orderSettlementPaymentNote">Ghi chú</label>
+                        <textarea id="orderSettlementPaymentNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-primary" id="orderSettlementPaymentSubmit">
-                        <i class="bi bi-floppy me-1"></i>Ghi nhận
+                        <i class="bi bi-floppy me-1"></i>Đã nhận tiền
                     </button>
+                    @if (Model.Settlement.BankTransferEnabled)
+                    {
+                        @if (Model.Settlement.ManualBankTransferConfirmEnabled)
+                        {
+                            <button type="button" class="btn btn-secondary d-none" id="orderSettlementQrManualConfirm">
+                                <i class="bi bi-check2-circle me-1"></i>Đã nhận tiền
+                            </button>
+                        }
+                    }
                 </div>
             </form>
         </div>
@@ -444,7 +430,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content ui-modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Thêm chi phí phát sinh</h5>
+                <h5 class="modal-title fw-bold">Thêm chi phí</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="orderExpenseForm" method="post" action="/Order/AddExpense">
@@ -452,13 +438,19 @@
                     <input type="hidden" name="SourceOrderId" value="@Model.Id" />
                     <div class="mb-3">
                         <label class="form-label" for="orderExpenseTitle">Khoản chi</label>
-                        <input id="orderExpenseTitle" name="Title" class="form-control" required maxlength="200" />
+                        <input id="orderExpenseTitle" name="Title" class="form-control" placeholder="Nhập khoản chi"
+                            data-val="true" data-val-required="Vui lòng nhập khoản chi" data-val-maxlength="Tối đa 200 kí tự" data-val-maxlength-max="200"/>
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="Title" data-valmsg-replace="true"></span>
                     </div>
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label" for="orderExpenseAmount">Số tiền</label>
-                            <input id="orderExpenseAmount" name="Amount" class="form-control decimal-input" inputmode="numeric"
-                                   data-decimal="currency" data-decimals="0" autocomplete="off" required />
+                            <input id="orderExpenseAmount" name="Amount" class="form-control" inputmode="numeric" placeholder="Nhập số tiền"
+                                   data-decimal="currency" value="0" autocomplete="off" 
+                                   data-val="true" data-val-required="Vui lòng nhập số tiền"
+                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                                   data-val-number="Số tiền phải là số" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="Amount" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-6">
                             <label class="form-label" for="orderExpenseType">Loại phí</label>
@@ -469,16 +461,20 @@
                                 <option value="3">Tiếp thị</option>
                                 <option value="4">Điện nước</option>
                             </select>
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="ExpenseType" data-valmsg-replace="true"></span>
                         </div>
                     </div>
                     <div class="mb-3 mt-3">
                         <label class="form-label" for="orderExpenseDate">Ngày phát sinh</label>
-                        <input id="orderExpenseDate" name="IncurredDate" type="date" class="form-control"
-                               value="@today" required />
+                        <input id="orderExpenseDate" name="IncurredDate" type="date" class="form-control" placeholder="Nhập ngày phát sinh"
+                               value="@today" data-max-date="@DateTime.Now.ToString("s")" data-val="true" data-val-required="Chọn ngày phát sinh" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="IncurredDate" data-valmsg-replace="true"></span>
                     </div>
                     <div>
                         <label class="form-label" for="orderExpenseDescription">Lý do</label>
-                        <textarea id="orderExpenseDescription" name="Description" class="form-control" rows="3"></textarea>
+                        <textarea id="orderExpenseDescription" name="Description" class="form-control" rows="3" placeholder="Nhập lý do phát sinh chi phí"
+                            data-val="true" data-val-maxlength="Tối đa 500 kí tự" data-val-maxlength-max="500"></textarea>
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="Description" data-valmsg-replace="true"></span>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">

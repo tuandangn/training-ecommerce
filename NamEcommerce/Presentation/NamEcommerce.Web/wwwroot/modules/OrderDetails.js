@@ -206,8 +206,6 @@ function parseDecimalInput(input) {
         });
     }
 
-    // ─── Remove item ──────────────────────────────────────────────────────────
-
     $('.btnRemoveItem').on('click', async function () {
         const id = $(this).data('id');
         const name = $(this).data('name');
@@ -269,7 +267,6 @@ function parseDecimalInput(input) {
         const qrStatus = document.getElementById('orderSettlementQrStatus');
         const qrExpires = document.getElementById('orderSettlementQrExpires');
         const qrManualConfirm = document.getElementById('orderSettlementQrManualConfirm');
-        const qrRecord = document.getElementById('orderSettlementQrRecord');
         let paymentIntent = null;
         let statusTimer = null;
 
@@ -290,7 +287,7 @@ function parseDecimalInput(input) {
         const stopPolling = () => {
             if (!statusTimer) return;
 
-            window.clearInterval(statusTimer);
+            window.clearTimeout(statusTimer);
             statusTimer = null;
         };
 
@@ -304,7 +301,6 @@ function parseDecimalInput(input) {
                 if (qrStatus) qrStatus.textContent = '';
                 if (qrExpires) qrExpires.textContent = '';
                 if (qrManualConfirm) qrManualConfirm.disabled = true;
-                if (qrRecord) qrRecord.disabled = true;
                 return;
             }
 
@@ -317,13 +313,13 @@ function parseDecimalInput(input) {
                     : '';
             }
             if (qrManualConfirm) qrManualConfirm.disabled = !isIntentPending(paymentIntent);
-            if (qrRecord) qrRecord.disabled = !isIntentConfirmed(paymentIntent);
         };
 
         const resetQrIntent = () => {
             paymentIntent = null;
             stopPolling();
             renderQrIntent();
+            if (submitButton) submitButton.classList.remove('d-none');
         };
 
         const refreshIntentStatus = async () => {
@@ -342,7 +338,10 @@ function parseDecimalInput(input) {
 
                 paymentIntent = result.intent;
                 renderQrIntent();
-                if (!isIntentPending(paymentIntent)) stopPolling();
+                if (isIntentConfirmed(paymentIntent)) {
+                    stopPolling();
+                    await consumesPaymentIntent();
+                }
             } catch {
                 stopPolling();
                 toast('Lỗi', 'Không thể cập nhật trạng thái QR.', 'error');
@@ -351,13 +350,21 @@ function parseDecimalInput(input) {
 
         const startPolling = () => {
             stopPolling();
-            if (!isIntentPending(paymentIntent)) return;
+            if (!isIntentPending(paymentIntent))
+                return;
 
-            statusTimer = window.setInterval(refreshIntentStatus, 4000);
-            refreshIntentStatus();
+            handlePolling();
+
+            async function handlePolling() {
+                await refreshIntentStatus();
+                statusTimer = window.setTimeout(handlePolling, 4000);
+            }
         };
 
-        document.getElementById('orderSettlementPaymentModal')?.addEventListener('hidden.bs.modal', resetQrIntent);
+        settlementModal.element?.addEventListener('hidden.bs.modal', resetQrIntent);
+        settlementModal.element?.addEventListener('shown.bs.modal', () => {
+            amountInput.focus();
+        });
         orderSettlementPaymentForm.querySelectorAll('[name="PaymentMode"]').forEach((input) => {
             input.addEventListener('change', () => {
                 resetQrIntent();
@@ -366,11 +373,15 @@ function parseDecimalInput(input) {
                         ? '<i class="bi bi-qr-code me-1"></i>Tạo QR'
                         : '<i class="bi bi-floppy me-1"></i>Ghi nhận';
                 }
+                qrManualConfirm?.classList.toggle('d-none', !isQrMode() || paymentIntent == null);
+                submitButton?.classList.toggle('d-none', isQrMode() && paymentIntent != null);
             });
         });
 
         orderSettlementPaymentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!$(orderSettlementPaymentForm).valid())
+                return;
 
             const amount = parseDecimalInput(amountInput);
             if (!amount || amount <= 0) {
@@ -391,18 +402,28 @@ function parseDecimalInput(input) {
                         amount,
                         note: noteInput?.value || null
                     });
-                    if (!result.success)
+                    if (!result.success) {
+                        if (submitButton)
+                            submitButton.disabled = false;
                         return;
+                    }
 
+                    submitButton?.classList.add('d-none');
+                    qrManualConfirm?.classList.remove('d-none');
                     paymentIntent = result.intent;
                     renderQrIntent();
                     startPolling();
-                    toast('Thành công', 'Đã tạo QR chuyển khoản.', 'success');
                 } catch {
                     toast('Lỗi', 'Không thể tạo QR chuyển khoản.', 'error');
                 } finally {
-                    if (submitButton) submitButton.disabled = false;
                 }
+                return;
+            }
+
+            settlementModal.element?.classList.add('d-none');
+            const confirmed = await confirm('Đã nhận tiền', `Bạn xác nhận đã nhận đủ ${DecimalFields.formatCurrencyWithSymbol(amount)}`);
+            if (!confirmed) {
+                settlementModal.element?.classList.remove('d-none');
                 return;
             }
 
@@ -432,6 +453,11 @@ function parseDecimalInput(input) {
         qrManualConfirm?.addEventListener('click', async () => {
             if (!paymentIntent) return;
 
+            settlementModal.element?.classList.add('d-none');
+            const confirmed = await confirm('Đã nhận tiền', `Bạn xác nhận đã nhận đủ ${DecimalFields.formatCurrencyWithSymbol(paymentIntent.amount)}`);
+            settlementModal.element?.classList.remove('d-none');
+            if (!confirmed) return;
+
             try {
                 const result = await apiPost(orderSettlementPaymentForm.dataset.confirmUrl, {
                     intentId: paymentIntent.id,
@@ -443,14 +469,16 @@ function parseDecimalInput(input) {
                 paymentIntent = result.intent;
                 renderQrIntent();
                 stopPolling();
-                toast('Thành công', 'Đã xác nhận tiền vào tài khoản.', 'success');
+                await consumesPaymentIntent();
             } catch {
                 toast('Lỗi', 'Không thể xác nhận QR.', 'error');
             }
         });
 
-        qrRecord?.addEventListener('click', async () => {
+        async function consumesPaymentIntent() {
             if (!paymentIntent || !isIntentConfirmed(paymentIntent)) return;
+
+            toast('Thành công', 'Đã nhận tiền vào tài khoản.', 'success');
 
             showPageLoading();
             settlementModal.hide();
@@ -469,13 +497,15 @@ function parseDecimalInput(input) {
                 hidePageLoading();
                 toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
             }
-        });
+        }
     }
 
     const orderExpenseForm = document.getElementById('orderExpenseForm');
     if (orderExpenseForm) {
         $('#orderExpenseForm').on('submit', async function (e) {
             e.preventDefault();
+            if (!$(orderExpenseForm).valid())
+                return;
 
             showPageLoading();
             const expenseModal = new PromiseModal('#orderExpenseModal');

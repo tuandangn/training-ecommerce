@@ -22,7 +22,7 @@ public sealed record OrderDetailsModel
     public string? CustomerName { get; set; }
     public string? CustomerAddress { get; set; }
     public string? CustomerPhoneNumber { get; set; }
-    public bool IsRetailWalkInCustomer { get; set; }
+    public bool IsRetailWalkInCustomer { get; init; }
 
     public IList<OrderItemModel> Items { get; init; } = [];
 
@@ -37,8 +37,10 @@ public sealed record OrderDetailsModel
     public bool CanCancelOrder { get; set; }
     public bool CanDeleteOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
-    public bool PaymentRequired { get; set; }
-    public decimal PaidAmount { get; init; }
+
+    public bool PaymentRequired { get; init; }
+    public bool PayOffRequired { get; init; }
+    public decimal PaidAmount { get; set; }
 
     public int FullyReceivedDirectShipCount { get; set; }
     public bool AreAllItemsFullyCovered
