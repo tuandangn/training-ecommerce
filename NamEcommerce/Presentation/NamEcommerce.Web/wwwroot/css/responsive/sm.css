@@ -46,7 +46,7 @@
         width: 100%;
     }
 
-    .action-toolbar > .btn {
+    .action-toolbar > * {
         width: 100%;
         justify-content: center;
     }

@@ -41,7 +41,7 @@
         root.innerHTML = `
             <div class="input-group product-picker-search">
                 <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" class="form-control product-picker-control" autocomplete="off"
+                <input type="text" class="form-control product-picker-control" autocomplete="off" inputmode="search"
                        placeholder="${escapeAttr(root.dataset.placeholder)}" aria-autocomplete="list" />
             </div>
             <div class="list-group position-absolute w-100 shadow product-picker-menu d-none" role="listbox"></div>

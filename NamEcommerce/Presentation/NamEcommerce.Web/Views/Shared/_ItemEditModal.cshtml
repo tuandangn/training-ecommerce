@@ -17,7 +17,7 @@
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                             <input type="text" class="form-control text-end" data-oe-qty autocomplete="off" placeholder="Nhập số lượng"
-                                   name="quantity" data-val="true" data-val-required="Vui lòng nhập số lượng"
+                                   name="quantity" data-val="true" data-val-required="Vui lòng nhập số lượng" inputmode="decimal"
                                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                    data-val-number="Số lượng phải là số" />
                             <button type="button" class="btn btn-outline-secondary px-3" data-oe-increment tabindex="-1">
@@ -30,7 +30,7 @@
                         <label class="form-label small fw-bold text-muted text-uppercase" data-oe-price-label>Đơn giá</label>
                         <div class="input-group">
                             <input type="text" class="form-control text-end" data-oe-price placeholder="Nhập đơn giá" autocomplete="off"
-                                   name="unitPrice" data-val="true" data-val-required="Vui lòng nhập đơn giá."
+                                   name="unitPrice" data-val="true" data-val-required="Vui lòng nhập đơn giá." inputmode="numeric"
                                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                    data-val-number="Đơn giá phải là số" />
                             <span class="input-group-text">đ</span>

@@ -46,12 +46,14 @@
 <div class="content-card" data-responsive-list data-list-key="order-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
-        <a asp-action="QuickCreate" class="btn btn-outline-secondary">
-            <i class="bi bi-lightning-fill me-1"></i> Bán nhanh
-        </a>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
-        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="QuickCreate" class="btn btn-outline-secondary flex-grow-1">
+                <i class="bi bi-lightning-fill me-1"></i> Bán nhanh
+            </a>
+            <a asp-action="Create" class="btn btn-primary flex-grow-1">
+                <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+            </a>
+        </div>
         <partial name="_ResponsiveListToolbar" />
     </div>
     <ul class="nav nav-tabs">
@@ -343,7 +345,7 @@
     <script type="module">
         const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
         const form = txtKeywords.closest('form');
-        const onSearchChanged = debounce(function () {
+        const onSearchChanged = debounce(function() {
             form.submit();
         }, 500);
         txtKeywords.addEventListener('input', onSearchChanged);

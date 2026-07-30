@@ -234,7 +234,7 @@
                             </label>
                             <div class="input-group input-group-lg bg-light rounded-3 border">
                                 <input class="form-control bg-transparent border-0 fw-bold text-danger no-additional-element no-hint"
-                                       type="number" step="1000" name="amount" id="paymentAmount"
+                                       type="number" step="1000" name="amount" id="paymentAmount" inputmode="numeric"
                                        value="@(isDebt ? Model.Balance.DisplayCurrency() : "")"
                                        required min="1" />
                                 <span class="input-group-text bg-transparent border-0 fw-bold text-danger">đ</span>

@@ -247,14 +247,14 @@ export default class BulkReceiveController {
                 <div class="small text-muted mt-1 bulk-row-hint"></div>
             </td>
             <td class="text-end pe-2">
-                <input name="Items[${idx}].Quantity"
-                       class="form-control form-control-sm text-end bulk-row-qty no-additional-element no-hint"
+                <input name="Items[${idx}].Quantity" inputmode="decimal"
+                       class="form-control form-control-sm text-end bulk-row-qty"
                        data-decimal="quantity" data-decimals="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
                 <input type="hidden" name="Items[${idx}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" />
             </td>
             <td class="text-end pe-2">
-                <input name="Items[${idx}].ActualUnitCost"
-                       class="form-control form-control-sm text-end bulk-row-cost no-additional-element no-hint"
+                <input name="Items[${idx}].ActualUnitCost" inputmode="numeric"
+                       class="form-control form-control-sm text-end bulk-row-cost"
                        data-decimal="currency" value="" placeholder="Cập nhật giá vốn" title="Nhập nếu giá vốn khác giá trong đơn nhập" />
             </td>
             <td class="ps-2">
@@ -314,7 +314,8 @@ export default class BulkReceiveController {
                             </div>
                             <div class="col-6">
                                 <label class="form-label form-label-sm text-muted mb-1">Số điện thoại <span class="text-danger">*</span></label>
-                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Bắt buộc" />
+                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone"
+                                    placeholder="Bắt buộc" inputmode="tel"/>
                             </div>
                         </div>
                     </div>

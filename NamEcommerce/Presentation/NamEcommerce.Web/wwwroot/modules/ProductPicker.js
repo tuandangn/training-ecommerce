@@ -245,7 +245,7 @@ class ProductPickerView {
                     <span class="spinner-border spinner-border-sm text-secondary d-none searchSpinner" role="status"></span>
                     <i class="bi bi-search text-muted searchIcon"></i>
                 </span>
-                <input type="text" class="form-control border-start-0 ps-0 productSearch" id="productSearch"
+                <input type="text" class="form-control border-start-0 ps-0 productSearch" id="productSearch" inputmode="search"
                     placeholder="Nhập tên hàng hóa..." autocomplete="off" aria-label="Tìm kiếm hàng hóa" aria-autocomplete="list" />
                 ${allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-product data-bs-toggle="tooltip" title="Thêm hàng hóa mới">
                     <i class="bi bi-plus"></i>

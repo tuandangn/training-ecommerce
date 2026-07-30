@@ -389,6 +389,8 @@
         input.classList.add('form-control', 'decimal-input',
             isCurr ? 'currency-input' : 'quantity-input');
 
+        input.inputMode = isCurr ? 'numeric' : 'decimal';
+
         var wrapper;
         if (input.closest('.input-group')) {
             const inputGroup = input.closest('.input-group');

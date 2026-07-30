@@ -489,7 +489,7 @@
                                                        data-item-id="@item.Id" data-quantity="@item.Quantity" data-decimal="currency"
                                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
-                                                       data-val-number="Đơn giá phải là số"
+                                                       data-val-number="Đơn giá phải là số" inputmode="numeric"
                                                        placeholder="Nhập đơn giá" />
                                             }
                                             else
@@ -512,7 +512,7 @@
                                 </span>
                             </div>
                             <div>
-                                <input id="quickPoShippingAmount" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập chi phí"/>
+                                <input id="quickPoShippingAmount" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập chi phí" inputmode="numeric"/>
                             </div>
                         </div>
                         <div class="col-lg-6">
@@ -548,12 +548,12 @@
                                     </div>
                                     <div class="input-group input-group-sm d-none" id="quickPoTaxCustomBox">
                                         <span class="input-group-text bg-light">Tỷ lệ</span>
-                                        <input type="number" id="quickPoTaxCustomRate" class="form-control text-end" min="0" max="100" step="any" placeholder="0" />
+                                        <input type="number" id="quickPoTaxCustomRate" class="form-control text-end" min="0" max="100" step="any" placeholder="0" inputmode="numeric" />
                                         <span class="input-group-text bg-light">%</span>
                                     </div>
                                 </div>
                                 <div id="quickPoTaxAmountBox">
-                                    <input id="quickPoTaxAmountInput" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập tiền thuế" />
+                                    <input id="quickPoTaxAmountInput" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập tiền thuế" inputmode="numeric"/>
                                 </div>
                             </div>
                         </div>
@@ -663,7 +663,7 @@
                     <input type="hidden" name="GoodsReceiptId" value="@Model.Id" />
                     <input type="hidden" name="ItemId" id="setUnitCostItemId" />
                     <label class="form-label small fw-medium text-muted" for="setUnitCostValue">Đơn giá nhập</label>
-                    <input type="number" id="setUnitCostValue" name="UnitCost" class="form-control"
+                    <input type="number" id="setUnitCostValue" name="UnitCost" class="form-control" inputmode="numeric"
                            min="0" step="any" placeholder="0" />
                 </form>
                 <div id="setUnitCostError" class="alert alert-danger d-none mt-2 py-2 mb-0"></div>

@@ -80,7 +80,7 @@
                             <div class="col-6">
                                 <label class="form-label" for="editQuantity">Số lượng</label>
                                 <input id="editQuantity" name="Quantity" class="form-control"
-                                       data-decimal="quantity" value="1" autocomplete="off"
+                                       data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                        data-val-number="Số lượng phải là số" />
@@ -90,7 +90,7 @@
                             <div class="col-6">
                                 <label class="form-label noRefill" for="editUnitPrice">Đơn giá</label>
                                 <input id="editUnitPrice" name="UnitPrice" class="form-control"
-                                       data-decimal="currency" autocomplete="off"
+                                       data-decimal="currency" autocomplete="off" inputmode="numeric"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                        data-val-number="Đơn giá phải là số" />
@@ -134,7 +134,7 @@
                                 <div class="col-6">
                                     <label class="form-label small fw-medium text-muted" for="addProductQuantity">Số lượng</label>
                                     <input id="addProductQuantity" name="Quantity" class="form-control"
-                                           data-decimal="quantity" value="1" autocomplete="off"
+                                           data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
                                            data-val="true" data-val-required="Vui lòng nhập số lượng"
                                            data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                            data-val-number="Số lượng phải là số" />
@@ -144,7 +144,7 @@
                                 <div class="col-6">
                                     <label class="form-label small fw-medium text-muted noRefill" for="addProductUnitPrice">Đơn giá</label>
                                     <input id="addProductUnitPrice" name="UnitPrice" class="form-control"
-                                           data-decimal="currency" autocomplete="off"
+                                           data-decimal="currency" autocomplete="off" inputmode="numeric"
                                            data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                            data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                            data-val-number="Đơn giá phải là số" />
@@ -213,7 +213,7 @@
                             <label class="form-label" for="orderDiscount">Giảm giá</label>
                             <input id="orderDiscount" name="OrderDiscount" class="form-control"
                                    value="@Model.OrderDiscount.DisplayCurrency()"
-                                   data-decimal="currency" autocomplete="off"
+                                   data-decimal="currency" autocomplete="off" inputmode="numeric"
                                    data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                    data-val-range="Giảm giá phải lớn hơn hoặc bằng 0" data-val-range-min="0"
                                    data-val-number="Giảm giá phải là số" />
@@ -258,7 +258,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="shippingPhoneNumber">Số điện thoại giao hàng</label>
                             <input id="shippingPhoneNumber" name="PhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber"
-                                   placeholder="Nhập số điện thoại giao hàng" data-val="true"
+                                   placeholder="Nhập số điện thoại giao hàng" data-val="true" inputmode="tel"
                                    data-val-required="Vui lòng nhập số điện thoại giao hàng."
                                    data-val-maxlength="Số điện thoại tối đa 50 ký tự." data-val-maxlength-max="50" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="PhoneNumber"

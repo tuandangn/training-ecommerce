@@ -74,7 +74,7 @@
                                 </div>
                                 <div class="col-12 col-md-6 col-lg-4">
                                     <label asp-for="CostPrice" class="form-label"></label>
-                                    <input asp-for="CostPrice" class="form-control" disabled value="@Model.CostPrice.DisplayCurrency()" data-decimal="currency" />
+                                    <input asp-for="CostPrice" class="form-control" disabled value="@Model.CostPrice.DisplayCurrency()" data-decimal="currency" inputmode="numeric"/>
                                     <span asp-validation-for="CostPrice" class="text-danger small"></span>
                                 </div>
                                 <div class="col-12 col-md-6 col-lg-4">
@@ -138,7 +138,7 @@
                     <div class="row g-3">
                         <div class="col-sm-6 col-md-3">
                             <label asp-for="DisplayOrder" class="form-label"></label>
-                            <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
+                            <input asp-for="DisplayOrder" class="form-control" placeholder="0" inputmode="numeric"/>
                             <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
                         </div>
                     </div>

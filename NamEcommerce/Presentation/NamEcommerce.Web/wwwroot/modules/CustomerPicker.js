@@ -232,7 +232,7 @@ export default class CustomerPicker {
         <div class="input-group-container">
             <div class="input-group">
                 <input type="text" class="form-control customerSearch" id="customerSearch" placeholder="Nhập tên, số điện thoại..."
-                    autocomplete="off" aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
+                    autocomplete="off" aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" inputmode="search" />
                 ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-customer data-bs-toggle="tooltip" title="Thêm khách hàng mới">
                     <i class="bi bi-plus"></i>
                     <span class="visually-hidden">Thêm mới</span>

@@ -818,7 +818,7 @@ class FastSale {
                     <input type="text" class="form-control form-control-sm text-end schedule-qty-input"
                            style="max-width:120px" data-val="true" name="item${index}_quantity"
                            value="${this.formatQuantity(item.quantity, decimalPlaces)}"
-                           data-decimal="quantity" data-decimals="${decimalPlaces}"
+                           data-decimal="quantity" data-decimals="${decimalPlaces}" inputmode="decimal"
                            data-val-range="Số lượng phải nhỏ hơn ${DecimalFields.formatQuantity(cartItem.quantity, cartItem.quantityDecimalPlaces)}" 
                            data-val-range-max="${cartItem.quantity}"
                            data-val-number="Số lượng không đúng"

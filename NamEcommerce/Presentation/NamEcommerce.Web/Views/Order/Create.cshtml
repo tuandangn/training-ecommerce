@@ -45,7 +45,8 @@
                                     </div>
                                     <div class="mb-3">
                                         <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                        <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại giao hàng" readonly="@(!Model.CustomerId.HasValue)" />
+                                        <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại giao hàng"
+                                            readonly="@(!Model.CustomerId.HasValue)" inputmode="tel"/>
                                         <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
                                     </div>
                                     <div>
@@ -63,7 +64,7 @@
                                     <div class="mb-3">
                                         <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <input asp-for="OrderDiscount" class="form-control" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off"
+                                               data-decimal="currency" autocomplete="off" inputmode="numeric"
                                                data-val="true" disabled="@(Model.Items.Count == 0)"
                                                data-val-range="Giảm giá phải lớn hơn hoặc bằng 0" data-val-range-min=""
                                                data-val-number="Giảm giá phải là số" />
@@ -235,7 +236,7 @@
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
                                 <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element" data-testid="order-item-quantity"
-                                       data-decimal="quantity" value="1" autocomplete="off"
+                                       data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                        data-val-number="Số lượng phải là số" />
@@ -245,7 +246,7 @@
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
                                 <input id="itemUnitPrice" name="itemProductUnitPrice" class="form-control" data-testid="order-item-unit-price"
-                                       data-decimal="currency" autocomplete="off"
+                                       data-decimal="currency" autocomplete="off" inputmode="numeric"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                        data-val-number="Đơn giá phải là số" />
@@ -317,7 +318,7 @@
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
                             <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" placeholder="Nhập số điện thoại"
                                    data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
-                                   data-val-required="Vui lòng nhập Số điện thoại." />
+                                   data-val-required="Vui lòng nhập Số điện thoại." inputmode="tel"/>
                             <span class="text-danger small field-validation-valid" data-valmsg-for="PhoneNumber" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
@@ -329,7 +330,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerEmail">Email</label>
-                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" />
+                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" inputmode="email"/>
                             <span class="text-danger small field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -367,7 +368,7 @@
                                 <div class="col-12 col-md-5 mb-3">
                                     <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnitPrice">Giá bán</label>
                                     <input id="quickProductUnitPrice" name="UnitPrice" class="form-control" data-decimal="currency" autocomplete="off" placeholder="Nhập giá bán"
-                                           data-val="true" data-val-required="Vui lòng nhập giá bán."
+                                           data-val="true" data-val-required="Vui lòng nhập giá bán." inputmode="numeric"
                                            data-val-range="Giá bán phải lớn hơn 0" data-val-range-min="0.1"
                                            data-val-number="Giá bán phải là số" / />
                                     <span class="text-danger small field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>

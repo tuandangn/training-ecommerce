@@ -64,12 +64,12 @@
                                             <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-req-qty"
+                                                       class="form-control form-control-sm text-end item-req-qty" inputmode="decimal"
                                                        data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0" />
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].ReturnUnitPrice" value="@item.ReturnUnitPrice.DisplayCurrency()"
-                                                       class="form-control form-control-sm text-end item-return-price"
+                                                       class="form-control form-control-sm text-end item-return-price" inputmode="numeric"
                                                        data-decimal="currency" min="0" placeholder="0" />
                                             </td>
                                             <td class="text-end item-subtotal text-muted small">
@@ -138,7 +138,7 @@
                         </div>
                         <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input asp-for="AdditionalCost" id="additionalCostInput"
+                            <input asp-for="AdditionalCost" id="additionalCostInput" inputmode="numeric"
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
                         </div>

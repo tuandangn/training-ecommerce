@@ -49,7 +49,7 @@
                             <label asp-for="Code" class="form-label"></label>
                             <div class="input-group">
                                 <span class="input-group-text">@Model.CodePrefix</span>
-                                <input asp-for="Code" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Code)" />
+                                <input asp-for="Code" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Code)"/>
                             </div>
                             <span asp-validation-for="Code" class="text-danger small"></span>
                         </div>
@@ -60,7 +60,7 @@
                         </div>
                         <div class="col-sm-6">
                             <label asp-for="PhoneNumber" class="form-label"></label>
-                            <input asp-for="PhoneNumber" class="form-control" placeholder="@Html.DisplayNameFor(m => m.PhoneNumber)" />
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="@Html.DisplayNameFor(m => m.PhoneNumber)" inputmode="tel"/>
                             <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                         </div>
                         <div class="col-sm-6">
@@ -76,7 +76,7 @@
                     <div class="row g-3">
                         <div class="col-sm-6 col-md-4">
                             <label asp-for="DisplayOrder" class="form-label"></label>
-                            <input asp-for="DisplayOrder" class="form-control" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
+                            <input asp-for="DisplayOrder" class="form-control" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" inputmode="numeric" />
                             <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
                         </div>
                     </div>

@@ -46,12 +46,14 @@
 <div class="content-card" data-responsive-list data-list-key="purchase-order-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new PurchaseOrderListSearchModel { Keywords = Model.Keywords, Status = (PurchaseOrderStatus?)Model.Status })" />
-        <a asp-action="QuickCreate" class="btn btn-outline-secondary">
-            <i class="bi bi-lightning-fill me-1"></i> Nhập nhanh
-        </a>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
-        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="QuickCreate" class="btn btn-outline-secondary flex-grow-1">
+                <i class="bi bi-lightning-fill me-1"></i> Nhập nhanh
+            </a>
+            <a asp-action="Create" class="btn btn-primary flex-grow-1">
+                <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+            </a>
+        </div>
         <partial name="_ResponsiveListToolbar" />
     </div>
     <ul class="nav nav-tabs">
@@ -70,132 +72,132 @@
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">
             <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th class="ps-4">Mã đơn</th>
-                        <th class="d-none d-md-table-cell">
-                            Hàng hóa
-                        </th>
-                        <th>
-                            Nhà cung cấp
-                        </th>
-                        <th class="text-end">Tổng tiền</th>
-                        <th class="text-center ui-w-120">
-                            Trạng thái
-                        </th>
-                        <th class="d-none d-xl-table-cell text-center">
-                            Ngày tạo
-                        </th>
-                        <th class="ui-w-80"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Data.Pagination.TotalCount > 0)
-                    {
-                        @foreach (var purchaseOrder in Model.Data)
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Mã đơn</th>
+                            <th class="d-none d-md-table-cell">
+                                Hàng hóa
+                            </th>
+                            <th>
+                                Nhà cung cấp
+                            </th>
+                            <th class="text-end">Tổng tiền</th>
+                            <th class="text-center ui-w-120">
+                                Trạng thái
+                            </th>
+                            <th class="d-none d-xl-table-cell text-center">
+                                Ngày tạo
+                            </th>
+                            <th class="ui-w-80"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Data.Pagination.TotalCount > 0)
                         {
-                            <tr>
-                                <td class="ps-4">
-                                    <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none d-block fw-medium text-nowrap" data-bs-toggle="tooltip" title="Xem chi tiết">
-                                        @HighlighHelper.Highlight(purchaseOrder.Code, query)
-                                    </a>
-                                    <span class="text-muted small">
-                                        @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                    </span>
-                                </td>
-                                <td class="d-none d-md-table-cell">
-                                    @{
-                                        var itemCount = purchaseOrder.Items.Count;
-                                        var ordered = purchaseOrder.TotalOrdered;
-                                        var received = purchaseOrder.TotalReceived;
-                                        var receivedPct = ordered > 0 ? Math.Min(100, (int)Math.Round(received * 100 / ordered)) : 0;
-                                        var isComplete = ordered > 0 && received >= ordered;
-                                        var hasReceived = received > 0;
-                                        var progressClass = isComplete ? "bg-success" : (hasReceived ? "bg-warning" : "bg-secondary");
-                                    }
-                                    @if (itemCount == 0)
-                                    {
-                                        <span class="text-muted fst-italic small">Chưa có hàng hóa</span>
-                                    }
-                                    else
-                                    {
-                                        <div>
-                                            <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none text-start po-items-popover"
-                                                    data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
-                                                    data-bs-custom-class="po-items-popover-content"
-                                                    data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
-                                                    data-bs-content="@BuildItemsPopoverHtml(purchaseOrder.Items)">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge rounded-pill bg-light text-dark border">
-                                                        <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
-                                                    </span>
-                                                </div>
-                                                <div class="progress mt-1 ui-progress-fixed" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
-                                                    <div class="progress-bar @progressClass" data-progress-width="@receivedPct"></div>
-                                                </div>
-                                                <div class="small text-muted mt-1">
-                                                    Đã nhận @received.DisplayQuantity() / @ordered.DisplayQuantity()
-                                                    @if (isComplete)
-                                                    {
-                                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                                    }
-                                                </div>
-                                            </a>
-                                        </div>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="position-relative">
-                                        <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
-                                            @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
+                            @foreach (var purchaseOrder in Model.Data)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none d-block fw-medium text-nowrap" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                            @HighlighHelper.Highlight(purchaseOrder.Code, query)
                                         </a>
-                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
+                                        <span class="text-muted small">
+                                            @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                        </span>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        @{
+                                            var itemCount = purchaseOrder.Items.Count;
+                                            var ordered = purchaseOrder.TotalOrdered;
+                                            var received = purchaseOrder.TotalReceived;
+                                            var receivedPct = ordered > 0 ? Math.Min(100, (int)Math.Round(received * 100 / ordered)) : 0;
+                                            var isComplete = ordered > 0 && received >= ordered;
+                                            var hasReceived = received > 0;
+                                            var progressClass = isComplete ? "bg-success" : (hasReceived ? "bg-warning" : "bg-secondary");
+                                        }
+                                        @if (itemCount == 0)
+                                        {
+                                            <span class="text-muted fst-italic small">Chưa có hàng hóa</span>
+                                        }
+                                        else
                                         {
                                             <div>
-                                                <span class="text-muted small">
-                                                    @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
-                                                </span>
+                                                <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none text-start po-items-popover"
+                                                   data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
+                                                   data-bs-custom-class="po-items-popover-content"
+                                                   data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
+                                                   data-bs-content="@BuildItemsPopoverHtml(purchaseOrder.Items)">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge rounded-pill bg-light text-dark border">
+                                                            <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
+                                                        </span>
+                                                    </div>
+                                                    <div class="progress mt-1 ui-progress-fixed" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
+                                                        <div class="progress-bar @progressClass" data-progress-width="@receivedPct"></div>
+                                                    </div>
+                                                    <div class="small text-muted mt-1">
+                                                        Đã nhận @received.DisplayQuantity() / @ordered.DisplayQuantity()
+                                                        @if (isComplete)
+                                                        {
+                                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                        }
+                                                    </div>
+                                                </a>
                                             </div>
                                         }
+                                    </td>
+                                    <td>
+                                        <div class="position-relative">
+                                            <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                                @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
+                                            </a>
+                                            @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
+                                            {
+                                                <div>
+                                                    <span class="text-muted small">
+                                                        @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary text-nowrap">
+                                        @purchaseOrder.TotalAmount.DisplayCurrencyWithSymbol()
+                                    </td>
+                                    <td class="text-center">
+                                        @{
+                                            var purchaseOrderStatus = (PurchaseOrderStatus)purchaseOrder.Status;
+                                        }
+                                        <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
+                                            @purchaseOrderStatus.GetDisplayText()
+                                        </span>
+                                    </td>
+                                    <td class="d-none d-xl-table-cell text-muted text-center">
+                                        @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a class="btn btn-sm btn-outline-secondary text-decoration-none" asp-action="Details" asp-route-id="@purchaseOrder.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                            <span>Xem</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                                        <h5>Không tìm thấy đơn nhập hàng nào</h5>
+                                        <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo đơn mới.</p>
                                     </div>
-                                </td>
-                                <td class="text-end fw-bold text-primary text-nowrap">
-                                    @purchaseOrder.TotalAmount.DisplayCurrencyWithSymbol()
-                                </td>
-                                <td class="text-center">
-                                    @{
-                                        var purchaseOrderStatus = (PurchaseOrderStatus)purchaseOrder.Status;
-                                    }
-                                    <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
-                                        @purchaseOrderStatus.GetDisplayText()
-                                    </span>
-                                </td>
-                                <td class="d-none d-xl-table-cell text-muted text-center">
-                                    @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                </td>
-                                <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-outline-secondary text-decoration-none" asp-action="Details" asp-route-id="@purchaseOrder.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
-                                        <span>Xem</span>
-                                    </a>
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="7">
-                                <div class="empty-state">
-                                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                                    <h5>Không tìm thấy đơn nhập hàng nào</h5>
-                                    <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo đơn mới.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -296,24 +298,24 @@
     <script type="module">
         const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
         const form = txtKeywords.closest('form');
-        const onSearchChanged = debounce(function () {
-        form.submit();
+        const onSearchChanged = debounce(function() {
+            form.submit();
         }, 700);
         txtKeywords.addEventListener('input', onSearchChanged);
 
-        if(txtKeywords.value){
-        focusEnd(txtKeywords);
+        if (txtKeywords.value) {
+            focusEnd(txtKeywords);
         }
         @if (!string.IsNullOrEmpty(Model.Keywords))
-        {
+            {
                 <text>
                         focusEnd(txtKeywords);
                 </text>
         }
 
-        // Init popover cho cột "Hàng hóa". site.js auto-init tooltip nhưng không init popover.
-        document.querySelectorAll('.po-items-popover').forEach(el => {
-            new bootstrap.Popover(el, { container: 'body', sanitize: false });
-        });
+            // Init popover cho cột "Hàng hóa". site.js auto-init tooltip nhưng không init popover.
+            document.querySelectorAll('.po-items-popover').forEach(el => {
+                new bootstrap.Popover(el, { container: 'body', sanitize: false });
+            });
     </script>
 }

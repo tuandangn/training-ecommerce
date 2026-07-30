@@ -127,7 +127,8 @@ export default class ProductBrowser {
                                     <i class="bi bi-search text-muted pb-search-icon"></i>
                                     <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
                                 </span>
-                                <input type="text" id="pbSearchKeywords" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
+                                <input type="text" id="pbSearchKeywords" class="form-control border-start-0 ps-0 pb-search-input"
+                                    value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" inputmode="search"/>
                                 ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-product data-bs-toggle="tooltip" title="Thêm hàng hóa mới">
                     <i class="bi bi-plus"></i>
                     <span class="visually-hidden">Thêm mới</span>

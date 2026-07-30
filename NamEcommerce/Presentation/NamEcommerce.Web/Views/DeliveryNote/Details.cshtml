@@ -420,11 +420,12 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tiền thu duyệt</label>
-                                            <input type="number" name="approvedAmountToCollect" class="form-control" min="0" step="1000" value="@proposed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
+                                            <input type="number" name="approvedAmountToCollect" class="form-control" min="0" step="1000" inputmode="numeric"
+                                                value="@proposed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chi phí trả về</label>
-                                            <input type="number" name="agreedCustomerCharge" class="form-control" min="0" step="1000" value="0" />
+                                            <input type="number" name="agreedCustomerCharge" class="form-control" min="0" step="1000" value="0" inputmode="numeric"/>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do chi phí</label>
@@ -710,7 +711,7 @@
                         <input type="hidden" name="deliveryNoteId" value="@Model.Id" />
                         <div class="mb-3">
                             <label for="deliveryShippingPhoneNumber" class="form-label">Số điện thoại</label>
-                            <input id="deliveryShippingPhoneNumber" name="shippingPhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber"
+                            <input id="deliveryShippingPhoneNumber" name="shippingPhoneNumber" class="form-control" value="@Model.ShippingPhoneNumber" inputmode="tel"
                                    data-val="true" data-val-required="Vui lòng nhập số điện thoại" data-val-maxlength="Số điện thoại không được vượt quá 50 ký tự" data-val-maxlength-max="50" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="shippingPhoneNumber" data-valmsg-replace="true"></span>
                         </div>

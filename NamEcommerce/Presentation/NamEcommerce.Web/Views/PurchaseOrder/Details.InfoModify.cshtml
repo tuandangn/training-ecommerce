@@ -48,15 +48,15 @@
     <div class="row g-3">
         <div class="col-sm-6">
             <label asp-for="ShippingAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
-            <input asp-for="ShippingAmount" class="form-control no-additional-element no-hint"
-                   value="@Model.ShippingAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off"
+            <input asp-for="ShippingAmount" class="form-control"
+                   value="@Model.ShippingAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off" inputmode="nnumeric"
                    data-val-range="Phí vận chuyển phải ≥ 0." data-val-range-min="0" data-val-number="Số không hợp lệ." />
             <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
         </div>
         <div class="col-sm-6">
             <label asp-for="TaxAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
-            <input asp-for="TaxAmount" class="form-control no-additional-element no-hint"
-                   value="@Model.TaxAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off"
+            <input asp-for="TaxAmount" class="form-control"
+                   value="@Model.TaxAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off" inputmode="nnumeric"
                    data-val-range="Thuế phải ≥ 0." data-val-range-min="0" data-val-number="Số không hợp lệ." />
             <span asp-validation-for="TaxAmount" class="text-danger small"></span>
         </div>
