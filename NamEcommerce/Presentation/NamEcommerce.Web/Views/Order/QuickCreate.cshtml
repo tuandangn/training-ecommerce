@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="~/css/pages/order.css" asp-append-version="true" />
     <style>
         .order-summary .order-summary-row .currency-field .field-prefix {
-            right:0;
+            right: 0;
         }
     </style>
 }
@@ -38,7 +38,7 @@
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
     <div class="row g-3">
-        <div class="col-lg-8">
+        <div class="col-xl-8">
             <div class="row g-3">
                 <div class="col-12">
                     <section class="content-card">
@@ -86,8 +86,8 @@
                                             <th class="ps-3">Hàng hóa</th>
                                             <th class="warehouse-col d-none">Kho hàng</th>
                                             <th class="text-end d-none d-xl-table-cell">Số lượng</th>
-                                            <th class="text-end">Đơn giá</th>
-                                            <th class="text-end d-none d-xl-table-cell">Thành tiền</th>
+                                            <th class="text-end d-none d-xl-table-cell">Đơn giá</th>
+                                            <th class="text-end d-table-cell d-xl-none d-xxl-table-cell">Thành tiền</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -124,6 +124,10 @@
                                                     <span class="small text-danger field-validation-valid"
                                                           data-valmsg-for="Items[@i].ProductId"
                                                           data-valmsg-replace="true"></span>
+                                                    @if (Model.Items.Where(ci => ci.ProductId == item.ProductId).Sum(ci => (ci.Quantity ?? 0)) > item.QuantityAvailable)
+                                                    {
+                                                        <div class="text-muted small fst-italic">Số lượng không đủ để giao bây giờ</div>
+                                                    }
                                                 </td>
                                                 <td class="align-middle d-none">
                                                     <select class="form-select form-select-sm warehouse-id" data-role="warehouse" name="Items[@i].WarehouseId"
@@ -143,11 +147,15 @@
                                                 <td class="text-end d-none d-xl-table-cell align-middle">
                                                     <span class="fw-medium">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</span>
                                                 </td>
-                                                <td class="text-end align-middle">
-                                                    <span class="text-muted">@item.UnitPrice.DisplayCurrencyWithSymbol()</span>
+                                                <td class="text-end d-none d-xl-table-cell align-middle">
+                                                    <span class="text-muted text-nowrap">
+                                                        @item.UnitPrice.DisplayCurrencyWithSymbol()
+                                                    </span>
                                                 </td>
-                                                <td class="text-end fw-semibold text-nowrap d-none d-xl-table-cell align-middle">
-                                                    @item.ItemSubTotal.DisplayCurrencyWithSymbol()
+                                                <td class="text-end align-middle d-table-cell d-xl-none d-xxl-table-cell">
+                                                    <span class="text-nowrap fw-semibold">
+                                                        @item.ItemSubTotal.DisplayCurrencyWithSymbol()
+                                                    </span>
                                                 </td>
                                                 <td class="text-center align-middle">
                                                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none deleteItem" aria-label="Xóa hàng hóa">
@@ -177,7 +185,7 @@
                                     <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric"/>
+                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" />
                                         <span class="small text-danger" asp-validation-for="OrderDiscount"></span>
                                     </span>
                                 </div>
@@ -215,21 +223,23 @@
                                     </nav>
                                 </div>
                                 <div class="tab-content" id="navShippingContent">
-                                    <div class="tab-pane fade border rounded p-3" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
-                                        <div class="row g-3 ship-info">
-                                            <div class="col-md-6">
-                                                <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" inputmode="tel"/>
-                                                <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" />
-                                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
-                                            </div>
-                                        </div>
+                                    <div class="tab-pane fade" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
                                     </div>
                                     <div class="tab-pane fade" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
+                                    </div>
+                                </div>
+                                <div class="border rounded p-3 ship-info" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                            <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" inputmode="tel" />
+                                            <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                            <input asp-for="ShippingAddress" class="form-control text-sm" placeholder="Nhập địa chỉ" />
+                                            <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -271,10 +281,10 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 d-none d-lg-block">
+        <div class="col-xl-4 d-none d-lg-block">
             <section class="content-card">
                 <div class="content-card-body">
-                    <div id="fastSaleProductBrowser" data-col-class="col-12"></div>
+                    <div id="fastSaleProductBrowser" data-col-class="col-6 col-xl-12"></div>
                 </div>
             </section>
         </div>
@@ -315,7 +325,7 @@
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
                             <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" placeholder="Nhập số điện thoại"
                                    data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
-                                   data-val-required="Vui lòng nhập Số điện thoại." inputmode="tel"/>
+                                   data-val-required="Vui lòng nhập Số điện thoại." inputmode="tel" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="PhoneNumber" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
@@ -427,7 +437,7 @@
                                 <div>
                                     <input name="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
                                            data-decimal="currency" data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0" autocomplete="off"
-                                           data-val="true" inputmode="numeric"/>
+                                           data-val="true" inputmode="numeric" />
                                     <span class="small text-danger field-validation-valid" data-valmsg-for="PaidAmount" data-valmsg-replace="true"></span>
                                 </div>
                                 <span class="form-text text-muted d-block text-end" id="debtAmount"></span>

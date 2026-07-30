@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.Extensions.Localization;
-using NamEcommerce.Web.Models.FastSales;
+using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Orders;

@@ -1,5 +1,4 @@
 ﻿using NamEcommerce.Web.Contracts.Models.Orders;
-using NamEcommerce.Web.Models.FastSales;
 using NamEcommerce.Web.Models.Orders;
 
 namespace NamEcommerce.Web.Services.Orders;

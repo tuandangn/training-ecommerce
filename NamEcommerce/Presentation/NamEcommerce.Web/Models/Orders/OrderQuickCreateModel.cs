@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace NamEcommerce.Web.Models.FastSales;
+namespace NamEcommerce.Web.Models.Orders;
 
 [Serializable]
 public sealed class OrderQuickCreateModel

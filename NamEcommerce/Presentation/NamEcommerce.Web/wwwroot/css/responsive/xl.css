@@ -1,3 +1,12 @@
 /* Bootstrap xl breakpoint file. Keep shared >= 1200px rules here. */
 @media (min-width: 1200px) {
 }
+
+@media (max-width: 1200px) {
+    .order-workflow-layout,
+    .order-workflow-info-grid,
+    .workflow-metric-grid,
+    .order-delivery-note-grid {
+        grid-template-columns: 1fr;
+    }
+}

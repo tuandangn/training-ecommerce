@@ -14,6 +14,9 @@ class FastSale {
 
     #paymentProcess;
 
+    #shippingAddressRequiredMsg;
+    #shippingPhoneNumberRequiredMsg;
+
     constructor(root) {
         this.root = root;
         this.urls = {
@@ -88,6 +91,9 @@ class FastSale {
         this.deliveryNowBtn = document.getElementById('fastSaleDeliverNow');
         this.payNowBtn = document.getElementById('fastSalePayNow');
         this.discountInput = document.getElementById('orderDiscount');
+
+        this.#shippingAddressRequiredMsg = this.shippingAddress?.getAttribute('data-val-required');
+        this.#shippingPhoneNumberRequiredMsg = this.shippingPhoneNumber?.getAttribute('data-val-required');
     }
     bindPickers() {
         const initialValues = {};
@@ -353,12 +359,22 @@ class FastSale {
 
         this.customer.value = this.selectedCustomer?.id ?? '';
 
-        const showShippingInfo = this.cart.length > 0 && this.fulfillmentMode === this.#notDelivered;
-        this.shippingAddress.closest('.ship-info').classList.toggle('d-none', !showShippingInfo);
+        const showShippingInfo = this.selectedCustomer != null && this.cart.length;
+        this.shippingAddress.closest('.ship-info')?.classList.toggle('d-none', !showShippingInfo);
+        if (this.fulfillmentMode == this.#deliveryNow) {
+            this.shippingAddress.removeAttribute('data-val-required');
+            this.shippingPhoneNumber.removeAttribute('data-val-required');
+        } else {
+            this.shippingAddress.setAttribute('data-val-required', this.#shippingAddressRequiredMsg);
+            this.shippingPhoneNumber.setAttribute('data-val-required', this.#shippingPhoneNumberRequiredMsg);
+        }
 
         reparseForm(this.root);
         document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning =>
             warning.classList.toggle('d-none', !this.isRetailWalkInCustomer() || total == 0));
+
+        $(this.shippingAddress).valid();
+        $(this.shippingPhoneNumber).valid();
     }
     #toggleDeliveryTabs() {
         if (this.fulfillmentMode == this.#notDelivered) {
@@ -403,13 +419,16 @@ class FastSale {
             const row = document.createElement('tr');
             row.setAttribute('data-unit-measurement', item.unitMeasurement);
             row.setAttribute('data-qty-available', item.quantityAvailable);
+
+            const isQtyExceeded = this.#isItemQtyExceeded(item);
+
             row.innerHTML = `
                 <td class="ps-3 fw-medium align-middle">
                     <div class="d-flex align-items-center gap-3">
                         ${item.pictureUrl ? `<img src="${item.pictureUrl}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />` : ''}
                         <div>
                             <div class="fw-medium product-name">${this.escape(item.name)}</div>
-                            <div class="text-muted small d-md-none">
+                            <div class="text-muted small d-xl-none">
                                 ${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}
                             </div>
                         </div>
@@ -429,6 +448,7 @@ class FastSale {
                     <span class="small text-danger field-validation-valid"
                         data-valmsg-for="Items[${index}].ProductId"
                         data-valmsg-replace="true"></span>
+                    ${isQtyExceeded ? '<div class="text-muted small fst-italic">Số lượng không đủ để giao bây giờ</div>' : ''}
                 </td>
                 <td class="align-middle ${this.fulfillmentMode == this.#deliveryNow ? '' : 'd-none'}">
                     ${this.renderWarehouseSelect(item, index)}
@@ -436,11 +456,15 @@ class FastSale {
                 <td class="text-end d-none d-xl-table-cell align-middle">
                     <span class="fw-medium">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)}</span>
                 </td>
-                <td class="text-end align-middle">
-                    <span class="text-muted">${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}</span>
+                <td class="text-end d-none d-xl-table-cell align-middle">
+                    <span class="text-muted text-nowrap">
+                        ${DecimalFields.formatCurrencyWithSymbol(item.unitPrice)}
+                    </span>
                 </td>
-                <td class="text-end fw-semibold text-nowrap d-none d-xl-table-cell align-middle">
-                    ${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}
+                <td class="text-end align-middle d-table-cell d-xl-none d-xxl-table-cell">
+                    <span class="text-nowrap fw-semibold ">
+                        ${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}
+                    </span>
                 </td>
                 <td class="text-center align-middle">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none deleteItem" aria-label="Xóa hàng hóa">
@@ -448,7 +472,6 @@ class FastSale {
                     </button>
                 </td>`;
 
-            //de
             row.querySelector('.deleteItem').addEventListener('click', () => {
                 this.cart.splice(index, 1);
                 this.render();
@@ -484,6 +507,13 @@ class FastSale {
             this.cartBody.appendChild(row);
         });
         DecimalFields.autoWrap(this.cartBody);
+    }
+    #isItemQtyExceeded(item) {
+        if (this.fulfillmentMode != this.#deliveryNow)
+            return false;
+        const sameProductItems = this.cart.filter(ci => ci.productId == item.productId);
+        const totalQty = sameProductItems.reduce((total, ci) => total + ci.quantity, 0);
+        return totalQty > item.quantityAvailable;
     }
     renderWarehouseSelect(item, index) {
         if (this.fulfillmentMode !== this.#deliveryNow) {
@@ -658,45 +688,36 @@ class FastSale {
         return !!customer;
     }
     validateSaleInput() {
-        if (!this.getSelectedCustomerId()) return 'Vui lòng chọn khách hàng.';
-        if (this.fulfillmentMode === 'deliverNow' && this.cart.some(item => !item.warehouseId)) return 'Vui lòng chọn kho cho từng mặt hàng.';
-        if (this.cart.length === 0) return 'Vui lòng thêm hàng hóa.';
-        if (this.cart.some(item => item.quantity <= 0)) return 'Số lượng phải lớn hơn 0.';
-        if (this.calculateTotal() <= 0) return 'Tổng tiền phải lớn hơn 0.';
-        if (this.fulfillmentMode === this.#notDelivered) {
-            if (!this.shippingPhoneNumber.value.trim()) return 'Vui lòng nhập số điện thoại giao hàng.';
-            if (!this.shippingAddress.value.trim()) return 'Vui lòng nhập địa chỉ giao hàng.';
+        if (!this.getSelectedCustomerId())
+            return 'Vui lòng chọn khách hàng.';
+
+        if (this.fulfillmentMode == this.#deliveryNow) {
+            for (let item of this.cart) {
+                if (!item.warehouseId)
+                    return `Vui lòng chọn kho cho mặt hàng "${item.name}"`;
+                if (this.#isItemQtyExceeded(item))
+                    return `"${item.name}" chỉ còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}${item.unitMeasurement ? ' ' + item.unitMeasurement : ''} không đủ để giao `;
+            }
         }
+
+        if (this.cart.length === 0)
+            return 'Vui lòng thêm hàng hóa.';
+
+        if (this.cart.some(item => item.quantity <= 0))
+            return 'Số lượng phải lớn hơn 0.';
+
+
+        if (this.calculateTotal() <= 0)
+            return 'Tổng tiền phải lớn hơn 0.';
+
+        if (this.fulfillmentMode === this.#notDelivered) {
+            if (!this.shippingPhoneNumber.value.trim())
+                return 'Vui lòng nhập số điện thoại giao hàng.';
+            if (!this.shippingAddress.value.trim())
+                return 'Vui lòng nhập địa chỉ giao hàng.';
+        }
+
         return null;
-    }
-
-    buildSalePayload(paymentAmount, discount, paymentIntentId) {
-        return {
-            customerId: this.getSelectedCustomerId(),
-            items: this.cart.map(item => ({
-                productId: item.productId,
-                warehouseId: this.fulfillmentMode === this.#deliveryNow ? item.warehouseId : null,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice
-            })),
-            shippingAddress: this.shippingAddress.value,
-            shippingPhoneNumber: this.shippingPhoneNumber.value,
-            orderDiscount: discount || 0,
-            note: this.note.value,
-            deliveryNow: this.fulfillmentMode === this.#deliveryNow,
-            payNow: this.paymentTiming === this.#payNow,
-            paidAmount: paymentAmount,
-            paymentIntentId
-        };
-    }
-
-    resolveSaleUrl() {
-        if (this.paymentTiming === this.#unpaid)
-            return this.urls.createUnpaidSale;
-
-        return this.#paymentProcess.isBank()
-            ? this.urls.createBankSale
-            : this.urls.createCashSale;
     }
 
     getSelectedCustomerId() {
@@ -715,12 +736,6 @@ class FastSale {
         return warehouses[0]?.id || '';
     }
 
-    getHeaderWarehouseId() {
-        if (this.fulfillmentMode !== this.#deliveryNow)
-            return;
-        return this.cart.find(item => item.warehouseId)?.warehouseId;
-    }
-
     async postJson(url, payload) {
         const result = await apiPost(url, payload);
         return result;
@@ -729,7 +744,6 @@ class FastSale {
     calculateSubtotal() {
         return this.cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     }
-
     calculateTotal() {
         return Math.max(0, this.calculateSubtotal() - DecimalFields.getValue(this.discountInput));
     }
@@ -741,24 +755,12 @@ class FastSale {
         return 'Bắt đầu thanh toán <i class="bi bi-arrow-right"></i>';
     }
 
-    formatDateTime(value) {
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return '';
-
-        return new Intl.DateTimeFormat('vi-VN', {
-            dateStyle: 'short',
-            timeStyle: 'short'
-        }).format(date);
-    }
-
     formatMoney(value) {
         return DecimalFields.formatCurrency(value || 0);
     }
-
     formatMoneyWithSymbol(value) {
         return DecimalFields.formatCurrencyWithSymbol(value || 0);
     }
-
     formatQuantity(value, decimals) {
         return DecimalFields.formatQuantity(value, decimals);
     }
@@ -771,124 +773,6 @@ class FastSale {
         const div = document.createElement('div');
         div.textContent = value ?? '';
         return div.innerHTML;
-    }
-
-    showScheduleModal(orderId, orderItems, orderUrl) {
-        const modalEl = document.getElementById('fastSaleScheduleModal');
-        if (!modalEl) {
-            if (orderUrl) window.location.href = orderUrl;
-            return;
-        }
-
-        const notBeforeDateValue = '20';
-        const modeSelect = document.getElementById('fastSaleScheduleMode');
-        const dateSection = document.getElementById('fastSaleScheduleDateSection');
-        const fromInput = document.getElementById('fastSaleScheduleFrom');
-        const noteInput = document.getElementById('fastSaleScheduleNote');
-        const orderIdInput = document.getElementById('fastSaleScheduleOrderId');
-        const itemsPayload = document.getElementById('fastSaleScheduleItemsPayload');
-        const itemsTable = document.getElementById('fastSaleScheduleItemsTable');
-        const form = document.getElementById('fastSaleScheduleForm');
-        const skipBtn = document.getElementById('fastSaleScheduleSkip');
-
-        orderIdInput.value = orderId ?? '';
-        noteInput.value = '';
-        fromInput.value = '';
-        modeSelect.value = '10';
-        dateSection.classList.add('d-none');
-        fromInput.removeAttribute('required');
-
-        modeSelect.onchange = () => {
-            const needsDate = modeSelect.value === notBeforeDateValue;
-            dateSection.classList.toggle('d-none', !needsDate);
-            fromInput.toggleAttribute('required', needsDate);
-            if (!needsDate) fromInput.value = '';
-        };
-
-        itemsTable.innerHTML = '';
-        const cartItems = this.cart;
-        const rows = orderItems.map((item, index) => {
-            const cartItem = cartItems[index];
-            const decimalPlaces = cartItem?.quantityDecimalPlaces ?? 0;
-            const div = document.createElement('div');
-            div.className = 'd-flex align-items-center justify-content-between gap-3 py-2 border-bottom';
-            div.innerHTML = `
-                <span class="fw-medium">${this.escape(item.productName)}</span>
-                <div class="d-flex align-items-end flex-column">
-                    <input type="text" class="form-control form-control-sm text-end schedule-qty-input"
-                           style="max-width:120px" data-val="true" name="item${index}_quantity"
-                           value="${this.formatQuantity(item.quantity, decimalPlaces)}"
-                           data-decimal="quantity" data-decimals="${decimalPlaces}" inputmode="decimal"
-                           data-val-range="Số lượng phải nhỏ hơn ${DecimalFields.formatQuantity(cartItem.quantity, cartItem.quantityDecimalPlaces)}" 
-                           data-val-range-max="${cartItem.quantity}"
-                           data-val-number="Số lượng không đúng"
-                           placeholder="Nhập số lượng" />
-                    <span class="small text-danger text-end field-validation-valid"
-                          data-valmsg-for="item${index}_quantity" data-valmsg-replace="true"></span>
-               </div>
-               `;
-            itemsTable.appendChild(div);
-            return { item, input: div.querySelector('input') };
-        });
-        DecimalFields.autoWrap(itemsTable);
-
-        reparseForm(form);
-
-        skipBtn.onclick = () => {
-            showPageLoading();
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            if (orderUrl) window.location.href = orderUrl;
-            else location.reload();
-        };
-
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            if (!$(form).valid())
-                return;
-
-            itemsPayload.replaceChildren();
-            let index = 0;
-            rows.forEach(({ item, input }) => {
-                const qty = DecimalFields.getValue(input);
-                if (!qty) return;
-                const append = (name, value) => {
-                    const el = document.createElement('input');
-                    el.type = 'hidden'; el.name = name; el.value = value ?? '';
-                    itemsPayload.appendChild(el);
-                };
-                append(`Items[${index}].OrderItemId`, item.orderItemId);
-                append(`Items[${index}].ProductId`, item.productId);
-                append(`Items[${index}].ProductName`, item.productName);
-                append(`Items[${index}].Quantity`, qty);
-                index++;
-            });
-
-            if (index === 0) {
-                this.showAlert('warning', 'Vui lòng nhập số lượng cho ít nhất một hàng hóa.');
-                return;
-            }
-
-            showPageLoading();
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            try {
-                const result = await apiPost(this.urls.schedule, DecimalFields.getFormData(form));
-                if (!result.success) {
-                    hidePageLoading();
-                    if (result.message)
-                        this.showAlert('error', result.message || 'Không thể lưu lịch.');
-                    return;
-                }
-            } finally {
-                submitBtn.disabled = false;
-            }
-
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            if (orderUrl) window.location.href = orderUrl;
-            else location.reload();
-        };
-
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 }
 
