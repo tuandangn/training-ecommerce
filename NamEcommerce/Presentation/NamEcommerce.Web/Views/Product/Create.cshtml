@@ -78,7 +78,7 @@
                                     <div class="col-12 col-md-6">
                                         <label asp-for="UnitPrice" class="form-label"></label>
                                         <input name="UnitPrice" data-decimal="currency" class="form-control include-hint"
-                                               placeholder="Nhập giá bán" />
+                                               placeholder="Nhập giá bán" inputmode="numeric"/>
                                         <span asp-validation-for="UnitPrice" class="text-danger small"></span>
                                     </div>
                                     <div class="col-12 col-md-6">
@@ -145,7 +145,7 @@
                                                                     <input name="ProductInventory.ProductStocks[@i].Quantity"
                                                                            value="@stock.Quantity.DisplayQuantity()" data-decimal="quantity" data-decimals="@initDp"
                                                                            class="form-control form-control-sm text-end stock-qty-input"
-                                                                           data-index="@i" placeholder="Nhập số lượng"
+                                                                           data-index="@i" placeholder="Nhập số lượng" inputmode="decimal"
                                                                            data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0"
                                                                            data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                                                     <span asp-validation-for="ProductInventory.ProductStocks[@i].Quantity" class="text-danger small"></span>
@@ -153,7 +153,7 @@
                                                                 <td class="text-end pe-3 ui-max-w-180">
                                                                     <input name="ProductInventory.ProductStocks[@i].UnitCost"
                                                                            value="@(stock.UnitCost > 0 ? stock.UnitCost.DisplayCurrency() : "0")"
-                                                                           data-decimal="currency"
+                                                                           data-decimal="currency" inputmode="numeric"
                                                                            class="form-control form-control-sm text-end stock-cost-input"
                                                                            data-index="@i" placeholder="Nhập giá vốn"
                                                                            data-val="true" data-val-required="Vui lòng nhập giá vốn"
@@ -201,7 +201,7 @@
                         <div class="row g-3">
                             <div class="col-sm-6 col-md-3">
                                 <label asp-for="DisplayOrder" class="form-label"></label>
-                                <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
+                                <input asp-for="DisplayOrder" class="form-control" placeholder="0" inputmode="numeric"/>
                                 <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
                             </div>
                         </div>

@@ -263,7 +263,7 @@
                                                 <span>Số lượng:</span>
                                                 <span>
                                                     <input class="form-control quantity-to-order" data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" name="quantityToOrder@(item.OrderItemId)"
-                                                           value="@item.QuantityToOrder.DisplayCurrency()" autocomplete="off"
+                                                           value="@item.QuantityToOrder.DisplayCurrency()" autocomplete="off" inputmode="decimal"
                                                            data-val="true" data-val-required="Vui lòng nhập số lượng"
                                                            data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.0001" : "1")"
                                                            data-val-number="Số lượng phải là số" />
@@ -275,7 +275,7 @@
                                             <label>
                                                 <span>Giá nhập:</span>
                                                 <div>
-                                                    <input class="form-control unit-cost" value="@item.UnitCost.DisplayCurrency()"
+                                                    <input class="form-control unit-cost" value="@item.UnitCost.DisplayCurrency()" inputmode="numeric"
                                                            data-decimal="currency" autocomplete="off" name="unitCost@(item.OrderItemId)"
                                                            data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                                            data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
@@ -329,14 +329,14 @@
                                             <label class="shortage-ds-field">
                                                 <span>Điện thoại:</span>
                                                 <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận *"
-                                                       name="ds@(item.OrderItemId)_contactPhone"
+                                                       name="ds@(item.OrderItemId)_contactPhone" inputmode="tel"
                                                        data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
                                                        data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
                                                 <span class="small text-danger field-validation-valid" data-valmsg-for="ds@(item.OrderItemId)_contactPhone" data-valmsg-replace="true"></span>
                                             </label>
                                             <label class="shortage-ds-field shortage-ds-priority-field">
                                                 <span>Ưu tiên:</span>
-                                                <input type="number" class="form-control ds-priority" min="0" step="1" value="0" />
+                                                <input type="number" class="form-control ds-priority" min="0" step="1" value="0" inputmode="numeric"/>
                                             </label>
                                         </div>
                                     </div>
@@ -918,7 +918,7 @@
                         <td class="align-middle">
                             <div class="input-group input-group-sm ui-float-end-w-140">
                                 <input class="form-control text-end related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
-                                       ${maxAttr} data-decimal="quantity" value="1" autocomplete="off"
+                                       ${maxAttr} data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0 ${maxAttr ? ` và nhỏ hơn ${DecimalFields.formatQuantity(maxQuantity)}` : ''}"
                                        data-val-range-min="0.0001"

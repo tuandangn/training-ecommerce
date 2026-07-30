@@ -39,7 +39,7 @@
 
             <div class="col-md-6">
                 <label asp-for="Amount" class="form-label">Số tiền (₫)</label>
-                <input asp-for="Amount" type="number" class="form-control" placeholder="0" />
+                <input asp-for="Amount" type="number" class="form-control" placeholder="0" inputmode="numeric"/>
                 <span asp-validation-for="Amount" class="text-danger small"></span>
             </div>
 

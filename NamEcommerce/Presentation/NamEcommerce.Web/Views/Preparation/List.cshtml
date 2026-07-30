@@ -73,7 +73,7 @@
                         <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoQuantity">
                             Số lượng nhập <span class="text-danger">*</span>
                         </label>
-                        <input type="number" class="form-control rounded-3" id="qcpoQuantity" min="0.01" step="0.01" placeholder="0" />
+                        <input type="number" class="form-control rounded-3" id="qcpoQuantity" min="0.01" step="0.01" placeholder="0" inputmode="decimal"/>
                         <div class="form-text">Gợi ý: số lượng đang thiếu</div>
                     </div>
                     <div class="col-6">
@@ -81,7 +81,7 @@
                             Đơn giá nhập <span class="text-danger">*</span>
                         </label>
                         <div class="input-group">
-                            <input type="number" class="form-control rounded-3" id="qcpoUnitCost" min="0" step="1000" placeholder="0" />
+                            <input type="number" class="form-control rounded-3" id="qcpoUnitCost" min="0" step="1000" placeholder="0" inputmode="numeric"/>
                             <span class="input-group-text bg-white small">đ</span>
                         </div>
                     </div>
@@ -173,7 +173,7 @@
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-muted text-uppercase" for="modalSurcharge">Phụ phí</label>
                                         <div class="input-group">
-                                            <input type="number" class="form-control text-end shadow-sm" id="modalSurcharge" name="surcharge" step="1000" placeholder="0" />
+                                            <input type="number" class="form-control text-end shadow-sm" id="modalSurcharge" name="surcharge" step="1000" placeholder="0" inputmode="numeric" />
                                             <span class="input-group-text bg-white small border-start-0">đ</span>
                                         </div>
                                     </div>
@@ -186,7 +186,8 @@
                                     <div class="mb-0 p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25">
                                         <label class="form-label small fw-bold text-primary text-uppercase mb-1">Số tiền phải thu</label>
                                         <div class="input-group mb-1">
-                                            <input type="number" class="form-control text-end fw-bold text-primary fs-5 bg-transparent border-0" id="modalAmountToCollect" name="amountToCollect" step="1000" />
+                                            <input type="number" class="form-control text-end fw-bold text-primary fs-5 bg-transparent border-0"
+                                                id="modalAmountToCollect" name="amountToCollect" step="1000" inputmode="numeric"/>
                                             <span class="input-group-text bg-transparent border-0 text-primary fw-bold fs-5">đ</span>
                                         </div>
                                         <div class="small text-primary opacity-75 ui-fs-075" id="modalCalculationInfo">
@@ -384,7 +385,7 @@
                                 </td>
                                 <td class="pe-0">
                                     <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm"
-                                           data-order-id="${orderId}" data-item-id="${item.orderItemId}"
+                                           data-order-id="${orderId}" data-item-id="${item.orderItemId}" inputmode="decimal"
                                            value="${item.remainingQuantity}" min="0" max="${item.remainingQuantity}" step="0.01" />
                                 </td>
                                 <td class="text-end text-muted pe-3 small">${item.stock}</td>

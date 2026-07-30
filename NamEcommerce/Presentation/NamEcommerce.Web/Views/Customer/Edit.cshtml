@@ -41,7 +41,7 @@
                                 <label asp-for="PhoneNumber" class="form-label"></label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
-                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" />
+                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" inputmode="tel"/>
                                 </div>
                                 <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                             </div>
@@ -54,7 +54,7 @@
                                 <label asp-for="Email" class="form-label"></label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
-                                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
+                                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email"/>
                                 </div>
                                 <span asp-validation-for="Email" class="text-danger small"></span>
                             </div>

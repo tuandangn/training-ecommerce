@@ -135,7 +135,7 @@ export default class DeliveryNoteController {
                             <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end returned-qty" name="returnedQty_${item.id}"
-                                    value="${DecimalFields.formatQuantity(returnedQty, decimalPlaces)}"
+                                    value="${DecimalFields.formatQuantity(returnedQty, decimalPlaces)}" inputmode="decimal"
                     data-decimal="quantity" data-decimals="${decimalPlaces}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}." data-val-range-max="${deliveredQty}"

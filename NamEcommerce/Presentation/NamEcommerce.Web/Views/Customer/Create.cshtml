@@ -33,7 +33,7 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" />
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" inputmode="tel"/>
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                 </div>
                 <div class="col-12">
@@ -43,13 +43,13 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="InitialDebt" class="form-label"></label>
-                    <input asp-for="InitialDebt" class="form-control text-start" placeholder="Nhập số công nợ cũ" data-decimal="currency"/>
+                    <input asp-for="InitialDebt" class="form-control text-start" placeholder="Nhập số công nợ cũ" data-decimal="currency" inputmode="numeric"/>
                     <span asp-validation-for="InitialDebt" class="text-danger small"></span>
                     <div class="form-text text-muted">Nhập số công nợ ban đầu của khách hàng.</div>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Email" class="form-label"></label>
-                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
+                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email" />
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
                 <div class="col-12">

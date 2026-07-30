@@ -101,7 +101,7 @@
                                             <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-req-qty"
+                                                       class="form-control form-control-sm text-end item-req-qty" inputmode="decimal"
                                                        data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0" />
                                             </td>
                                             <td class="text-end text-muted small">
@@ -109,7 +109,7 @@
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].ReturnUnitCost" value="@item.ReturnUnitCost.DisplayCurrency()"
-                                                       class="form-control form-control-sm text-end item-return-cost"
+                                                       class="form-control form-control-sm text-end item-return-cost" inputmode="numeric"
                                                        data-decimal="currency" min="0" placeholder="0" />
                                             </td>
                                             <td class="text-end item-subtotal text-muted small">
@@ -215,7 +215,7 @@
                         <!-- Chi phí phát sinh -->
                         <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input asp-for="AdditionalCost" id="additionalCostInput"
+                            <input asp-for="AdditionalCost" id="additionalCostInput" inputmode="numeric"
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
                             <div class="form-text">Vận chuyển, đền bù... sẽ trừ vào tổng thu hồi.</div>

@@ -191,7 +191,7 @@
                                 <div class="col-6">
                                     <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
                                     <input id="itemQuantity" name="quantity" class="form-control no-additional-element"
-                                           data-decimal="quantity" value="1"
+                                           data-decimal="quantity" value="1" inputmode="decimal"
                                            data-val="true" data-val-required="Vui lòng nhập số lượng"
                                            data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                            data-val-number="Số lượng phải là số" />
@@ -201,7 +201,7 @@
                                 <div class="col-6">
                                     <label class="form-label small fw-medium text-muted" for="itemUnitPrice">Đơn giá</label>
                                     <input id="itemUnitPrice" name="unitCost" class="form-control no-additional-element"
-                                           data-decimal="currency"
+                                           data-decimal="currency" inputmode="numeric"
                                            data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                            data-val-number="Đơn giá phải là số" />
                                     <span class="small text-danger field-validation-valid"
@@ -268,12 +268,12 @@
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="editItemQuantity">Số lượng</label>
                                 <input id="editItemQuantity" class="form-control no-additional-element"
-                                       data-decimal="quantity" />
+                                       data-decimal="quantity" inputmode="decimal"/>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="editItemUnitCost">Đơn giá</label>
                                 <input id="editItemUnitCost" class="form-control no-additional-element"
-                                       data-decimal="currency" />
+                                       data-decimal="currency" inputmode="numeric"/>
                             </div>
                         </div>
                         <div class="mt-3">
@@ -326,7 +326,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Số lượng nhận</label>
-                            <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control" data-testid="po-receive-quantity" data-decimal="quantity" value="0" required />
+                            <input name="ReceivedQuantity" id="modalReceivedQty" inputmode="decimal" class="form-control" data-testid="po-receive-quantity" data-decimal="quantity" value="0" required />
                             <div id="modalDistributionPreview" class="d-none mt-2 p-2 rounded border-start border-3 border-primary bg-light small">
                                 <div class="fw-semibold text-muted mb-1 text-uppercase ui-fs-07">Phân phối hàng nhận</div>
                                 <div id="modalDistributionDetails" class="d-flex flex-column gap-1"></div>
@@ -380,7 +380,7 @@
                                 <span class="text-body-tertiary text-lowercase fw-normal">(có thể bỏ trống để giữ nguyên giá hiện tại)</span>
                             </label>
                             <input name="SellingPrice" id="modalSellingPrice" class="form-control no-additional-element no-hint"
-                                   data-decimal="currency" value="" />
+                                   data-decimal="currency" value="" inputmode="numeric" />
                             <div class="small text-muted mt-1">
                                 Giá vốn của lô này: <span id="modalItemUnitCost" class="fw-bold">0</span>
                             </div>
@@ -413,7 +413,7 @@
                                     <div class="alert alert-primary py-2 small mb-2" id="modalDsSelectedOrder"></div>
                                     <div class="mb-2">
                                         <input type="text" name="DirectShipAddress" id="modalDsAddressInput"
-                                               class="form-control form-control-sm" placeholder="Địa chỉ giao hàng *" />
+                                               class="form-control form-control-sm" placeholder="Địa chỉ giao hàng" />
                                     </div>
                                     <div class="row g-2">
                                         <div class="col-6">
@@ -422,7 +422,7 @@
                                         </div>
                                         <div class="col-6">
                                             <input type="text" name="DirectShipContactPhone" id="modalDsContactPhone"
-                                                   class="form-control form-control-sm" placeholder="Số điện thoại *" />
+                                                   class="form-control form-control-sm" placeholder="Số điện thoại" inputmode="tel" />
                                         </div>
                                     </div>
                                 </div>
@@ -542,7 +542,7 @@
                                             Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
                                         </label>
                                         <input id="bulkAdditionalShipping" name="AdditionalShipping"
-                                               class="form-control no-additional-element no-hint"
+                                               class="form-control" inputmode="numeric"
                                                data-decimal="currency" value="" placeholder="0" />
                                     </div>
                                     <div class="col-md-6">
@@ -556,8 +556,8 @@
                                             </div>
                                         </label>
                                         <div class="input-group">
-                                            <input id="bulkAdditionalTaxInput" class="form-control no-additional-element no-hint"
-                                                   data-decimal="currency" value="" placeholder="0" />
+                                            <input id="bulkAdditionalTaxInput" class="form-control"
+                                                   data-decimal="currency" value="" placeholder="0" inputmode="numeric" />
                                             <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
                                         </div>
                                         <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
@@ -617,7 +617,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại <span class="text-danger">*</span></label>
-                            <input id="editDsContactPhone" type="text" class="form-control" />
+                            <input id="editDsContactPhone" type="text" class="form-control" inputmode="tel"/>
                         </div>
                         <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -661,7 +661,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactPhone"] <span class="text-danger">*</span></label>
-                            <input id="markDsContactPhone" type="text" class="form-control" />
+                            <input id="markDsContactPhone" type="text" class="form-control" inputmode="tel" />
                         </div>
                         <div id="markDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
                     </div>
@@ -720,14 +720,14 @@
                             </div>
                             <div id="allocateDirectShipFields" class="d-none">
                                 <div class="mb-2">
-                                    <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao *" />
+                                    <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao" />
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại *" />
+                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" inputmode="tel"/>
                                     </div>
                                 </div>
                             </div>
@@ -769,7 +769,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="markDsPhone" name="contactPhone" placeholder="Số điện thoại" 
+                            <input type="text" class="form-control" id="markDsPhone" name="contactPhone" placeholder="Số điện thoại" inputmode="tel"
                                 data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}" data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="contactPhone" data-valmsg-replace="true"></span>
                         </div>
@@ -1862,7 +1862,7 @@
                                         <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
                                         <td class="pe-2">
                                             <div class="d-flex align-items-center justify-content-end">
-                                                <input type="text" class="form-control form-control-sm text-end allocate-qty-input no-additional-element no-hint ui-w-90 d-inline-block"
+                                                <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
                                                        data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
                                            </div>
                                         </td>`;
@@ -2108,8 +2108,7 @@
                                             </td>
                                             <td class="text-end pe-3">
                                                 <input type="number" class="form-control form-control-sm text-end split-qty-input ui-w-100 ms-auto"
-                                                       min="0" max="@available" step="1" value="0"
-                                                       />
+                                                       min="0" max="@available" step="1" value="0" inputmode="decimal" />
                                                 <div class="small text-muted mt-1">Tối đa: @available.DisplayQuantity()</div>
                                             </td>
                                         </tr>

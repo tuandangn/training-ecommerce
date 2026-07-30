@@ -177,7 +177,7 @@
                                     <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off" id="orderDiscount" />
+                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric"/>
                                         <span class="small text-danger" asp-validation-for="OrderDiscount"></span>
                                     </span>
                                 </div>
@@ -219,7 +219,7 @@
                                         <div class="row g-3 ship-info">
                                             <div class="col-md-6">
                                                 <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" />
+                                                <input asp-for="ShippingPhoneNumber" class="form-control text-sm" placeholder="Nhập số điện thoại" inputmode="tel"/>
                                                 <span asp-validation-for="ShippingPhoneNumber" class="small text-danger"></span>
                                             </div>
                                             <div class="col-md-6">
@@ -315,7 +315,7 @@
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
                             <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" placeholder="Nhập số điện thoại"
                                    data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
-                                   data-val-required="Vui lòng nhập Số điện thoại." />
+                                   data-val-required="Vui lòng nhập Số điện thoại." inputmode="tel"/>
                             <span class="text-danger small field-validation-valid" data-valmsg-for="PhoneNumber" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
@@ -327,7 +327,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerEmail">Email</label>
-                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" />
+                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" inputmode="email" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -427,7 +427,7 @@
                                 <div>
                                     <input name="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
                                            data-decimal="currency" data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0" autocomplete="off"
-                                           data-val="true" />
+                                           data-val="true" inputmode="numeric"/>
                                     <span class="small text-danger field-validation-valid" data-valmsg-for="PaidAmount" data-valmsg-replace="true"></span>
                                 </div>
                                 <span class="form-text text-muted d-block text-end" id="debtAmount"></span>

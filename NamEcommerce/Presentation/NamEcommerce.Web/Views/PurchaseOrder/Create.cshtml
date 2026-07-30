@@ -213,10 +213,10 @@
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
-                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element" data-testid="po-item-quantity"
-                                       data-decimal="quantity" value="1" autocomplete="off"
+                                <input id="itemQuantity" name="itemProductQuantity" class="form-control" data-testid="po-item-quantity"
+                                       data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
-                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
+                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.001"
                                        data-val-number="Số lượng phải là số" />
                                 <span class="small text-danger field-validation-valid"
                                       data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
@@ -225,8 +225,8 @@
                                 <label class="form-label small fw-medium text-muted" for="itemUnitPrice">
                                     Đơn giá
                                 </label>
-                                <input id="itemUnitPrice" name="itemUnitPrice" class="form-control no-additional-element" data-testid="po-item-unit-cost"
-                                       data-decimal="currency" autocomplete="off"
+                                <input id="itemUnitPrice" name="itemUnitPrice" class="form-control" data-testid="po-item-unit-cost"
+                                       data-decimal="currency" autocomplete="off" inputmode="numeric"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                        data-val-number="Đơn giá phải là số" />

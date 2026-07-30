@@ -192,7 +192,7 @@
                 <div class="content-card-body">
                     <div class="mb-3">
                         <label asp-for="ShippingPhoneNumber" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <input asp-for="ShippingPhoneNumber" class="form-control" />
+                        <input asp-for="ShippingPhoneNumber" class="form-control" inputmode="tel"/>
                         <span asp-validation-for="ShippingPhoneNumber" class="text-danger small"></span>
                     </div>
                     <div class="mb-3">
@@ -232,7 +232,7 @@
                         <div class="col-xl-7 mb-3">
                             <label asp-for="Surcharge" class="form-label small fw-bold text-muted text-uppercase mb-2" for="surchargeInput"></label>
                             <div class="input-group">
-                                <input asp-for="Surcharge" class="form-control text-end" id="surchargeInput" placeholder="0" data-decimal="currency" />
+                                <input asp-for="Surcharge" class="form-control text-end" id="surchargeInput" placeholder="0" data-decimal="currency" inputmode="numeric" />
                                 <span class="input-group-text bg-white">đ</span>
                             </div>
                         </div>
@@ -290,7 +290,9 @@
                     <div>
                         <label asp-for="AmountToCollect" class="form-label small fw-bold text-primary text-uppercase mb-2" for="amountToCollectInput">Số tiền phải thu</label>
                         <div class="input-group">
-                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" readonly="@(Model.IsRetailWalkInCustomer)" id="amountToCollectInput" data-decimal="currency" />
+                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" 
+                                readonly="@(Model.IsRetailWalkInCustomer)" id="amountToCollectInput" data-decimal="currency" 
+                                inputmode="numeric"/>
                             <span class="input-group-text bg-primary text-white border-primary">đ</span>
                         </div>
                         <span asp-validation-for="AmountToCollect" class="text-danger small"></span>
@@ -682,7 +684,7 @@
                                                                         <input type="hidden" name="Items[${itemIndex}].WarehouseAllocations[${index}].WarehouseId" value="${warehouseId}" />
                                                                         <input class="form-control form-control-sm text-end warehouse-allocation-input allocation-quantity-input"
                                                                                name="Items[${itemIndex}].WarehouseAllocations[${index}].Quantity"
-                                                                               value="${suggestedQuantity}"
+                                                                               value="${suggestedQuantity}" inputmode="decimal"
                                                                                data-available-quantity="${warehouse.quantityAvailable}"
                                                                                data-decimal="quantity" data-decimals="${parseInt($row.attr('data-decimalplaces') || '0', 10)}" />
                                                                     </div>`;

@@ -363,10 +363,10 @@
                     <div class="row g-3">
                         <div class="col-7">
                             <label class="form-label" for="orderSettlementPaymentAmount">Số tiền</label>
-                            <input id="orderSettlementPaymentAmount" name="Amount"
+                            <input id="orderSettlementPaymentAmount" name="Amount" inputmode="numeric"
                                    class="form-control" value="@(paymentDefaultAmount > 0 ? paymentDefaultAmount.ToString("0") : string.Empty)"
                                    autocomplete="off" data-decimal="currency" placeholder="Nhập số tiền" readonly="@(!canChangePaymentAmount)"
-                                   data-val="true" data-val-required="Vui lòng nhập số tiền"
+                                   data-val="true" data-val-required="Vui lòng nhập số tiền" inputmode="numeric"
                                    data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
                                    data-val-number="Số tiền phải là số" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Amount" data-valmsg-replace="true"></span>
@@ -457,7 +457,7 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label" for="orderExpenseAmount">Số tiền</label>
-                            <input id="orderExpenseAmount" name="Amount" class="form-control decimal-input"
+                            <input id="orderExpenseAmount" name="Amount" class="form-control decimal-input" inputmode="numeric"
                                    data-decimal="currency" data-decimals="0" autocomplete="off" required />
                         </div>
                         <div class="col-6">

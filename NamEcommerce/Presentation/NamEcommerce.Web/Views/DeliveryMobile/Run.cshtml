@@ -315,7 +315,7 @@
                     <div class="mb-2">
                         <label class="form-label" for="amount_@(item.DeliveryNoteId)">Thu tiền khách</label>
                         <div class="input-group">
-                            <input name="cashCollectedAmount" class="form-control mobile-money-input"
+                            <input name="cashCollectedAmount" class="form-control mobile-money-input" inputmode="numeric"
                                    data-decimal="currency" data-val="true" data-val-required="Vui lòng nhập đơn giá"
                                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.001"
                                    data-val-number="Đơn giá phải là số" value="@item.AmountToCollect.DisplayCurrency()"
