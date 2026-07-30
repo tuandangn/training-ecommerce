@@ -305,7 +305,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderAppService, OrderAppService>();
     services.AddScoped<IOrderFulfillmentScheduleAppService, OrderFulfillmentScheduleAppService>();
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
-    services.AddScoped<IFastSaleAppService, FastSaleAppService>();
+    services.AddScoped<IQuickCreateOrderAppService, QuickCreateOrderAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<IBankTransferReceivingAccountResolver, BankTransferReceivingAccountResolver>();
     services.AddScoped<IBankTransferPaymentIntentAppService, BankTransferPaymentIntentAppService>();

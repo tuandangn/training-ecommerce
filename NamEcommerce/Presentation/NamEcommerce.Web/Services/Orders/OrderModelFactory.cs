@@ -36,7 +36,6 @@ using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
-using NamEcommerce.Web.Models.FastSales;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
 

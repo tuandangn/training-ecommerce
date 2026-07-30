@@ -2,15 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Web.Constants;
-using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Commands.Models.Debts;
+using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.FastSales;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
-using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
-using NamEcommerce.Web.Models.FastSales;
+using NamEcommerce.Web.Models.Orders;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -223,30 +223,6 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
-    public async Task<IActionResult> CreateCashSale([FromBody] CreateCashQuickSaleCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return ToQuickSaleJson(result);
-    }
-
-    [HttpPost]
-    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
-    public async Task<IActionResult> CreateBankTransferSale([FromBody] CreateBankTransferQuickSaleCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return ToQuickSaleJson(result);
-    }
-
-    [HttpPost]
-    [Authorize(Policy = SystemPermissions.Orders.QuickCreate)]
-    public async Task<IActionResult> CreateUnpaidSale([FromBody] CreateUnpaidQuickSaleCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return ToQuickSaleJson(result);
-    }
-
-    [HttpPost]
     public async Task<IActionResult> CreatePaymentIntent([FromBody] CreateBankTransferPaymentIntentCommand command)
     {
         var result = await _mediator.Send(command);
@@ -285,29 +261,6 @@ public sealed partial class OrderController : BaseAuthorizedController
             intent = result.Intent,
             status = ((BankTransferPaymentIntentStatus)result.Intent!.Status).GetDisplayText(),
             expiresAt = DateTimeHelper.ToLocalTime(result.Intent!.ExpiresAtUtc).ToString(ViewConstants.DefaultDateTimeFormat)
-        });
-    }
-
-    private IActionResult ToQuickSaleJson(QuickSaleResultModel result)
-    {
-        if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.FastSaleFailed") });
-
-        return Json(new
-        {
-            success = true,
-            orderId = result.OrderId,
-            deliveryNoteId = result.DeliveryNoteId,
-            customerDebtId = result.CustomerDebtId,
-            customerPaymentId = result.CustomerPaymentId,
-            orderUrl = result.OrderId.HasValue ? Url.Action("Details", "Order", new { id = result.OrderId.Value }) : null,
-            orderItems = result.OrderItems.Select(item => new
-            {
-                orderItemId = item.OrderItemId,
-                productId = item.ProductId,
-                productName = item.ProductName,
-                quantity = item.Quantity
-            })
         });
     }
 }

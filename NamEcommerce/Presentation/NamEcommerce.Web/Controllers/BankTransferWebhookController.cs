@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Settings;
-using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 
 namespace NamEcommerce.Web.Controllers;
 
