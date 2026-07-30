@@ -48,6 +48,7 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public bool CanProcess { get; set; }
 
     public bool ProcessRequiresPayment { get; set; }
+    public bool PayOffRequired { get; set; }
     public decimal PaidAmount { get; set; }
     public bool HadPaid { get; set; }
 

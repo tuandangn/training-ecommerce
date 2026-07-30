@@ -25,4 +25,14 @@ public static class SpecificationExtensions
             Expression.Invoke(right, param));
         return Expression.Lambda<Func<T, bool>>(body, param);
     }
+
+    public static Expression<Func<T, bool>> AndNot<T>(
+        this Expression<Func<T, bool>> left,
+        Expression<Func<T, bool>> right)
+    {
+        var notRightBody = Expression.Not(right.Body);
+        var notRightExpression = Expression.Lambda<Func<T, bool>>(notRightBody, right.Parameters);
+
+        return left.And(notRightExpression);
+    }
 }

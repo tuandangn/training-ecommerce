@@ -7,6 +7,15 @@
         _ => null
     };
 }
+@section Styles {
+    <style>
+        @@media (max-width: 575.98px) {
+            .action-toolbar > .d-flex > * {
+                flex-grow: 1;
+            }
+        }
+    </style>
+}
 @section TitleSection {
     <h1 class="topbar-page-title">Chuẩn bị hàng</h1>
     <div class="topbar-page-subtitle">
@@ -24,10 +33,10 @@
 @switch (Model)
 {
     case ProductPreparationListModel:
-        <partial name="List.Product" model="Model"/>
+        <partial name="List.Product" model="Model" />
         break;
     case CustomerPreparationListModel:
-        <partial name="List.Customer" model="Model"/>
+        <partial name="List.Customer" model="Model" />
         break;
 }
 
@@ -73,7 +82,7 @@
                         <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoQuantity">
                             Số lượng nhập <span class="text-danger">*</span>
                         </label>
-                        <input type="number" class="form-control rounded-3" id="qcpoQuantity" min="0.01" step="0.01" placeholder="0" inputmode="decimal"/>
+                        <input type="number" class="form-control rounded-3" id="qcpoQuantity" min="0.01" step="0.01" placeholder="0" inputmode="decimal" />
                         <div class="form-text">Gợi ý: số lượng đang thiếu</div>
                     </div>
                     <div class="col-6">
@@ -81,7 +90,7 @@
                             Đơn giá nhập <span class="text-danger">*</span>
                         </label>
                         <div class="input-group">
-                            <input type="number" class="form-control rounded-3" id="qcpoUnitCost" min="0" step="1000" placeholder="0" inputmode="numeric"/>
+                            <input type="number" class="form-control rounded-3" id="qcpoUnitCost" min="0" step="1000" placeholder="0" inputmode="numeric" />
                             <span class="input-group-text bg-white small">đ</span>
                         </div>
                     </div>
@@ -187,7 +196,7 @@
                                         <label class="form-label small fw-bold text-primary text-uppercase mb-1">Số tiền phải thu</label>
                                         <div class="input-group mb-1">
                                             <input type="number" class="form-control text-end fw-bold text-primary fs-5 bg-transparent border-0"
-                                                id="modalAmountToCollect" name="amountToCollect" step="1000" inputmode="numeric"/>
+                                                   id="modalAmountToCollect" name="amountToCollect" step="1000" inputmode="numeric" />
                                             <span class="input-group-text bg-transparent border-0 text-primary fw-bold fs-5">đ</span>
                                         </div>
                                         <div class="small text-primary opacity-75 ui-fs-075" id="modalCalculationInfo">
@@ -205,7 +214,7 @@
                         <i class="bi bi-check2-circle me-2"></i>Tạo phiếu xuất
                     </button>
                 </div>
-           </form>
+            </form>
         </div>
     </div>
 </div>
@@ -220,11 +229,11 @@
 
             function showAlert(type, message) {
                 const alertHtml = `
-                    <div class="alert alert-${type} alert-dismissible fade show alert-global mb-3" role="alert">
-                        <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>`;
+                                    <div class="alert alert-${type} alert-dismissible fade show alert-global mb-3" role="alert">
+                                        <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
+                                        ${message}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>`;
                 $('#alertArea').html(alertHtml);
                 setTimeout(() => { $('#alertArea .alert').alert('close'); }, 5000);
             }
@@ -245,7 +254,7 @@
 
             function calculateTotals() {
                 let totalItems = 0;
-                $('.qty-input').each(function() {
+                $('.qty-input').each(function () {
                     const qty = parseFloat($(this).val()) || 0;
                     if (qty > 0) {
                         const orderId = $(this).data('order-id');
@@ -276,7 +285,7 @@
             }
 
             // Events for financial calculation
-            $(document).on('input change', '.qty-input, #modalSurcharge, #showPrice', function() {
+            $(document).on('input change', '.qty-input, #modalSurcharge, #showPrice', function () {
                 calculateTotals();
             });
 
@@ -377,20 +386,20 @@
                 Object.keys(orderGroups).forEach(orderId => {
                     itemDetails[orderId].forEach((item, index) => {
                         itemsHtml += `
-                            <tr>
-                                <td class="ps-3"><span class="badge bg-light text-dark border">${item.orderCode}</span></td>
-                                <td class="fw-medium">${item.productName}</td>
-                                <td class="text-end small text-muted">
-                                    <span class="text-success">${item.deliveredQuantity}</span> / <span class="fw-bold text-dark">${item.quantity}</span>
-                                </td>
-                                <td class="pe-0">
-                                    <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm"
-                                           data-order-id="${orderId}" data-item-id="${item.orderItemId}" inputmode="decimal"
-                                           value="${item.remainingQuantity}" min="0" max="${item.remainingQuantity}" step="0.01" />
-                                </td>
-                                <td class="text-end text-muted pe-3 small">${item.stock}</td>
-                            </tr>
-                        `;
+                                            <tr>
+                                                <td class="ps-3"><span class="badge bg-light text-dark border">${item.orderCode}</span></td>
+                                                <td class="fw-medium">${item.productName}</td>
+                                                <td class="text-end small text-muted">
+                                                    <span class="text-success">${item.deliveredQuantity}</span> / <span class="fw-bold text-dark">${item.quantity}</span>
+                                                </td>
+                                                <td class="pe-0">
+                                                    <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm"
+                                                           data-order-id="${orderId}" data-item-id="${item.orderItemId}" inputmode="decimal"
+                                                           value="${item.remainingQuantity}" min="0" max="${item.remainingQuantity}" step="0.01" />
+                                                </td>
+                                                <td class="text-end text-muted pe-3 small">${item.stock}</td>
+                                            </tr>
+                                        `;
                     });
                 });
 
@@ -408,12 +417,12 @@
                 createDeliveryNotesModal.show();
             });
 
-        $('#deliveryNotesForm').on('submit', async function (e) {
-            e.preventDefault();
+            $('#deliveryNotesForm').on('submit', async function (e) {
+                e.preventDefault();
 
-            if(!$(this).valid()){
-                return;
-            }
+                if (!$(this).valid()) {
+                    return;
+                }
 
                 const orderGroups = btnCreate.data('orderGroups');
                 if (!orderGroups) return;
@@ -521,12 +530,12 @@
             });
             // ── Quick Create Purchase Order ──────────────────────────────
             const quickCreatePOModal = new bootstrap.Modal(document.getElementById('quickCreatePurchaseOrderModal'));
-            const $qcpoVendorId      = $('#qcpoVendorId');
+            const $qcpoVendorId = $('#qcpoVendorId');
             const $qcpoVendorSpinner = $('#qcpoVendorSpinner');
             const $qcpoNoVendorAlert = $('#qcpoNoVendorAlert');
-            const $qcpoInputFields   = $('#qcpoInputFields');
-            const $qcpoVendorField   = $('#qcpoVendorField');
-            const $btnSubmitQuickPO  = $('#btnSubmitQuickPO');
+            const $qcpoInputFields = $('#qcpoInputFields');
+            const $qcpoVendorField = $('#qcpoVendorField');
+            const $btnSubmitQuickPO = $('#btnSubmitQuickPO');
 
             async function loadProductVendors(productId) {
                 // Reset state
@@ -569,9 +578,9 @@
             }
 
             $(document).on('click', '.btnQuickCreatePurchaseOrder', function () {
-                const productId    = $(this).data('product-id');
-                const productName  = $(this).data('product-name');
-                const shortageQty  = $(this).data('shortage-quantity');
+                const productId = $(this).data('product-id');
+                const productName = $(this).data('product-name');
+                const shortageQty = $(this).data('shortage-quantity');
 
                 $('#qcpoProductId').val(productId);
                 $('#qcpoProductName').val(productName);
@@ -585,10 +594,10 @@
 
             $btnSubmitQuickPO.on('click', async function () {
                 const productId = $('#qcpoProductId').val();
-                const vendorId  = $qcpoVendorId.val();
-                const quantity  = parseFloat($('#qcpoQuantity').val());
-                const unitCost  = parseFloat($('#qcpoUnitCost').val()) || 0;
-                const note      = $('#qcpoNote').val().trim();
+                const vendorId = $qcpoVendorId.val();
+                const quantity = parseFloat($('#qcpoQuantity').val());
+                const unitCost = parseFloat($('#qcpoUnitCost').val()) || 0;
+                const note = $('#qcpoNote').val().trim();
 
                 if (!vendorId) {
                     toast('Lỗi', 'Vui lòng chọn nhà cung cấp.', 'error');

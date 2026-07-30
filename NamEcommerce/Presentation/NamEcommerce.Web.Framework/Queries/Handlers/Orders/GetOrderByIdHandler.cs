@@ -55,6 +55,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             CanCompleteOrder = order.CanCompleteOrder,
             CanProcess = order.CanProcess,
             ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };

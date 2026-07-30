@@ -26,6 +26,10 @@
         .order-summary .order-summary-row .currency-field .field-prefix {
             right: 0;
         }
+
+        #orderDiscount[readonly] {
+            background-color: #fff;
+        }
     </style>
 }
 
@@ -68,15 +72,10 @@
                         </div>
                         <div class="content-card-header">
                             <h5>Danh sách hàng hóa</h5>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
-                                        data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
-                                    <i class="bi bi-plus-lg me-1"></i>Thêm hàng
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger @(Model.Items.Count > 0 ? "" : "d-none") " id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
-                                    Xóa danh sách
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
+                                    data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
+                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                            </button>
                         </div>
                         <div class="content-card-body-flush">
                             <div class="table-responsive">
@@ -185,7 +184,7 @@
                                     <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" />
+                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" readonly="@(Model.Items.Sum(item => item.ItemSubTotal) == 0)" />
                                         <span class="small text-danger" asp-validation-for="OrderDiscount"></span>
                                     </span>
                                 </div>

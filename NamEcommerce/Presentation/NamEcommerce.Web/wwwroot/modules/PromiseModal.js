@@ -10,6 +10,10 @@
         this._instance = bootstrap.Modal.getOrCreateInstance(this._element);
     }
 
+    get element() {
+        return this._element;
+    }
+
     /**
      * Hiển thị modal và trả về Promise khi hoàn tất hiệu ứng mở.
      * @returns {Promise<void>}

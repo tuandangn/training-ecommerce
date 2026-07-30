@@ -48,7 +48,9 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public bool ProcessRequiresPayment { get; set; }
     public decimal PaidAmount { get; set; }
     public bool HasPayments { get; set; }
+    public bool PayOffRequired { get; set; }
     public bool HadPaid { get; set; }
+    public bool IsPaymentRequired() => ProcessRequiresPayment && ((PayOffRequired && PaidAmount < TotalAmount) || PaidAmount == 0);
 
     public IList<OrderItemDto> Items { get; } = [];
 

@@ -141,6 +141,7 @@ public sealed class OrderModelFactory(
             CanUpdateOrderItems = order.CanUpdateOrderItems,
             CanCompleteOrder = order.CanCompleteOrder,
             PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment,
+            PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOn
         };

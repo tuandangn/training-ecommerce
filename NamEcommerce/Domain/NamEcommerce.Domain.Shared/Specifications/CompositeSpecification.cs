@@ -13,6 +13,10 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         currentCriteria = _emptyCriteria;
     }
+    public CompositeSpecification(ISpecification<T> initialCriteria)
+    {
+        currentCriteria = initialCriteria.Criteria;
+    }
 
     public Expression<Func<T, bool>> Criteria => currentCriteria;
     public List<Expression<Func<T, object>>> Includes { get; } = [];
@@ -33,6 +37,14 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
         currentCriteria = currentCriteria.And(right.Criteria);
+
+        return this;
+    }
+    public CompositeSpecification<T> AndNot(ISpecification<T> right)
+    {
+        if (currentCriteria == _emptyCriteria)
+            currentCriteria = right.Criteria;
+        currentCriteria = currentCriteria.AndNot(right.Criteria);
 
         return this;
     }

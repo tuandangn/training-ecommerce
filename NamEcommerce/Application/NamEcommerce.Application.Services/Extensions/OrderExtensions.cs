@@ -35,6 +35,7 @@ public static class OrderExtensions
             CanCompleteOrder = order.CanCompleteOrder,
             CanProcess = order.CanProcess,
             ProcessRequiresPayment = order.ProcessRequiresPayment,
+            PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
             HadPaid = order.HadPaid
         };

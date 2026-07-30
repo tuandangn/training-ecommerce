@@ -187,11 +187,6 @@ public sealed class ShortageAggregationAppService(
 
         return null;
     }
-    private async Task<HashSet<Guid>?> GetShortageOrderItemIdsAsync(Guid orderId)
-    {
-        var primaryShortages = await shortageQueryService.GetOrderItemShortagesAsync(orderId).ConfigureAwait(false);
-        return primaryShortages.Select(shortage => shortage.OrderItemId).ToHashSet();
-    }
 
 
     public async Task<IList<ExistingDraftPurchaseOrderAppDto>> CheckExistingDraftsAsync(IList<Guid> vendorIds)

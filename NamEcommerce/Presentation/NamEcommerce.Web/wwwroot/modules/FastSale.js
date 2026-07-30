@@ -219,6 +219,17 @@ class FastSale {
             this.render();
         }, 700);
         this.discountInput.addEventListener('input', discountChanged);
+
+        this.root.addEventListener('formdata', e => {
+            this.#prepareSubmitFormData(e.formData);
+        });
+    }
+    #prepareSubmitFormData(formData) {
+        if (this.fulfillmentMode == this.#deliveryNow) {
+            formData.set('deliveryNow', true);
+            formData.set(this.shippingAddress.name, this.shippingAddress.value || this.selectedCustomer.address);
+            formData.set(this.shippingPhoneNumber.name, this.shippingPhoneNumber.value || this.selectedCustomer.phone);
+        }
     }
 
     setFulfillmentMode(mode) {
@@ -324,6 +335,12 @@ class FastSale {
 
     render() {
         const subTotal = this.calculateSubtotal();
+        const discount = this.getDiscount();
+        if (discount > subTotal) {
+            this.discountInput.value = this.formatCurrency(discount);
+            this.render();
+            return;
+        }
         const total = this.calculateTotal();
 
         if (subTotal > 0 && this.isRetailWalkInCustomer() && this.paymentTiming == this.#unpaid) {
@@ -338,6 +355,8 @@ class FastSale {
             this.setFulfillmentMode(this.#notDelivered);
             return;
         }
+
+        this.discountInput.setAttribute('readonly', subTotal == 0);
 
         this.payNowBtn.disabled = subTotal == 0 && total == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
@@ -580,11 +599,6 @@ class FastSale {
                 return;
 
             showPageLoading();
-            this.root.addEventListener('formdata', function onFormData(e) {
-                self.root.removeEventListener('formdata', onFormData);
-                prepareSubmitFormData(e.formData);
-            });
-
             this.complete.disabled = true;
             this.root.submit();
             return;
@@ -596,7 +610,7 @@ class FastSale {
         showPageLoading();
 
         const formData = new FormData(this.root);
-        prepareSubmitFormData(formData);
+        this.#prepareSubmitFormData(formData);
         formData.set('returnJson', true);
 
         const createOrderResult = await this.postJson(this.root.action, formData);
@@ -648,14 +662,6 @@ class FastSale {
         }
         this.showAlert('success', this.fulfillmentMode == this.#deliveryNow ? 'Hoàn tất đơn hàng' : "Đơn hàng đã được tạo và thanh toán");
         this.#redirectToOrderPage(orderInfo.orderId);
-
-        function prepareSubmitFormData(formData) {
-            if (self.fulfillmentMode == self.#deliveryNow) {
-                formData.set('deliveryNow', true);
-                formData.set(self.shippingAddress.name, self.selectedCustomer.address);
-                formData.set(self.shippingPhoneNumber.name, self.selectedCustomer.phone);
-            }
-        }
     }
     #redirectToOrderPage(orderId) {
         location = `/Order/Details/${orderId}`
@@ -744,8 +750,11 @@ class FastSale {
     calculateSubtotal() {
         return this.cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     }
+    getDiscount() {
+        return DecimalFields.getValue(this.discountInput) || 0;
+    }
     calculateTotal() {
-        return Math.max(0, this.calculateSubtotal() - DecimalFields.getValue(this.discountInput));
+        return Math.max(0, this.calculateSubtotal() - this.getDiscount());
     }
 
     getCompleteButtonHtml() {

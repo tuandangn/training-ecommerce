@@ -211,16 +211,9 @@
                 </div>
             }
 
-            <div class="workflow-section-title">Khách trả hàng</div>
-            @if (Model.DeliveryWorkflow.Returns.Count == 0)
+            @if (Model.DeliveryWorkflow.Returns.Count > 0)
             {
-                <div class="workflow-soft-empty">
-                    <i class="bi bi-arrow-return-left"></i>
-                    <span>Chưa có phiếu khách trả hàng liên quan tới đơn này.</span>
-                </div>
-            }
-            else
-            {
+                <div class="workflow-section-title">Khách trả hàng</div>
                 <div class="table-responsive">
                     <table class="table data-table mb-0">
                         <thead>
