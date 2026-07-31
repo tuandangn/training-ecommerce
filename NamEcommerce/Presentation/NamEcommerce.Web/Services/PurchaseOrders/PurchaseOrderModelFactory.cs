@@ -398,13 +398,13 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             ReceivingStatusClass = receivingStatus.Class,
             Steps =
             [
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus", 
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus",
                     $"{model.Info.Items.Count} mặt hàng", activeStage, model.Info.Items.Count > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", 
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down",
                     receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3", 
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3",
                     allocationText, activeStage, false),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check", 
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check",
                     GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
             ]
         };
@@ -459,18 +459,16 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         VendorDebtsByVendorAppDto? vendorDebts,
         IEnumerable<VendorPaymentAppDto> vendorPayments)
     {
-        var timeline = new List<PurchaseOrderDetailsModel.TimelineEventModel>
+        var initialPurchase = new PurchaseOrderDetailsModel.TimelineEventModel()
         {
-            new()
-            {
-                OccurredOn = model.Info.CreatedOn,
-                Title = "Tạo đơn nhập",
-                Description = $"{model.Info.Code} - {model.Info.VendorName}",
-                Icon = "bi-file-earmark-plus",
-                Tone = "primary",
-                Stage = PurchaseOrderDetailsModel.WorkflowStage.Ordering
-            }
+            OccurredOn = model.Info.CreatedOn,
+            Title = "Tạo đơn nhập",
+            Description = $"{model.Info.Code} - {model.Info.VendorName}",
+            Icon = "bi-file-earmark-plus",
+            Tone = "primary",
+            Stage = PurchaseOrderDetailsModel.WorkflowStage.Ordering
         };
+        var timeline = new List<PurchaseOrderDetailsModel.TimelineEventModel>();
 
         foreach (var audit in itemChangeAudits)
         {
@@ -542,10 +540,12 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             });
         }
 
-        return timeline
+        timeline = timeline
             .OrderByDescending(item => item.OccurredOn)
             .ThenBy(item => item.Title)
             .ToList();
+        timeline.Insert(0, initialPurchase);
+        return timeline;
     }
 
     private static IList<VendorDebtAppDto> GetVendorDebtsForPurchaseOrder(

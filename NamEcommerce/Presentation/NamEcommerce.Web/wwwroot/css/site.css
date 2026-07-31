@@ -3236,4 +3236,9 @@ tr.table-success > td {
     pointer-events: none;
 }
 
+.img-uploader-wrapper > [data-image-uploader] {
+    display: flex;
+    gap:5px;
+}
+
 .img-uploader__hint { font-size: .7rem; color: var(--bs-secondary); }

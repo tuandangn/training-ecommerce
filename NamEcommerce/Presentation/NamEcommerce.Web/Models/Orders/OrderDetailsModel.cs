@@ -17,6 +17,7 @@ public sealed record OrderDetailsModel
     public int Status { get; set; }
     public string? Note { get; set; }
     public DateTime CreatedOn { get; set; }
+    public DateTime PlacedOn { get; set; }
 
     public required Guid CustomerId { get; init; }
     public string? CustomerName { get; set; }

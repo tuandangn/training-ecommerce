@@ -893,18 +893,16 @@ public sealed class OrderModelFactory(
         IEnumerable<CustomerPaymentAppDto> payments,
         IEnumerable<OrderItemChangeAuditAppDto> itemChangeAudits)
     {
-        var timeline = new List<OrderDetailsModel.TimelineEventModel>
+        var initialOrder = new OrderDetailsModel.TimelineEventModel()
         {
-            new()
-            {
-                OccurredOn = model.CreatedOn,
-                Title = "Khách hàng đặt hàng",
-                Description = $"{model.CustomerName} - {model.Items.Count} mặt hàng",
-                Icon = "bi-receipt",
-                Tone = "primary",
-                Stage = OrderDetailsModel.WorkflowStage.Order
-            }
+            OccurredOn = model.CreatedOn,
+            Title = "Khách hàng đặt hàng",
+            Description = $"{model.CustomerName} - {model.Items.Count} mặt hàng",
+            Icon = "bi-receipt",
+            Tone = "primary",
+            Stage = OrderDetailsModel.WorkflowStage.Order
         };
+        var timeline = new List<OrderDetailsModel.TimelineEventModel>();
 
         if (!string.IsNullOrWhiteSpace(model.Note))
         {
@@ -1150,9 +1148,11 @@ public sealed class OrderModelFactory(
             });
         }
 
-        return timeline
+        timeline = timeline
             .OrderBy(item => item.OccurredOn)
             .ToList();
+        timeline.Insert(0, initialOrder);
+        return timeline;
     }
 
     private static string GetPaymentTimelineTitle(CustomerPaymentAppDto payment, PaymentMethod method, PaymentType type)

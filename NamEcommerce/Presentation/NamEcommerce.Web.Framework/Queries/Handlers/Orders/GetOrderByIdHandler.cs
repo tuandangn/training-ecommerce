@@ -57,7 +57,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             ProcessRequiresPayment = order.ProcessRequiresPayment,
             PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
-            CreatedOn = order.CreatedOnUtc.ToLocalTime()
+            CreatedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc)
         };
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId) }, cancellationToken).ConfigureAwait(false);
         foreach (var orderItem in order.Items)
