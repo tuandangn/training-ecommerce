@@ -146,6 +146,7 @@ export default class ItemEditOffcanvas {
         const next = Math.max(decimals > 0 ? Math.pow(10, -decimals) : 1, current + delta);
         this.#qtyInput.value = DecimalFields.formatQuantity(next, decimals);
         if (this.#showPrice) this.#refreshTotal();
+        focusEnd(this.#qtyInput);
     }
 
     #apply() {

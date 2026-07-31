@@ -2,8 +2,6 @@
 @model OrderDetailsModel
 @{
     var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Settlement;
-    var today = DateTime.Today.ToString("yyyy-MM-dd");
-    var now = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
 
     var customerBalance = Model.Settlement.CustomerAccountBalance;
     var customerBalanceLabel = Model.PaymentRequired ? "Chờ thanh toán"
@@ -352,7 +350,8 @@
                         <div class="col-5">
                             <label class="form-label" for="orderSettlementPaymentPaidOn">Ngày thu</label>
                             <input id="orderSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control"
-                                   value="@now" placeholder="Nhập ngày thu tiền" data-min-date="@Model.CreatedOn.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" />
+                                   value="@DateTime.Now.ToString("s")" placeholder="Nhập ngày thu tiền" 
+                                   data-min-date-s="@Model.CreatedOn.Date.ToString("s")" data-max-date-s="@DateTime.Now.Date.AddDays(1).ToString("s")" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="PaidOn" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -467,7 +466,7 @@
                     <div class="mb-3 mt-3">
                         <label class="form-label" for="orderExpenseDate">Ngày phát sinh</label>
                         <input id="orderExpenseDate" name="IncurredDate" type="date" class="form-control" placeholder="Nhập ngày phát sinh"
-                               value="@today" data-max-date="@DateTime.Now.ToString("s")" data-val="true" data-val-required="Chọn ngày phát sinh" />
+                               value="@DateTime.Today.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" data-val="true" data-val-required="Chọn ngày phát sinh" />
                         <span class="small text-danger field-validation-valid" data-valmsg-for="IncurredDate" data-valmsg-replace="true"></span>
                     </div>
                     <div>

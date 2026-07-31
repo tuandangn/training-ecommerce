@@ -68,7 +68,7 @@ public sealed class AccountingReportService : IAccountingReportService
 
     public async Task<IncomeStatementDto> GetIncomeStatementAsync(AccountingPeriod period)
     {
-        var start = period.Start;
+        var start =  period.Start;
         var end = period.End;
 
         var allDeliveryNotes = _deliveryNotes.DataSource.ToList();

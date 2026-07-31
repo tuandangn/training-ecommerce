@@ -319,7 +319,10 @@ function parseDecimalInput(input) {
             paymentIntent = null;
             stopPolling();
             renderQrIntent();
-            if (submitButton) submitButton.classList.remove('d-none');
+            if (submitButton) {
+                submitButton.classList.remove('d-none');
+                submitButton.disabled = false;
+            }
         };
 
         const refreshIntentStatus = async () => {
@@ -361,26 +364,27 @@ function parseDecimalInput(input) {
             }
         };
 
-        settlementModal.element?.addEventListener('hidden.bs.modal', resetQrIntent);
+        settlementModal.element?.addEventListener('hidden.bs.modal', () => {
+            $('[name="PaymentMode"][value="cash"]').prop('checked', true);
+            paymentModeChanged();
+            isPaidOnValid();
+        });
         settlementModal.element?.addEventListener('shown.bs.modal', () => {
             amountInput.focus();
+            amountInput.select();
         });
-        orderSettlementPaymentForm.querySelectorAll('[name="PaymentMode"]').forEach((input) => {
-            input.addEventListener('change', () => {
-                resetQrIntent();
-                if (submitButton) {
-                    submitButton.innerHTML = isQrMode()
-                        ? '<i class="bi bi-qr-code me-1"></i>Tạo QR'
-                        : '<i class="bi bi-floppy me-1"></i>Ghi nhận';
-                }
-                qrManualConfirm?.classList.toggle('d-none', !isQrMode() || paymentIntent == null);
-                submitButton?.classList.toggle('d-none', isQrMode() && paymentIntent != null);
+        orderSettlementPaymentForm.querySelectorAll('[name="PaymentMode"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                paymentModeChanged();
             });
+        });
+        paidOnInput.addEventListener('change', () => {
+            isPaidOnValid();
         });
 
         orderSettlementPaymentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!$(orderSettlementPaymentForm).valid())
+            if (!isFormValid())
                 return;
 
             const amount = parseDecimalInput(amountInput);
@@ -415,7 +419,6 @@ function parseDecimalInput(input) {
                     startPolling();
                 } catch {
                     toast('Lỗi', 'Không thể tạo QR chuyển khoản.', 'error');
-                } finally {
                 }
                 return;
             }
@@ -455,20 +458,28 @@ function parseDecimalInput(input) {
 
             settlementModal.element?.classList.add('d-none');
             const confirmed = await confirm('Đã nhận tiền', `Bạn xác nhận đã nhận đủ ${DecimalFields.formatCurrencyWithSymbol(paymentIntent.amount)}`);
-            settlementModal.element?.classList.remove('d-none');
-            if (!confirmed) return;
+            if (!confirmed) {
+                settlementModal.element?.classList.remove('d-none');
+                return;
+            }
 
+            showPageLoading();
             try {
                 const result = await apiPost(orderSettlementPaymentForm.dataset.confirmUrl, {
                     intentId: paymentIntent.id,
                     note: noteInput?.value || null
                 });
-                if (!result.success)
+                if (!result.success) {
+                    hidePageLoading();
+                    settlementModal.element?.classList.remove('d-none');
                     return;
+                }
 
                 paymentIntent = result.intent;
                 renderQrIntent();
                 stopPolling();
+                settlementModal.element?.classList.remove('d-none');
+                settlementModal.hide();
                 await consumesPaymentIntent();
             } catch {
                 toast('Lỗi', 'Không thể xác nhận QR.', 'error');
@@ -481,7 +492,6 @@ function parseDecimalInput(input) {
             toast('Thành công', 'Đã nhận tiền vào tài khoản.', 'success');
 
             showPageLoading();
-            settlementModal.hide();
             try {
                 const result = await apiPost(orderSettlementPaymentForm.dataset.qrRecordUrl, {
                     orderId,
@@ -497,6 +507,66 @@ function parseDecimalInput(input) {
                 hidePageLoading();
                 toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
             }
+        }
+
+        function paymentModeChanged() {
+            resetQrIntent();
+            if (submitButton) {
+                submitButton.innerHTML = isQrMode()
+                    ? '<i class="bi bi-qr-code me-1"></i>Tạo QR'
+                    : '<i class="bi bi-floppy me-1"></i>Ghi nhận';
+            }
+            qrManualConfirm?.classList.toggle('d-none', !isQrMode() || paymentIntent == null);
+            submitButton?.classList.toggle('d-none', isQrMode() && paymentIntent != null);
+        }
+
+        function isFormValid() {
+            if (!$(orderSettlementPaymentForm).valid())
+                return false;
+            return isPaidOnValid();
+        }
+        function isPaidOnValid() {
+            const paidOnStr = paidOnInput.value;
+            const paidOnValidator = document.querySelector(`[data-valmsg-for="${paidOnInput.name}"]`);
+            if (!paidOnStr) {
+                paidOnValidator.textContent = 'Vui lòng chọn ngày thu';
+                return false;
+            }
+            const paidOn = new Date(paidOnStr);
+            if (!paidOn.getTime()) {
+                paidOnValidator.textContent = 'Ngày thu không đúng';
+                return false;
+            }
+            const minDateStr = paidOnInput.getAttribute('data-min-date-s');
+            if (minDateStr) {
+                const minDate = new Date(minDateStr);
+                if (minDate.getTime()) {
+                    if (paidOn.getTime() < minDate.getTime()) {
+                        paidOnValidator.textContent = 'Ngày thu phải lớn hơn ' + formatDate(minDate);
+                        return false;
+                    }
+                }
+            }
+            const maxDateStr = paidOnInput.getAttribute('data-max-date-s');
+            if (maxDateStr) {
+                const maxDate = new Date(maxDateStr);
+                if (maxDate.getTime()) {
+                    if (paidOn.getTime() > maxDate.getTime()) {
+                        paidOnValidator.textContent = 'Ngày thu phải nhỏ hơn ' + formatDate(maxDate);
+                        return false;
+                    }
+                }
+            }
+            paidOnValidator.textContent = '';
+            return true;
+        }
+        function formatDate(date) {
+            const year = date.getFullYear();
+            // getMonth() trả về 0-11 nên phải +1
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            return `${day}/${month}/${year}`; // Hoặc `${day}/${month}/${year}`
         }
     }
 

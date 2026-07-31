@@ -184,7 +184,7 @@
                                     <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
-                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" readonly="@(Model.Items.Sum(item => item.ItemSubTotal) == 0)" />
+                                               data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" disabled="@(Model.Items.Sum(item => item.ItemSubTotal) == 0)" />
                                         <span class="small text-danger" asp-validation-for="OrderDiscount"></span>
                                     </span>
                                 </div>

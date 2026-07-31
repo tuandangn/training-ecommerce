@@ -7,16 +7,16 @@ public sealed record AccountingPeriod
     public int? Quarter { get; init; }
 
     public DateTime Start => Month.HasValue
-        ? new DateTime(Year, Month.Value, 1)
+        ? new DateTime(Year, Month.Value, 1).ToUniversalTime()
         : Quarter.HasValue
-            ? new DateTime(Year, (Quarter.Value - 1) * 3 + 1, 1)
-            : new DateTime(Year, 1, 1);
+            ? new DateTime(Year, (Quarter.Value - 1) * 3 + 1, 1).ToUniversalTime()
+            : new DateTime(Year, 1, 1).ToUniversalTime();
 
     public DateTime End => Month.HasValue
-        ? Start.AddMonths(1).AddDays(-1)
+        ? new DateTime(Year, Month.Value, DateTime.DaysInMonth(Year, Month.Value), 23, 59, 59).ToUniversalTime()
         : Quarter.HasValue
-            ? Start.AddMonths(3).AddDays(-1)
-            : new DateTime(Year, 12, 31);
+            ? new DateTime(Year, Start.Month + 3, DateTime.DaysInMonth(Year, Start.Month + 3), 23, 59, 59).ToUniversalTime()
+            : new DateTime(Year + 1, 1, 1).AddMilliseconds(-1).ToUniversalTime();
 
     public string Display => Month.HasValue ? $"Tháng {Month}/{Year}"
         : Quarter.HasValue ? $"Quý {Quarter}/{Year}"

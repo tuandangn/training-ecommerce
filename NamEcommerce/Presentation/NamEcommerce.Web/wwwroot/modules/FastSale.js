@@ -356,7 +356,7 @@ class FastSale {
             return;
         }
 
-        this.discountInput.setAttribute('readonly', subTotal == 0);
+        this.discountInput.disabled = subTotal == 0;
 
         this.payNowBtn.disabled = subTotal == 0 && total == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
