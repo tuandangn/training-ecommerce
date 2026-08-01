@@ -20,6 +20,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
@@ -65,10 +66,11 @@ public sealed class OrderManager(
         return order.ToDto();
     }
 
-    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status, OrderStatus? notStatus)
-        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : [], notStatus.HasValue ? [notStatus.Value] : []);
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status, OrderStatus? notStatus, bool? isPaymentRequired = null)
+        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : [], notStatus.HasValue ? [notStatus.Value] : [], isPaymentRequired);
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus>? status, IEnumerable<OrderStatus>? notStatus)
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, 
+        IEnumerable<OrderStatus>? status, IEnumerable<OrderStatus>? notStatus, bool? isPaymentRequired = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -76,6 +78,7 @@ public sealed class OrderManager(
         var query = orderDataReader.DataSource;
 
         var specification = new CompositeSpecification<Order>();
+
         if (status != null && status.Any())
             specification = specification.Or(new HaveStatusOrderSpec(status));
         if (notStatus != null && notStatus.Any())
@@ -88,6 +91,14 @@ public sealed class OrderManager(
             var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
             var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
             specification.Or(new OrdersOfBuyersSpec(customerIds));
+        }
+
+        if (isPaymentRequired.HasValue)
+        {
+            if (isPaymentRequired.Value)
+                specification = specification.And(new IsPaymentRequiredOrderSpec());
+            else
+                specification = specification.AndNot(new IsPaymentRequiredOrderSpec());
         }
 
         specification.ApplyOrderByDescending(order => order.CreatedOnUtc);

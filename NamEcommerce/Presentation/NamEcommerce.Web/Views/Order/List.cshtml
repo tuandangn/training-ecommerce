@@ -45,7 +45,7 @@
 }
 <div class="content-card" data-responsive-list data-list-key="order-list">
     <div class="action-toolbar">
-        <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
+        <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status, IsWaitingPayment = Model.IsWaitingPayment })" />
         <div class="d-flex gap-2">
             <a asp-action="QuickCreate" class="btn btn-outline-secondary flex-grow-1">
                 <i class="bi bi-lightning-fill me-1"></i> Bán nhanh
@@ -59,15 +59,19 @@
     <ul class="nav nav-tabs">
         <li class="nav-item">
             <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status=""
-               class="nav-link @(Model.Status.HasValue ? "" : "active")">Tất cả</a>
+               asp-route-IsWaitingPayment="" class="nav-link @(Model.Status.HasValue || Model.IsWaitingPayment ? "" : "active")">Tất cả</a>
         </li>
         @foreach (var statusOption in OrderStatus.GetOptions())
         {
             <li class="nav-item">
                 <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status="@statusOption.value"
-                   class="nav-link @(statusOption.value == Model.Status ? "active" : "")" aria-current="page">@statusOption.text</a>
+                   asp-route-IsWaitingPayment="" class="nav-link @(statusOption.value == Model.Status ? "active" : "")" aria-current="page">@statusOption.text</a>
             </li>
         }
+        <li class="nav-item">
+            <a asp-route-IsWaitingPayment="true" asp-route-status="" asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)"
+               class="nav-link @(Model.IsWaitingPayment ? "active" : "")">Chờ thanh toán</a>
+        </li>
     </ul>
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">

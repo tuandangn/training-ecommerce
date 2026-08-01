@@ -36,7 +36,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.And(right.Criteria);
+        else
+            currentCriteria = currentCriteria.And(right.Criteria);
 
         return this;
     }
@@ -44,7 +45,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.AndNot(right.Criteria);
+        else
+            currentCriteria = currentCriteria.AndNot(right.Criteria);
 
         return this;
     }
@@ -52,7 +54,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.Or(right.Criteria);
+        else
+            currentCriteria = currentCriteria.Or(right.Criteria);
 
         return this;
     }

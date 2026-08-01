@@ -604,7 +604,7 @@ class FastSale {
             return;
         }
 
-        if (!await confirm('Tạo đơn hàng', 'Xác nhận tạo đơn hàng và thanh toán'))
+        if (!await confirm('Tạo đơn hàng', 'Tạo đơn hàng và bắt đầu thanh toán'))
             return;
 
         showPageLoading();
@@ -618,6 +618,8 @@ class FastSale {
             hidePageLoading();
             return;
         }
+
+        this.showAlert('success', 'Đơn hàng đã được tạo thành công');
 
         const orderInfo = createOrderResult.data;
 
@@ -633,7 +635,6 @@ class FastSale {
             orderCode: orderInfo.orderCode,
             subTotal: orderInfo.subTotal,
             discount: orderInfo.discount,
-            total: orderInfo.orderTotal,
             canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
             customer: {
                 id: this.selectedCustomer.id,
@@ -656,11 +657,15 @@ class FastSale {
         };
         const completeResult = await this.postJson('/Order/CompleteQuickCreateOrderPayment', completePaymentPayload);
         if (!completeResult.success) {
-            this.showAlert('warning', 'Phát sinh lỗi khi hoàn thanh đơn');
+            this.showAlert('warning', 'Phát sinh lỗi khi hoàn thành đơn');
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
-        this.showAlert('success', this.fulfillmentMode == this.#deliveryNow ? 'Hoàn tất đơn hàng' : "Đơn hàng đã được tạo và thanh toán");
+        if (paymentResult.amount == orderInfo.total) {
+            this.showAlert('success', this.fulfillmentMode == this.#deliveryNow ? 'Hoàn tất đơn hàng' : "Đã thanh toán thành công");
+        } else {
+            this.showAlert('success', `Đơn hàng đã được tạm ứng ${this.formatMoneyWithSymbol(paymentResult.amount)}`);
+        }
         this.#redirectToOrderPage(orderInfo.orderId);
     }
     #redirectToOrderPage(orderId) {
@@ -791,7 +796,6 @@ class PaymentProcess {
 
     #subTotal;
     #discount;
-    #total;
     #amount;
     #canChangePaidAmount;
 
@@ -892,7 +896,6 @@ class PaymentProcess {
 
         this.#subTotal = subTotal || 0;
         this.#discount = discount || 0;
-        this.#total = total || 0;
 
         this.#canChangePaidAmount = canChangePaidAmount;
 

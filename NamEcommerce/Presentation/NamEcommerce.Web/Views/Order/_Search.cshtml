@@ -1,6 +1,7 @@
 @model OrderListSearchModel
 <form method="get" class="d-flex flex-wrap align-items-center gap-2">
     <input type="hidden" asp-for="Status" />
+    <input type="hidden" asp-for="IsWaitingPayment" />
     <div class="search-input-group flex-grow-1">
         <div class="input-group">
             <span class="input-group-text bg-white border-end-0">
@@ -9,7 +10,7 @@
             <input asp-for="Keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã đơn, tên khách, sđt" inputmode="search"/>
             @if (!string.IsNullOrEmpty(Model.Keywords))
             {
-                <a asp-action="List" asp-route-status="@Model.Status" class="btn btn-outline-secondary" title="Bỏ lọc">
+                <a asp-action="List" asp-route-status="@Model.Status" asp-route-IsWaitingPayment="@Model.IsWaitingPayment" class="btn btn-outline-secondary" title="Bỏ lọc">
                     <i class="bi bi-x-lg"></i>
                 </a>
             }

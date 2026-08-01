@@ -300,6 +300,7 @@ public sealed class OrderModelFactory(
         {
             Keywords = searchModel?.Keywords,
             Status = searchModel?.Status,
+            IsPaymentRequired = searchModel != null && searchModel.IsWaitingPayment ? true : null,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });

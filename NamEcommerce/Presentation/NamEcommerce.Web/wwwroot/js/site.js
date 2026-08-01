@@ -1,10 +1,12 @@
 ﻿'use strict';
 
 $(function () {
-    /*
+    
     const disabledSubmitForms = [];
 
     $('form').on('submit', function (e) {
+        if (e.isDefaultPrevented())
+            return;
         var form = this;
         if (!isFormValid(form))
             return;
@@ -15,7 +17,7 @@ $(function () {
     $(document).ajaxComplete(function () {
         disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
     });
-    */
+   
 
     $('.alert-dismissible').each(function () {
         let time = 3000;

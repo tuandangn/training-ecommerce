@@ -30,7 +30,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
 
     public async Task<OrderListModel> Handle(GetOrderListQuery request, CancellationToken cancellationToken)
     {
-        var ordersData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
+        var ordersData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status, request.IsPaymentRequired).ConfigureAwait(false);
         var customers = await _customerAppService.GetCustomersByIdsAsync(ordersData.Select(o => o.CustomerId)).ConfigureAwait(false);
         var orderDeliveryNotesMap = new Dictionary<Guid, IList<DeliveryNoteAppDto>>();
         foreach(var order in ordersData)
@@ -87,6 +87,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
         {
             Keywords = request.Keywords,
             Status = request.Status,
+            IsWaitingPayment = request.IsPaymentRequired.HasValue && request.IsPaymentRequired.Value,
             Data = PagedDataModel.Create(orderItemModels, ordersData.Pagination.PageIndex, ordersData.Pagination.PageSize, ordersData.Pagination.TotalCount)
         };
         return model;

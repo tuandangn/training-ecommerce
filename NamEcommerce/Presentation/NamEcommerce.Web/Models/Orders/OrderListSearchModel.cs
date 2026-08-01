@@ -7,4 +7,5 @@ public sealed record OrderListSearchModel : BasePaginationModel
 {
     public string? Keywords { get; set; }
     public int? Status { get; set; }
+    public bool IsWaitingPayment { get; set; }
 }
