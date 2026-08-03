@@ -21,7 +21,7 @@ public static class OrderFulfillmentScheduleExtensions
             InactivatedOnUtc = schedule.InactivatedOnUtc,
             InactivatedByUserId = schedule.InactivatedByUserId,
             Items = schedule.Items
-                .Select(item => new OrderFulfillmentScheduleItemDto(item.Id)
+                .Select(item => new OrderFulfillmentScheduleDto.OrderFulfillmentScheduleItemDto(item.Id)
                 {
                     OrderFulfillmentScheduleId = item.OrderFulfillmentScheduleId,
                     OrderItemId = item.OrderItemId,

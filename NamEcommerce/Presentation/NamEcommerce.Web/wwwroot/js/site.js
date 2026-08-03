@@ -17,7 +17,6 @@ $(function () {
     $(document).ajaxComplete(function () {
         disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
     });
-   
 
     $('.alert-dismissible').each(function () {
         let time = 3000;

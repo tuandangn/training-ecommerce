@@ -5,17 +5,17 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
-using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.Orders;
 
@@ -166,9 +166,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
         }).ConfigureAwait(false);
 
         var updatedOrder = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
-        var defaultScheduleResult = await CreateDefaultSchedulesAsync(
-            updatedOrder,
-            updatedOrder?.Items.Where(item => !existingItemIds.Contains(item.Id)).Select(item => item.Id).ToHashSet()).ConfigureAwait(false);
+        var addedItemIds = updatedOrder?.Items.Where(item => !existingItemIds.Contains(item.Id)).Select(item => item.Id).Distinct().ToList();
+        var defaultScheduleResult = await orderFulfillmentScheduleAppService.CreateDefaultSchedulesForOrderAsync(updatedOrder!.Id, addedItemIds).ConfigureAwait(false);
         if (!defaultScheduleResult.Success)
         {
             return new AddOrderItemResultAppDto
@@ -239,6 +238,15 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
+        var calculatedOrderTotal = order.TotalAmount - orderItem.SubTotal + dto.Quantity * dto.UnitPrice;
+        if (calculatedOrderTotal < order.PaidAmount)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.AfterUpdateOrderItemTotalCannotBeLessThanPaidAmount"
+            };
+        }
 
         var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
         if (product is null)
@@ -266,7 +274,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
             }
         }
 
-        if (!product.ProductVendors.Any())
+        if (product.ProductVendors.Count == 0)
         {
             var needCheckQuantity = Math.Max(0, dto.Quantity - orderItem.Quantity);
             var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(orderItem.ProductId).ConfigureAwait(false);
@@ -280,12 +288,10 @@ public sealed class OrderAppService(IOrderManager orderManager,
             }
         }
 
-        var deliveryNoteOrderItems = (from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                         && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote)
-                                     .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
-                                     .ToList();
+        var activeDeliveryNotes = await deliveryNoteDataReader.GetListAsync(new ActiveDeliveryNotesOfOrderItemsSpec(dto.OrderId, [dto.OrderItemId])).ConfigureAwait(false);
+        var deliveryNoteOrderItems = activeDeliveryNotes.SelectMany(deliveryNote
+            => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
+            .ToList();
         var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
         if (dto.Quantity < deliveryNoteQty)
         {
@@ -301,17 +307,6 @@ public sealed class OrderAppService(IOrderManager orderManager,
             {
                 Success = false,
                 ErrorMessage = "Error.OrderItemUnitPriceCannotChange_InDelivery"
-            };
-        }
-
-        var scheduleQuantityResult = await EnsureActiveScheduleQuantityFitsAsync(dto.OrderId, dto.OrderItemId, dto.Quantity).ConfigureAwait(false);
-        if (!scheduleQuantityResult.Success)
-        {
-            return new UpdateOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = scheduleQuantityResult.ErrorMessage,
-                OrderId = dto.OrderId
             };
         }
 
@@ -374,11 +369,18 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        var orderItemDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
-                                     where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                        && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                     select deliveryNote;
-        if (orderItemDeliveryNotes.Any())
+        var calculatedOrderTotal = order.TotalAmount - orderItem.SubTotal;
+        if (calculatedOrderTotal < order.PaidAmount)
+        {
+            return new DeleteOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.AfterDeletingOrderItemTotalCannotBeLessThanPaidAmount"
+            };
+        }
+
+        var hasDeliveryNotes = await deliveryNoteDataReader.AnyAsync(new ActiveDeliveryNotesOfOrderItemsSpec(dto.OrderId, [dto.OrderItemId])).ConfigureAwait(false);
+        if (hasDeliveryNotes)
         {
             return new DeleteOrderItemResultAppDto
             {
@@ -387,6 +389,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
+        await orderFulfillmentScheduleAppService.DeleteScheduleItemsOfOrderItemsAsync(dto.OrderId, [dto.OrderItemId]).ConfigureAwait(false);
         await orderManager.DeleteOrderItemAsync(new DeleteOrderItemDto(dto.OrderId, dto.OrderItemId)).ConfigureAwait(false);
 
         return new DeleteOrderItemResultAppDto
@@ -630,8 +633,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        var createdOrder = await orderManager.GetOrderByIdAsync(createOrderResult.CreatedId).ConfigureAwait(false);
-        var defaultScheduleResult = await CreateDefaultSchedulesAsync(createdOrder, null).ConfigureAwait(false);
+        var defaultScheduleResult = await orderFulfillmentScheduleAppService.CreateDefaultSchedulesForOrderAsync(createOrderResult.CreatedId, null).ConfigureAwait(false);
         if (!defaultScheduleResult.Success)
         {
             return new CreateOrderResultAppDto
@@ -648,104 +650,6 @@ public sealed class OrderAppService(IOrderManager orderManager,
             CreatedId = createOrderResult.CreatedId
         };
     }
-
-    private async Task<CommonActionResultDto> EnsureActiveScheduleQuantityFitsAsync(Guid orderId, Guid orderItemId, decimal newQuantity)
-    {
-        var schedules = await orderFulfillmentScheduleAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
-        var activeScheduledQuantity = schedules
-            .Where(schedule => schedule.IsActive)
-            .SelectMany(schedule => schedule.Items)
-            .Where(item => item.OrderItemId == orderItemId)
-            .Sum(item => item.Quantity);
-        if (activeScheduledQuantity == 0)
-            return CommonActionResultDto.CreateSuccess();
-
-        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(orderId).ConfigureAwait(false);
-        var shippedQuantity = states.FirstOrDefault(state => state.OrderItemId == orderItemId)?.ShippedQuantity ?? 0;
-        var newRemainingQuantity = Math.Max(0, newQuantity - shippedQuantity);
-
-        return activeScheduledQuantity <= newRemainingQuantity
-            ? CommonActionResultDto.CreateSuccess()
-            : CommonActionResultDto.CreateError("Error.OrderFulfillmentScheduleQuantityExceedsOrderItemQuantity");
-    }
-
-    private async Task<CommonActionResultDto> CreateDefaultSchedulesAsync(OrderDto? order, ISet<Guid>? limitedOrderItemIds)
-    {
-        if (order is null)
-            return CommonActionResultDto.CreateSuccess();
-
-        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(order.Id).ConfigureAwait(false);
-        if (limitedOrderItemIds is not null)
-            states = states.Where(state => limitedOrderItemIds.Contains(state.OrderItemId)).ToList();
-
-        if (states.Count == 0)
-            return CommonActionResultDto.CreateSuccess();
-
-        if (order.ExpectedShippingDateUtc.HasValue)
-        {
-            return await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.NotBeforeDate, order.ExpectedShippingDateUtc, states
-                .Select(state => ToScheduleItem(state, Math.Max(0, state.RequiredQuantity - state.ShippedQuantity)))
-                .Where(item => item.Quantity > 0)
-                .ToList()).ConfigureAwait(false);
-        }
-
-        var asapItems = states
-            .Select(state =>
-            {
-                var remaining = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity);
-                return ToScheduleItem(state, Math.Min(remaining, state.AvailableQuantity));
-            })
-            .Where(item => item.Quantity > 0)
-            .ToList();
-        var asapResult = await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.AsSoonAsPossible, null, asapItems).ConfigureAwait(false);
-        if (!asapResult.Success)
-            return asapResult;
-
-        var waitingItems = states
-            .Select(state =>
-            {
-                var remaining = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity);
-                var available = Math.Min(remaining, state.AvailableQuantity);
-                return ToScheduleItem(state, remaining - available);
-            })
-            .Where(item => item.Quantity > 0)
-            .ToList();
-
-        return await CreateScheduleAsync(order.Id, OrderFulfillmentScheduleMode.WhenStockAvailable, null, waitingItems).ConfigureAwait(false);
-    }
-
-    private async Task<CommonActionResultDto> CreateScheduleAsync(
-        Guid orderId,
-        OrderFulfillmentScheduleMode mode,
-        DateTime? scheduledFromUtc,
-        IList<OrderFulfillmentScheduleItemInputAppDto> items)
-    {
-        if (items.Count == 0)
-            return CommonActionResultDto.CreateSuccess();
-
-        var result = await orderFulfillmentScheduleAppService.CreateAsync(new CreateOrderFulfillmentScheduleAppDto
-        {
-            OrderId = orderId,
-            Mode = (int)mode,
-            ScheduledFromUtc = scheduledFromUtc,
-            Items = items
-        }).ConfigureAwait(false);
-
-        return result.Success
-            ? CommonActionResultDto.CreateSuccess()
-            : CommonActionResultDto.CreateError(result.ErrorMessage);
-    }
-
-    private static OrderFulfillmentScheduleItemInputAppDto ToScheduleItem(
-        Domain.Shared.Dtos.Inventory.OrderItemFulfillmentStateDto state,
-        decimal quantity)
-        => new()
-        {
-            OrderItemId = state.OrderItemId,
-            ProductId = state.ProductId,
-            ProductName = state.ProductName,
-            Quantity = quantity
-        };
 
     public async Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto)
     {
@@ -883,5 +787,22 @@ public sealed class OrderAppService(IOrderManager orderManager,
         {
             return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
+    }
+
+    public async Task<decimal> GetRemainShippingQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)
+    {
+        var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        var orderItem = order.Items.FirstOrDefault(item => item.Id == orderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException();
+
+        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(order.Id).ConfigureAwait(false);
+        var shippedQuantity = states.FirstOrDefault(state => state.OrderItemId == orderItem.Id)?.ShippedQuantity ?? 0;
+
+        var newRemainingQuantity = Math.Max(0, orderItem.Quantity - shippedQuantity);
+        return newRemainingQuantity;
     }
 }

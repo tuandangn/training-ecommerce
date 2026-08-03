@@ -30,6 +30,12 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return await ErrorResult();
 
+        if (!deliveryNow && model.ExpectedShippingDate.HasValue && model.ExpectedShippingDate.Value < DateTime.Today)
+        {
+            ModelState.AddModelError(nameof(model.ExpectedShippingDate), Localizer["Error.Invalid", Localizer["Label.ExpectedDate"]]);
+            return await ErrorResult();
+        }
+
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId!.Value });
         if (customer is null)
         {
@@ -121,6 +127,7 @@ public sealed partial class OrderController : BaseAuthorizedController
             CustomerId = model.CustomerId!.Value,
             DeliveryNow = deliveryNow,
             Note = model.Note,
+            ExpectedShippingDate = deliveryNow ? null : model.ExpectedShippingDate,
             ShippingAddress = model.ShippingAddress,
             ShippingPhoneNumber = model.ShippingPhoneNumber,
             OrderDiscount = model.OrderDiscount,

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Services.Extensions;
@@ -13,43 +14,41 @@ namespace NamEcommerce.Domain.Services.Orders;
 
 public sealed class OrderFulfillmentScheduleManager(
     IRepository<OrderFulfillmentSchedule> scheduleRepository,
-    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository,
     IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
     IRepository<Order> orderRepository,
     IShortageQueryService shortageQueryService,
     ICurrentUserAccessor currentUserAccessor) : IOrderFulfillmentScheduleManager
 {
     public async Task<OrderFulfillmentScheduleDto?> GetByIdAsync(Guid id)
-        => (await scheduleDataReader.GetByIdAsync(id).ConfigureAwait(false))?.ToDto();
-
-    public Task<IList<OrderFulfillmentScheduleDto>> GetByOrderIdAsync(Guid orderId)
     {
-        var schedules = scheduleDataReader.DataSource
-            .Where(schedule => schedule.OrderId == orderId)
+        var schedule = await scheduleRepository.GetByIdAsync(id).ConfigureAwait(false);
+        return schedule?.ToDto();
+    }
+
+    public async Task<IList<OrderFulfillmentScheduleDto>> GetByOrderIdAsync(Guid orderId, bool includeInactive = false)
+    {
+        var schedules = await scheduleDataReader.DataSource
+            .Where(schedule => schedule.OrderId == orderId && (includeInactive || schedule.IsActive))
             .OrderByDescending(schedule => schedule.IsActive)
             .ThenBy(schedule => schedule.ScheduledFromUtc ?? DateTime.MaxValue)
             .ThenBy(schedule => schedule.CreatedOnUtc)
-            .ToList()
-            .Select(schedule => schedule.ToDto())
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
-        return Task.FromResult<IList<OrderFulfillmentScheduleDto>>(schedules);
+        return schedules.Select(schedule => schedule.ToDto()).ToList();
     }
 
-    public Task<IList<OrderFulfillmentScheduleDto>> GetActiveByOrderIdsAsync(IReadOnlyCollection<Guid> orderIds)
+    public async Task<IList<OrderFulfillmentScheduleDto>> GetActiveByOrderIdsAsync(IReadOnlyCollection<Guid> orderIds)
     {
         if (orderIds.Count == 0)
-            return Task.FromResult<IList<OrderFulfillmentScheduleDto>>([]);
+            return [];
 
-        var schedules = scheduleDataReader.DataSource
+        var schedules = await scheduleDataReader.DataSource
             .Where(schedule => schedule.IsActive && orderIds.Contains(schedule.OrderId))
             .OrderBy(schedule => schedule.ScheduledFromUtc ?? DateTime.MaxValue)
             .ThenBy(schedule => schedule.CreatedOnUtc)
-            .ToList()
-            .Select(schedule => schedule.ToDto())
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
 
-        return Task.FromResult<IList<OrderFulfillmentScheduleDto>>(schedules);
+        return schedules.Select(schedule => schedule.ToDto()).ToList();
     }
 
     public async Task<CreateOrderFulfillmentScheduleResultDto> CreateAsync(CreateOrderFulfillmentScheduleDto dto)
@@ -59,6 +58,15 @@ public sealed class OrderFulfillmentScheduleManager(
 
         var order = await GetEditableOrderAsync(dto.OrderId).ConfigureAwait(false);
         var normalizedItems = NormalizeItems(order, dto.Items);
+        foreach (var item in normalizedItems)
+        {
+            if (item.OrderItemId == Guid.Empty)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderItemIsNotFound");
+            if (item.ProductId == Guid.Empty)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.ProductIsNotFound");
+            if (item.Quantity <= 0)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderFulfillmentScheduleQuantityMustBePositive");
+        }
         await EnsureQuantitiesDoNotExceedRemainingAsync(order, normalizedItems, null).ConfigureAwait(false);
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
@@ -81,14 +89,26 @@ public sealed class OrderFulfillmentScheduleManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var schedule = await scheduleDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
-            ?? throw new OrderFulfillmentScheduleIsNotFoundException(dto.Id);
+        var schedule = await scheduleRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (schedule is null)
+            throw new OrderFulfillmentScheduleIsNotFoundException(dto.Id);
+
         var order = await GetEditableOrderAsync(dto.OrderId).ConfigureAwait(false);
         if (schedule.OrderId != order.Id)
             throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderFulfillmentScheduleOrderMismatch");
 
         var normalizedItems = NormalizeItems(order, dto.Items);
-        if (schedule.IsActive)
+        foreach (var item in normalizedItems)
+        {
+            if (item.OrderItemId == Guid.Empty)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderItemIsNotFound");
+            if (item.ProductId == Guid.Empty)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.ProductIsNotFound");
+            if (item.Quantity <= 0)
+                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderFulfillmentScheduleQuantityMustBePositive");
+        }
+
+        if (dto.IsActive ?? schedule.IsActive)
             await EnsureQuantitiesDoNotExceedRemainingAsync(order, normalizedItems, schedule.Id).ConfigureAwait(false);
 
         var existingItems = schedule.Items.ToList();
@@ -96,15 +116,8 @@ public sealed class OrderFulfillmentScheduleManager(
         schedule.SetWindow(dto.ScheduledFromUtc, dto.ScheduledToUtc);
         schedule.SetNote(dto.Note);
         schedule.ReplaceItems(normalizedItems);
-        foreach (var item in existingItems)
-        {
-            await scheduleItemRepository.DeleteAsync(item).ConfigureAwait(false);
-        }
-
-        foreach (var item in schedule.Items)
-        {
-            await scheduleItemRepository.InsertAsync(item).ConfigureAwait(false);
-        }
+        if (dto.IsActive.HasValue)
+            await ActivateSchedule(schedule, dto.IsActive.Value).ConfigureAwait(false);
 
         var updated = await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);
         return new UpdateOrderFulfillmentScheduleResultDto { UpdatedId = updated.Id };
@@ -112,7 +125,7 @@ public sealed class OrderFulfillmentScheduleManager(
 
     public async Task SetActiveAsync(SetOrderFulfillmentScheduleActiveDto dto)
     {
-        var schedule = await scheduleDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+        var schedule = await scheduleRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new OrderFulfillmentScheduleIsNotFoundException(dto.Id);
 
         if (dto.IsActive)
@@ -128,20 +141,65 @@ public sealed class OrderFulfillmentScheduleManager(
                 })
                 .ToList();
             await EnsureQuantitiesDoNotExceedRemainingAsync(order, items, schedule.Id).ConfigureAwait(false);
-            schedule.Activate();
         }
+        var updated = await ActivateSchedule(schedule, dto.IsActive).ConfigureAwait(false);
+        if (updated)
+            await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);
+    }
+
+    public async Task DeleteScheduleItemsOfOrderItemsAsync(Guid orderId, IList<Guid> orderItemIds)
+    {
+        var schedules = await scheduleDataReader.SecuredDataSource
+            .Where(schedule => schedule.OrderId == orderId && schedule.Items.Any(item => orderItemIds.Contains(item.OrderItemId)))
+            .ToListAsync().ConfigureAwait(false);
+
+        foreach (var schedule in schedules)
+        {
+            var newItems = schedule.Items.Where(item => !orderItemIds.Contains(item.OrderItemId)).Select(item => new CreateOrderFulfillmentScheduleItemDto
+            {
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                OrderItemId = item.OrderItemId,
+                Quantity = item.Quantity
+            }).ToList();
+            if (newItems.Count == 0)
+            {
+                schedule.ReplaceItems([]);
+                await DeleteAsync(schedule.Id).ConfigureAwait(false);
+                continue;
+            }
+            await UpdateAsync(new UpdateOrderFulfillmentScheduleDto(schedule.Id)
+            {
+                IsActive = schedule.IsActive,
+                Mode = schedule.Mode,
+                Note = schedule.Note,
+                OrderId = orderId,
+                ScheduledFromUtc = schedule.ScheduledFromUtc,
+                ScheduledToUtc = schedule.ScheduledToUtc,
+                Items = newItems
+            }).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<bool> ActivateSchedule(OrderFulfillmentSchedule schedule, bool isActive)
+    {
+        if (schedule.IsActive == isActive)
+            return false;
+
+        if (isActive)
+            schedule.Activate();
         else
         {
             var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
             schedule.Inactivate(currentUser?.Id);
         }
 
-        await scheduleRepository.UpdateAsync(schedule).ConfigureAwait(false);
+        return true;
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var schedule = await scheduleDataReader.GetByIdAsync(id).ConfigureAwait(false)
+        var schedule = await scheduleRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new OrderFulfillmentScheduleIsNotFoundException(id);
 
         await GetEditableOrderAsync(schedule.OrderId).ConfigureAwait(false);
@@ -153,11 +211,11 @@ public sealed class OrderFulfillmentScheduleManager(
         if (orderItemIds.Count == 0)
             return;
 
-        var schedules = scheduleDataReader.DataSource
+        var schedules = await scheduleDataReader.DataSource
             .Where(schedule => schedule.IsActive
                 && schedule.Mode == OrderFulfillmentScheduleMode.WhenStockAvailable
                 && schedule.Items.Any(item => orderItemIds.Any(orderItemId => orderItemId.SecondaryId == item.OrderItemId)))
-            .ToList();
+            .ToListAsync().ConfigureAwait(false);
         foreach (var schedule in schedules)
         {
             var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(schedule.OrderId).ConfigureAwait(false);
@@ -185,8 +243,7 @@ public sealed class OrderFulfillmentScheduleManager(
     }
 
     private static IList<CreateOrderFulfillmentScheduleItemDto> NormalizeItems(
-        Order order,
-        IList<CreateOrderFulfillmentScheduleItemDto> items)
+        Order order, IList<CreateOrderFulfillmentScheduleItemDto> items)
     {
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         return items
@@ -217,7 +274,7 @@ public sealed class OrderFulfillmentScheduleManager(
             state => state.OrderItemId,
             state => Math.Max(0, state.RequiredQuantity - state.ShippedQuantity));
 
-        var activeScheduledQuantities = GetActiveScheduledQuantities(order.Id, excludedScheduleId);
+        var activeScheduledQuantities = await GetActiveScheduledQuantitiesAsync(order.Id, excludedScheduleId).ConfigureAwait(false);
         foreach (var item in requestedItems)
         {
             var remaining = remainingQuantities.GetValueOrDefault(item.OrderItemId);
@@ -227,13 +284,13 @@ public sealed class OrderFulfillmentScheduleManager(
         }
     }
 
-    private Dictionary<Guid, decimal> GetActiveScheduledQuantities(Guid orderId, Guid? excludedScheduleId)
+    private Task<Dictionary<Guid, decimal>> GetActiveScheduledQuantitiesAsync(Guid orderId, Guid? excludedScheduleId)
         => scheduleDataReader.DataSource
             .Where(schedule => schedule.OrderId == orderId
                 && schedule.IsActive
                 && (!excludedScheduleId.HasValue || schedule.Id != excludedScheduleId.Value))
-            .ToList()
             .SelectMany(schedule => schedule.Items)
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+            .ToDictionaryAsync(group => group.Key, group => group.Sum(item => item.Quantity));
+
 }

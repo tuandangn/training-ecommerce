@@ -10,6 +10,7 @@ public sealed class QuickCreateOrderCommand : ICommand<QuickCreateOrderResultMod
     public required bool DeliveryNow { get; init; }
     public decimal OrderDiscount { get; set; }
 
+    public DateTime? ExpectedShippingDate { get; set; }
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
 

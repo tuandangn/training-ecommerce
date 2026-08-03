@@ -143,10 +143,15 @@ export default class OrderController {
     #bindEvents() {
         const form = document.getElementById('createOrderForm');
         form.addEventListener('submit', e => {
+            if (!isFormValid(form))
+                return;
+
             if (!this.#state.items.length) {
                 e.preventDefault();
                 toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
             }
+
+            showPageLoading();
         });
 
         getEl('ShippingAddress').addEventListener('change', (e) => this.#setState({ shippingAddress: e.target.value }));

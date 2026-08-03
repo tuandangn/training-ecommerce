@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Services.Customers;
@@ -7,7 +8,7 @@ using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Application.Services.Events.Orders;
 
-public sealed class OrderHasPaymentEventHandler(IOrderManager orderManager, IDeliveryNoteManager deliveryNoteManager, ICustomerManager customerManager)
+public sealed class OrderHasPaymentEventHandler(IOrderManager orderManager, IDeliveryNoteManager deliveryNoteManager, IOrderFulfillmentScheduleAppService orderFulfillmentScheduleAppService)
     : INotificationHandler<OrderHasPayment>
 {
     public async Task Handle(OrderHasPayment notification, CancellationToken cancellationToken)
@@ -26,6 +27,12 @@ public sealed class OrderHasPaymentEventHandler(IOrderManager orderManager, IDel
             return;
 
         var deliveryNotes = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue, string.Empty, orderId: order.Id, [DeliveryNoteStatus.Draft]).ConfigureAwait(false);
+        if (deliveryNotes.PagerInfo.TotalCount == 0 && order.IsRetailWalkInCustomer)
+        {
+            await orderFulfillmentScheduleAppService.CreateDefaultSchedulesForOrderAsync(order.Id, null).ConfigureAwait(false);
+            return;
+        }
+
         foreach (var deliveryNote in deliveryNotes)
         {
             if (!deliveryNote.RequiresPaymentToConfirm)

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
@@ -12,9 +13,10 @@ using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
 using NamEcommerce.Domain.Specifications.Orders;
+using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
@@ -25,7 +27,8 @@ public sealed class ShortageQueryService(
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
-    IRepository<Order> orderRepository) : IShortageQueryService
+    IRepository<Order> orderRepository,
+    IRepository<DeliveryNote> deliveryNoteRepository) : IShortageQueryService
 {
     private static readonly DeliveryNoteStatus[] ShippedStatuses =
     [
@@ -67,7 +70,10 @@ public sealed class ShortageQueryService(
 
     public async Task<IList<DeliveryNoteItemShortageDto>> GetDeliveryNoteShortagesAsync(Guid deliveryNoteId)
     {
-        var deliveryNote = GetDeliveryNote(deliveryNoteId);
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(deliveryNoteId);
+
         if (deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.OrderId == Guid.Empty)
             return [];
 
@@ -79,8 +85,8 @@ public sealed class ShortageQueryService(
             .Where(item => item.OrderItemId != Guid.Empty)
             .Select(item => (SecondaryItemId)(deliveryNote.OrderId, item.OrderItemId))
             .ToList();
-        var shippedQuantities = GetShippedQuantities(orderItemIds, deliveryNote.Id, order.Id);
-        var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
+        var shippedQuantities = await GetShippedQuantitiesAsync(orderItemIds, deliveryNote.Id, order.Id).ConfigureAwait(false);
+        var allocationsByOrderItem = await GetPurchaseOrderAllocationsAsync(orderItemIds).ConfigureAwait(false);
         var result = new List<DeliveryNoteItemShortageDto>();
 
         foreach (var productGroup in deliveryNote.Items
@@ -137,7 +143,9 @@ public sealed class ShortageQueryService(
 
         if (filter?.DeliveryNoteId is Guid deliveryNoteId)
         {
-            var deliveryNote = GetDeliveryNote(deliveryNoteId);
+            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+            if (deliveryNote is null)
+                throw new DeliveryNoteNotFoundException(deliveryNoteId);
             if (deliveryNote.OrderId == Guid.Empty)
                 return [];
 
@@ -172,10 +180,6 @@ public sealed class ShortageQueryService(
         return ApplyFilter(result, filter).ToList();
     }
 
-    private DeliveryNote GetDeliveryNote(Guid deliveryNoteId)
-        => deliveryNoteReader.DataSource.SingleOrDefault(deliveryNote => deliveryNote.Id == deliveryNoteId)
-           ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
-
     private async Task<List<OrderItemShortageDto>> BuildOrderItemShortagesAsync(Order order, ISet<Guid>? limitedOrderItemIds)
     {
         var fulfillmentStates = await BuildOrderItemFulfillmentStatesAsync(order, limitedOrderItemIds).ConfigureAwait(false);
@@ -206,10 +210,11 @@ public sealed class ShortageQueryService(
             .Where(item => limitedOrderItemIds is null || limitedOrderItemIds.Contains(item.Id))
             .ToList();
         var orderItemIds = orderItems.Select(item => (SecondaryItemId)(order.Id, item.Id)).ToList();
-        var shippedQuantities = GetShippedQuantities(orderItemIds, null, order.Id);
-        var allocationsByOrderItem = GetPurchaseOrderAllocations(orderItemIds);
-        var result = new List<OrderItemFulfillmentStateDto>();
 
+        var shippedQuantities = await GetShippedQuantitiesAsync(orderItemIds, null, order.Id).ConfigureAwait(false);
+        var allocationsByOrderItem = await GetPurchaseOrderAllocationsAsync(orderItemIds).ConfigureAwait(false);
+
+        var result = new List<OrderItemFulfillmentStateDto>();
         foreach (var productGroup in orderItems.GroupBy(item => item.ProductId))
         {
             var remainingAvailable = await inventoryStockManager
@@ -251,43 +256,43 @@ public sealed class ShortageQueryService(
         return result;
     }
 
-    private Dictionary<Guid, decimal> GetShippedQuantities(IList<SecondaryItemId> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
+    private async Task<Dictionary<Guid, decimal>> GetShippedQuantitiesAsync(IList<SecondaryItemId> orderItemIds, Guid? excludedDeliveryNoteId, Guid orderId)
     {
-        var query = deliveryNoteReader.DataSource
-            .Where(note => ShippedStatuses.Contains(note.Status));
+        var activeDeliveryNotesSpec = new CompositeSpecification<DeliveryNote>(new HaveStatusDeliveryNoteSpec(ShippedStatuses));
 
         if (excludedDeliveryNoteId.HasValue)
-            query = query.Where(note => note.Id != excludedDeliveryNoteId.Value);
+            activeDeliveryNotesSpec.AndNot(new HaveIdsDeliveryNoteSpec([excludedDeliveryNoteId.Value]));
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
-        var shippedQuantities = query
-            .SelectMany(note => note.Items)
-            .Where(item => itemIds.Contains(item.OrderItemId))
-            .GroupBy(item => item.OrderItemId)
-            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+        activeDeliveryNotesSpec.And(new DeliveryNotesOfOrderItemsSpec(orderId, itemIds));
 
-        var returnedQuantities = GetCompensatedReturnedQuantities(orderId, orderItemIds);
+        var shippedQuantities = await deliveryNoteReader.ApplySpecification(activeDeliveryNotesSpec)
+            .SelectMany(note => note.Items)
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionaryAsync(group => group.Key, group => group.Sum(item => item.Quantity)).ConfigureAwait(false);
+
+        var returnedQuantities = await GetCompensatedReturnedQuantities(orderId, orderItemIds).ConfigureAwait(false);
         foreach (var id in orderItemIds)
         {
-            shippedQuantities[id.SecondaryId] = Math.Max(0m, shippedQuantities.GetValueOrDefault(id.SecondaryId) - returnedQuantities.GetValueOrDefault(id.SecondaryId));
+            var shippedQuantity = shippedQuantities.GetValueOrDefault(id.SecondaryId);
+            var returnedQuantity = returnedQuantities.GetValueOrDefault(id.SecondaryId);
+            shippedQuantities[id.SecondaryId] = Math.Max(0m, shippedQuantity - returnedQuantity);
         }
 
         return shippedQuantities;
     }
 
-    private Dictionary<Guid, decimal> GetCompensatedReturnedQuantities(Guid orderId, IList<SecondaryItemId> orderItemIds)
+    private async Task<Dictionary<Guid, decimal>> GetCompensatedReturnedQuantities(Guid orderId, IList<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
-            return [];
+            return new Dictionary<Guid, decimal>();
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
-        var validDeliveryNoteItems = deliveryNoteReader.DataSource
-            .Where(note => note.OrderId == orderId)
+        var validDeliveryNoteItems = deliveryNoteReader.ApplySpecification(new ActiveDeliveryNotesOfOrderItemsSpec(orderId, itemIds))
             .SelectMany(note => note.Items)
-            .Where(item => item.OrderItemId != Guid.Empty && itemIds.Contains(item.OrderItemId))
             .Select(item => new { item.Id, item.OrderItemId });
 
-        return customerReturnReader.DataSource
+        return await customerReturnReader.DataSource
             .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
                 && returnNote.CompensateInNextDelivery
                 && returnNote.Status != CustomerReturnStatus.Draft)
@@ -299,19 +304,20 @@ public sealed class ShortageQueryService(
                 deliveryNoteItem => deliveryNoteItem.Id,
                 (returnItem, deliveryNoteItem) => new { deliveryNoteItem.OrderItemId, returnItem.AcceptedQuantity })
             .GroupBy(item => item.OrderItemId)
-            .ToDictionary(group => group.Key, group => group.Sum(item => item.AcceptedQuantity));
+            .ToDictionaryAsync(group => group.Key, group => group.Sum(item => item.AcceptedQuantity)).ConfigureAwait(false);
     }
 
-    private Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> GetPurchaseOrderAllocations(IEnumerable<SecondaryItemId> orderItemIds)
+    private async Task<Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>>> GetPurchaseOrderAllocationsAsync(IEnumerable<SecondaryItemId> orderItemIds)
     {
         var itemIds = orderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
         if (itemIds.Count == 0)
             return [];
 
-        var allocations = allocationReader.DataSource
-            .Where(allocation => itemIds.Contains(allocation.OrderItemId.SecondaryId))
-            .OrderBy(allocation => allocation.CreatedOnUtc)
-            .ToList();
+        var activeAllocationSpec = new CompositeSpecification<PurchaseOrderItemAllocation>(
+            new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemIds.First().PrimaryId, itemIds));
+        activeAllocationSpec.ApplyOrderBy(allocation => allocation.CreatedOnUtc);
+
+        var allocations = await allocationReader.GetListAsync(activeAllocationSpec).ConfigureAwait(false);
         if (allocations.Count == 0)
             return [];
 
@@ -319,11 +325,10 @@ public sealed class ShortageQueryService(
             .Select(allocation => allocation.PurchaseOrderItemId.SecondaryId)
             .Distinct()
             .ToList();
+        var activePurchaseOrderSpec = new CompositeSpecification<PurchaseOrder>(new HaveStatusPurchaseOrderSpec(ActivePurchaseOrderStatuses));
+        activePurchaseOrderSpec.And(new PurchaseOrdersOfPurchaseOrderItemsSpec(purchaseOrderItemIds));
 
-        var purchaseOrderItemMap = purchaseOrderReader.DataSource
-            .Where(purchaseOrder => ActivePurchaseOrderStatuses.Contains(purchaseOrder.Status)
-                && purchaseOrder.Items.Any(item => purchaseOrderItemIds.Contains(item.Id)))
-            .ToList()
+        var purchaseOrderItemMap = await purchaseOrderReader.ApplySpecification(activePurchaseOrderSpec)
             .SelectMany(purchaseOrder => purchaseOrder.Items
                 .Where(item => purchaseOrderItemIds.Contains(item.Id))
                 .Select(item => new
@@ -333,7 +338,7 @@ public sealed class ShortageQueryService(
                     PurchaseOrderCode = purchaseOrder.Code,
                     purchaseOrder.ExpectedDeliveryDateUtc
                 }))
-            .ToDictionary(item => item.PurchaseOrderItemId);
+            .ToDictionaryAsync(item => item.PurchaseOrderItemId).ConfigureAwait(false);
 
         var result = new Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>>();
         foreach (var allocation in allocations)
@@ -362,8 +367,7 @@ public sealed class ShortageQueryService(
     }
 
     private static IList<PurchaseOrderShortageAllocationDto> GetAllocationsForOrderItem(
-        Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> allocationsByOrderItem,
-        Guid orderItemId)
+        Dictionary<Guid, List<PurchaseOrderShortageAllocationDto>> allocationsByOrderItem, Guid orderItemId)
         => allocationsByOrderItem.TryGetValue(orderItemId, out var allocations) ? allocations : [];
 
     private static IEnumerable<OrderItemShortageDto> ApplyFilter(IEnumerable<OrderItemShortageDto> shortages, ShortageFilterDto? filter)

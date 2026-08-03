@@ -48,14 +48,3 @@ public sealed class QuickCreateOrderItemValidator : AbstractValidator<QuickCreat
             .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
     }
 }
-
-public sealed class OrderQuickCreatePaymentValidator : AbstractValidator<OrderQuickCreateCompleteModel>
-{
-    public OrderQuickCreatePaymentValidator(IStringLocalizer<SharedResource> localizer)
-    {
-        RuleFor(p => p.OrderId)
-            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Order"]]);
-        RuleFor(p => p.PaidAmount)
-            .GreaterThan(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.PaidAmount"]]);
-    }
-}

@@ -21,6 +21,7 @@ public interface IOrderAppService
     Task<DeleteOrderItemResultAppDto> DeleteOrderItemAsync(DeleteOrderItemAppDto dto);
 
     Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto);
+    Task<decimal> GetRemainShippingQuantityForOrderItemAsync(Guid orderId, Guid orderItemId);
 
     Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto);
 }

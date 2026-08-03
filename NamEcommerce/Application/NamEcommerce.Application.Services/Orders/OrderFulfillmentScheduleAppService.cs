@@ -1,7 +1,9 @@
+using MediatR;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -9,9 +11,11 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Specifications.Orders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
@@ -21,13 +25,14 @@ public sealed class OrderFulfillmentScheduleAppService(
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
     IEntityDataReader<DeliveryRun> deliveryRunDataReader,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
+    IRepository<Order> orderRepository,
     IShortageQueryService shortageQueryService) : IOrderFulfillmentScheduleAppService
 {
     public async Task<OrderFulfillmentScheduleAppDto?> GetByIdAsync(Guid id)
         => (await scheduleManager.GetByIdAsync(id).ConfigureAwait(false))?.ToDto();
 
-    public async Task<IList<OrderFulfillmentScheduleAppDto>> GetByOrderIdAsync(Guid orderId)
-        => (await scheduleManager.GetByOrderIdAsync(orderId).ConfigureAwait(false))
+    public async Task<IList<OrderFulfillmentScheduleAppDto>> GetByOrderIdAsync(Guid orderId, bool includeInactive = false)
+        => (await scheduleManager.GetByOrderIdAsync(orderId, includeInactive).ConfigureAwait(false))
             .Select(schedule => schedule.ToDto())
             .ToList();
 
@@ -39,15 +44,95 @@ public sealed class OrderFulfillmentScheduleAppService(
         if (!valid)
             return new CreateOrderFulfillmentScheduleResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        try
+        var result = await scheduleManager.CreateAsync(dto.ToDomainDto()).ConfigureAwait(false);
+        return new CreateOrderFulfillmentScheduleResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+
+    public async Task<CommonActionResultDto> CreateDefaultSchedulesForOrderAsync(Guid orderId, IList<Guid>? limitedOrderItemIds)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            return CommonActionResultDto.CreateSuccess();
+
+        var states = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(order.Id).ConfigureAwait(false);
+        if (limitedOrderItemIds is not null)
+            states = states.Where(state => limitedOrderItemIds.Contains(state.OrderItemId)).ToList();
+
+        if (states.Count == 0)
+            return CommonActionResultDto.CreateSuccess();
+
+        //not before date
+        if (order.ExpectedShippingDateUtc.HasValue && order.ExpectedShippingDateUtc > DateTime.UtcNow)
         {
-            var result = await scheduleManager.CreateAsync(dto.ToDomainDto()).ConfigureAwait(false);
-            return new CreateOrderFulfillmentScheduleResultAppDto { Success = true, CreatedId = result.CreatedId };
+            var fulfillmentItems = states.Select(state => new OrderFulfillmentScheduleItemInputAppDto
+            {
+                OrderItemId = state.OrderItemId,
+                ProductId = state.ProductId,
+                ProductName = state.ProductName,
+                Quantity = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity)
+            }).Where(item => item.Quantity > 0).ToList();
+
+            if (fulfillmentItems.Count == 0)
+                return CommonActionResultDto.CreateSuccess();
+
+            return await CreateAsync(new CreateOrderFulfillmentScheduleAppDto
+            {
+                OrderId = orderId,
+                Mode = (int)OrderFulfillmentScheduleMode.NotBeforeDate,
+                ScheduledFromUtc = order.ExpectedShippingDateUtc,
+                Items = fulfillmentItems
+            }).ConfigureAwait(false);
         }
-        catch (NamEcommerceDomainException ex)
+
+        //as soon as possible
+        var asapItems = states
+            .Select(state => new OrderFulfillmentScheduleItemInputAppDto
+            {
+                OrderItemId = state.OrderItemId,
+                ProductId = state.ProductId,
+                ProductName = state.ProductName,
+                Quantity = Math.Min(Math.Max(0, state.RequiredQuantity - state.ShippedQuantity), state.AvailableQuantity)
+            })
+            .Where(item => item.Quantity > 0)
+            .ToList();
+
+        if (asapItems.Count > 0)
         {
-            return new CreateOrderFulfillmentScheduleResultAppDto { Success = false, ErrorMessage = ex.Message };
+            var asapResult = await CreateAsync(new CreateOrderFulfillmentScheduleAppDto
+            {
+                OrderId = orderId,
+                Mode = (int)OrderFulfillmentScheduleMode.AsSoonAsPossible,
+                Items = asapItems
+            }).ConfigureAwait(false);
+            if (!asapResult.Success)
+                return asapResult;
         }
+
+        //waiting
+        var waitingItems = states
+            .Select(state =>
+            {
+                var remaining = Math.Max(0, state.RequiredQuantity - state.ShippedQuantity);
+                var available = Math.Min(remaining, state.AvailableQuantity);
+                return new OrderFulfillmentScheduleItemInputAppDto
+                {
+                    OrderItemId = state.OrderItemId,
+                    ProductId = state.ProductId,
+                    ProductName = state.ProductName,
+                    Quantity = Math.Max(0, remaining - available)
+                };
+            })
+            .Where(item => item.Quantity > 0)
+            .ToList();
+        if (waitingItems.Count == 0)
+            return CommonActionResultDto.CreateSuccess();
+
+        return await CreateAsync(new CreateOrderFulfillmentScheduleAppDto
+        {
+            OrderId = orderId,
+            Mode = (int)OrderFulfillmentScheduleMode.WhenStockAvailable,
+            Items = waitingItems
+        }).ConfigureAwait(false);
     }
 
     public async Task<UpdateOrderFulfillmentScheduleResultAppDto> UpdateAsync(UpdateOrderFulfillmentScheduleAppDto dto)
@@ -56,43 +141,24 @@ public sealed class OrderFulfillmentScheduleAppService(
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
+        {
             return new UpdateOrderFulfillmentScheduleResultAppDto { Success = false, ErrorMessage = errorMessage };
+        }
 
-        try
-        {
-            var result = await scheduleManager.UpdateAsync(dto.ToDomainDto()).ConfigureAwait(false);
-            return new UpdateOrderFulfillmentScheduleResultAppDto { Success = true, UpdatedId = result.UpdatedId };
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return new UpdateOrderFulfillmentScheduleResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        var result = await scheduleManager.UpdateAsync(dto.ToDomainDto()).ConfigureAwait(false);
+        return new UpdateOrderFulfillmentScheduleResultAppDto { Success = true, UpdatedId = result.UpdatedId };
     }
 
     public async Task<CommonActionResultDto> SetActiveAsync(SetOrderFulfillmentScheduleActiveAppDto dto)
     {
-        try
-        {
-            await scheduleManager.SetActiveAsync(new(dto.Id, dto.IsActive)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
+        await scheduleManager.SetActiveAsync(new(dto.Id, dto.IsActive)).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<CommonActionResultDto> DeleteAsync(Guid id)
     {
-        try
-        {
-            await scheduleManager.DeleteAsync(id).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
+        await scheduleManager.DeleteAsync(id).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<CommonActionResultDto> RefreshWhenStockAvailableForPurchaseOrderItemsAsync(
@@ -118,34 +184,32 @@ public sealed class OrderFulfillmentScheduleAppService(
 
         var baseDateUtc = filter.DateUtc ?? DateTime.UtcNow;
         var todayLocal = baseDateUtc.ToLocalTime().Date;
-        var orders = GetOpenOrders();
-        var orderIds = orders.Select(order => order.Id).ToList();
-        var statesByOrder = await GetStatesByOrderAsync(orderIds).ConfigureAwait(false);
-        var processingDeliveryOrderIds = GetProcessingDeliveryOrderIds(orderIds);
-        orders = orders
-            .Where(order => processingDeliveryOrderIds.Contains(order.Id)
-                || statesByOrder.GetValueOrDefault(order.Id)?.Any(state => state.RequiredQuantity > state.ShippedQuantity) == true)
-            .ToList();
+
+        var pendingOrderSpec = new CompositeSpecification<Order>(new HaveStatusOrderSpec([OrderStatus.Pending]));
+        pendingOrderSpec.ApplyOrderBy(order => order.CreatedOnUtc);
+        var orders = await orderDataReader.GetListAsync(pendingOrderSpec).ConfigureAwait(false);
+
+        var pendingOrderIds = orders.Select(order => order.Id).ToList();
+        var statesByOrders = await GetStatesByOrderAsync(pendingOrderIds).ConfigureAwait(false);
+        var processingDeliveryOrderIds = await GetProcessingDeliveryOrderIdsAsync(pendingOrderIds).ConfigureAwait(false);
+
+        orders = orders.Where(order => processingDeliveryOrderIds.Contains(order.Id)
+            || statesByOrders.GetValueOrDefault(order.Id)?.Any(state => state.RequiredQuantity > state.ShippedQuantity) == true).ToList();
 
         if (!string.IsNullOrWhiteSpace(filter.Keywords))
         {
-            var kw = filter.Keywords.Trim();
-            orders = orders.Where(order =>
-                order.Code.Contains(kw, StringComparison.OrdinalIgnoreCase)
-                || order.ShippingAddress.Value.Contains(kw, StringComparison.OrdinalIgnoreCase)
-                || statesByOrder.GetValueOrDefault(order.Id)?.Any(state =>
-                    state.CustomerName?.Contains(kw, StringComparison.OrdinalIgnoreCase) == true
-                    || state.CustomerPhone?.Contains(kw) == true) == true)
-                .ToList();
+            var orderSearchSpec = new OrderKeywordSearchSpec(filter.Keywords.Trim());
+            orders = orders.Where(orderSearchSpec.Criteria.Compile()).ToList();
         }
 
-        orderIds = orders.Select(order => order.Id).ToList();
+        pendingOrderIds = orders.Select(order => order.Id).ToList();
+
         var schedules = await GetSchedulesAsync(orders, filter.IncludeInactive).ConfigureAwait(false);
 
         var entries = new List<OrderFulfillmentBoardEntryAppDto>();
-        entries.AddRange(BuildScheduleEntries(schedules, orders, statesByOrder));
-        entries.AddRange(BuildUnscheduledOrderEntries(orders, schedules, statesByOrder, baseDateUtc));
-        entries.AddRange(BuildDeliveryNoteEntries(orderIds));
+        entries.AddRange(BuildScheduleEntries(schedules, orders, statesByOrders));
+        entries.AddRange(BuildUnscheduledOrderEntries(orders, schedules, statesByOrders, baseDateUtc));
+        entries.AddRange(BuildDeliveryNoteEntries(pendingOrderIds));
         entries.AddRange(BuildDeliveryRunEntries());
 
         var filteredEntries = ApplyRiskFilter(entries, filter.Risk).ToList();
@@ -167,20 +231,31 @@ public sealed class OrderFulfillmentScheduleAppService(
         };
     }
 
-    private IList<Order> GetOpenOrders()
-        => orderDataReader.DataSource
-            .Where(order => order.OrderStatus == OrderStatus.Pending)
-            .OrderBy(order => order.CreatedOnUtc)
+    public async Task<decimal> GetActiveScheduledQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)
+    {
+        var schedules = await GetByOrderIdAsync(orderId, false).ConfigureAwait(false);
+        var hadOrderItemSchedules = schedules.Where(schedule => schedule.Items.Any(item => item.OrderItemId == orderItemId))
+            .Select(schedule => (scheduleId: schedule.Id, items: schedule.Items.Where(item => item.OrderItemId == orderItemId)))
             .ToList();
+        return hadOrderItemSchedules.Sum(info => info.items.Sum(item => item.Quantity));
+    }
 
-    private HashSet<Guid> GetProcessingDeliveryOrderIds(IReadOnlyCollection<Guid> orderIds)
+    public Task DeleteScheduleItemsOfOrderItemsAsync(Guid orderId, IList<Guid> orderItemIds)
+        => scheduleManager.DeleteScheduleItemsOfOrderItemsAsync(orderId, orderItemIds);
+
+    private async Task<HashSet<Guid>> GetProcessingDeliveryOrderIdsAsync(IList<Guid> orderIds)
     {
         if (orderIds.Count == 0)
             return [];
 
-        var statuses = new[] { DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Delivering, DeliveryNoteStatus.PendingConfirmation };
-        return deliveryNoteDataReader.DataSource
-            .Where(note => orderIds.Contains(note.OrderId) && statuses.Contains(note.Status))
+        var validStatus = new List<DeliveryNoteStatus>{
+            DeliveryNoteStatus.Confirmed,
+            DeliveryNoteStatus.Delivering,
+            DeliveryNoteStatus.PendingConfirmation
+        };
+        var haveStatusDeliveryNoteOfOrdersSpec = new CompositeSpecification<DeliveryNote>(new HaveStatusDeliveryNoteSpec(validStatus));
+        haveStatusDeliveryNoteOfOrdersSpec.And(new DeliveryNotesOfOrdersSpec(orderIds));
+        return (await deliveryNoteDataReader.GetListAsync(haveStatusDeliveryNoteOfOrdersSpec).ConfigureAwait(false))
             .Select(note => note.OrderId)
             .ToHashSet();
     }
@@ -189,9 +264,7 @@ public sealed class OrderFulfillmentScheduleAppService(
     {
         var result = new Dictionary<Guid, IList<OrderItemFulfillmentStateDto>>();
         foreach (var orderId in orderIds)
-        {
             result[orderId] = await shortageQueryService.GetOrderItemFulfillmentStatesAsync(orderId).ConfigureAwait(false);
-        }
 
         return result;
     }
@@ -210,7 +283,7 @@ public sealed class OrderFulfillmentScheduleAppService(
         var schedules = new List<OrderFulfillmentScheduleAppDto>();
         foreach (var order in orders)
         {
-            schedules.AddRange((await scheduleManager.GetByOrderIdAsync(order.Id).ConfigureAwait(false)).Select(schedule => schedule.ToDto()));
+            schedules.AddRange((await scheduleManager.GetByOrderIdAsync(order.Id, true).ConfigureAwait(false)).Select(schedule => schedule.ToDto()));
         }
 
         return schedules;
@@ -540,4 +613,5 @@ public sealed class OrderFulfillmentScheduleAppService(
             }
         ];
     }
+
 }

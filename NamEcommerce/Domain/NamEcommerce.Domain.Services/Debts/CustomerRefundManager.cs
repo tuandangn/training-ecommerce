@@ -1,6 +1,5 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
-using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
@@ -17,7 +16,6 @@ namespace NamEcommerce.Domain.Services.Debts;
 public sealed class CustomerRefundManager(
     IRepository<CustomerRefund> refundRepository,
     IEntityDataReader<CustomerRefund> refundReader,
-    IEntityDataReader<CustomerReturn> customerReturnReader,
     ICustomerLedgerManager customerLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : ICustomerRefundManager
 {

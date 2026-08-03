@@ -923,23 +923,6 @@ class PaymentProcess {
             this.#amount = amount;
         }, 700) : Function.prototype;
 
-        const onPaymentSubmit = e => {
-            e.preventDefault();
-            if (!this.#isPaymentFormValid())
-                return;
-
-            const isValid = this.#reference.validateQuickCreateOrder();
-            if (!isValid) return;
-
-            this.#endPayment(true, 0);
-        }
-
-        const createQr = async () => {
-            if (!this.#config.bankTransferEnabled)
-                return;
-            await this.#createPaymentQrCode();
-        }
-
         const confirmMoneyReceived = async () => {
             if (!this.#isPaymentFormValid())
                 return;
@@ -947,7 +930,11 @@ class PaymentProcess {
             //hide modal
             this.root.classList.add('d-none');
 
-            const confirmed = await confirm('Đã nhận tiền', `Bạn xác nhận đã nhận đủ ${DecimalFields.formatCurrencyWithSymbol(this.#amount)}`);
+            var amount = this.isBank() ? this.#paymentIntent?.amount : this.#amount;
+            if (amount != DecimalFields.getValue(this.paidAmountInput))
+                throw new Error('Số tiền thanh toán không khớp, vui lòng thử lại');
+
+            const confirmed = await confirm('Đã nhận tiền', `Bạn xác nhận đã nhận đủ ${DecimalFields.formatCurrencyWithSymbol(amount)}`);
             if (!confirmed) {
                 this.root.classList.remove('d-none');
                 return;
@@ -964,7 +951,36 @@ class PaymentProcess {
                 }
             }
 
-            this.#endPayment(true, this.#amount);
+            this.#endPayment(true, amount);
+        }
+
+        const onPaymentSubmit = e => {
+            e.preventDefault();
+            if (!this.#isPaymentFormValid())
+                return;
+
+            const isValid = this.#reference.validateQuickCreateOrder();
+            if (!isValid) return;
+
+            if (this.#amount != DecimalFields.getValue(this.paidAmountInput)) {
+                onAmountChanged.flush();
+            }
+                
+            if (this.isBank()) {
+                if (!this.#paymentIntent || this.#paymentIntent.amount != this.#amount) {
+                    this.#createPaymentQrCode();
+                } else {
+                    confirmMoneyReceived();
+                }
+            } else {
+                confirmMoneyReceived();
+            }
+        }
+
+        const createQr = async () => {
+            if (!this.#config.bankTransferEnabled)
+                return;
+            await this.#createPaymentQrCode();
         }
 
         const onCloseModal = async () => {
@@ -992,6 +1008,7 @@ class PaymentProcess {
             this.createQr.addEventListener('click', createQr);
             this.moneyReceivedBtn.addEventListener('click', confirmMoneyReceived);
             this.paidAmountInput.addEventListener('input', onAmountChanged);
+            this.paidAmountInput.addEventListener('change', onAmountChanged.flush);
             this.form.addEventListener('submit', onPaymentSubmit);
             this.cashMethod.addEventListener('click', setCashPayment);
             this.bankMethod.addEventListener('click', setBankPayment);
@@ -1005,6 +1022,7 @@ class PaymentProcess {
             this.root.addEventListener('hidden.bs.modal', function onHidden(e) {
                 self.root.removeEventListener('hidden.bs.modal', onHidden);
                 self.paidAmountInput.removeEventListener('input', onAmountChanged);
+                self.paidAmountInput.removeEventListener('change', onAmountChanged.flush);
                 self.createQr.removeEventListener('click', createQr);
                 self.moneyReceivedBtn.removeEventListener('click', confirmMoneyReceived);
                 self.form.removeEventListener('submit', this.onPaymentSubmit);

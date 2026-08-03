@@ -15,13 +15,10 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
     }
 
     internal OrderFulfillmentSchedule(
-        Guid orderId,
-        string orderCode,
+        Guid orderId, string orderCode,
         OrderFulfillmentScheduleMode mode,
-        DateTime? scheduledFromUtc,
-        DateTime? scheduledToUtc,
-        string? note,
-        Guid? createdByUserId) : base(Guid.NewGuid())
+        DateTime? scheduledFromUtc, DateTime? scheduledToUtc,
+        string? note, Guid? createdByUserId) : base(Guid.NewGuid())
     {
         if (orderId == Guid.Empty)
             throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderIsNotFound");
@@ -34,7 +31,6 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
         CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
         IsActive = true;
-        _items = [];
 
         SetWindow(scheduledFromUtc, scheduledToUtc);
         SetNote(note);
@@ -42,19 +38,26 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
 
     public Guid OrderId { get; private set; }
     public string OrderCode { get; private set; }
+
+    private readonly List<OrderFulfillmentScheduleItem> _items = [];
+    public IReadOnlyCollection<OrderFulfillmentScheduleItem> Items => _items.AsReadOnly();
+
     public DateTime? ScheduledFromUtc { get; private set; }
     public DateTime? ScheduledToUtc { get; private set; }
+
     public OrderFulfillmentScheduleMode Mode { get; private set; }
+
     public string? Note { get; private set; }
     public bool IsActive { get; private set; }
+
     public Guid? CreatedByUserId { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
+
     public DateTime? InactivatedOnUtc { get; private set; }
     public Guid? InactivatedByUserId { get; private set; }
 
-    private readonly List<OrderFulfillmentScheduleItem> _items;
-    public IReadOnlyCollection<OrderFulfillmentScheduleItem> Items => _items.AsReadOnly();
+    #region Methods
 
     internal void SetWindow(DateTime? scheduledFromUtc, DateTime? scheduledToUtc)
     {
@@ -85,22 +88,12 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
     {
         ArgumentNullException.ThrowIfNull(items);
 
-        var newItems = items.ToList();
-        if (newItems.Count == 0)
-            throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderFulfillmentScheduleItemRequired");
-
-        foreach (var item in newItems)
-        {
-            if (item.OrderItemId == Guid.Empty)
-                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderItemIsNotFound");
-            if (item.ProductId == Guid.Empty)
-                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.ProductIsNotFound");
-            if (item.Quantity <= 0)
-                throw new OrderFulfillmentScheduleDataIsInvalidException("Error.OrderFulfillmentScheduleQuantityMustBePositive");
-        }
-
         _items.Clear();
-        foreach (var item in newItems)
+
+        if (!items.Any())
+            return;
+
+        foreach (var item in items)
         {
             _items.Add(new OrderFulfillmentScheduleItem(
                 Id,
@@ -127,4 +120,6 @@ public sealed record OrderFulfillmentSchedule : AppAggregateEntity
         InactivatedByUserId = inactivatedByUserId;
         UpdatedOnUtc = DateTime.UtcNow;
     }
+
+    #endregion
 }

@@ -1017,4 +1017,16 @@
   <data name="Error.RetailWalkInCustomerMustPrepay" xml:space="preserve">
     <value>Retail-walk-in customer must be prepay for order</value>
   </data>
+  <data name="Error.AfterDiscountOrderTotalCannotBeLessThanPaidAmount" xml:space="preserve">
+    <value>Order total cannot less than be paid amount after discounted</value>
+  </data>
+  <data name="Error.OrderFulfillmentScheduleQuantityExceedsOrderItemQuantity" xml:space="preserve">
+    <value>Order fulfillment schedule quantity exceeds order item quantity</value>
+  </data>
+  <data name="Error.OrderFulfillmentScheduleIsNotFound" xml:space="preserve">
+    <value>Order fulfillment schedule is not found</value>
+  </data>
+  <data name="Error.CannotEditInactiveSchedule" xml:space="preserve">
+    <value>Cannot edit inactive schedule</value>
+  </data>
 </root>

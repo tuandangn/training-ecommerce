@@ -106,9 +106,10 @@ public sealed class GetOrderFulfillmentSchedulesByOrderHandler(IOrderFulfillment
     : IRequestHandler<GetOrderFulfillmentSchedulesByOrderQuery, IList<OrderFulfillmentScheduleModel>>
 {
     public async Task<IList<OrderFulfillmentScheduleModel>> Handle(GetOrderFulfillmentSchedulesByOrderQuery request, CancellationToken cancellationToken)
-        => (await appService.GetByOrderIdAsync(request.OrderId).ConfigureAwait(false))
-            .Select(ToModel)
-            .ToList();
+    {
+        var schedules = await appService.GetByOrderIdAsync(request.OrderId, true).ConfigureAwait(false);
+        return schedules.Select(ToModel).ToList();
+    }
 
     private static OrderFulfillmentScheduleModel ToModel(OrderFulfillmentScheduleAppDto schedule)
         => new(schedule.Id)

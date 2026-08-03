@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.FastSales;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
@@ -24,6 +25,7 @@ public sealed class QuickCreateOrderHandler(IQuickCreateOrderAppService fastSale
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
             DeliveryNow = request.DeliveryNow,
+            ExpectedShippingDateUtc = request.DeliveryNow ? null : DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate),
             ShippingAddress = request.ShippingAddress,
             ShippingPhoneNumber = request.ShippingPhoneNumber
         }).ConfigureAwait(false);

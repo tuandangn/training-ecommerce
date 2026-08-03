@@ -49,8 +49,9 @@ public sealed class QuickCreateOrderAppService(
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
             ShippingAddress = dto.ShippingAddress,
+            ExpectedShippingDateUtc = dto.DeliveryNow ? null : dto.ExpectedShippingDateUtc,
             ShippingPhoneNumber = dto.ShippingPhoneNumber,
-            SkipScheduling = dto.DeliveryNow,
+            SkipScheduling = dto.DeliveryNow || customer.IsRetailWalkIn(),
             RequiresPayOff = dto.DeliveryNow
         };
         foreach (var item in dto.Items)

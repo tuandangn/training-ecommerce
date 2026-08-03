@@ -53,7 +53,8 @@ public static class OrderFulfillmentScheduleExtensions
             ScheduledToUtc = dto.ScheduledToUtc,
             Mode = (OrderFulfillmentScheduleMode)dto.Mode,
             Note = dto.Note,
-            Items = dto.Items.Select(ToDomainItemDto).ToList()
+            Items = dto.Items.Select(ToDomainItemDto).ToList(),
+            IsActive = dto.IsActive
         };
 
     private static CreateOrderFulfillmentScheduleItemDto ToDomainItemDto(OrderFulfillmentScheduleItemInputAppDto item)

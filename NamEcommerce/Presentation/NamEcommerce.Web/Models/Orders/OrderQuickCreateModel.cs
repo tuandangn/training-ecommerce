@@ -24,6 +24,9 @@ public sealed class OrderQuickCreateModel
 
     public IList<QuickCreateOrderItemModel> Items { get; set; } = [];
 
+    [Display(Name = "Ngày giao dự kiến")]
+    public DateTime? ExpectedShippingDate { get; set; }
+
     [Display(Name = "Địa chỉ")]
     public string? ShippingAddress { get; set; }
 
@@ -40,15 +43,6 @@ public sealed class OrderQuickCreateModel
     [ValidateNever]
     public bool ManualBankTransferConfirmEnabled { get; set; }
 }
-
-[Serializable]
-public sealed class OrderQuickCreateCompleteModel
-{
-    public Guid OrderId { get; set; }
-    public decimal PaidAmount { get; set; }
-    public Guid? PaymentIntentId { get; set; }
-}
-
 
 [Serializable]
 public sealed class QuickCreateOrderItemModel

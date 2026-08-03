@@ -1,16 +1,19 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
-using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Services.OrderFulfillment;
 
 namespace NamEcommerce.Web.Controllers;
 
 [Authorize(Policy = SystemPermissions.Orders.View)]
-public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfillmentModelFactory orderFulfillmentModelFactory) : BaseAuthorizedController
+public sealed class OrderFulfillmentController(
+    IMediator mediator, IOrderFulfillmentModelFactory orderFulfillmentModelFactory,
+    IOrderFulfillmentScheduleAppService orderFulfillmentScheduleAppService) : BaseAuthorizedController
 {
     public async Task<IActionResult> Index(OrderFulfillmentBoardSearchModel search)
     {
@@ -39,7 +42,7 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     public async Task<IActionResult> CreateSchedule(OrderFulfillmentScheduleInputModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = GetErrorMessage() });
+            return this.JsonError(GetErrorMessage());
 
         var result = await mediator.Send(new CreateOrderFulfillmentScheduleCommand
         {
@@ -51,7 +54,9 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
             Items = model.Items.Select(ToCommandItem).ToList()
         });
 
-        return ToJson(result);
+        if (result.Success)
+            return this.JsonOk();
+        return this.JsonError(result.ErrorMessage!);
     }
 
     [HttpPost]
@@ -59,9 +64,13 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     public async Task<IActionResult> UpdateSchedule(OrderFulfillmentScheduleInputModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = GetErrorMessage() });
+            return this.JsonError(GetErrorMessage());
         if (!model.Id.HasValue)
-            return Json(new { success = false, message = LocalizeError("Error.OrderFulfillmentScheduleIsNotFound") });
+            return this.JsonError(LocalizeError("Error.OrderFulfillmentScheduleIsNotFound"));
+
+        var schedule = await orderFulfillmentScheduleAppService.GetByIdAsync(model.Id.Value);
+        if (schedule is null)
+            return this.JsonError(LocalizeError("Error.OrderFulfillmentScheduleIsNotFound"));
 
         var result = await mediator.Send(new UpdateOrderFulfillmentScheduleCommand
         {
@@ -74,7 +83,9 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
             Items = model.Items.Select(ToCommandItem).ToList()
         });
 
-        return ToJson(result);
+        if (result.Success)
+            return this.JsonOk();
+        return this.JsonError(result.ErrorMessage!);
     }
 
     [HttpPost]
@@ -82,7 +93,10 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     public async Task<IActionResult> SetScheduleActive(Guid id, bool isActive)
     {
         var result = await mediator.Send(new SetOrderFulfillmentScheduleActiveCommand(id, isActive));
-        return ToJson(result);
+
+        if (result.Success)
+            return this.JsonOk();
+        return this.JsonError(result.ErrorMessage!);
     }
 
     [HttpPost]
@@ -90,13 +104,11 @@ public sealed class OrderFulfillmentController(IMediator mediator, IOrderFulfill
     public async Task<IActionResult> DeleteSchedule(Guid id)
     {
         var result = await mediator.Send(new DeleteOrderFulfillmentScheduleCommand(id));
-        return ToJson(result);
-    }
 
-    private IActionResult ToJson(CommonActionResultModel result)
-        => Json(result.Success
-            ? new { success = true, message = LocalizeError(result.SuccessMessage ?? "Msg.SaveSuccess") }
-            : new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
+        if (result.Success)
+            return this.JsonOk();
+        return this.JsonError(result.ErrorMessage!);
+    }
 
     private static OrderFulfillmentScheduleItemCommand ToCommandItem(OrderFulfillmentScheduleItemInputModel item)
         => new()

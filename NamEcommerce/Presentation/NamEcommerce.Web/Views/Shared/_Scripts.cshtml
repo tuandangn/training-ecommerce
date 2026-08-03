@@ -93,7 +93,6 @@
                 },
                 onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
-                    if (selectedDates.length) instance.close();
                 }
             });
         }

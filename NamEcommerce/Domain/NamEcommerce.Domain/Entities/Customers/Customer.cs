@@ -30,6 +30,12 @@ public sealed record Customer : AppAggregateEntity
 
     public DateTime CreatedOnUtc { get; init; }
 
+    #region Methods
+
+    public bool IsRetailWalkIn() => Kind == CustomerKind.RetailWalkIn;
+
+    #endregion
+
     #region Events
 
     internal void MarkCreated()

@@ -23,8 +23,6 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     public Expression<Func<T, object>>? OrderBy { get; private set; }
     public Expression<Func<T, object>>? OrderByDescending { get; private set; }
 
-    public void AddInclude(Expression<Func<T, object>> include)
-        => Includes.Add(include);
     public void ApplyOrderBy(Expression<Func<T, object>> orderBy)
         => OrderBy = orderBy;
     public void ApplyOrderByDescending(Expression<Func<T, object>> orderByDesc)

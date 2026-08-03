@@ -1,3 +1,4 @@
+@using System.Globalization
 @model OrderFulfillmentSchedulePanelModel
 
 <div class="modal fade" id="fulfillmentScheduleModal" tabindex="-1" aria-hidden="true">
@@ -20,45 +21,56 @@
                                 <option value="@((int)OrderFulfillmentScheduleMode.NotBeforeDate)">Không trước ngày</option>
                                 <option value="@((int)OrderFulfillmentScheduleMode.WhenStockAvailable)">Khi có hàng</option>
                             </select>
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="Mode" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12 col-md-4" data-schedule-date-field>
                             <label class="form-label" for="fulfillmentScheduleFrom">Bắt đầu</label>
-                            <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày bắt đầu" />
+                            <input id="fulfillmentScheduleFrom" name="ScheduledFromUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày bắt đầu" 
+                                data-val="true" data-val-required="Vui lòng nhập ngày bắt đầu" />
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="ScheduledFromUtc" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12 col-md-4" data-schedule-date-field>
                             <label class="form-label" for="fulfillmentScheduleTo">Kết thúc</label>
-                            <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày kết thúc"/>
+                            <input id="fulfillmentScheduleTo" name="ScheduledToUtc" type="datetime-local" class="form-control" placeholder="Nhập ngày kết thúc" />
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="ScheduledToUtc" data-valmsg-replace="true"></span>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="fulfillmentScheduleNote">Ghi chú</label>
                             <textarea id="fulfillmentScheduleNote" name="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="Note" data-valmsg-replace="true"></span>
                         </div>
                     </div>
-
                     <div class="table-responsive mt-3">
                         <table class="table data-table mb-0">
                             <thead>
                                 <tr>
                                     <th>Hàng hóa</th>
-                                    <th class="text-end">SL đơn</th>
-                                    <th class="text-end">SL lên lịch</th>
+                                    <th class="text-end">Đơn đặt</th>
+                                    <th class="text-end">Số lượng xử lý</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var item in Model.AvailableItems)
+                                @for (var index = 0; index < Model.AvailableItems.Count; index++)
                                 {
-                                    <tr class="fulfillment-schedule-item"
-                                        data-order-item-id="@item.OrderItemId"
-                                        data-product-id="@item.ProductId"
-                                        data-product-name="@item.ProductName">
-                                        <td class="fw-600">@item.ProductName</td>
-                                        <td class="text-end">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
+                                    var item = Model.AvailableItems[index];
+                                    <tr class="fulfillment-schedule-item" data-order-item-id="@item.OrderItemId" data-product-id="@item.ProductId" data-product-name="@item.ProductName">
+                                        <td class="fw-600">
+                                            @item.ProductName
+                                        </td>
                                         <td class="text-end">
-                                            <input type="text" placeholder="Nhập số lượng"
-                                                   class="form-control form-control-sm text-end schedule-item-quantity"
-                                                   data-decimal="quantity" inputmode="decimal"
-                                                   data-decimals="@item.QuantityDecimalPlaces"
-                                                   autocomplete="off" />
+                                            @item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end align-items-center">
+                                                <input type="text" placeholder="Nhập số lượng" name="ScheduledItems[@index].Quantity"
+                                                       class="form-control w-auto form-control-sm text-end schedule-item-quantity"
+                                                       data-decimal="quantity" inputmode="decimal"
+                                                       data-decimals="@item.QuantityDecimalPlaces"
+                                                       data-val="true" data-val-range="Số lượng phải nhỏ hơn @item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)"
+                                                       data-val-range-min="0" data-val-range-max="@item.Quantity.ToString(CultureInfo.InvariantCulture)"
+                                                       autocomplete="off" />
+                                            </div>
+                                            <span class="small text-danger field-validation-valid d-block" data-valmsg-for="ScheduledItems[@index].Quantity" data-valmsg-replace="true"></span>
                                         </td>
                                     </tr>
                                 }

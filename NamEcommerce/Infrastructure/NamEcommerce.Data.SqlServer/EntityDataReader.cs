@@ -45,7 +45,16 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public async Task<bool> AnyAsync(ISpecification<TEntity> spec)
         => await DataSource.AnyAsync(spec.Criteria).ConfigureAwait(false);
 
-    public IQueryable<TEntity> SecuredDataSource => ((NamEcommerceEfDbContext)_dbContext).Set<TEntity>().IgnoreQueryFilters().AsNoTracking();
+    public IQueryable<TEntity> SecuredDataSource
+    {
+        get
+        {
+            if (_dbContext is NamEcommerceEfDbContext efDbContext)
+                return efDbContext.Set<TEntity>().IgnoreQueryFilters();
+
+            return DataSource;
+        }
+    }
 
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _dbContext.GetDataAsync<TEntity>();
