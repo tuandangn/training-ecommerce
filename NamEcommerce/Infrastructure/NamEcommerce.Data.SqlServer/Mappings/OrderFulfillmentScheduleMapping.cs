@@ -1,4 +1,3 @@
-using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;

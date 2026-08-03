@@ -8,6 +8,8 @@ public sealed class GetOrderListQuery : IRequest<OrderListModel>
 {
     public string? Keywords { get; init; }
     public int? Status { get; init; }
+    public bool? IsPaymentRequired { get; set; }
+
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
 }

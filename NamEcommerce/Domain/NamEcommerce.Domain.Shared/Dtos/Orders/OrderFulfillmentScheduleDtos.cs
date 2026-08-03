@@ -4,17 +4,6 @@ using NamEcommerce.Domain.Shared.Exceptions.Orders;
 namespace NamEcommerce.Domain.Shared.Dtos.Orders;
 
 [Serializable]
-public sealed record OrderFulfillmentScheduleItemDto(Guid Id)
-{
-    public required Guid OrderFulfillmentScheduleId { get; init; }
-    public required Guid OrderItemId { get; init; }
-    public required Guid ProductId { get; init; }
-    public required string ProductName { get; init; }
-    public required decimal Quantity { get; init; }
-    public required DateTime CreatedOnUtc { get; init; }
-}
-
-[Serializable]
 public sealed record OrderFulfillmentScheduleDto(Guid Id)
 {
     public required Guid OrderId { get; init; }
@@ -30,6 +19,17 @@ public sealed record OrderFulfillmentScheduleDto(Guid Id)
     public DateTime? InactivatedOnUtc { get; init; }
     public Guid? InactivatedByUserId { get; init; }
     public IList<OrderFulfillmentScheduleItemDto> Items { get; init; } = [];
+
+    [Serializable]
+    public sealed record OrderFulfillmentScheduleItemDto(Guid Id)
+    {
+        public required Guid OrderFulfillmentScheduleId { get; init; }
+        public required Guid OrderItemId { get; init; }
+        public required Guid ProductId { get; init; }
+        public required string ProductName { get; init; }
+        public required decimal Quantity { get; init; }
+        public required DateTime CreatedOnUtc { get; init; }
+    }
 }
 
 [Serializable]
@@ -98,8 +98,9 @@ public sealed record UpdateOrderFulfillmentScheduleDto(Guid Id)
     public DateTime? ScheduledFromUtc { get; init; }
     public DateTime? ScheduledToUtc { get; init; }
     public required OrderFulfillmentScheduleMode Mode { get; init; }
+    public required IList<CreateOrderFulfillmentScheduleItemDto> Items { get; init; }
     public string? Note { get; init; }
-    public IList<CreateOrderFulfillmentScheduleItemDto> Items { get; init; } = [];
+    public bool? IsActive { get; set; }
 
     public void Verify()
     {

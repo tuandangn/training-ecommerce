@@ -6,7 +6,6 @@ namespace NamEcommerce.Domain.Specifications.Orders;
 
 [Serializable]
 public sealed class MatchedShippingAddressOrderSpec(KeywordFilter filter)
-    : BaseSpecification<Order>(order => order.ShippingAddress != null 
-        && order.ShippingAddress.Value.ToUpper().Contains(filter.UppercaseKeywords)
+    : BaseSpecification<Order>(order => order.ShippingAddress.Value.ToUpper().Contains(filter.UppercaseKeywords)
         || order.ShippingAddress.Value.ToUpper().Contains(filter.NormalizedKeywords)
         || order.ShippingAddress.NormalizedValue.Contains(filter.NormalizedKeywords));

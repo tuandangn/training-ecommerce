@@ -36,9 +36,7 @@ public class GlobalExceptionFilter : IExceptionFilter
 
             // If it's an AJAX request expecting JSON
             var request = context.HttpContext.Request;
-            bool isAjax = request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
-                          request.Headers["Accept"].ToString().Contains("application/json");
-
+            var isAjax = request.IsAjaxRequest();
             if (isAjax)
             {
                 // Trả về theo chuẩn JsonNotificationResult — ajax-helper.js sẽ tự render notification

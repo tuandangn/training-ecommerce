@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.CustomerPortal;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
@@ -18,7 +20,8 @@ public sealed class CustomerPortalManager(
     IRepository<CustomerReturnRequest> returnRequestRepository,
     IEntityDataReader<CustomerReturnRequest> returnRequestReader,
     IRepository<CustomerPaymentIntent> paymentIntentRepository,
-    IEntityDataReader<CustomerPaymentIntent> paymentIntentReader) : ICustomerPortalManager
+    IEntityDataReader<CustomerPaymentIntent> paymentIntentReader,
+    EntityCodeGenerator entityCodeGenerator) : ICustomerPortalManager
 {
     public async Task<CustomerDeliveryFeedbackDto> CreateDeliveryFeedbackAsync(CreateCustomerDeliveryFeedbackDto dto)
     {
@@ -95,7 +98,8 @@ public sealed class CustomerPortalManager(
     {
         dto.Verify();
 
-        var request = new CustomerOrderRequest(dto.CustomerId, GenerateOrderRequestCode())
+        var code = await GenerateOrderRequestCode().ConfigureAwait(false);
+        var request = new CustomerOrderRequest(dto.CustomerId, code)
         {
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
             ShippingAddress = dto.ShippingAddress,
@@ -333,11 +337,10 @@ public sealed class CustomerPortalManager(
         await paymentIntentRepository.UpdateAsync(intent).ConfigureAwait(false);
     }
 
-    private string GenerateOrderRequestCode()
+    private Task<string> GenerateOrderRequestCode()
     {
-        var monthPrefix = $"YC-DH-{DateTime.UtcNow:yyMM}";
-        var count = orderRequestReader.SecuredDataSource.Count(request => request.Code.StartsWith(monthPrefix));
-        return $"{monthPrefix}-{(count + 1):D3}";
+        var prefix = $"YC-DH-{DateTime.UtcNow:yyMM}";
+        return entityCodeGenerator.NextAsync(prefix, () => orderRequestReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private static CustomerDeliveryFeedbackDto MapToDto(CustomerDeliveryFeedback feedback)

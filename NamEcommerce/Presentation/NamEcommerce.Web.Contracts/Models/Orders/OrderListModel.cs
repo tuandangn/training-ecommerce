@@ -6,6 +6,7 @@ public sealed class OrderListModel
 {
     public string? Keywords { get; init; }
     public int? Status { get; set; }
+    public bool IsWaitingPayment { get; set; }
 
     public required IPagedDataModel<OrderModel> Data { get; init; }
 

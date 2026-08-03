@@ -10,6 +10,7 @@ public sealed record QuickCreateOrderAppDto
 
     public bool DeliveryNow { get; init; }
 
+    public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? ShippingAddress { get; set; }
     public string? ShippingPhoneNumber { get; set; }
 

@@ -67,8 +67,9 @@ public sealed record UpdateOrderFulfillmentScheduleAppDto(Guid Id)
     public DateTime? ScheduledFromUtc { get; init; }
     public DateTime? ScheduledToUtc { get; init; }
     public required int Mode { get; init; }
+    public required IList<OrderFulfillmentScheduleItemInputAppDto> Items { get; init; }
     public string? Note { get; init; }
-    public IList<OrderFulfillmentScheduleItemInputAppDto> Items { get; init; } = [];
+    public bool? IsActive { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {

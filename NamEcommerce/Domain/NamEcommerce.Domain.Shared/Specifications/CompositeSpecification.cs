@@ -23,8 +23,6 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     public Expression<Func<T, object>>? OrderBy { get; private set; }
     public Expression<Func<T, object>>? OrderByDescending { get; private set; }
 
-    public void AddInclude(Expression<Func<T, object>> include)
-        => Includes.Add(include);
     public void ApplyOrderBy(Expression<Func<T, object>> orderBy)
         => OrderBy = orderBy;
     public void ApplyOrderByDescending(Expression<Func<T, object>> orderByDesc)
@@ -36,7 +34,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.And(right.Criteria);
+        else
+            currentCriteria = currentCriteria.And(right.Criteria);
 
         return this;
     }
@@ -44,7 +43,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.AndNot(right.Criteria);
+        else
+            currentCriteria = currentCriteria.AndNot(right.Criteria);
 
         return this;
     }
@@ -52,7 +52,8 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
-        currentCriteria = currentCriteria.Or(right.Criteria);
+        else
+            currentCriteria = currentCriteria.Or(right.Criteria);
 
         return this;
     }

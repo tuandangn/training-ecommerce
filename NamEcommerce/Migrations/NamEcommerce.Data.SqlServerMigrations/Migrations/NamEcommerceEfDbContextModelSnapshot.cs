@@ -5653,7 +5653,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasOne("NamEcommerce.Domain.Entities.Orders.OrderItem", null)
                         .WithMany()
                         .HasForeignKey("OrderItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

@@ -23,8 +23,12 @@ public sealed record OrderFulfillmentScheduleItem : AppEntity
 
     public Guid OrderFulfillmentScheduleId { get; private set; }
     public Guid OrderItemId { get; private set; }
+
     public Guid ProductId { get; private set; }
     public string ProductName { get; private set; }
+
     public decimal Quantity { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
+
+    public void Update(decimal quantity) => Quantity = quantity;
 }

@@ -1200,7 +1200,7 @@ body {
         }
 
         .data-table tbody td .btn-table-action + .btn-table-action {
-            margin-left: 0.25rem;
+            /*margin-left: 0.25rem;*/
         }
 
     .data-table tbody tr:last-child td {

@@ -26,7 +26,9 @@ using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Specifications;
 using NamEcommerce.Domain.Specifications.Customers;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
 using NamEcommerce.Domain.Specifications.Orders;
+using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -41,8 +43,6 @@ public sealed class OrderManager(
     IInventoryStockManager stockManager,
     ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator entityCodeGenerator,
-    IEntityDataReader<OrderFulfillmentSchedule> scheduleDataReader,
-    IRepository<OrderFulfillmentScheduleItem> scheduleItemRepository,
     IBankTransferPaymentIntentManager bankTransferPaymentIntentManager) : IOrderManager
 {
     public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
@@ -65,10 +65,11 @@ public sealed class OrderManager(
         return order.ToDto();
     }
 
-    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status, OrderStatus? notStatus)
-        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : [], notStatus.HasValue ? [notStatus.Value] : []);
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status, OrderStatus? notStatus, bool? isPaymentRequired = null)
+        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : [], notStatus.HasValue ? [notStatus.Value] : [], isPaymentRequired);
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus>? status, IEnumerable<OrderStatus>? notStatus)
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords,
+        IEnumerable<OrderStatus>? status, IEnumerable<OrderStatus>? notStatus, bool? isPaymentRequired = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -76,6 +77,7 @@ public sealed class OrderManager(
         var query = orderDataReader.DataSource;
 
         var specification = new CompositeSpecification<Order>();
+
         if (status != null && status.Any())
             specification = specification.Or(new HaveStatusOrderSpec(status));
         if (notStatus != null && notStatus.Any())
@@ -85,9 +87,17 @@ public sealed class OrderManager(
         {
             specification.Or(new OrderKeywordSearchSpec(keywords));
 
-            var matchedCustomers = await customerDataReader.GetListAsync(new CustomerKeywordSearchSpec(keywords)).ConfigureAwait(false);
-            var customerIds = matchedCustomers.Select(v => v.Id).OfType<Guid?>().ToArray();
+            var customerIds = await customerDataReader.ApplySpecification(new CustomerKeywordSearchSpec(keywords))
+                .Select(c => c.Id).OfType<Guid?>().ToArrayAsync().ConfigureAwait(false);
             specification.Or(new OrdersOfBuyersSpec(customerIds));
+        }
+
+        if (isPaymentRequired.HasValue)
+        {
+            if (isPaymentRequired.Value)
+                specification = specification.And(new IsPaymentRequiredOrderSpec());
+            else
+                specification = specification.AndNot(new IsPaymentRequiredOrderSpec());
         }
 
         specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
@@ -314,20 +324,23 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        var deliveryNoteOrderItems = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                            where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                               && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                            select deliveryNote)
-                                     .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
-                                     .ToListAsync().ConfigureAwait(false);
-        var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
-        var outstandingAllocationQty = await GetOutstandingAllocationQuantityAsync(dto.OrderItemId).ConfigureAwait(false);
+        var orderItem = order.OrderItems.FirstOrDefault(orderItem => orderItem.Id == dto.OrderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException();
+
+        var deliveryNoteItems = await deliveryNoteDataReader.ApplySpecification(new ActiveDeliveryNotesOfOrderItemsSpec(dto.OrderId, [dto.OrderItemId]))
+            .SelectMany(deliveryNote => deliveryNote.Items)
+            .Where(item => item.OrderItemId == dto.OrderItemId)
+            .ToListAsync().ConfigureAwait(false);
+        if (deliveryNoteItems.Any(item => item.UnitPrice != dto.UnitPrice))
+            throw new InvalidOperationException("Updated order item cannot change unit price of items that are already in delivery notes.");
+        var deliveryNoteQty = deliveryNoteItems.Sum(item => item.Quantity);
         if (dto.Quantity < deliveryNoteQty)
             throw new InvalidOperationException("Updated order item quantity cannot less than its delivering quantity.");
+
+        var outstandingAllocationQty = await GetOutstandingAllocationQuantityAsync((dto.OrderId, dto.OrderItemId)).ConfigureAwait(false);
         if (dto.Quantity < deliveryNoteQty + outstandingAllocationQty)
             throw new OrderCannotUpdateOrderItemsException();
-        if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
-            throw new InvalidOperationException("Updated order item cannot change unit price of items that are already in delivery notes.");
 
         var currentItem = order.OrderItems.FirstOrDefault(item => item.Id == dto.OrderItemId);
         if (currentItem is null)
@@ -354,23 +367,12 @@ public sealed class OrderManager(
         if (!order.CanUpdateOrderItems())
             throw new OrderCannotUpdateOrderItemsException();
 
-        var hasOrderItemDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                               where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
-                                                  && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                               select deliveryNote).AnyAsync().ConfigureAwait(false);
+        var hasOrderItemDeliveryNotes = await deliveryNoteDataReader.AnyAsync(new ActiveDeliveryNotesOfOrderItemsSpec(dto.OrderId, [dto.OrderItemId])).ConfigureAwait(false);
         if (hasOrderItemDeliveryNotes)
             throw new OrderCannotUpdateOrderItemsException();
 
         if (await HasReceivedAllocationsAsync(dto.OrderItemId).ConfigureAwait(false))
             throw new OrderCannotUpdateOrderItemsException();
-
-        var scheduleItemsToDelete = await scheduleDataReader.DataSource
-            .Where(s => s.OrderId == order.Id)
-            .SelectMany(s => s.Items)
-            .Where(item => item.OrderItemId == dto.OrderItemId)
-            .ToListAsync().ConfigureAwait(false);
-        foreach (var scheduleItem in scheduleItemsToDelete)
-            await scheduleItemRepository.DeleteAsync(scheduleItem).ConfigureAwait(false);
 
         order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -444,6 +446,10 @@ public sealed class OrderManager(
         return entityCodeGenerator.NextAsync(prefix, () => orderDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
+    private async Task<decimal> GetOutstandingAllocationQuantityAsync(SecondaryItemId orderItemId)
+        => (await allocationDataReader.GetListAsync(new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemId.PrimaryId, [orderItemId.SecondaryId])).ConfigureAwait(false))
+            .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+
     private async Task EnsureAvailableForProductsWithoutVendorAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
     {
         foreach (var itemGroup in items.GroupBy(item => item.ProductId))
@@ -461,12 +467,6 @@ public sealed class OrderManager(
                 throw new InsufficientStockException(itemGroup.Key, Guid.Empty, requestedQuantity, availableQuantity);
         }
     }
-
-    private Task<decimal> GetOutstandingAllocationQuantityAsync(Guid orderItemId)
-        => allocationDataReader.DataSource
-            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId
-                && allocation.Status != AllocationStatus.Cancelled)
-            .SumAsync(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
 
     private Task<bool> HasReceivedAllocationsAsync(Guid orderItemId)
         => allocationDataReader.DataSource

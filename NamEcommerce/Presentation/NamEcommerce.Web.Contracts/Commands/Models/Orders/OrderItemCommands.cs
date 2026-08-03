@@ -9,5 +9,4 @@ public sealed record UpdateOrderItemCommand : ICommand<CommonActionResultModel>
     public required Guid ItemId { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
-    public int QuantityDecimalPlaces { get; init; }
 }

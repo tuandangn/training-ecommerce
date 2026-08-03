@@ -350,8 +350,14 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateInfo") });
 
-        if ((model.OrderDiscount ?? 0) > order.OrderSubTotal)
+        var discountAmount = (model.OrderDiscount ?? 0);
+
+        if (discountAmount > order.OrderSubTotal)
             return Json(new { success = false, message = LocalizeError("Error.OrderDiscountExceedsTotal") });
+
+        var orderTotal = order.OrderSubTotal - discountAmount;
+        if (orderTotal < order.PaidAmount)
+            return Json(new { success = false, message = LocalizeError("Error.AfterDiscountOrderTotalCannotBeLessThanPaidAmount") });
 
         var result = await _mediator.Send(new UpdateOrderDiscountCommand(model.OrderId, model.OrderDiscount));
 
