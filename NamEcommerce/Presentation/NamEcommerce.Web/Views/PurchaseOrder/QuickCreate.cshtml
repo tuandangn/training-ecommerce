@@ -1,6 +1,7 @@
-@model NamEcommerce.Web.Models.PurchaseOrders.QuickCreatePurchaseOrderModel
+@using System.Globalization
+@model PurchaseOrderQuickCreateModel
 @{
-    ViewData["Title"] = "Nhập hàng nhanh";
+    ViewData["Title"] = "Nhập nhanh";
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
@@ -12,147 +13,283 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
                 <li class="breadcrumb-item"><a asp-action="List" asp-controller="PurchaseOrder" class="text-decoration-none">Đơn nhập</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Nhập hàng nhanh</li>
+                <li class="breadcrumb-item active" aria-current="page">Nhập nhanh</li>
             </ol>
         </nav>
     </div>
 }
+@section Styles {
+    <style>
+        .order-item-thumb {
+            height: 40px;
+            object-fit: cover;
+            width: 40px;
+        }
 
+        .nav-tabs .nav-link[disabled],
+        .nav-tabs .nav-link.disabled {
+            cursor: default;
+            color: var(--gray-400);
+            border-bottom: none;
+        }
+    </style>
+}
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
 <div class="row g-3">
-    <div class="col-lg-8">
-        <div class="content-card">
-            <div class="content-card-body-flush border-bottom pt-2">
-                <div class="content-card-header">
-                    <h5>
-                        Thông tin đơn nhập
-                    </h5>
-                </div>
-                <div class="content-card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
-                                <div id="vendorPicker" data-id="" data-name="" data-phone="" data-address=""></div>
-                                <input type="hidden" id="VendorId" name="VendorId" />
-                            </div>
-                            <div>
-                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
-                                <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
-                                <select id="DefaultWarehouseId" class="form-select">
-                                    <option value="">-- Chọn kho --</option>
-                                    @foreach (var w in Model.AvailableWarehouses)
-                                    {
-                                        <option value="@w.Id">@w.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div>
-                                <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
-                                <input asp-for="Note" id="Note" class="form-control" placeholder="Ghi chú đơn nhập" />
-                            </div>
-                        </div>
+    <div class="col-xl-8">
+        <form method="post" asp-antiforgery="true" id="purchaseOrderQuickCreateForm">
+            <div class="content-card">
+                <div class="content-card-body-flush border-bottom pt-2">
+                    <div class="content-card-header">
+                        <h5>
+                            Thông tin đơn nhập
+                        </h5>
                     </div>
-                </div>
-            </div>
-            <div class="content-card-body-flush">
-                <div class="content-card-header">
-                    <h5 class="mb-0">Danh sách hàng hóa</h5>
-                    <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
-                            data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
-                        <i class="bi bi-plus-lg me-1"></i>Thêm hàng
-                    </button>
-                </div>
-                <div class="alert alert-warning mb-0 d-none notHasAppropriatedVendorWarning">
-                    <span class="fw-bold d-block">Không có nhà cung cấp nào phù hợp cho tất cả hàng hóa đã chọn.</span>
-                    Nếu muốn nhập hàng từ nhiều nhà cung cấp vui lòng tạo nhiều đơn nhập tương ứng.
-                </div>
-                <div class="table-responsive">
-                    <table class="table data-table mb-0">
-                        <thead class="d-none d-md-table-header-group">
-                            <tr>
-                                <th class="ps-3">Sản phẩm</th>
-                                <th class="ui-w-110">Số lượng</th>
-                                <th class="ui-w-140">Đơn giá nhập</th>
-                                <th class="text-end ui-w-130">Thành tiền</th>
-                                <th class="ui-w-40"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemsBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="content-card-footer bg-white py-2">
-                <div class="order-summary" id="tableFooter">
-                    <div class="order-summary-row total border-top-0 pt-0 mt-0">
-                        <span class="label">Tổng cộng</span>
-                        <span class="value">
-                            <span id="orderTotal">0 đ</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="content-card-footer">
-                <div class="d-flex flex-column gap-3">
-                    <div class="d-flex align-items-start gap-3 w-100 flex-wrap justify-content-between mb-3">
-                        <div class="d-flex align-items-center justify-content-start">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="receiveImmediately" checked role="switch" />
-                            </div>
-                            <label class="fw-medium" for="receiveImmediately">Đã nhận hàng</label>
-                        </div>
-                        <div id="paymentSection">
-                            <div class="d-flex align-items-center justify-content-start">
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" id="isPaid" role="switch" />
+                    <div class="content-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block">Ngày đặt</label>
+                                    <input type="datetime-local" asp-for="PlacedOn" class="form-control" value="@Model.PlacedOn.ToString("s")"
+                                           data-val-range-max="@DateTime.Now.ToString("s")" placeholder="Ngày đặt hàng" />
+                                    <span asp-validation-for="PlacedOn" class="small text-danger"></span>
                                 </div>
-                                <label class="fw-medium" for="isPaid">Đã thanh toán công nợ</label>
+                                <div>
+                                    <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
+                                    <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone"
+                                         data-address="@Model.VendorAddress" data-empty="@(Model.NotHasAppropriatedVendor ? "true" : "false")"
+                                         data-limit="@string.Join(',', Model.ValidVendorIds)"></div>
+                                    <input id="VendorId" asp-for="VendorId" class="visually-hidden" />
+                                    <span asp-validation-for="VendorId" class="small text-danger"></span>
+                                </div>
                             </div>
-
-                            <div id="paymentFields" class="d-none">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted text-uppercase">Số tiền thanh toán</label>
-                                        <div class="input-group">
-                                            <input type="text" id="paymentAmount" class="form-control" data-decimal="currency" placeholder="0" inputmode="numeric"/>
-                                            <span class="input-group-text">đ</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted text-uppercase">Hình thức thanh toán</label>
-                                        <select id="paymentMethod" class="form-select">
-                                            <option value="0">Tiền mặt</option>
-                                            <option value="1">Chuyển khoản</option>
-                                            <option value="3">Khác</option>
-                                        </select>
-                                    </div>
+                            <div class="col-sm-6">
+                                <div>
+                                    <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
+                                    <textarea asp-for="Note" id="Note" class="form-control" placeholder="Nhập ghi chú" rows="4"></textarea>
+                                    <span asp-validation-for="Note" class="small text-danger"></span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center justify-content-between">
-                        <a asp-action="List" class="btn btn-outline-secondary text-decoration-none btn-sm">
-                            <i class="bi bi-arrow-left"></i>
-                            Trở về
-                        </a>
-                        <button type="button" id="btnSubmit" class="btn btn-primary fw-bold py-2">
-                            <i class="bi bi-check-circle me-1"></i>Lưu đơn nhập
+                </div>
+                <div class="content-card-body-flush">
+                    <div class="content-card-header">
+                        <h5 class="mb-0">Danh sách hàng hóa</h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
+                                data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm hàng
                         </button>
                     </div>
+                    <div class="alert alert-warning mb-0 @(Model.NotHasAppropriatedVendor ? "" : "d-none") notHasAppropriatedVendorWarning">
+                        <span class="fw-bold d-block">Không có nhà cung cấp nào phù hợp cho tất cả hàng hóa đã chọn.</span>
+                        Nếu muốn nhập hàng từ nhiều nhà cung cấp vui lòng tạo nhiều đơn nhập tương ứng.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table data-table mb-0">
+                            <thead class="d-md-table-header-group">
+                                <tr>
+                                    <th class="ps-3">Sản phẩm</th>
+                                    <th class="text-end d-none d-lg-table-cell">Số lượng</th>
+                                    <th class="text-end d-none d-lg-table-cell">Đơn giá nhập</th>
+                                    <th class="text-end d-table-cell d-lg-none d-xl-table-cell">Thành tiền</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody">
+                                @for (var i = 0; i < Model.Items.Count; i++)
+                                {
+                                    var item = Model.Items[i];
+                                    <tr data-row-idx="@i">
+                                        <td class="ps-3 align-middle">
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
+                                                {
+                                                    <img src="@item.ProductDisplayPicture" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="@item.ProductDisplayName" />
+                                                }
+                                                <div>
+                                                    <div class="fw-medium product-name">@item.ProductDisplayName</div>
+                                                    <div class="d-xl-none">
+                                                        <div class="text-muted small">
+                                                            @item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces) x @item.UnitCost.DisplayCurrencyWithSymbol()
+                                                        </div>
+                                                        <span class="small text-danger" asp-validation-for="Items[@i].Quantity"></span>
+                                                        <span class="small text-danger" asp-validation-for="Items[@i].UnitCost"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="text" class="visually-hidden product-id" name="Items[@i].ProductId" value="@item.ProductId"
+                                                   data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                                            <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@(item.QuantityDecimalPlaces)" class="quantityDecimalPlaces" />
+                                            <input type="hidden" class="row-qty" name="Items[@i].Quantity" value="@item.Quantity?.ToString(CultureInfo.InvariantCulture)"
+                                                   data-val="true" data-val-required="Vui lòng nhập số lượng."
+                                                   data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.001"
+                                                   data-val-number="Số lượng không đúng." />
+                                            <input type="hidden" class="row-price" name="Items[@i].UnitCost" value="@item.UnitCost?.ToString(CultureInfo.InvariantCulture)"
+                                                   data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                                                   data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                                                   data-val-number="Đơn giá phải là số" />
+                                            <span class="small text-danger" asp-validation-for="Items[@i].ProductId"></span>
+                                            @if (item.AvailableVendors.Any())
+                                            {
+                                                <script type="application/json" class="available-vendors">@Html.Raw(Json.Serialize(item.AvailableVendors))</script>
+                                            }
+                                        </td>
+                                        <td class="text-center align-middle d-none d-lg-table-cell">
+                                            <span class="fw-medium">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</span>
+                                            <span class="small text-danger" asp-validation-for="Items[@i].Quantity"></span>
+                                        </td>
+                                        <td class="text-end align-middle d-none d-lg-table-cell">
+                                            <span class="text-muted">@item.UnitCost.DisplayCurrencyWithSymbol()</span>
+                                            <span class="small text-danger" asp-validation-for="Items[@i].UnitCost"></span>
+                                        </td>
+                                        <td class="text-end align-middle d-table-cell d-lg-none d-xl-table-cell">
+                                            <span class="fw-bold text-primary text-nowrap">@item.SubTotal.DisplayCurrencyWithSymbol()</span>
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" data-del-idx="@i">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyItems" class="py-4 text-center text-muted small" style="@(Model.Items.Count > 0 ? "display:none" : "display:block")">
+                        Chưa có hàng hóa
+                        <div class="mt-1">
+                            <span asp-validation-for="Items" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card-footer bg-white py-2">
+                    <div class="order-summary" id="tableFooter">
+                        <div class="order-summary-row total border-top-0 pt-0 mt-0">
+                            <span class="label">Tổng cộng</span>
+                            <span class="value">
+                                <span id="orderTotal">0 đ</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card-body">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-3 mb-0">
+                                <label class="form-label small fw-bold text-muted text-uppercase" asp-for="IsReceived" for="@Html.IdFor(m => m.IsReceived)_notReceived">Nhận hàng</label>
+                                <nav>
+                                    <div class="nav nav-tabs" role="tablist">
+                                        <input type="radio" class="btn-check" asp-for="IsReceived" id="@Html.IdFor(m => m.IsReceived)_notReceived" value="false" autocomplete="off" checked="@(!Model.IsReceived)" />
+                                        <label for="@Html.IdFor(m => m.IsReceived)_notReceived" class="nav-link @(Model.Items.Count == 0 ? "disabled" : "")"
+                                               data-bs-toggle="tab" data-bs-target="#navNotDelivered" type="button" role="tab"
+                                               aria-controls="navNotDelivered" aria-selected="false" id="quickCreateNotDelivered">
+                                            Chưa nhận
+                                        </label>
+                                        <input type="radio" class="btn-check" asp-for="IsReceived" id="@Html.IdFor(m => m.IsReceived)_received" value="true" autocomplete="off" checked="@Model.IsReceived" />
+                                        <label for="@Html.IdFor(m => m.IsReceived)_received" class="nav-link @(Model.Items.Count == 0 ? "disabled" : "")"
+                                               data-bs-toggle="tab" data-bs-target="#navDelivered" type="button" role="tab"
+                                               aria-controls="navDelivered" aria-selected="false" id="quickCreateDelivered">
+                                            Đã nhận
+                                        </label>
+                                    </div>
+                                </nav>
+                            </div>
+                            <span class="text-danger small" asp-validation-for="IsReceived"></span>
+                            <div class="tab-content" id="navShippingContent">
+                                <div class="tab-pane fade" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                </div>
+                                <div class="tab-pane fade border rounded p-3" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
+                                    <div class="row g-3">
+                                        <div class="col-md-12 col-lg-6">
+                                            <label asp-for="ReceivedOn" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                                Ngày nhận
+                                            </label>
+                                            <input type="datetime-local" asp-for="ReceivedOn" class="form-control text-sm" placeholder="Ngày nhận" data-val-range-max="@DateTime.Now.ToString("s")" />
+                                            <span asp-validation-for="ReceivedOn" class="small text-danger"></span>
+                                        </div>
+                                        <div class="col-md-12 col-lg-6">
+                                            <label asp-for="DefaultWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
+                                            <select asp-for="DefaultWarehouseId" class="form-select">
+                                                <option value="">-- Chọn kho --</option>
+                                                @foreach (var w in Model.AvailableWarehouses)
+                                                {
+                                                    <option value="@w.Id">@w.Name</option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="DefaultWarehouseId" class="small text-danger"></span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-3 mb-0">
+                                <label class="form-label small fw-bold text-muted text-uppercase" asp-for="IsPaid" for="@Html.IdFor(m => m.IsPaid)_unpaid">Thanh toán</label>
+                                <nav>
+                                    <div class="nav nav-tabs" role="tablist">
+                                        <input type="radio" class="btn-check" asp-for="IsPaid" id="@Html.IdFor(m => m.IsPaid)_unpaid" value="false" autocomplete="off" checked="@(!Model.IsPaid)" />
+                                        <label for="@Html.IdFor(m => m.IsPaid)_unpaid" class="nav-link @(Model.Items.Count == 0 ? "disabled" : "")"
+                                               data-bs-toggle="tab" data-bs-target="#navUnpaid" type="button" role="tab"
+                                               aria-controls="navUnpaid" aria-selected="false" id="quickCreateUnpaid">
+                                            Chưa thanh toán
+                                        </label>
+                                        <input type="radio" class="btn-check" asp-for="IsPaid" id="@Html.IdFor(m => m.IsPaid)_paid" value="true" autocomplete="off" checked="@Model.IsPaid" />
+                                        <label for="@Html.IdFor(m => m.IsPaid)_paid" class="nav-link @(Model.Items.Count == 0 ? "disabled" : "")"
+                                               data-bs-toggle="tab" data-bs-target="#navPaid" type="button" role="tab"
+                                               aria-controls="navPaid" aria-selected="false" id="quickCreatePaid">
+                                            Đã thanh toán
+                                        </label>
+                                    </div>
+                                </nav>
+                                <span class="text-danger small" asp-validation-for="IsPaid"></span>
+                            </div>
+                            <div class="tab-content" id="navPaymentContent">
+                                <div class="tab-pane fade" id="navUnpaid" role="tabpanel" aria-labelledby="navUnpaid-tab" tabindex="0">
+                                </div>
+                                <div class="tab-pane fade border rounded p-3" id="navPaid" role="tabpanel" aria-labelledby="navPaid-tab" tabindex="0">
+                                    <div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-muted text-uppercase">Số tiền</label>
+                                                <input type="text" asp-for="PaidAmount" id="paymentAmount" class="form-control include-suffix"
+                                                       data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric" 
+                                                       data-val="true" data-val-required="Vui lòng nhập số tiền"
+                                                       data-val-range="" data-val-range-min="0.1"
+                                                       data-val-range-max="" data-val-number="Số tiền phải là số" />
+                                                <span class="text-danger small" asp-validation-for="PaidAmount"></span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-muted text-uppercase">Hình thức thanh toán</label>
+                                                <select id="paymentMethod" class="form-select" asp-for="PaymentMethod">
+                                                    @foreach (var paymentMethod in PaymentMethod.GetOptions())
+                                                    {
+                                                        <option value="@paymentMethod.value" selected="@(paymentMethod.value == (int) Model.PaymentMethod)">@paymentMethod.text</option>
+                                                    }
+                                                </select>
+                                                <span class="text-danger small" asp-validation-for="PaymentMethod"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 d-flex justify-content-center">
+                            <button type="submit" id="btnSubmit" class="btn btn-primary fw-bold py-2">
+                                <i class="bi bi-floppy"></i>
+                                Tạo đơn
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
-
-    <div class="col-lg-4 d-none d-lg-block">
+    <div class="col-xl-4 d-none d-lg-block">
         <div class="content-card">
             <div class="content-card-body">
-                <div id="productBrowser" data-col-class="col-12"></div>
+                <div id="productBrowser" data-vid="@Model.VendorId" data-col-class="col-12"></div>
             </div>
         </div>
     </div>
@@ -164,7 +301,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body p-3" id="productBrowserMobileContainer">
-        <div id="productBrowserMobile" data-col-class="col-12"></div>
+        <div id="productBrowserMobile" data-vid="@Model.VendorId" data-col-class="col-12"></div>
     </div>
 </div>
 

@@ -1029,4 +1029,22 @@
   <data name="Error.CannotEditInactiveSchedule" xml:space="preserve">
     <value>Cannot edit inactive schedule</value>
   </data>
+  <data name="Label.ReceivedOn" xml:space="preserve">
+    <value>Received date</value>
+  </data>
+  <data name="Error.ReceivedOnMustBeAfterPlacedOn" xml:space="preserve">
+    <value>Received date must be after placed purchase order date</value>
+  </data>
+  <data name="Label.PaidAmount" xml:space="preserve">
+    <value>Paid amount</value>
+  </data>
+  <data name="Error.PaidAmountExceedsOrderTotal" xml:space="preserve">
+    <value>Paid amount cannot exceed order total</value>
+  </data>
+  <data name="Error.ReceivedDateCannotBeInFuture" xml:space="preserve">
+    <value>Received date cannot be in the future.</value>
+  </data>
+  <data name="Error.PaymentInfoRequired" xml:space="preserve">
+    <value>Payment information is required</value>
+  </data>
 </root>

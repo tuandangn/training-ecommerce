@@ -192,9 +192,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
         foreach (var item in dto.Items)
         {
-            createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
+            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
-                PurchaseOrderId = Guid.Empty,
                 ProductId = item.ProductId ?? Guid.Empty,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost,
@@ -210,30 +209,46 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
     }
 
-    public async Task<QuickCreatePurchaseOrderResultAppDto> QuickCreatePurchaseOrderAsync(QuickCreatePurchaseOrderAppDto dto)
+    public async Task<PurchaseOrderQuickCreateResultAppDto> QuickCreatePurchaseOrderAsync(PurchaseOrderQuickCreateAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return QuickCreatePurchaseOrderResultAppDto.CreateError(errorMessage!);
+        {
+            return new PurchaseOrderQuickCreateResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
 
         var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
         {
-            return new QuickCreatePurchaseOrderResultAppDto
+            return new PurchaseOrderQuickCreateResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.VendorIsNotFound"
             };
         }
 
-        var products = await _productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
+        var productIds = dto.Items.Select(item => item.ProductId).OfType<Guid>().Distinct().ToList();
+        var products = await _productDataReader.GetByIdsAsync(productIds).ConfigureAwait(false);
+        if (products.Count() != productIds.Count)
+        {
+            return new PurchaseOrderQuickCreateResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.ProductIsNotFound"
+            };
+        }
+
         var candidateVendorIds = products.SelectMany(p => p.ProductVendors).Select(v => v.VendorId).Distinct().ToList();
         var validVendorIds = candidateVendorIds.Where(vendorId => products.All(p => p.ProductVendors.Any(v => v.VendorId == vendorId))).ToList();
         if (validVendorIds.Count == 0)
         {
-            return new QuickCreatePurchaseOrderResultAppDto
+            return new PurchaseOrderQuickCreateResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.PurchaseOrder.NoVendorsAppropriate"
@@ -242,19 +257,19 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         if (!validVendorIds.Contains(dto.VendorId))
         {
-            return new QuickCreatePurchaseOrderResultAppDto
+            return new PurchaseOrderQuickCreateResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.PurchaseOrder.VendorIsNotAppropriate"
             };
         }
 
-        if (dto.DefaultWarehouseId != Guid.Empty)
+        if (dto.IsReceived)
         {
-            var defaultWarehouse = await _warehouseDataReader.GetByIdAsync(dto.DefaultWarehouseId).ConfigureAwait(false);
+            var defaultWarehouse = await _warehouseDataReader.GetByIdAsync(dto.DefaultWarehouseId!.Value).ConfigureAwait(false);
             if (defaultWarehouse is null)
             {
-                return new QuickCreatePurchaseOrderResultAppDto
+                return new PurchaseOrderQuickCreateResultAppDto
                 {
                     Success = false,
                     ErrorMessage = "Error.WarehouseIsNotFound"
@@ -269,7 +284,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 var warehouse = await _warehouseDataReader.GetByIdAsync(item.WarehouseId.Value).ConfigureAwait(false);
                 if (warehouse is null)
                 {
-                    return new QuickCreatePurchaseOrderResultAppDto
+                    return new PurchaseOrderQuickCreateResultAppDto
                     {
                         Success = false,
                         ErrorMessage = "Error.WarehouseIsNotFound"
@@ -280,7 +295,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             var product = products.FirstOrDefault(product => product.Id == item.ProductId);
             if (product is null)
             {
-                return new QuickCreatePurchaseOrderResultAppDto
+                return new PurchaseOrderQuickCreateResultAppDto
                 {
                     Success = false,
                     ErrorMessage = "Error.ProductIsNotFound"
@@ -294,7 +309,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 {
                     if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
                     {
-                        return new QuickCreatePurchaseOrderResultAppDto
+                        return new PurchaseOrderQuickCreateResultAppDto
                         {
                             Success = false,
                             ErrorMessage = "Error.QuantityMustBeInteger"
@@ -304,30 +319,35 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        var result = await _purchaseOrderManager.QuickCreateAndReceiveAsync(new QuickCreatePurchaseOrderDto
+        var result = await _purchaseOrderManager.QuickCreatePurchaseOrderAsync(new PurchaseOrderQuickCreateDto
         {
+            PlacedOnUtc = dto.PlacedOnUtc,
             VendorId = dto.VendorId,
-            DefaultWarehouseId = dto.DefaultWarehouseId,
-            ReceivedOnUtc = dto.ReceivedOnUtc,
+            DefaultWarehouseId = dto.IsReceived ? dto.DefaultWarehouseId : null,
+            ReceivedOnUtc = dto.IsReceived ? dto.ReceivedOnUtc : null,
             Note = dto.Note,
-            ReceiveImmediately = dto.ReceiveImmediately,
+            IsReceived = dto.IsReceived,
+            IsPaid = dto.IsPaid,
             PictureIds = dto.PictureIds,
-            Items = dto.Items.Select(i => new QuickCreatePurchaseOrderItemDto
+            Items = dto.Items.Select(i => new PurchaseOrderQuickCreateDto.PurchaseOrderQuickCreateItemDto
             {
                 ProductId = i.ProductId,
                 Quantity = i.Quantity,
                 UnitCost = i.UnitCost,
-                WarehouseId = i.WarehouseId,
-                QuantityDecimalPlaces = i.QuantityDecimalPlaces
+                WarehouseId = dto.IsReceived ? i.WarehouseId : null
             }).ToList(),
-            Payment = dto.Payment is null ? null : new QuickCreatePaymentDto
+            Payment = !dto.IsPaid || dto.Payment is null ? null : new PurchaseOrderQuickCreateDto.PurchaseOrderQuickCreatePaymentDto
             {
-                Amount = dto.Payment.Amount,
+                PaidAmount = dto.Payment.PaidAmount,
                 PaymentMethod = (PaymentMethod)dto.Payment.PaymentMethod
             }
         }).ConfigureAwait(false);
 
-        return QuickCreatePurchaseOrderResultAppDto.CreateSuccess(result.PurchaseOrderId, result.PurchaseOrderCode, result.GoodsReceiptIds);
+        return new PurchaseOrderQuickCreateResultAppDto
+        {
+            Success = true,
+            CreatedId = result.PurchaseOrderId
+        };
     }
 
     public async Task<CreatePurchaseOrderResultAppDto> CopyPurchaseOrderAsync(Guid id)

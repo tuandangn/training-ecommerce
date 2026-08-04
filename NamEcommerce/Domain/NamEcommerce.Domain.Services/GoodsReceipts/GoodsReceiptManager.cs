@@ -327,6 +327,8 @@ public sealed class GoodsReceiptManager(
                 : null;
         var goodsReceipt = await GoodsReceipt.CreateAsync(
             Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
+        if (dto.ReceivedOnUtc.HasValue)
+            goodsReceipt.CreatedOnUtc = dto.ReceivedOnUtc.Value;
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
@@ -490,8 +492,8 @@ public sealed class GoodsReceiptManager(
             .ToListAsync().ConfigureAwait(false);
         var allocation = allocations
             .Where(a => a.OutboundReferenceId == deliveryNoteId)
-            .OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault() 
-            ?? allocations .OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault();
+            .OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault()
+            ?? allocations.OrderByDescending(a => a.CreatedAtUtc).FirstOrDefault();
 
         if (allocation is null || allocation.CostingStatus == InventoryCostingStatus.Pending)
             return null;

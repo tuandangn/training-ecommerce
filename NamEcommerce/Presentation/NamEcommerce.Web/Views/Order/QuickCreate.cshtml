@@ -53,7 +53,7 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div>
-                                        <label asp-for="CustomerId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                                        <label asp-for="CustomerId" for="customerSearch" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <div id="fastSaleCustomerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
                                              data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"
                                              data-kind="@Model.CustomerDisplayKind" data-is-system="@Model.CustomerDisplayIsSystem.ToString().ToLowerInvariant()"></div>
@@ -63,7 +63,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div>
-                                        <label for="fastSaleNote" class="form-label small fw-bold text-muted text-uppercase d-block">@Html.DisplayNameFor(m => m.Note)</label>
+                                        <label asp-for="Note" for="fastSaleNote" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                         <textarea asp-for="Note" class="form-control" rows="2" id="fastSaleNote" placeholder="Nhập ghi chú..."></textarea>
                                         <span asp-validation-for="Note" class="small text-danger"></span>
                                     </div>
@@ -166,7 +166,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div id="fastSaleEmptyCart" class="py-4 text-center text-muted" style="@(Model.Items.Count > 0 ? "display:none" : "display:block")">
+                            <div id="fastSaleEmptyCart" class="py-4 text-center text-muted small @(Model.Items.Count > 0 ? "d-none" : "")">
                                 Chưa có hàng hóa
                             </div>
                         </div>
@@ -181,7 +181,7 @@
                                     <span class="value" id="fastSaleSubtotal">@subTotal.DisplayCurrencyWithSymbol()</span>
                                 </div>
                                 <div class="order-summary-row">
-                                    <span class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></span>
+                                    <label for="orderDiscount" class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></label>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
                                                data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" disabled="@(Model.Items.Sum(item => item.ItemSubTotal) == 0)" />
@@ -221,7 +221,7 @@
                                         </div>
                                     </nav>
                                 </div>
-                                <div class="border rounded p-3 ship-info" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                <div class="border rounded p-3 ship-info @(Model.CustomerId.HasValue && Model.Items.Count > 0)" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
                                     <div class="row g-3">
                                         <div class="col-md-12 col-lg-4">
                                             <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
@@ -395,7 +395,7 @@
                     <div id="paymentProcessContainer">
                         <hr />
                         <div class="d-flex align-items-center gap-3 mb-3 justify-content-between">
-                            <label name="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <label for="paidAmount" class="form-label small fw-bold text-muted text-uppercase d-block">Số tiền</label>
                             <div>
                                 <div>
                                     <input name="PaidAmount" class="form-control text-sm" id="paidAmount" placeholder="Nhập số tiền" disabled
@@ -407,7 +407,7 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-3 mt-2 mb-3 justify-content-between" id="paymentMethodContainer">
-                            <label for="PaidAmount" class="form-label small fw-bold text-muted text-uppercase d-block">
+                            <label for="fastSaleCashMethod" class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Phương thức
                             </label>
                             <div class="fast-sale-payment-methods" role="group">

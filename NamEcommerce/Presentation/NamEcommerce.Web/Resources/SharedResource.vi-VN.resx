@@ -1029,4 +1029,22 @@
   <data name="Error.CannotEditInactiveSchedule" xml:space="preserve">
     <value>Không thể thay đổi lịch xử lý chưa được kích hoạt</value>
   </data>
+  <data name="Label.ReceivedOn" xml:space="preserve">
+    <value>Ngày nhận</value>
+  </data>
+  <data name="Error.ReceivedOnMustBeAfterPlacedOn" xml:space="preserve">
+    <value>Ngày nhận hàng phải lớn hơn ngày đặt hàng</value>
+  </data>
+  <data name="Label.PaidAmount" xml:space="preserve">
+    <value>Số tiền</value>
+  </data>
+  <data name="Error.PaidAmountExceedsOrderTotal" xml:space="preserve">
+    <value>Số tiền đã thanh toán không được quá tổng đơn</value>
+  </data>
+  <data name="Error.ReceivedDateCannotBeInFuture" xml:space="preserve">
+    <value>Ngày nhận hàng không lớn hơn hiện tại</value>
+  </data>
+  <data name="Error.PaymentInfoRequired" xml:space="preserve">
+    <value>Thông tin thanh toán không có</value>
+  </data>
 </root>

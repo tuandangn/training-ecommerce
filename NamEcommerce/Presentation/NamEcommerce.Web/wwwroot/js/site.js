@@ -47,12 +47,27 @@ function hidePageLoading() {
     mask.style.display = 'none';
 }
 
+function reparseForm(formSelector) {
+    var $form = $(formSelector);
+
+    // Remove the cached validator data
+    $form.removeData('validator')
+        .removeData('unobtrusiveValidation');
+
+    // Re-parse the form rules
+    $.validator.unobtrusive.parse($form);
+}
 function isFormValid(form) {
     try {
         return $(form).valid();
     } catch {
         return false;
     }
+}
+function validateElement(element) {
+    if (!element || !element.form)
+        return;
+    $(element.form).data('validator')?.element(element);
 }
 
 function enableSubmitButtons(form, enabled) {
@@ -111,15 +126,4 @@ function getEl(id) {
     const el = document.getElementById(id);
     if (!el) throw new Error(`Element #${id} không tồn tại`);
     return el;
-}
-
-function reparseForm(formSelector) {
-    var $form = $(formSelector);
-
-    // Remove the cached validator data
-    $form.removeData('validator')
-        .removeData('unobtrusiveValidation');
-
-    // Re-parse the form rules
-    $.validator.unobtrusive.parse($form);
 }

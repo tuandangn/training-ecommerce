@@ -70,7 +70,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     {
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
-            PlacedOn = DateTime.Now
+            PlacedOn = DateTime.Now,
         };
 
         if (model.VendorId.HasValue)
@@ -103,6 +103,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     item.ProductDisplayName = product.Name;
                     item.ProductDisplayPicture = product.PictureUrl;
                     item.AvailableVendors = product.AvailableVendors;
+                    item.QuantityDecimalPlaces = product.QuantityDecimalPlaces;
                 }
             }
             else
@@ -114,14 +115,58 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         return model;
     }
 
-    public async Task<QuickCreatePurchaseOrderModel> PrepareQuickCreatePurchaseOrderModel()
+    public async Task<PurchaseOrderQuickCreateModel> PrepareQuickCreatePurchaseOrderModel(PurchaseOrderQuickCreateModel? oldModel = null)
     {
-        var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-        return new QuickCreatePurchaseOrderModel
+        var model = oldModel ?? new PurchaseOrderQuickCreateModel
         {
+            PlacedOn = DateTime.Now,
             ReceivedOn = DateTime.Now,
-            AvailableWarehouses = warehouses.Options
+            PaymentMethod = PaymentMethod.Cash
         };
+
+        var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.AvailableWarehouses = warehouses.Options;
+
+        if (model.VendorId.HasValue)
+        {
+            var vendor = await _mediator.Send(new GetVendorQuery
+            {
+                Id = model.VendorId.Value
+            }).ConfigureAwait(false);
+            if (vendor is not null)
+            {
+                model.VendorName = vendor.Name;
+                model.VendorPhone = vendor.PhoneNumber;
+                model.VendorAddress = vendor.Address;
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            if (productIds.Count > 0)
+            {
+                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                {
+                    Ids = productIds
+                }).ConfigureAwait(false);
+                model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
+                foreach (var item in model.Items)
+                {
+                    var product = products.First(p => p.Id == item.ProductId);
+                    item.ProductDisplayName = product.Name;
+                    item.ProductDisplayPicture = product.PictureUrl;
+                    item.AvailableVendors = product.AvailableVendors;
+                    item.QuantityDecimalPlaces = product.QuantityDecimalPlaces;
+                }
+            }
+            else
+            {
+                model.Items.Clear();
+            }
+        }
+
+        return model;
     }
 
     public async Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id)

@@ -35,7 +35,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                                            <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase mb-0">Khách hàng</label>
+                                            <label asp-for="CustomerId" for="customerSearch" class="form-label small fw-bold text-muted text-uppercase mb-0"></label>
                                         </div>
                                         <div id="customerPicker" data-testid="order-customer-picker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
                                              data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"

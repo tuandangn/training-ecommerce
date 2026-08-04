@@ -432,7 +432,7 @@ class FastSale {
     }
     renderCart() {
         this.cartBody.innerHTML = '';
-        this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
+        this.emptyCart.classList.toggle('d-none', this.cart.length > 0);
         document.querySelector('.warehouse-col')?.classList.toggle('d-none', this.fulfillmentMode != this.#deliveryNow);
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');

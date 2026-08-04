@@ -45,7 +45,7 @@ public sealed class PreparationController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> QuickCreatePurchaseOrder([FromBody] QuickCreatePurchaseOrderModel model)
+    public async Task<IActionResult> QuickCreatePurchaseOrder([FromBody] PreparationCreatePurchaseOrderModel model)
     {
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {

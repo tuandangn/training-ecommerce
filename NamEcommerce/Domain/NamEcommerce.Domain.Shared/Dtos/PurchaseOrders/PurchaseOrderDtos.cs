@@ -50,7 +50,7 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 [Serializable]
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 {
-    public IList<PurchaseOrderItemDto> Items { get; } = [];
+    public IList<CreatedPurchaseOrderItemDto> Items { get; } = [];
 
     public decimal TaxAmount { get; init; }
     public decimal ShippingAmount { get; init; }
@@ -68,6 +68,24 @@ public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
             item.Verify();
 
         base.Verify();
+    }
+
+    [Serializable]
+    public sealed record CreatedPurchaseOrderItemDto
+    {
+        public required Guid ProductId { get; init; }
+        public required decimal QuantityOrdered { get; init; }
+
+        public decimal UnitCost { get; set; }
+        public string? Note { get; set; }
+
+        public void Verify()
+        {
+            if (QuantityOrdered <= 0)
+                throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+            if (UnitCost < 0)
+                throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
+        }
     }
 }
 [Serializable]

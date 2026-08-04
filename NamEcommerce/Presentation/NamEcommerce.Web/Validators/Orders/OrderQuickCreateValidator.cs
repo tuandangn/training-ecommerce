@@ -25,16 +25,16 @@ public sealed class OrderQuickCreateValidator : AbstractValidator<OrderQuickCrea
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
-        RuleForEach(p => p.Items).SetValidator(m => new QuickCreateOrderItemValidator(localizer));
+        RuleForEach(p => p.Items).SetValidator(m => new OrderQuickCreateItemValidator(localizer));
 
         RuleFor(p => p.Note)
             .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
     }
 }
 
-public sealed class QuickCreateOrderItemValidator : AbstractValidator<QuickCreateOrderItemModel>
+public sealed class OrderQuickCreateItemValidator : AbstractValidator<QuickCreateOrderItemModel>
 {
-    public QuickCreateOrderItemValidator(IStringLocalizer<SharedResource> localizer)
+    public OrderQuickCreateItemValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.ProductId)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Product"]]);

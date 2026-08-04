@@ -60,7 +60,10 @@
                     const original = instance.input;
                     original.type = "text";
                     original.classList.add("visually-hidden");
-                    instance._input?.classList.add('bg-white');
+                    instance._input?.classList.add('bg-white'); 
+                    if (instance.altInput) {
+                        instance.altInput.id = original.id + '_alt';
+                    }
                 },
                 onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
@@ -90,6 +93,9 @@
                     original.type = "text";
                     original.classList.add("visually-hidden");
                     instance._input?.classList.add('bg-white');
+                    if (instance.altInput) {
+                        instance.altInput.id = original.id + '_alt';
+                    }
                 },
                 onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);

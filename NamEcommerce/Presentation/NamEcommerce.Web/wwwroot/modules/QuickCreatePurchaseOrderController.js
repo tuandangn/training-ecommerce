@@ -27,12 +27,49 @@ export default class QuickCreatePurchaseOrderController {
         const modalEl = getEl('itemEditModal');
         this.#itemEditor = new ItemEditor(offcanvasEl, modalEl, { priceLabel: 'Đơn giá nhập' });
 
+        this.#bindElements();
         this.#bindVendorPicker();
         this.#bindBrowser();
-        this.#bindToggles();
-        this.#bindSubmit();
-        this.#renderItems();
-        this.#renderSummary();
+        this.#bindEvents();
+
+        const initialItems = this.#getItems();
+        this.#items = initialItems;
+
+        this.#render();
+    }
+
+    #bindElements() {
+        this.inputVendor = document.getElementById('VendorId');
+
+        this.inputPlacedDate = document.getElementById('PlacedOn');
+        this.inputReceivedDate = document.getElementById('ReceivedOn');
+
+        this.btnNotDelivered = document.getElementById('quickCreateNotDelivered');
+        this.chkboxNotReceived = document.getElementById('IsReceived_notReceived');
+        this.btnDelivered = document.getElementById('quickCreateDelivered');
+        this.chkboxReceived = document.getElementById('IsReceived_received');
+
+        this.inputReceivedOn = document.getElementById('ReceivedOn');
+        this.inputReceivedOn.setAttribute('data-val-required', 'Vui lòng nhập Ngày nhận.')
+        this.inputReceivedOn.setAttribute('data-val-range', 'Ngày nhận hàng phải lớn hơn ngày đặt và nhỏ hơn ngày hiện tại')
+
+        this.inputWarehouse = document.getElementById('DefaultWarehouseId');
+        this.inputWarehouse.setAttribute('data-val-required', 'Vui lòng nhập Kho hàng.')
+
+        this.btnIsPaid = document.getElementById('quickCreatePaid');
+        this.chkboxIsPaid = document.getElementById('IsPaid_paid');
+        this.btnUnpaid = document.getElementById('quickCreateUnpaid');
+        this.chkboxUnpaid = document.getElementById('IsPaid_unpaid');
+
+        this.emptyItems = document.getElementById('emptyItems');
+        this.tableBody = document.getElementById('itemsBody');
+
+        this.orderTotal = document.getElementById('orderTotal');
+
+        this.inputPaidAmount = document.getElementById('paymentAmount');
+
+        this.btnSubmit = document.getElementById('btnSubmit');
+        this.form = document.getElementById('purchaseOrderQuickCreateForm');
     }
 
     #bindVendorPicker() {
@@ -42,7 +79,6 @@ export default class QuickCreatePurchaseOrderController {
         this.#vendorPicker = new VendorPicker(el, {
             onSelect: async (vendor) => {
                 const valid = vendor == null || await this.#checkCommonVendor(vendor.id);
-
                 if (!valid) return;
 
                 this.#vendorId = vendor?.id ?? null;
@@ -50,12 +86,14 @@ export default class QuickCreatePurchaseOrderController {
                 if (vendor) this.#refreshPricesForVendor(vendor.id);
                 this.#browser?.setVendor(vendor?.id ?? null);
                 this.#mobileBrowser?.setVendor(vendor?.id ?? null);
+                validateElement(this.inputVendor);
             },
             onRemove: () => {
                 this.#vendorId = null;
                 getEl('VendorId').value = '';
                 this.#browser?.setVendor(null);
                 this.#mobileBrowser?.setVendor(null);
+                validateElement(this.inputVendor);
             }
         });
     }
@@ -99,29 +137,50 @@ export default class QuickCreatePurchaseOrderController {
     }
 
     #bindToggles() {
-        const receiveToggle = getEl('receiveImmediately');
-        const paymentSection = getEl('paymentSection');
-        const paidToggle = getEl('isPaid');
+        // const receiveToggle = getEl('receiveImmediately');
+        // const paymentSection = getEl('paymentSection');
+        // const paidToggle = getEl('isPaid');
 
-        receiveToggle?.addEventListener('change', () => {
-            const on = receiveToggle.checked;
-            paymentSection?.classList.toggle('d-none', !on);
-            if (!on) {
-                if (paidToggle) paidToggle.checked = false;
-                getEl('paymentFields')?.classList.add('d-none');
-            }
-            this.#renderSummary();
-        });
+        // receiveToggle?.addEventListener('change', () => {
+        //     const on = receiveToggle.checked;
+        //     paymentSection?.classList.toggle('d-none', !on);
+        //     if (!on) {
+        //         if (paidToggle) paidToggle.checked = false;
+        //         getEl('paymentFields')?.classList.add('d-none');
+        //     }
+        //     this.#renderSummary();
+        // });
 
-        paidToggle?.addEventListener('change', () => {
-            const show = paidToggle.checked;
-            getEl('paymentFields')?.classList.toggle('d-none', !show);
-            if (show) this.#syncPaymentAmount();
-        });
+        // paidToggle?.addEventListener('change', () => {
+        //     const show = paidToggle.checked;
+        //     getEl('paymentFields')?.classList.toggle('d-none', !show);
+        //     if (show) this.#syncPaymentAmount();
+        // });
     }
 
-    #bindSubmit() {
-        getEl('btnSubmit')?.addEventListener('click', () => this.#submit());
+    #bindEvents() {
+        this.inputPlacedDate.addEventListener('change', e => {
+            this.#render();
+            if (this.#isDelivered()) {
+                validateElement(this.inputReceivedDate);
+            }
+        });
+
+        this.form.addEventListener('change', e => {
+            if (e.target.name == 'IsReceived') {
+                this.#render();
+            }
+            if (e.target.name == 'IsPaid') {
+                this.#render();
+            }
+        });
+
+        this.form.addEventListener('submit', e => {
+            e.preventDefault();
+            if (!isFormValid(this.form))
+                return;
+            this.#handleFormSubmit();
+        });
     }
 
     #isValidProduct(product) {
@@ -149,7 +208,7 @@ export default class QuickCreatePurchaseOrderController {
 
         const items = this.#items.filter(item => item.appropriateVendorIds.includes(vendorId));
         this.#items = items;
-        this.#renderItems();
+        this.#render();
         return true;
     }
 
@@ -162,8 +221,7 @@ export default class QuickCreatePurchaseOrderController {
         const idx = this.#items.findIndex(i => i.productId === product.id);
         if (idx >= 0) {
             this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
-            this.#renderItems();
-            this.#renderSummary();
+            this.#render();
             return;
         }
 
@@ -211,8 +269,7 @@ export default class QuickCreatePurchaseOrderController {
                 }
             } catch { /* keep existing */ }
         }
-        this.#renderItems();
-        this.#renderSummary();
+        this.#render();
     }
 
     #openEditor(item, openOptions) {
@@ -244,15 +301,13 @@ export default class QuickCreatePurchaseOrderController {
                         manualCostSet: currentItem.manualCostSet || price != currentItem.unitCost
                     };
                 }
-                this.#renderItems();
-                this.#renderSummary();
+                this.#render();
             },
             onDelete: () => {
                 const idx = this.#items.findIndex(i => i.productId === data.productId);
                 if (idx === -1) return;
                 this.#items.splice(idx, 1);
-                this.#renderItems();
-                this.#renderSummary();
+                this.#render();
             }
         }, openOptions);
     }
@@ -262,18 +317,92 @@ export default class QuickCreatePurchaseOrderController {
         bootstrap.Offcanvas.getOrCreateInstance(offcanvas)?.hide();
     }
 
-    #renderItems() {
-        const tbody = getEl('itemsBody');
-        if (!tbody) return;
+    #render() {
+        const subTotal = this.#calculateSubTotal();
+        const total = subTotal;
 
-        if (this.#items.length === 0) {
-            tbody.innerHTML = `<tr id="emptyRow"><td colspan="5" class="text-center text-muted py-3 small">Chưa có hàng hóa</td></tr>`;
-            return;
+        this.#renderItems();
+        this.#renderSummary();
+
+        const commonVendors = this.#getCommonVendorOfItems(this.#items);
+        if (this.#items.length > 0) {
+            this.#vendorPicker.setLimitVendorIds(commonVendors.map(v => v.id));
+            document.querySelector('.notHasAppropriatedVendorWarning')?.classList.toggle('d-none', commonVendors.length > 0);
+        }
+        else {
+            this.#vendorPicker.setLimitVendorIds(null);
         }
 
-        tbody.innerHTML = this.#items.map((item, i) => this.#buildRow(item, i)).join('');
+        this.btnNotDelivered.classList.toggle('disabled', this.#items.length === 0);
+        this.btnDelivered.classList.toggle('disabled', this.#items.length === 0);
+        this.#toggleDeliveryTabs();
+        if (this.#isDelivered()) {
+            this.inputWarehouse.setAttribute('data-val', 'true');
+            this.inputReceivedOn.setAttribute('data-val', 'true');
+            const placedDate = new Date(this.inputPlacedDate.value);
+            if (placedDate.getTime()) {
+                this.inputReceivedDate.setAttribute('data-val-range-min', placedDate.toISOString());
+            } else {
+                this.inputReceivedDate.setAttribute('data-val-range-min', '');
+            }
+        } else {
+            this.inputReceivedOn.setAttribute('data-val', 'false');
+            this.inputWarehouse.setAttribute('data-val', 'false');
+        }
 
-        tbody.querySelectorAll('[data-del-idx]').forEach(btn => {
+        this.btnIsPaid.classList.toggle('disabled', subTotal == 0 && total == 0);
+        this.btnUnpaid.classList.toggle('disabled', subTotal == 0);
+        this.#togglePaymentTabs();
+        if (this.#isPaid()) {
+            this.inputPaidAmount.setAttribute('data-val', 'true');
+            this.inputPaidAmount.setAttribute('data-val-range-max', subTotal);
+            this.inputPaidAmount.setAttribute('data-val-range', 'Số tiền thanh toán phải lớn hơn 0 và nhỏ hơn hoặc bằng ' + DecimalFields.formatCurrencyWithSymbol(subTotal));
+        } else {
+            this.inputPaidAmount.setAttribute('data-val', 'false');
+            this.inputPaidAmount.setAttribute('data-val-range-max', '');
+            this.inputPaidAmount.setAttribute('data-val-range', '');
+        }
+
+        reparseForm(this.form);
+    }
+    #getItems() {
+        const container = this.tableBody;
+        const rows = Array.from(container.querySelectorAll('tr'));
+        return rows.map(row => {
+            let availableVendors = [];
+            const availableVendorEl = row.querySelector('.available-vendors');
+            if (availableVendorEl) {
+                availableVendors = JSON.parse(availableVendorEl.textContent).map(v => ({ key: v.id, value: v.name }));
+            }
+            const quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value, 2), 0);
+            const unitCost = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value, 0), 0);
+            const quantityDecimalPlaces = parseNumber(DecimalFields.stripFormatting(row.querySelector('.quantityDecimalPlaces').value, 0), 0);
+            const purchaseOrderItem = {
+                productId: row.querySelector('.product-id').value,
+                productName: row.querySelector('.product-name').textContent.trim(),
+                productPicture: row.querySelector('.product-picture')?.src,
+                quantity,
+                unitCost,
+                warehouseId: null,
+                quantityDecimalPlaces,
+                manualCostSet: false,
+                appropriateVendors: availableVendors.map(v => ({ id: v.key, name: v.value })) ?? [],
+                appropriateVendorIds: availableVendors.map(v => v.key) ?? [],
+            };
+
+            return purchaseOrderItem;
+        });
+    }
+    #renderItems() {
+        this.tableBody.innerHTML = '';
+        this.emptyItems.style.display = this.#items.length > 0 ? 'none' : 'block';
+
+        if (this.#items.length === 0)
+            return;
+
+        this.tableBody.innerHTML = this.#items.map((item, i) => this.#buildRow(item, i)).join('');
+
+        this.tableBody.querySelectorAll('[data-del-idx]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const index = Number(btn.getAttribute('data-del-idx'));
                 if (Number.isNaN(index) || index < 0) throw new Error('Invalid index');
@@ -291,140 +420,141 @@ export default class QuickCreatePurchaseOrderController {
 
                 if (result.isConfirmed) {
                     this.#items.splice(index, 1);
-                    this.#renderItems();
-                    this.#renderSummary();
+                    this.#render();
                 }
             });
         });
-        tbody.querySelectorAll('tr').forEach((row, i) => {
+        this.tableBody.querySelectorAll('tr').forEach((row, i) => {
             row.style.cursor = 'pointer';
             row.addEventListener('click', (e) => {
                 if (e.target.closest('button')) return;
                 this.#openEditor(this.#items[i]);
             });
         });
-
-        const commonVendors = this.#getCommonVendorOfItems(this.#items);
-        if (this.#items.length > 0) {
-            this.#vendorPicker.setLimitVendorIds(commonVendors.map(v => v.id));
-            document.querySelector('.notHasAppropriatedVendorWarning')?.classList.toggle('d-none', commonVendors.length > 0);
-        }
-        else {
-            this.#vendorPicker.setLimitVendorIds(null);
-        }
     }
-
     #buildRow(item, i) {
         return `<tr data-row-idx="${i}">
-            <td class="ps-3 py-2">
-                <div class="fw-medium">${escapeHtml(item.productName)}</div>
-                <div class="text-muted small d-md-none">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)} × ${DecimalFields.formatCurrencyWithSymbol(item.unitCost)}</div>
+            <td class="ps-3 align-middle">
+                <div class="d-flex align-items-center gap-3">
+                    ${item.productPicture ? `<img src="${item.productPicture}" class="rounded product-picture order-item-thumb d-none d-lg-block" alt="" />` : ''}
+                    <div>
+                        <div class="fw-medium product-name">${escapeHtml(item.productName)}</div>
+                        <div class="d-xl-none">
+                            <div class="text-muted small d-xl-none">
+                                ${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrencyWithSymbol(item.unitCost)}
+                            </div>
+                            <span class="small text-danger field-validation-valid"
+                                data-valmsg-for="Items[${i}].Quantity" data-valmsg-replace="true"></span>
+                            <span class="small text-danger field-validation-valid"
+                                data-valmsg-for="Items[${i}].UnitCost" data-valmsg-replace="true"></span>
+                        </div>
+                    </div>
+                </div>
+                <input type="text" class="visually-hidden product-id" name="Items[${i}].ProductId" value="${item.productId}"
+                    data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${item.quantityDecimalPlaces ?? 0}" />
+                <input type="hidden" class="row-qty" name="Items[${i}].Quantity" value="${item.quantity}"
+                    data-val="true" data-val-required="Vui lòng nhập số lượng."
+                    data-val-range="Số lượng phải lớn hơn 0."
+                    data-val-range-min="${(item.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
+                    data-val-number="Số lượng không đúng." />
+                <input type="hidden" class="row-price" name="Items[${i}].UnitCost" value="${item.unitCost}"
+                    data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                    data-val-number="Đơn giá phải là số" />
+                <span class="small text-danger field-validation-valid"
+                    data-valmsg-for="Items[${i}].ProductId"
+                    data-valmsg-replace="true"></span>
             </td>
-            <td class="py-2 text-center d-none d-md-table-cell">
+            <td class="text-center align-middle d-none d-lg-table-cell">
                 <span class="fw-medium">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)}</span>
+                <span class="small text-danger field-validation-valid"
+                    data-valmsg-for="Items[${i}].Quantity" data-valmsg-replace="true"></span>
             </td>
-            <td class="py-2 text-end">
-                <span class="text-muted">${DecimalFields.formatCurrency(item.unitCost)} đ</span>
+            <td class="text-end align-middle d-none d-lg-table-cell">
+                <span class="text-muted">${DecimalFields.formatCurrencyWithSymbol(item.unitCost)}</span>
+                <span class="small text-danger field-validation-valid"
+                    data-valmsg-for="Items[${i}].UnitCost" data-valmsg-replace="true"></span>
             </td>
-            <td class="py-2 text-end text-nowrap d-none d-md-table-cell">
-                <span class="fw-bold text-primary">${DecimalFields.formatCurrencyWithSymbol(item.quantity * item.unitCost)}</span>
+            <td class="text-end align-middle d-table-cell d-lg-none d-xl-table-cell">
+                <span class="fw-bold text-primary text-nowrap">${DecimalFields.formatCurrencyWithSymbol(item.quantity * item.unitCost)}</span>
             </td>
-            <td class="py-2 text-center">
+            <td class="text-center align-middle">
                 <button type="button" class="btn btn-sm btn-link text-danger p-0" data-del-idx="${i}"><i class="bi bi-trash"></i></button>
             </td>
         </tr>`;
     }
-
     #renderSummary() {
-        const total = this.#items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
-        const totalEl = getEl('orderTotal');
-        if (totalEl) totalEl.textContent = DecimalFields.formatCurrencyWithSymbol(total);
-
+        const subTotal = this.#calculateSubTotal();
+        if (this.orderTotal)
+            this.orderTotal.textContent = DecimalFields.formatCurrencyWithSymbol(subTotal);
         this.#syncPaymentAmount();
+    }
+    #calculateSubTotal() {
+        return this.#items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
+    }
+    #toggleDeliveryTabs() {
+        if (this.#isDelivered()) {
+            if (this.btnDelivered.disabled) {
+                this.btnDelivered.classList.remove('active');
+                document.querySelector(this.btnDelivered.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+            }
+            else {
+                bootstrap.Tab.getOrCreateInstance(this.btnDelivered).show();
+            }
+            return;
+        }
+        if (this.btnNotDelivered.disabled) {
+            this.btnNotDelivered.classList.remove('active');
+            document.querySelector(this.btnNotDelivered.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+        }
+        else {
+            bootstrap.Tab.getOrCreateInstance(this.btnNotDelivered).show();
+        }
+    }
+    #togglePaymentTabs() {
+        if (this.#isPaid()) {
+            if (this.btnIsPaid.disabled) {
+                this.btnIsPaid.classList.remove('active');
+                document.querySelector(this.btnIsPaid.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+            }
+            else {
+                bootstrap.Tab.getOrCreateInstance(this.btnIsPaid).show();
+            }
+            return;
+        }
+        if (this.btnUnpaid.disabled) {
+            this.btnUnpaid.classList.remove('active');
+            document.querySelector(this.btnUnpaid.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
+        }
+        else {
+            bootstrap.Tab.getOrCreateInstance(this.btnUnpaid).show();
+        }
+    }
+
+    #isDelivered() {
+        return this.chkboxReceived?.checked ?? false;
+    }
+    #isPaid() {
+        return this.chkboxIsPaid?.checked ?? false;
     }
 
     #syncPaymentAmount() {
-        const paidToggle = getEl('isPaid');
-        if (!paidToggle?.checked) return;
-        const amountInput = getEl('paymentAmount');
-        if (!amountInput || document.activeElement === amountInput) return;
-        const total = this.#items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
-        amountInput.value = DecimalFields.formatCurrency(total);
+        // if (!this.chkboxIsPaid?.checked) return;
+        // if (!this.inputPaidAmount)
+        //     return;
+        // const total = this.#calculateSubTotal();
+        // this.inputPaidAmount.value = DecimalFields.formatCurrency(total);
     }
 
-    async #submit() {
+    async #handleFormSubmit() {
         if (this.#items.length === 0) {
             window.NotificationCenter.warning('Vui lòng thêm ít nhất một sản phẩm');
             return;
         }
 
-        const vendorInput = getEl('VendorId');
-        if (!vendorInput?.value) {
-            window.NotificationCenter.warning('Vui lòng chọn nhà cung cấp');
-            return;
-        }
-
-        const warehouseId = getEl('DefaultWarehouseId')?.value;
-        if (!warehouseId) {
-            window.NotificationCenter.warning('Vui lòng chọn kho nhập hàng');
-            return;
-        }
-
+        this.btnSubmit.disabled = true;
         showPageLoading();
-
-        const receiveImmediately = getEl('receiveImmediately')?.checked ?? true;
-        const isPaid = receiveImmediately && (getEl('isPaid')?.checked ?? false);
-
-        let payment = null;
-        if (isPaid) {
-            const amountInput = getEl('paymentAmount');
-            const amount = DecimalFields.stripFormatting(amountInput?.value ?? '0');
-            if (amount <= 0) {
-                window.NotificationCenter.warning('Số tiền thanh toán phải lớn hơn 0');
-                return;
-            }
-            payment = {
-                amount,
-                paymentMethod: parseInt(getEl('paymentMethod')?.value ?? '0')
-            };
-        }
-
-        const receivedOnInput = getEl('ReceivedOn');
-        const receivedOn = receivedOnInput?.value ? new Date(receivedOnInput.value).toISOString() : new Date().toISOString();
-
-        const command = {
-            vendorId: vendorInput.value,
-            defaultWarehouseId: warehouseId,
-            receivedOn,
-            note: getEl('Note')?.value || null,
-            receiveImmediately,
-            pictureIds: [],
-            items: this.#items.map(i => ({
-                productId: i.productId,
-                quantity: i.quantity,
-                unitCost: i.unitCost || null,
-                warehouseId: i.warehouseId || null,
-                quantityDecimalPlaces: i.quantityDecimalPlaces
-            })),
-            payment
-        };
-
-        const btn = getEl('btnSubmit');
-        if (btn) { btn.disabled = true; btn.textContent = 'Đang xử lý...'; }
-
-        try {
-            const result = await apiPost('/PurchaseOrder/QuickCreate', command);
-            if (result.success) {
-                window.location.href = `/PurchaseOrder/Details/${result.data?.purchaseOrderId}`;
-                return;
-            }
-            hidePageLoading();
-        }
-        catch {
-            hidePageLoading();
-        }
-        finally {
-            if (btn) { btn.disabled = false; btn.textContent = 'Lưu đơn nhập'; }
-        }
+        this.form.submit();
     }
 }

@@ -7,7 +7,7 @@ using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
-public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<QuickCreatePurchaseOrderCommand, QuickCreatePurchaseOrderResultModel>
+public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<PurchaseOrderQuickCreateCommand, QuickCreatePurchaseOrderResultModel>
 {
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
 
@@ -16,28 +16,29 @@ public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<QuickCreat
         _purchaseOrderAppService = appService;
     }
 
-    public async Task<QuickCreatePurchaseOrderResultModel> Handle(QuickCreatePurchaseOrderCommand request, CancellationToken cancellationToken)
+    public async Task<QuickCreatePurchaseOrderResultModel> Handle(PurchaseOrderQuickCreateCommand request, CancellationToken cancellationToken)
     {
-        var result = await _purchaseOrderAppService.QuickCreatePurchaseOrderAsync(new QuickCreatePurchaseOrderAppDto
+        var result = await _purchaseOrderAppService.QuickCreatePurchaseOrderAsync(new PurchaseOrderQuickCreateAppDto
         {
+            PlacedOnUtc = DateTimeHelper.ToUniversalTime(request.PlacedOn),
             VendorId = request.VendorId,
             DefaultWarehouseId = request.DefaultWarehouseId,
-            ReceivedOnUtc = DateTimeHelper.ToUniversalTime(request.ReceivedOn),
+            ReceivedOnUtc = request.IsReceived ? DateTimeHelper.ToUniversalTime(request.ReceivedOn) : null,
             Note = request.Note,
-            ReceiveImmediately = request.ReceiveImmediately,
-            PictureIds = request.PictureIds,
-            Items = request.Items.Select(i => new QuickCreatePurchaseOrderItemAppDto
+            IsReceived = request.IsReceived,
+            IsPaid = request.IsPaid,
+            PictureIds = request.PictureIds ?? [],
+            Items = request.Items.Select(i => new PurchaseOrderQuickCreateAppDto.PurchaseOrderQuickCreateItemAppDto
             {
                 ProductId = i.ProductId,
                 Quantity = i.Quantity,
                 UnitCost = i.UnitCost,
-                WarehouseId = i.WarehouseId,
-                QuantityDecimalPlaces = i.QuantityDecimalPlaces
+                WarehouseId = i.WarehouseId
             }).ToList(),
-            Payment = request.Payment is null ? null : new QuickCreatePaymentAppDto
+            Payment = !request.IsPaid || request.PaymentInfo is null ? null : new PurchaseOrderQuickCreateAppDto.PurchaseOrderQuickCreatePaymentAppDto
             {
-                Amount = request.Payment.Amount,
-                PaymentMethod = (int)request.Payment.PaymentMethod
+                PaidAmount = request.PaymentInfo.PaidAmount,
+                PaymentMethod = request.PaymentInfo.PaymentMethod
             }
         }).ConfigureAwait(false);
 
@@ -45,9 +46,7 @@ public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<QuickCreat
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage,
-            PurchaseOrderId = result.PurchaseOrderId,
-            PurchaseOrderCode = result.PurchaseOrderCode,
-            GoodsReceiptIds = result.GoodsReceiptIds
+            CreatedId = result.CreatedId
         };
     }
 }

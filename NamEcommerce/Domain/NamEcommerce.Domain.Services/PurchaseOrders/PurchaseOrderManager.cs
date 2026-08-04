@@ -122,52 +122,62 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
-    public async Task<QuickCreatePurchaseOrderResultDto> QuickCreateAndReceiveAsync(QuickCreatePurchaseOrderDto dto)
+    public async Task<PurchaseOrderQuickCreateResultDto> QuickCreatePurchaseOrderAsync(PurchaseOrderQuickCreateDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await CreatePurchaseOrderAggregateAsync(
-            dto.VendorId, dto.DefaultWarehouseId, dto.ReceivedOnUtc, null, dto.Note, 0, 0).ConfigureAwait(false);
-
+        var createPurchaseOrderDto = new CreatePurchaseOrderDto
+        {
+            PlacedOnUtc = dto.PlacedOnUtc,
+            Note = dto.Note,
+            VendorId = dto.VendorId,
+            WarehouseId = dto.DefaultWarehouseId
+        };
         foreach (var item in dto.Items)
         {
-            await purchaseOrder.AddPurchaseOrderItemAsync(
-                new PurchaseOrderItem(purchaseOrder.Id, item.ProductId, item.Quantity, item.UnitCost ?? 0),
-                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
+            {
+                ProductId = item.ProductId,
+                QuantityOrdered = item.Quantity,
+                UnitCost = item.UnitCost ?? 0
+            });
         }
+        var insertResult = await CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
 
-        purchaseOrder.MarkCreated();
-        var inserted = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(insertResult.CreatedId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(insertResult.CreatedId);
 
         var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         var userId = currentUser?.Id;
 
-        inserted.ChangeStatus(PurchaseOrderStatus.Submitted, userId);
-        inserted.UpdatedOnUtc = DateTime.UtcNow;
-        inserted.MarkStatusChanged(PurchaseOrderStatus.Draft);
-        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
+        purchaseOrder.ChangeStatus(PurchaseOrderStatus.Submitted, userId);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkStatusChanged(PurchaseOrderStatus.Draft);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
-        inserted.ChangeStatus(PurchaseOrderStatus.Approved, userId);
-        inserted.UpdatedOnUtc = DateTime.UtcNow;
-        inserted.MarkStatusChanged(PurchaseOrderStatus.Submitted);
-        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
+        purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved, userId);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkStatusChanged(PurchaseOrderStatus.Submitted);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         var createdReceiptIds = new List<Guid>();
-
-        if (dto.ReceiveImmediately)
+        if (dto.IsReceived)
         {
-            var insertedItems = inserted.Items.ToList();
+
+            var insertedItems = purchaseOrder.Items.ToList();
             var lines = dto.Items.Select((item, i) => new BulkReceiveGoodsForPurchaseOrderLineDto
             {
                 PurchaseOrderItemId = insertedItems[i].Id,
-                WarehouseId = item.WarehouseId ?? dto.DefaultWarehouseId,
+                WarehouseId = dto.DefaultWarehouseId!.Value,
                 ReceivedQuantity = item.Quantity,
                 ActualUnitCost = item.UnitCost
             }).ToList();
 
-            var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(inserted.Id)
+            var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(purchaseOrder.Id)
             {
+                ReceivedOnUtc = dto.ReceivedOnUtc,
                 Lines = lines,
                 ReceivedByUserId = userId
             }).ConfigureAwait(false);
@@ -175,24 +185,22 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             createdReceiptIds.AddRange(receiveResult.CreatedGoodsReceiptIds);
         }
 
-        if (dto.Payment is not null)
+        if (dto.IsPaid)
         {
             await _vendorDebtManager.RecordFlexiblePaymentForVendorAsync(new CreateVendorPaymentDto
             {
                 VendorId = dto.VendorId,
-                PurchaseOrderId = inserted.Id,
-                Amount = dto.Payment.Amount,
+                PurchaseOrderId = purchaseOrder.Id,
+                Amount = dto.Payment!.PaidAmount,
                 PaymentMethod = dto.Payment.PaymentMethod,
                 PaymentType = dto.Payment.PaymentType,
-                PaidOnUtc = dto.ReceivedOnUtc
+                PaidOnUtc = dto.ReceivedOnUtc ?? dto.PlacedOnUtc
             }).ConfigureAwait(false);
         }
 
-        return new QuickCreatePurchaseOrderResultDto
+        return new PurchaseOrderQuickCreateResultDto
         {
-            PurchaseOrderId = inserted.Id,
-            PurchaseOrderCode = inserted.Code,
-            GoodsReceiptIds = createdReceiptIds.AsReadOnly()
+            PurchaseOrderId = purchaseOrder.Id
         };
     }
 
@@ -413,9 +421,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
         foreach (var item in dto.Items)
         {
-            createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
+            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
-                PurchaseOrderId = Guid.Empty,
                 ProductId = item.ProductId,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost,
@@ -693,7 +700,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var hasReceivableDirectShip = await _directShipManager
             .HasReceivableDirectShipAllocationsAsync(purchaseOrderItem.Id).ConfigureAwait(false);
         if (hasReceivableDirectShip)
-            EnsureDirectShipTransitWarehouseConfigured();
+            await EnsureDirectShipTransitWarehouseConfiguredAsync().ConfigureAwait(false);
 
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
@@ -704,6 +711,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         var grResult = await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
         {
+            ReceivedOnUtc = dto.ReceivedOnUtc,
             PurchaseOrderId = purchaseOrder.Id,
             PurchaseOrderCode = purchaseOrder.Code,
             VendorId = purchaseOrder.VendorId,
@@ -754,7 +762,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         }
 
         if (hasReceivableDirectShip)
-            EnsureDirectShipTransitWarehouseConfigured();
+            await EnsureDirectShipTransitWarehouseConfiguredAsync().ConfigureAwait(false);
 
         // Aggregate-validate qty theo PO item (cùng item nhiều kho phải cộng dồn trước khi check).
         var groupedByItem = dto.Lines.GroupBy(line => line.PurchaseOrderItemId);
@@ -787,6 +795,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         {
             var result = await ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, line.PurchaseOrderItemId)
             {
+                ReceivedOnUtc = dto.ReceivedOnUtc,
                 ReceivedByUserId = dto.ReceivedByUserId,
                 ReceivedQuantity = line.ReceivedQuantity,
                 WarehouseId = line.WarehouseId,
@@ -944,7 +953,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         }
     }
 
-    private async Task EnsureDirectShipTransitWarehouseConfigured()
+    private async Task EnsureDirectShipTransitWarehouseConfiguredAsync()
     {
         var transitWarehouse = await _warehouseOrderDataReader.DataSource
             .FirstOrDefaultAsync(w => w.WarehouseType == WarehouseType.DirectTransit)

@@ -18,7 +18,7 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
-        RuleForEach(p => p.Items).SetValidator(new CreatePurchaseOrderItemValidator(localizer));
+        RuleForEach(p => p.Items).SetValidator(p => new CreatePurchaseOrderItemValidator(localizer));
     }
 }
 public sealed class CreatePurchaseOrderItemValidator : AbstractValidator<CreatePurchaseOrderItemModel>

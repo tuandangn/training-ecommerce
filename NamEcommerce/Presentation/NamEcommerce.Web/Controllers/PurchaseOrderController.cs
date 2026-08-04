@@ -111,7 +111,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         {
             if (model.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
             {
-                AddLocalizedModelError("Error.PurchaseOrder.ProductIsNotFound");
+                AddLocalizedModelError("Error.ProductIsNotFound");
                 model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
                 return View(model);
             }
@@ -175,13 +175,122 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
-    public async Task<IActionResult> QuickCreate([FromBody] QuickCreatePurchaseOrderCommand command)
+    public async Task<IActionResult> QuickCreate(PurchaseOrderQuickCreateModel model)
     {
-        var result = await _mediator.Send(command);
-        if (!result.Success)
-            return this.JsonError(LocalizeError(result.ErrorMessage!));
+        if (!ModelState.IsValid)
+        {
+            model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+            return View(model);
+        }
 
-        return this.JsonOk(new { purchaseOrderId = result.PurchaseOrderId }, Localizer["Msg.SaveSuccess"].Value);
+        if (model.VendorId.HasValue)
+        {
+            var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId.Value });
+            if (vendor is null)
+            {
+                AddLocalizedModelError("Error.VendorIsNotFound");
+                model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                return View(model);
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+            {
+                Ids = model.Items.Where(i => i.ProductId.HasValue).Select(i => i.ProductId!.Value).ToList()
+            });
+
+            if (model.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
+            {
+                AddLocalizedModelError("Error.ProductIsNotFound");
+                model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                return View(model);
+            }
+
+            if (model.VendorId.HasValue)
+            {
+                var isInvalid = false;
+
+                var candidateVendorIds = productInfos.SelectMany(p => p.AvailableVendors).Select(v => v.Id).Distinct().ToList();
+                var validVendorIds = candidateVendorIds.Where(vendorId => productInfos.All(p => p.AvailableVendors.Any(v => v.Id == vendorId))).ToList();
+
+                model.NotHasAppropriatedVendor = isInvalid = validVendorIds.Count == 0;
+
+                if (model.VendorId.HasValue && !validVendorIds.Contains(model.VendorId.Value))
+                {
+                    AddLocalizedModelError("Error.PurchaseOrder.VendorIsNotAppropriate");
+                    model.VendorId = null;
+                    isInvalid = true;
+                }
+
+                if (isInvalid)
+                {
+                    model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                    return View(model);
+                }
+            }
+
+            if (model.IsPaid)
+            {
+                var subTotal = model.Items.Sum(item => item.SubTotal);
+                if (subTotal < model.PaidAmount)
+                {
+                    AddLocalizedModelError("Error.PaidAmountExceedsOrderTotal");
+                    model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                    return View(model);
+                }
+            }
+        }
+
+        var result = await _mediator.Send(prepareQuickCreateCommand());
+        if (result.Success)
+        {
+            NotifySuccess("Msg.SaveSuccess");
+            return RedirectToAction(nameof(Details), new { id = result.CreatedId });
+        }
+
+        NotifyError(result.ErrorMessage!);
+        model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+        return View(model);
+
+        //local method
+        PurchaseOrderQuickCreateCommand prepareQuickCreateCommand()
+        {
+            var command = new PurchaseOrderQuickCreateCommand
+            {
+                PlacedOn = model.PlacedOn,
+                VendorId = model.VendorId!.Value,
+                IsPaid = model.IsPaid,
+                IsReceived = model.IsReceived,
+                Note = model.Note,
+                Items = model.Items.Select(item => new PurchaseOrderQuickCreateCommand.PurchaseOrderQuickCreateItemModel
+                {
+                    ProductId = item.ProductId!.Value,
+                    Quantity = item.Quantity!.Value,
+                    UnitCost = item.UnitCost
+                }).ToList()
+            };
+            if (model.IsReceived)
+            {
+                foreach (var item in command.Items)
+                {
+                    item.WarehouseId = model.DefaultWarehouseId;
+                }
+                command.DefaultWarehouseId = model.DefaultWarehouseId;
+                command.ReceivedOn = model.ReceivedOn;
+            }
+            if (model.IsPaid)
+            {
+                command.PaymentInfo = new PurchaseOrderQuickCreateCommand.PurchaseOrderQuickCreatePaymentModel
+                {
+                    PaidAmount = model.PaidAmount!.Value,
+                    PaymentMethod = (int)model.PaymentMethod
+                };
+            }
+
+            return command;
+        }
     }
 
     [HttpPost]

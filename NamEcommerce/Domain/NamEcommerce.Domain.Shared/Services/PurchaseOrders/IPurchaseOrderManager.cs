@@ -17,7 +17,7 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<IList<RelatedPurchaseOrderDto>> FindRelatedPurchaseOrdersAsync(Guid vendorId, IList<Guid> productIds, IList<PurchaseOrderStatus> statuses);
 
     Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto);
-    Task<QuickCreatePurchaseOrderResultDto> QuickCreateAndReceiveAsync(QuickCreatePurchaseOrderDto dto);
+    Task<PurchaseOrderQuickCreateResultDto> QuickCreatePurchaseOrderAsync(PurchaseOrderQuickCreateDto dto);
     Task<CreatePurchaseOrderResultDto> CopyPurchaseOrderAsync(Guid sourceId);
     Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto);
     Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageAsync(CreatePoFromShortageDto dto);

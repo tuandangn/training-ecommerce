@@ -1,10 +1,12 @@
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 
 [Serializable]
 public sealed record CreateGoodsReceiptFromPurchaseOrderDto
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required Guid PurchaseOrderId { get; init; }
     public required string PurchaseOrderCode { get; init; }
 
@@ -28,6 +30,9 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderDto
             throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
         if (Quantity <= 0)
             throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedDateCannotBeInFuture");
+
     }
 }
 

@@ -13,7 +13,7 @@ public interface IPurchaseOrderAppService
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
 
     Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto);
-    Task<QuickCreatePurchaseOrderResultAppDto> QuickCreatePurchaseOrderAsync(QuickCreatePurchaseOrderAppDto dto);
+    Task<PurchaseOrderQuickCreateResultAppDto> QuickCreatePurchaseOrderAsync(PurchaseOrderQuickCreateAppDto dto);
     Task<CreatePurchaseOrderResultAppDto> CopyPurchaseOrderAsync(Guid id);
     Task<CreatePurchaseOrderResultAppDto> SplitPurchaseOrderAsync(SplitPurchaseOrderAppDto dto);
 

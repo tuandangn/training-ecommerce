@@ -56,6 +56,7 @@ public sealed record AddPurchaseOrderItemResultDto
 [Serializable]
 public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required decimal ReceivedQuantity { get; init; }
     public required Guid? WarehouseId { get; init; }
     public Guid? ReceivedByUserId { get; set; }
@@ -64,6 +65,8 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
 
     public void Verify()
     {
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedDateCannotBeInFuture");
         if (ReceivedQuantity <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderReceiveQuantityMustBePositive");
         if (SellingPrice.HasValue && SellingPrice.Value < 0)
@@ -82,6 +85,7 @@ public sealed record ReceivedGoodsForItemResultDto(Guid PurchaseOrderId, Guid Pu
 [Serializable]
 public sealed record BulkReceiveGoodsForPurchaseOrderDto(Guid PurchaseOrderId)
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required IList<BulkReceiveGoodsForPurchaseOrderLineDto> Lines { get; init; }
     public Guid? ReceivedByUserId { get; init; }
 
@@ -89,6 +93,8 @@ public sealed record BulkReceiveGoodsForPurchaseOrderDto(Guid PurchaseOrderId)
     {
         if (PurchaseOrderId == Guid.Empty)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderIsNotFound");
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedDateCannotBeInFuture");
         if (Lines is null || Lines.Count == 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.BulkReceive.NoItemsProvided");
         foreach (var line in Lines)
