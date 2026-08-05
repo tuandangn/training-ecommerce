@@ -7,7 +7,6 @@
 }
 <div class="d-flex align-items-center justify-content-center ui-login-shell">
     <div class="w-100 ui-max-w-420">
-        <!-- Logo / Brand -->
         <div class="text-center mb-4">
             <div class="mb-2 ui-login-brand-icon">
                 <i class="bi bi-bag-heart-fill"></i>
@@ -16,7 +15,6 @@
             <p class="text-muted small mt-1">Đăng nhập để tiếp tục quản lý</p>
         </div>
 
-        <!-- Login Card -->
         <div class="content-card">
             <div class="content-card-body ui-login-card">
                 <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
@@ -40,8 +38,7 @@
                             <span class="input-group-text bg-white ui-border-right-muted">
                                 <i class="bi bi-lock text-muted"></i>
                             </span>
-                            <input asp-for="Password" class="form-control ui-border-left-0" data-testid="login-password" placeholder="Mật khẩu"
-                                   />
+                            <input asp-for="Password" class="form-control ui-border-left-0" data-testid="login-password" placeholder="Mật khẩu"/>
                         </div>
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>

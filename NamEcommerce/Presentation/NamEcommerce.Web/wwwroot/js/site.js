@@ -7,11 +7,15 @@ $(function () {
     $('form').on('submit', function (e) {
         if (e.isDefaultPrevented())
             return;
+
         var form = this;
         if (!isFormValid(form))
             return;
+
         enableSubmitButtons(form, false);
         disabledSubmitForms.push(form);
+
+        showPageLoading();
     });
 
     $(document).ajaxComplete(function () {
