@@ -1059,4 +1059,16 @@
   <data name="Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate" xml:space="preserve">
     <value>Expected delivery date cannot be less than placed date</value>
   </data>
+  <data name="Error.ExpenseTaxRateInvalid" xml:space="preserve">
+    <value>Expense tax rate is invalid</value>
+  </data>
+  <data name="Error.ExpenseDataIsInvalid" xml:space="preserve">
+    <value>Expense data is invalid</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeInFuture" xml:space="preserve">
+    <value>Expense incurred date cannot be in future</value>
+  </data>
+  <data name="Label.IncurredDate" xml:space="preserve">
+    <value>Incurred date</value>
+  </data>
 </root>

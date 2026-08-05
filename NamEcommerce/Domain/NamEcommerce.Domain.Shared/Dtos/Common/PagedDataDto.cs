@@ -34,7 +34,7 @@ public static class PagedDataDto
             }
         };
 
-    public static IPagedDataDto<TData> Create<TData>(IEnumerable<TData> items, int pageIndex, int pageSize, int totalCount)
+    public static IPagedDataDto<TData> Create<TData>(IEnumerable<TData> items, int pageIndex, int pageSize, int? totalCount)
         => new PagedDataDto<TData>()
         {
             Items = items,
@@ -42,7 +42,7 @@ public static class PagedDataDto
             {
                 PageIndex = pageIndex,
                 PageSize = pageSize,
-                TotalCount = totalCount
+                TotalCount = totalCount.HasValue ? totalCount.Value : items.Count()
             }
         };
 }

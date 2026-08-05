@@ -1,0 +1,27 @@
+﻿using FluentValidation;
+using Microsoft.Extensions.Localization;
+using NamEcommerce.Web.Models.Finances;
+using NamEcommerce.Web.Resources;
+
+namespace NamEcommerce.Web.Validators.Finances;
+
+public sealed class EditExpenseValidator : AbstractValidator<EditExpenseModel>
+{
+    public EditExpenseValidator(IStringLocalizer<SharedResource> localizer)
+    {
+        RuleFor(m => m.Title)
+            .NotEmpty().WithMessage(m => localizer["Error.ExpenseTitleRequired"])
+            .MaximumLength(255).WithMessage(m => localizer["Error.ExpenseTitleTooLong"]);
+
+        RuleFor(m => m.IncurredDate)
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.IncurredDate"]])
+            .LessThanOrEqualTo(DateTime.Now).WithMessage(m => localizer["Error.ExpenseIncurredDateCannotBeInFuture"]);
+
+        RuleFor(m => m.AmountWithoutTax)
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Amount"]])
+            .GreaterThan(0).WithMessage(m => localizer["Error.ExpenseAmountMustBePositive"]);
+
+        RuleFor(m => m.TaxRate)
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.ExpenseTaxRateInvalid"]);
+    }
+}

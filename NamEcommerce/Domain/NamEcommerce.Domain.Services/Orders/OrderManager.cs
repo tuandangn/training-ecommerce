@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -100,12 +101,16 @@ public sealed class OrderManager(
                 specification = specification.AndNot(new IsPaymentRequiredOrderSpec());
         }
 
-        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await orderDataReader.CountAsync(specification).ConfigureAwait(false);
 
-        var total = await orderDataReader.CountAsync(specification).ConfigureAwait(false);
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<OrderDto>(), pageIndex, pageSize, 0);
+
+        specification.ApplyOrderByDescending(order => order.CreatedOnUtc);
         var pagedData = await orderDataReader.GetPagedListAsync(specification, pageIndex, pageSize).ConfigureAwait(false);
 
-        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, total);
+        return PagedDataDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, totalCount);
     }
 
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)

@@ -28,6 +28,7 @@ public sealed class PurchaseOrderQuickCreateModel
     public bool IsReceived { get; set; }
     public IList<Guid> PictureIds { get; set; } = [];
     public DateTime? ExpectedDeliveryDate { get; set; }
+    public decimal? ShippingAmount { get; set; }
 
     public bool IsPaid { get; set; }
     public decimal? PaidAmount { get; set; }

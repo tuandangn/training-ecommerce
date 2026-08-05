@@ -5,95 +5,69 @@ using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
+using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Application.Services.Extensions;
 
 namespace NamEcommerce.Application.Services.Finance;
 
-public class ExpenseAppService : IExpenseAppService
+public class ExpenseAppService(IExpenseManager expenseManager,
+    IEntityDataReader<Expense> expenseDataReader) : IExpenseAppService
 {
-    private readonly IExpenseManager _expenseManager;
-    private readonly IEntityDataReader<Expense> _expenseDataReader;
-
-    public ExpenseAppService(IExpenseManager expenseManager, IEntityDataReader<Expense> expenseDataReader)
+    public async Task<IPagedDataAppDto<ExpenseAppDto>> GetExpensesAsync(
+        int pageIndex = 0, int pageSize = int.MaxValue, IList<Guid>? orderIds = null,
+        string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null,
+        int? expenseType = null, string? sortBy = null, bool sortDesc = true)
     {
-        _expenseManager = expenseManager;
-        _expenseDataReader = expenseDataReader;
-    }
-
-    public async Task<IPagedDataAppDto<ExpenseAppDto>> GetExpensesAsync(string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null, int pageIndex = 0, int pageSize = int.MaxValue, string? sortBy = null, bool sortDesc = true)
-    {
-        var query = _expenseDataReader.DataSource;
-        if (!string.IsNullOrWhiteSpace(keywords))
-            query = query.Where(x => x.Title.Contains(keywords) || (x.Description != null && x.Description.Contains(keywords)));
-
-        if (fromDate.HasValue)
-            query = query.Where(x => x.IncurredDate >= fromDate.Value.Date);
-
-        if (toDate.HasValue)
-            query = query.Where(x => x.IncurredDate <= toDate.Value.Date.AddDays(1).AddTicks(-1));
-
-        if (expenseType.HasValue)
+        var expenseSortBy = sortBy switch
         {
-            var typeEnum = (NamEcommerce.Domain.Shared.Enums.Finance.ExpenseType)expenseType.Value;
-            query = query.Where(x => x.ExpenseType == typeEnum);
-        }
-
-        var totalCount = query.Count();
-
-        IOrderedQueryable<Expense> sorted = sortBy switch
-        {
-            "amount" => sortDesc ? query.OrderByDescending(x => x.Amount) : query.OrderBy(x => x.Amount),
-            "title"  => sortDesc ? query.OrderByDescending(x => x.Title)  : query.OrderBy(x => x.Title),
-            "type"   => sortDesc ? query.OrderByDescending(x => x.ExpenseType) : query.OrderBy(x => x.ExpenseType),
-            _        => sortDesc ? query.OrderByDescending(x => x.IncurredDate) : query.OrderBy(x => x.IncurredDate)
+            "amount" => sortDesc ? ExpenseSortByEnum.AmountDesc : ExpenseSortByEnum.Amount,
+            "title" => sortDesc ? ExpenseSortByEnum.TitleDesc : ExpenseSortByEnum.Title,
+            "type" => ExpenseSortByEnum.ExpenseType,
+            _ => sortDesc ? ExpenseSortByEnum.IncurredDateDesc : ExpenseSortByEnum.IncurredDate
         };
+        var pagedData = await expenseManager.GetExpensesAsync(pageIndex, pageSize,
+            orderIds, keywords, fromDate, toDate,
+            (ExpenseType?)expenseType, expenseSortBy).ConfigureAwait(false);
 
-        var items = sorted
-            .Skip(pageIndex * pageSize).Take(pageSize)
-            .Select(x => new ExpenseAppDto
-            {
-                Id = x.Id,
-                Title = x.Title,
-                Description = x.Description,
-                Amount = x.Amount,
-                ExpenseType = (int)x.ExpenseType,
-                IncurredDate = x.IncurredDate,
-                SourceOrderId = x.SourceOrderId,
-                SourceCustomerReturnId = x.SourceCustomerReturnId,
-                SourceVendorReturnId = x.SourceVendorReturnId
-            })
-            .ToList();
-
-        return PagedDataAppDto.Create(items, pageIndex, pageSize, totalCount);
-    }
-
-    public Task<IList<ExpenseAppDto>> GetExpensesByOrderIdAsync(Guid orderId)
-    {
-        var items = _expenseDataReader.DataSource
-            .Where(x => x.SourceOrderId == orderId)
-            .OrderByDescending(x => x.IncurredDate)
-            .Select(x => new ExpenseAppDto
-            {
-                Id = x.Id,
-                Title = x.Title,
-                Description = x.Description,
-                Amount = x.Amount,
-                ExpenseType = (int)x.ExpenseType,
-                IncurredDate = x.IncurredDate,
-                SourceOrderId = x.SourceOrderId,
-                SourceCustomerReturnId = x.SourceCustomerReturnId,
-                SourceVendorReturnId = x.SourceVendorReturnId
-            })
-            .ToList();
-
-        return Task.FromResult<IList<ExpenseAppDto>>(items);
+        return pagedData.ToPagedDataAppDto(expense => new ExpenseAppDto
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            AmountWithoutTax = expense.AmountWithoutTax,
+            TaxRate = expense.TaxRate,
+            Amount = expense.Amount,
+            ExpenseType = (int)expense.ExpenseType,
+            IncurredDateUtc = expense.IncurredDate,
+            SourceOrderId = expense.SourceOrderId,
+            SourceCustomerReturnId = expense.SourceCustomerReturnId,
+            SourceVendorReturnId = expense.SourceVendorReturnId,
+            IsSystemGenerated = expense.IsSystemGenerated
+        });
     }
 
     public async Task<ExpenseAppDto?> GetExpenseByIdAsync(Guid id)
     {
-        var x = await _expenseDataReader.GetByIdAsync(id);
-        if (x is null) return null;
+        var expense = await expenseManager.GetExpenseByIdAsync(id);
 
-        return MapExpense(x);
+        if (expense is null) 
+            return null;
+
+        return new()
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            AmountWithoutTax = expense.AmountWithoutTax,
+            TaxRate = expense.TaxRate,
+            Amount = expense.Amount,
+            ExpenseType = (int)expense.ExpenseType,
+            IncurredDateUtc = expense.IncurredDate,
+            SourceOrderId = expense.SourceOrderId,
+            SourceCustomerReturnId = expense.SourceCustomerReturnId,
+            SourceVendorReturnId = expense.SourceVendorReturnId,
+            IsSystemGenerated = expense.IsSystemGenerated
+        };
     }
 
     public async Task<CreateExpenseResultAppDto> CreateExpenseAsync(CreateExpenseAppDto dto)
@@ -101,15 +75,16 @@ public class ExpenseAppService : IExpenseAppService
         var (valid, errorMessage) = dto.Validate();
         if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        var result = await _expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        var result = await expenseManager.CreateExpenseAsync(new CreateExpenseDto
         {
             Title = dto.Title,
             Description = dto.Description,
-            Amount = dto.Amount,
-            ExpenseType = (NamEcommerce.Domain.Shared.Enums.Finance.ExpenseType)dto.ExpenseType,
-            IncurredDate = dto.IncurredDate,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDateUtc = dto.IncurredDateUtc,
             RecordedByUserId = dto.RecordedByUserId,
-            SourceOrderId = dto.SourceOrderId
+            SourceOrderId = dto.SourceOrderId,
         });
 
         return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
@@ -120,16 +95,17 @@ public class ExpenseAppService : IExpenseAppService
         var (valid, errorMessage) = dto.Validate();
         if (!valid) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        var expense = await _expenseDataReader.GetByIdAsync(dto.Id);
+        var expense = await expenseDataReader.GetByIdAsync(dto.Id);
         if (expense is null) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
-        await _expenseManager.UpdateExpenseAsync(new UpdateExpenseDto(dto.Id)
+        await expenseManager.UpdateExpenseAsync(new UpdateExpenseDto
         {
+            Id = dto.Id,
             Title = dto.Title,
             Description = dto.Description,
-            Amount = dto.Amount,
-            ExpenseType = (NamEcommerce.Domain.Shared.Enums.Finance.ExpenseType)dto.ExpenseType,
-            IncurredDate = dto.IncurredDate
+            AmountWithoutTax = dto.AmountWithoutTax,
+            IncurredDateUtc = dto.IncurredDateUtc,
+            ExpenseType = (ExpenseType) dto.ExpenseType
         });
 
         return new UpdateExpenseResultAppDto { Success = true, UpdatedId = dto.Id };
@@ -137,46 +113,26 @@ public class ExpenseAppService : IExpenseAppService
 
     public async Task<DeleteExpenseResultAppDto> DeleteExpenseAsync(Guid id)
     {
-        var expense = await _expenseDataReader.GetByIdAsync(id);
+        var expense = await expenseDataReader.GetByIdAsync(id);
         if (expense is null) return new DeleteExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
-        await _expenseManager.DeleteExpenseAsync(id);
+        await expenseManager.DeleteExpenseAsync(id);
         return new DeleteExpenseResultAppDto { Success = true };
     }
 
-    public Task<IReadOnlyCollection<ExpenseSummaryAppDto>> GetExpenseSummaryAsync(DateTime? fromDate = null, DateTime? toDate = null)
+    public async Task<IEnumerable<ExpenseSummaryAppDto>> GetExpenseSummaryAsync(DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var query = _expenseDataReader.DataSource;
-        if (fromDate.HasValue)
-            query = query.Where(x => x.IncurredDate >= fromDate.Value.Date);
-        if (toDate.HasValue)
-            query = query.Where(x => x.IncurredDate <= toDate.Value.Date.AddDays(1).AddTicks(-1));
-
-        var result = query
-            .GroupBy(x => x.ExpenseType)
-            .Select(g => new ExpenseSummaryAppDto
+        var data = await expenseManager.GetExpensesAsync(0, int.MaxValue, fromDate: fromDate, toDate: toDate).ConfigureAwait(false);
+        var summaryLines = data.GroupBy(expense => expense.ExpenseType)
+            .Select(group => new ExpenseSummaryAppDto
             {
-                ExpenseType = (int)g.Key,
-                Count = g.Count(),
-                TotalAmount = g.Sum(x => x.Amount)
+                ExpenseType = (int)group.Key,
+                Count = group.Count(),
+                TotalAmount = group.Sum(x => x.Amount)
             })
             .OrderByDescending(x => x.TotalAmount)
             .ToList();
 
-        return Task.FromResult<IReadOnlyCollection<ExpenseSummaryAppDto>>(result);
+        return summaryLines;
     }
-
-    private static ExpenseAppDto MapExpense(Expense expense)
-        => new()
-        {
-            Id = expense.Id,
-            Title = expense.Title,
-            Description = expense.Description,
-            Amount = expense.Amount,
-            ExpenseType = (int)expense.ExpenseType,
-            IncurredDate = expense.IncurredDate,
-            SourceOrderId = expense.SourceOrderId,
-            SourceCustomerReturnId = expense.SourceCustomerReturnId,
-            SourceVendorReturnId = expense.SourceVendorReturnId
-        };
 }

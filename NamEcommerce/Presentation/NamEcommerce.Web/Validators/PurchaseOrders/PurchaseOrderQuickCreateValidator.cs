@@ -27,10 +27,14 @@ public sealed class PurchaseOrderQuickCreateValidator : AbstractValidator<Purcha
         {
             RuleFor(p => p.DefaultWarehouseId)
                 .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Warehouse"]]);
+
             RuleFor(p => p.ReceivedOn)
                 .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.ReceivedOn"]])
                 .GreaterThanOrEqualTo(p => p.PlacedOn).WithMessage(p => localizer["Error.ReceivedOnMustBeAfterPlacedOn"])
                 .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.ReceivedDateCannotBeInFuture"]);
+
+            RuleFor(p => p.ShippingAmount)
+                .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.ShippingAmount"]]);
         }).Otherwise(() =>
         {
             RuleFor(p => p.ExpectedDeliveryDate)

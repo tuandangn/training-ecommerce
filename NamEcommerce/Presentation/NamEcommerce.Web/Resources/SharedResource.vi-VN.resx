@@ -1059,4 +1059,16 @@
   <data name="Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate" xml:space="preserve">
     <value>Ngày nhập dự kiến không nhỏ hơn ngày đặt hàng</value>
   </data>
+  <data name="Error.ExpenseTaxRateInvalid" xml:space="preserve">
+    <value>Tỉ lệ thuế không đúng</value>
+  </data>
+  <data name="Error.ExpenseDataIsInvalid" xml:space="preserve">
+    <value>Dữ liệu chi phí không đúng.</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeInFuture" xml:space="preserve">
+    <value>Ngày phát sinh chi phí không thể ở tương lai</value>
+  </data>
+  <data name="Label.IncurredDate" xml:space="preserve">
+    <value>Ngày phát sinh</value>
+  </data>
 </root>

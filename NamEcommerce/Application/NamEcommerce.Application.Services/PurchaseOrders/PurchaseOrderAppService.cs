@@ -52,7 +52,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-        IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, 
+        IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
         IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
         IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
@@ -890,16 +890,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<CommonActionResultDto> AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax)
     {
-        try
-        {
-            await _purchaseOrderManager.AddReceiptFeesAsync(purchaseOrderId, additionalShipping, additionalTax)
-                .ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
+        await _purchaseOrderManager.AddReceiptFeesAsync(purchaseOrderId, additionalShipping, additionalTax)
+            .ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderAppDto dto)

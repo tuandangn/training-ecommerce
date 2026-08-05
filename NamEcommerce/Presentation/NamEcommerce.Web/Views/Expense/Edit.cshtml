@@ -1,91 +1,105 @@
-@model NamEcommerce.Application.Contracts.Dtos.Finance.UpdateExpenseAppDto
-
+@using NamEcommerce.Domain.Shared.Enums.Finance
+@using NamEcommerce.Web.Models.Finances
+@model EditExpenseModel
 @{
     ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Chi phí";
-
-    bool isSystem = ViewData["IsSystemGenerated"] is true;
-
-    var expenseTypes = new List<SelectListItem>
-    {
-        new SelectListItem { Value = "1", Text = "Lương thưởng" },
-        new SelectListItem { Value = "2", Text = "Mặt bằng" },
-        new SelectListItem { Value = "3", Text = "Tiếp thị" },
-        new SelectListItem { Value = "4", Text = "Điện nước" },
-        new SelectListItem { Value = "5", Text = "Khác" },
-        new SelectListItem { Value = "6", Text = "Hoàn hàng (Hệ thống)" }
-    };
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Cập nhật Chi phí</h1>
-        <p class="page-header-subtitle">Thay đổi thông tin khoản chi @Model.Title</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Chi phí
+        <span class="text-muted">@Model.Title</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Expense" class="text-decoration-none">Chi phí</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
+<div class="content-card">
+    <form asp-action="Edit" method="post" asp-antiforgery="true">
+        <div class="content-card-header">
+            <h5>Thông tin chi phí</h5>
+        </div>
+        <div class="content-card-body">
+            <div class="row g-3">
+                @if (Model.IsSystemGenerated)
+                {
+                    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Khoản chi phí này được tạo tự động bởi hệ thống (từ nghiệp vụ hoàn hàng). Chỉ có thể chỉnh sửa ghi chú.</span>
+                    </div>
+                }
+                <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+                <input type="hidden" asp-for="Id" />
+                <div class="col-md-6">
+                    <label asp-for="Title" class="form-label">Khoản chi</label>
+                    <input asp-for="Title" class="form-control" disabled="@(Model.IsSystemGenerated)" />
+                    @if (Model.IsSystemGenerated)
+                    {
+                        <input type="hidden" asp-for="Title" />
+                    }
+                    <span asp-validation-for="Title" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
+                    <input asp-for="IncurredDate" type="date" class="form-control" data-val-range-max="@DateTime.Today.ToString("s")" disabled="@(Model.IsSystemGenerated)" />
+                    @if (Model.IsSystemGenerated)
+                    {
+                        <input type="hidden" asp-for="IncurredDate" />
+                    }
+                    <span asp-validation-for="IncurredDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AmountWithoutTax" class="form-label">
+                        Số tiền
+                    </label>
+                    <input asp-for="AmountWithoutTax" data-decimal="currency" class="form-control" disabled="@(Model.IsSystemGenerated)" inputmode="numeric" />
+                    @if (Model.IsSystemGenerated)
+                    {
+                        <input type="hidden" asp-for="AmountWithoutTax" />
+                    }
+                    <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
+                </div>
 
-<div class="form-card">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Thông tin chi phí</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
-    <div class="form-card-body">
-
-        @if (isSystem)
-        {
-            <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
-                <i class="bi bi-shield-lock-fill"></i>
-                <span>Khoản chi phí này được tạo tự động bởi hệ thống (từ nghiệp vụ hoàn hàng). Chỉ có thể chỉnh sửa ghi chú.</span>
+                <div class="col-md-6">
+                    <label asp-for="ExpenseType" class="form-label">Loại phí</label>
+                    <select asp-for="ExpenseType" class="form-select" disabled="@(Model.IsSystemGenerated)">
+                        @foreach (var (value, text) in ExpenseType.GetOptions())
+                        {
+                            <option value="@value" selected="@(value == (int)Model.ExpenseType)">@text</option>
+                        }
+                    </select>
+                    @if (Model.IsSystemGenerated)
+                    {
+                        <input type="hidden" asp-for="ExpenseType" />
+                    }
+                    <span asp-validation-for="ExpenseType" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label">Ghi chú thêm</label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
             </div>
-        }
-
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-        <form class="row g-3" asp-action="Edit" method="post" asp-antiforgery="true">
-            <input type="hidden" asp-for="Id" />
-
-            <div class="col-md-6">
-                <label asp-for="Title" class="form-label">Khoản chi</label>
-                <input asp-for="Title" class="form-control" autofocus disabled="@isSystem" />
-                @if (isSystem) { <input type="hidden" asp-for="Title" /> }
-                <span asp-validation-for="Title" class="text-danger small"></span>
-            </div>
-
-            <div class="col-md-6">
-                <label asp-for="Amount" class="form-label">Số tiền (₫)</label>
-                <input asp-for="Amount" type="number" class="form-control" disabled="@isSystem" inputmode="numeric"/>
-                @if (isSystem) { <input type="hidden" asp-for="Amount" /> }
-                <span asp-validation-for="Amount" class="text-danger small"></span>
-            </div>
-
-            <div class="col-md-6">
-                <label asp-for="ExpenseType" class="form-label">Loại phí</label>
-                <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select" disabled="@isSystem"></select>
-                @if (isSystem) { <input type="hidden" asp-for="ExpenseType" /> }
-                <span asp-validation-for="ExpenseType" class="text-danger small"></span>
-            </div>
-
-            <div class="col-md-6">
-                <label asp-for="IncurredDate" class="form-label">Ngày thanh toán / Hóa đơn</label>
-                <input asp-for="IncurredDate" type="date" class="form-control" disabled="@isSystem" />
-                @if (isSystem) { <input type="hidden" asp-for="IncurredDate" /> }
-                <span asp-validation-for="IncurredDate" class="text-danger small"></span>
-            </div>
-
-            <div class="col-12">
-                <label asp-for="Description" class="form-label">Ghi chú thêm</label>
-                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                <span asp-validation-for="Description" class="text-danger small"></span>
-            </div>
-
-            <div class="form-card-footer ui-edge-footer">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="List" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <div class="d-block">
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-save me-1"></i>Lưu thay đổi
+                    <i class="bi bi-floppy"></i>
+                    Lưu lại
                 </button>
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

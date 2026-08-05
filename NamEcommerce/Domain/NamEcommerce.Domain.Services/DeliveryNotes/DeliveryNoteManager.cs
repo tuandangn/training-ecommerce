@@ -30,6 +30,8 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Values;
 using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -827,32 +829,27 @@ public sealed class DeliveryNoteManager(
     public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize,
         string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
-        var query = deliveryNoteReader.DataSource;
+        var deliverySpec = new CompositeSpecification<DeliveryNote>();
 
         if (!string.IsNullOrWhiteSpace(keywords))
-        {
-            var uppercaseKeywords = keywords.Trim().ToUpper();
-            query = query.Where(deliveryNote =>
-                deliveryNote.Code.Contains(keywords) ||
-                (deliveryNote.OrderCode != null && deliveryNote.OrderCode.Contains(keywords)) ||
-                deliveryNote.CustomerInfo.FullName.Value.ToUpper().Contains(uppercaseKeywords) ||
-                (deliveryNote.CustomerInfo.PhoneNumber != null && deliveryNote.CustomerInfo.PhoneNumber.Contains(keywords))
-            );
-        }
+            deliverySpec.And(new DeliveryNoteKeywordSearchSpec(keywords));
+
         if (orderId.HasValue)
-            query = query.Where(deliverNote => deliverNote.OrderId == orderId);
+            deliverySpec.And(new DeliveryNotesOfOrdersSpec([orderId.Value]));
+
         if (status != null && status.Any())
-            query = query.Where(deliverNote => status.Contains(deliverNote.Status));
+            deliverySpec.And(new HaveStatusDeliveryNoteSpec(status.ToList()));
 
-        query = query.OrderByDescending(x => x.CreatedOnUtc);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await deliveryNoteReader.CountAsync(deliverySpec).ConfigureAwait(false);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
-        if (total == 0)
+        if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(new List<DeliveryNoteDto>(), pageIndex, pageSize, 0);
 
-        var deliveryNotes = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
+        deliverySpec.ApplyOrderByDescending(deliveryNote => deliveryNote.CreatedOnUtc);
+        var pagedData = await deliveryNoteReader.GetPagedListAsync(deliverySpec, pageIndex, pageSize).ConfigureAwait(false);
 
-        return PagedDataDto.Create(deliveryNotes.Select(MapToDto).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(pagedData.Select(MapToDto).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<IDictionary<Guid, decimal>> GetDeliveredQuantitiesAsync(IEnumerable<Guid> orderItemIds)

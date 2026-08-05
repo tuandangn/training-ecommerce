@@ -167,34 +167,20 @@ public sealed partial class OrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsRecordPayment)]
     public async Task<IActionResult> RecordSettlementPayment([FromBody] RecordOrderSettlementPaymentCommand command)
     {
-        try
-        {
-            var result = await _mediator.Send(command);
-            return result.Success
-                ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
-                : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
-        }
+        var result = await _mediator.Send(command);
+        return result.Success
+            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
     }
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsRecordPayment)]
     public async Task<IActionResult> RecordSettlementQrPayment([FromBody] RecordOrderSettlementQrPaymentCommand command)
     {
-        try
-        {
-            var result = await _mediator.Send(command);
-            return result.Success
-                ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
-                : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
-        }
+        var result = await _mediator.Send(command);
+        return result.Success
+            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest") });
     }
 
     [HttpPost]

@@ -25,6 +25,7 @@ public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<PurchaseOr
             DefaultWarehouseId = request.DefaultWarehouseId,
             ReceivedOnUtc = request.IsReceived ? DateTimeHelper.ToUniversalTime(request.ReceivedOn) : null,
             ExpectedDeliveryOnUtc = request.IsReceived || !request.ExpectedDeliveryDate.HasValue ? null : DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate.Value),
+            ShippingAmount = request.IsReceived ? request.ShippingAmount : null,
             Note = request.Note,
             IsReceived = request.IsReceived,
             IsPaid = request.IsPaid,

@@ -474,9 +474,9 @@ public sealed class CustomerReturnManager(
             {
                 Title = $"Chi phí phát sinh phiếu trả hàng {customerReturn.Code}",
                 Description = $"Chi phí phát sinh khi nhận hàng trả từ khách {customerReturn.CustomerName}",
-                Amount = customerReturn.AdditionalCost,
+                AmountWithoutTax = customerReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
-                IncurredDate = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
+                IncurredDateUtc = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
                 SourceCustomerReturnId = customerReturn.Id
             }).ConfigureAwait(false);
         }

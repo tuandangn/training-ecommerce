@@ -34,14 +34,14 @@ public sealed record PurchaseOrderQuickCreateAppDto
                 return (false, "Error.WarehouseRequired");
             if (ReceivedOnUtc > DateTime.UtcNow)
                 return (false, "Error.ReceivedDateCannotBeInFuture");
+            if (ShippingAmount.HasValue && ShippingAmount <= 0)
+                return (false, "Error.ShippingAmountCannotBeNegative");
         }
         else
         {
-            if(ExpectedDeliveryOnUtc.HasValue && ExpectedDeliveryOnUtc < DateTime.UtcNow)
+            if (ExpectedDeliveryOnUtc.HasValue && ExpectedDeliveryOnUtc < DateTime.UtcNow)
                 return (false, "Error.ExpectedDeliveryDateCannotBeInPast");
         }
-        if (ShippingAmount.HasValue && ShippingAmount <= 0)
-            return (false, "Error.ShippingAmountCannotBeNegative");
 
         if (TaxAmount.HasValue && TaxAmount <= 0)
             return (false, "Error.TaxAmountCannotBeNegative");

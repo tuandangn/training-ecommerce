@@ -929,16 +929,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 || userIds.Contains(c.CreatedByUserId));
         }
 
-        query = query.OrderByDescending(c => c.CreatedOnUtc);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
 
-        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<PurchaseOrderDto>(), pageIndex, pageSize, 0);
+
+        query = query.OrderByDescending(c => c.CreatedOnUtc);
         var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        var data = PagedDataDto.Create(pagedData.Select(purchaseOrder => purchaseOrder.ToDto()), pageIndex, pageSize, totalCount);
-        return data;
+        return PagedDataDto.Create(pagedData.Select(purchaseOrder => purchaseOrder.ToDto()), pageIndex, pageSize, totalCount);
     }
 
     public async Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id)

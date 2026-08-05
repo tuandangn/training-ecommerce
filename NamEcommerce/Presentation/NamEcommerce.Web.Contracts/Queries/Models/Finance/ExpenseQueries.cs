@@ -16,7 +16,7 @@ public sealed class GetExpensesQuery : IRequest<ExpenseListModel>
 }
 
 [Serializable]
-public sealed record GetExpenseByIdQuery(Guid Id) : IRequest<ExpenseEditModel?>;
+public sealed record GetExpenseByIdQuery(Guid Id) : IRequest<ExpenseModel?>;
 
 [Serializable]
 public sealed class GetExpenseBudgetsQuery : IRequest<ExpenseBudgetListModel>

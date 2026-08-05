@@ -498,7 +498,7 @@ export default class QuickCreatePurchaseOrderController {
     }
     #toggleDeliveryTabs() {
         if (this.#isDelivered()) {
-            if (this.btnDelivered.disabled) {
+            if (this.btnDelivered.classList.contains('disabled')) {
                 this.btnDelivered.classList.remove('active');
                 document.querySelector(this.btnDelivered.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
             }
@@ -507,7 +507,7 @@ export default class QuickCreatePurchaseOrderController {
             }
             return;
         }
-        if (this.btnNotDelivered.disabled) {
+        if (this.btnNotDelivered.classList.contains('disabled')) {
             this.btnNotDelivered.classList.remove('active');
             document.querySelector(this.btnNotDelivered.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
         }
@@ -517,7 +517,7 @@ export default class QuickCreatePurchaseOrderController {
     }
     #togglePaymentTabs() {
         if (this.#isPaid()) {
-            if (this.btnIsPaid.disabled) {
+            if (this.btnIsPaid.classList.contains('disabled')) {
                 this.btnIsPaid.classList.remove('active');
                 document.querySelector(this.btnIsPaid.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
             }
@@ -526,7 +526,7 @@ export default class QuickCreatePurchaseOrderController {
             }
             return;
         }
-        if (this.btnUnpaid.disabled) {
+        if (this.btnUnpaid.classList.contains('disabled')) {
             this.btnUnpaid.classList.remove('active');
             document.querySelector(this.btnUnpaid.getAttribute('data-bs-target'))?.classList.remove('active', 'show');
         }

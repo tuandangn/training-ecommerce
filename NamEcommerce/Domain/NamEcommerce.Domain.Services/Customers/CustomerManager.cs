@@ -10,6 +10,8 @@ using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
 using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.Customers;
 
 namespace NamEcommerce.Domain.Services.Customers;
 
@@ -116,39 +118,34 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false)
     {
-        var query = _customerDataReader.DataSource;
+        var customerSpec = new CompositeSpecification<Customer>();
 
         if (!includeSystem)
-            query = query.Where(c => !c.IsSystem);
+            customerSpec.And(new IsSystemCustomerSpec(false));
 
         if (!string.IsNullOrWhiteSpace(keywords))
+            customerSpec.And(new CustomerKeywordSearchSpec(keywords));
+
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await _customerDataReader.CountAsync(customerSpec).ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerDto>(), pageIndex, pageSize, 0);
+
+        customerSpec.ApplyOrderBy(c => c.FullName.Value);
+        var pagedData = await _customerDataReader.GetPagedListAsync(customerSpec, pageIndex, pageSize).ConfigureAwait(false);
+
+        return PagedDataDto.Create(pagedData.Select(c => new CustomerDto(c.Id)
         {
-            var normalizedKeywords = TextHelper.Normalize(keywords);
-            var uppercaseKeywords = keywords.Trim().ToUpper();
-            query = query.Where(c =>
-                c.FullName.Value.ToUpper().Contains(uppercaseKeywords) || c.FullName.Value.ToUpper().Contains(normalizedKeywords) || c.FullName.NormalizedValue.Contains(normalizedKeywords)
-                || c.Address.Value.ToUpper().Contains(uppercaseKeywords) || c.Address.Value.ToUpper().Contains(normalizedKeywords) || c.Address.NormalizedValue.Contains(normalizedKeywords)
-                || c.PhoneNumber.Contains(keywords));
-        }
-
-        var total = await query.CountAsync().ConfigureAwait(false);
-        var paged = await query
-            .OrderBy(c => c.FullName.Value)
-            .ThenByDescending(c => c.CreatedOnUtc)
-            .Skip(pageIndex * pageSize).Take(pageSize)
-            .Select(c => new CustomerDto(c.Id)
-            {
-                FullName = c.FullName,
-                PhoneNumber = c.PhoneNumber,
-                Email = c.Email,
-                Address = c.Address,
-                Note = c.Note,
-                Kind = (int)c.Kind,
-                IsSystem = c.IsSystem,
-                CreatedOnUtc = c.CreatedOnUtc
-            }).ToListAsync().ConfigureAwait(false);
-
-        return PagedDataDto.Create(paged, pageIndex, pageSize, total);
+            FullName = c.FullName,
+            PhoneNumber = c.PhoneNumber,
+            Email = c.Email,
+            Address = c.Address,
+            Note = c.Note,
+            Kind = (int)c.Kind,
+            IsSystem = c.IsSystem,
+            CreatedOnUtc = c.CreatedOnUtc
+        }), pageIndex, pageSize, totalCount);
     }
 
     private static CustomerDto MapToDto(Customer customer)

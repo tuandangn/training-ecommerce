@@ -462,7 +462,7 @@ public sealed class OrderModelFactory(
             ? await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, model.Id).ConfigureAwait(false)
             : await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, null).ConfigureAwait(false);
         var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
-        var expenses = await expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
+        var expenses = await expenseAppService.GetExpensesAsync(orderIds: [model.Id]).ConfigureAwait(false);
         var itemChangeAudits = await orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
         var receivingAccount = await bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
         var customerBalance = model.IsRetailWalkInCustomer
@@ -495,7 +495,7 @@ public sealed class OrderModelFactory(
             return new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
 
         var purchaseOrderGoodsReceiptsMap = new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
-        foreach(var purchaseOrder in model.AllocatedPurchaseOrders.Items)
+        foreach (var purchaseOrder in model.AllocatedPurchaseOrders.Items)
         {
             var goodReceipts = await goodsReceiptAppService
                     .GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrder.PurchaseOrderId)
@@ -793,7 +793,7 @@ public sealed class OrderModelFactory(
             .ToList();
 
         var expenseRows = expenses
-            .OrderBy(expense => expense.IncurredDate)
+            .OrderBy(expense => expense.IncurredDateUtc)
             .Select(expense => new OrderDetailsModel.SettlementExpenseModel
             {
                 Id = expense.Id,
@@ -801,7 +801,7 @@ public sealed class OrderModelFactory(
                 Description = expense.Description,
                 ExpenseTypeText = GetExpenseTypeText((ExpenseType)expense.ExpenseType),
                 Amount = expense.Amount,
-                IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDate)
+                IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDateUtc)
             })
             .ToList();
 

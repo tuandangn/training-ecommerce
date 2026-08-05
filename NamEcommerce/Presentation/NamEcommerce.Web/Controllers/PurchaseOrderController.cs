@@ -281,6 +281,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 command.DefaultWarehouseId = model.DefaultWarehouseId;
                 command.ReceivedOn = model.ReceivedOn;
                 command.PictureIds = model.PictureIds;
+                command.ShippingAmount = model.ShippingAmount;
             }
             else
             {

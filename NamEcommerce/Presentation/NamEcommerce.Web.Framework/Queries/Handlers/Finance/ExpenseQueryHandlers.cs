@@ -3,7 +3,7 @@ using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Finance;
 using NamEcommerce.Web.Contracts.Queries.Models.Finance;
-using NamEcommerce.Application.Contracts.Dtos.Finance;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Finance;
 
@@ -16,17 +16,17 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
     {
         var pageIndex = Math.Max(0, request.Page - 1);
 
-        var now = DateTime.UtcNow;
-        var summaryFrom = new DateTime(now.Year, now.Month, 1);
-        var summaryTo = summaryFrom.AddMonths(1).AddTicks(-1);
+        var now = DateTime.Now;
+        var summaryFrom = DateTimeHelper.ToUniversalTime(new DateTime(now.Year, now.Month, 1));
+        var summaryTo = DateTimeHelper.ToUniversalTime(summaryFrom.AddMonths(1).AddTicks(-1));
 
         var paged = await expenseAppService.GetExpensesAsync(
-            keywords: request.Keywords,
-            fromDate: request.FromDate,
-            toDate: request.ToDate,
-            expenseType: request.ExpenseType,
             pageIndex: pageIndex,
             pageSize: PageSize,
+            keywords: request.Keywords,
+            fromDate: request.FromDate.HasValue ? DateTimeHelper.ToUniversalTime(request.FromDate) : null,
+            toDate: request.ToDate.HasValue ? DateTimeHelper.ToUniversalTime(request.ToDate) : null,
+            expenseType: request.ExpenseType,
             sortBy: request.SortBy,
             sortDesc: request.SortDesc).ConfigureAwait(false);
 
@@ -55,7 +55,7 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
             Description = x.Description,
             Amount = x.Amount,
             ExpenseType = x.ExpenseType,
-            IncurredDate = x.IncurredDate,
+            IncurredDate = DateTimeHelper.ToLocalTime(x.IncurredDateUtc),
             SourceOrderId = x.SourceOrderId,
             SourceCustomerReturnId = x.SourceCustomerReturnId,
             SourceVendorReturnId = x.SourceVendorReturnId,
@@ -78,21 +78,22 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
 }
 
 public sealed class GetExpenseByIdHandler(IExpenseAppService expenseAppService)
-    : IRequestHandler<GetExpenseByIdQuery, ExpenseEditModel?>
+    : IRequestHandler<GetExpenseByIdQuery, ExpenseModel?>
 {
-    public async Task<ExpenseEditModel?> Handle(GetExpenseByIdQuery request, CancellationToken cancellationToken)
+    public async Task<ExpenseModel?> Handle(GetExpenseByIdQuery request, CancellationToken cancellationToken)
     {
         var expense = await expenseAppService.GetExpenseByIdAsync(request.Id).ConfigureAwait(false);
         if (expense is null) return null;
 
-        return new ExpenseEditModel
+        return new ExpenseModel
         {
             Id = expense.Id,
             Title = expense.Title,
             Description = expense.Description,
-            Amount = expense.Amount,
+            AmountWithoutTax = expense.AmountWithoutTax,
+            TaxRate = expense.TaxRate,
             ExpenseType = expense.ExpenseType,
-            IncurredDate = expense.IncurredDate,
+            IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDateUtc),
             IsSystemGenerated = expense.ExpenseType == 6 || expense.SourceOrderId.HasValue
         };
     }

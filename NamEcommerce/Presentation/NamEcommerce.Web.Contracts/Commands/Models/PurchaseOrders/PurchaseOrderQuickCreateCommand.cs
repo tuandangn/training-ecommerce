@@ -7,14 +7,17 @@ public sealed class PurchaseOrderQuickCreateCommand : ICommand<QuickCreatePurcha
 {
     public required DateTime PlacedOn { get; init; }
     public required Guid VendorId { get; init; }
-    public required bool IsReceived { get; init; }
-    public required bool IsPaid { get; init; }
     public required IList<PurchaseOrderQuickCreateItemModel> Items { get; init; }
+    public string? Note { get; set; }
+
+    public required bool IsReceived { get; init; }
     public Guid? DefaultWarehouseId { get; set; }
     public DateTime? ReceivedOn { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
-    public string? Note { get; set; }
     public IList<Guid>? PictureIds { get; set; }
+    public decimal? ShippingAmount { get; set; }
+
+    public required bool IsPaid { get; init; }
     public PurchaseOrderQuickCreatePaymentModel? PaymentInfo { get; set; }
 
     [Serializable]

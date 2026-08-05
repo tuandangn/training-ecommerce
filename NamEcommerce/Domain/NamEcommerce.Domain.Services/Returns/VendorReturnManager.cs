@@ -309,9 +309,9 @@ public sealed class VendorReturnManager(
             {
                 Title = $"Chi phí phát sinh phiếu trả NCC {vendorReturn.Code}",
                 Description = $"Chi phí phát sinh khi trả hàng cho nhà cung cấp {vendorReturn.VendorName}",
-                Amount = vendorReturn.AdditionalCost,
+                AmountWithoutTax = vendorReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
-                IncurredDate = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
+                IncurredDateUtc = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
                 SourceVendorReturnId = vendorReturn.Id
             }).ConfigureAwait(false);
         }
