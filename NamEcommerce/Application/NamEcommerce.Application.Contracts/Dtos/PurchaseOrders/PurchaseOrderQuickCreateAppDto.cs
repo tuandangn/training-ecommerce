@@ -5,14 +5,19 @@ public sealed record PurchaseOrderQuickCreateAppDto
 {
     public required DateTime PlacedOnUtc { get; init; }
     public required Guid VendorId { get; init; }
-    public Guid? DefaultWarehouseId { get; set; }
-    public DateTime? ReceivedOnUtc { get; set; }
     public string? Note { get; set; }
+
     public required bool IsReceived { get; init; }
-    public required bool IsPaid { get; init; }
+    public DateTime? ReceivedOnUtc { get; set; }
+    public Guid? DefaultWarehouseId { get; set; }
     public IList<Guid> PictureIds { get; init; } = [];
-    public required IList<PurchaseOrderQuickCreateItemAppDto> Items { get; init; }
+    public decimal? ShippingAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
+
+    public required bool IsPaid { get; init; }
     public PurchaseOrderQuickCreatePaymentAppDto? Payment { get; init; }
+
+    public required IList<PurchaseOrderQuickCreateItemAppDto> Items { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
@@ -29,13 +34,19 @@ public sealed record PurchaseOrderQuickCreateAppDto
             if (ReceivedOnUtc > DateTime.UtcNow)
                 return (false, "Error.ReceivedDateCannotBeInFuture");
         }
+        if (ShippingAmount.HasValue && ShippingAmount <= 0)
+            return (false, "Error.ShippingAmountCannotBeNegative");
+
+        if (TaxAmount.HasValue && TaxAmount <= 0)
+            return (false, "Error.TaxAmountCannotBeNegative");
+
         if (IsPaid)
         {
             if (Payment is null)
                 return (false, "Error.PaymentInfoRequired");
             if (Payment.PaidAmount <= 0)
                 return (false, "Error.PaymentAmountMustBePositive");
-            if (Payment.PaidAmount > Items.Sum(item => item.Quantity * (item.UnitCost ?? 0)))
+            if (Payment.PaidAmount > Items.Sum(item => item.Quantity * (item.UnitCost ?? 0)) + (ShippingAmount ?? 0) + (TaxAmount ?? 0))
                 return (false, "Error.PaidAmountExceedsOrderTotal");
         }
         return (true, null);
@@ -56,6 +67,7 @@ public sealed record PurchaseOrderQuickCreateAppDto
     {
         public required decimal PaidAmount { get; init; }
         public required int PaymentMethod { get; init; }
+        public Guid? BankAccountId { get; set; }
     }
 }
 

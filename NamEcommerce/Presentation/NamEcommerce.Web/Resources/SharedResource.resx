@@ -1047,4 +1047,16 @@
   <data name="Error.PaymentInfoRequired" xml:space="preserve">
     <value>Payment information is required</value>
   </data>
+  <data name="Error.BankTransferMethodRequireBankAccount" xml:space="preserve">
+    <value>Bank transfer method requires bank account</value>
+  </data>
+  <data name="Error.BankAccountIsNotFound" xml:space="preserve">
+    <value>Bank account is not found</value>
+  </data>
+  <data name="Error.PurchaseOrder.SplitMustLeaveItemsInSource" xml:space="preserve">
+    <value>Purchase order target after split must have items</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate" xml:space="preserve">
+    <value>Expected delivery date cannot be less than placed date</value>
+  </data>
 </root>

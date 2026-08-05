@@ -57,7 +57,10 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             CanAllocation = purchaseOrder.CanAllocation
         };
 
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = purchaseOrder.Items.Select(item => item.ProductId).Distinct() }, cancellationToken).ConfigureAwait(false);
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = purchaseOrder.Items.Select(item => item.ProductId).Distinct().ToList()
+        }, cancellationToken).ConfigureAwait(false);
 
         foreach (var item in purchaseOrder.Items)
         {

@@ -1047,4 +1047,16 @@
   <data name="Error.PaymentInfoRequired" xml:space="preserve">
     <value>Thông tin thanh toán không có</value>
   </data>
+  <data name="Error.BankTransferMethodRequireBankAccount" xml:space="preserve">
+    <value>Phương thức chuyển khoản phải có tài khoản ghi nhận</value>
+  </data>
+  <data name="Error.BankAccountIsNotFound" xml:space="preserve">
+    <value>Không tìm thấy tài khoản ngân hàng</value>
+  </data>
+  <data name="Error.PurchaseOrder.SplitMustLeaveItemsInSource" xml:space="preserve">
+    <value>Đơn nhập sau khi chia phải còn hàng cần nhập</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate" xml:space="preserve">
+    <value>Ngày nhập dự kiến không nhỏ hơn ngày đặt hàng</value>
+  </data>
 </root>

@@ -89,7 +89,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
@@ -143,7 +143,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await _mediator.Send(new GetProductsByIdsForOrderQuery

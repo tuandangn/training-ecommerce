@@ -36,7 +36,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             .ToList();
         if (itemsNeedInfo.Count > 0)
         {
-            var ids = itemsNeedInfo.Select(i => i.ProductId!.Value).Distinct();
+            var ids = itemsNeedInfo.Select(i => i.ProductId!.Value).Distinct().ToList();
             var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = ids })
                 .ConfigureAwait(false);
 

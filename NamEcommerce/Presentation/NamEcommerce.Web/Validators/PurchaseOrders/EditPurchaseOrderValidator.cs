@@ -22,5 +22,8 @@ public sealed class EditPurchaseOrderValidator : AbstractValidator<EditPurchaseO
         RuleFor(p => p.TaxAmount)
             .GreaterThanOrEqualTo(0).When(p => p.TaxAmount.HasValue)
             .WithMessage(p => localizer["Error.Invalid", localizer["Label.TaxAmount"]]);
+
+        RuleFor(p => p.Note)
+            .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 500]);
     }
 }

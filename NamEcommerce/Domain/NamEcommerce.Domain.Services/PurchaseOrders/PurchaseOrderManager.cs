@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -39,7 +38,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly IRepository<GoodsReceipt> _goodsReceiptRepository;
-    private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
     private readonly IEntityDataReader<VendorReturn> _vendorReturnReader;
     private readonly IEntityDataReader<VendorDebt> _vendorDebtReader;
@@ -54,7 +52,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         IEntityDataReader<Product> productDataReader,
         IGoodsReceiptManager goodsReceiptManager,
         IRepository<GoodsReceipt> goodsReceiptRepository,
-        IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
         IEntityDataReader<DeliveryNote> deliveryNoteReader,
         IEntityDataReader<VendorReturn> vendorReturnReader,
         IEntityDataReader<VendorDebt> vendorDebtReader,
@@ -71,7 +68,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _productDataReader = productDataReader;
         _goodsReceiptManager = goodsReceiptManager;
         _goodsReceiptRepository = goodsReceiptRepository;
-        _goodsReceiptDataReader = goodsReceiptDataReader;
         _deliveryNoteReader = deliveryNoteReader;
         _vendorReturnReader = vendorReturnReader;
         _vendorDebtReader = vendorDebtReader;
@@ -119,88 +115,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return new CreatePurchaseOrderResultDto
         {
             CreatedId = insertedPurchaseOrder.Id
-        };
-    }
-
-    public async Task<PurchaseOrderQuickCreateResultDto> QuickCreatePurchaseOrderAsync(PurchaseOrderQuickCreateDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-        dto.Verify();
-
-        var createPurchaseOrderDto = new CreatePurchaseOrderDto
-        {
-            PlacedOnUtc = dto.PlacedOnUtc,
-            Note = dto.Note,
-            VendorId = dto.VendorId,
-            WarehouseId = dto.DefaultWarehouseId
-        };
-        foreach (var item in dto.Items)
-        {
-            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
-            {
-                ProductId = item.ProductId,
-                QuantityOrdered = item.Quantity,
-                UnitCost = item.UnitCost ?? 0
-            });
-        }
-        var insertResult = await CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
-
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(insertResult.CreatedId).ConfigureAwait(false);
-        if (purchaseOrder is null)
-            throw new PurchaseOrderIsNotFoundException(insertResult.CreatedId);
-
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
-        var userId = currentUser?.Id;
-
-        purchaseOrder.ChangeStatus(PurchaseOrderStatus.Submitted, userId);
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        purchaseOrder.MarkStatusChanged(PurchaseOrderStatus.Draft);
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved, userId);
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        purchaseOrder.MarkStatusChanged(PurchaseOrderStatus.Submitted);
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        var createdReceiptIds = new List<Guid>();
-        if (dto.IsReceived)
-        {
-
-            var insertedItems = purchaseOrder.Items.ToList();
-            var lines = dto.Items.Select((item, i) => new BulkReceiveGoodsForPurchaseOrderLineDto
-            {
-                PurchaseOrderItemId = insertedItems[i].Id,
-                WarehouseId = dto.DefaultWarehouseId!.Value,
-                ReceivedQuantity = item.Quantity,
-                ActualUnitCost = item.UnitCost
-            }).ToList();
-
-            var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(purchaseOrder.Id)
-            {
-                ReceivedOnUtc = dto.ReceivedOnUtc,
-                Lines = lines,
-                ReceivedByUserId = userId
-            }).ConfigureAwait(false);
-
-            createdReceiptIds.AddRange(receiveResult.CreatedGoodsReceiptIds);
-        }
-
-        if (dto.IsPaid)
-        {
-            await _vendorDebtManager.RecordFlexiblePaymentForVendorAsync(new CreateVendorPaymentDto
-            {
-                VendorId = dto.VendorId,
-                PurchaseOrderId = purchaseOrder.Id,
-                Amount = dto.Payment!.PaidAmount,
-                PaymentMethod = dto.Payment.PaymentMethod,
-                PaymentType = dto.Payment.PaymentType,
-                PaidOnUtc = dto.ReceivedOnUtc ?? dto.PlacedOnUtc
-            }).ConfigureAwait(false);
-        }
-
-        return new PurchaseOrderQuickCreateResultDto
-        {
-            PurchaseOrderId = purchaseOrder.Id
         };
     }
 
@@ -417,18 +331,15 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
-            Note = dto.Note
-        };
-        foreach (var item in dto.Items)
-        {
-            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
+            Note = dto.Note,
+            Items = dto.Items.Select(item => new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
                 ProductId = item.ProductId,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost,
                 Note = item.Note
-            });
-        }
+            }).ToList()
+        };
 
         var createResult = await CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
         // Repository.GetByIdAsync tìm được PO vừa stage (chưa save) trong ChangeTracker — reader query DB sẽ không thấy

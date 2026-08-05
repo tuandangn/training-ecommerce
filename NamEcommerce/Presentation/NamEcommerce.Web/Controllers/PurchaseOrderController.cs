@@ -1,17 +1,18 @@
+using DocumentFormat.OpenXml.Office2010.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Application.Contracts.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
-using NamEcommerce.Web.Services.PurchaseOrders;
-using NamEcommerce.Web.Models.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
-using NamEcommerce.Web.Contracts.Security;
-using NamEcommerce.Web.Extensions;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Settings;
+using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Models.PurchaseOrders;
+using NamEcommerce.Web.Services.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -104,7 +105,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var productInfos = model.Items.Count == 0 ? []
             : await _mediator.Send(new GetProductsByIdsForOrderQuery
             {
-                Ids = model.Items.Where(i => i.ProductId.HasValue).Select(i => i.ProductId!.Value).ToList()
+                Ids = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList()
             });
 
         if (model.Items.Count > 0)
@@ -198,7 +199,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         {
             var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
             {
-                Ids = model.Items.Where(i => i.ProductId.HasValue).Select(i => i.ProductId!.Value).ToList()
+                Ids = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList()
             });
 
             if (model.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
@@ -356,6 +357,46 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Copy(Guid id)
     {
+        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
+        if (vendor is null)
+        {
+            NotifyError("Error.VendorIsNotFound");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (purchaseOrder.Items.Count == 0)
+        {
+            NotifyError("Error.PurchaseOrderItemRequired");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = purchaseOrder.Items.Select(i => i.ProductId).Distinct().ToList()
+        });
+
+        if (purchaseOrder.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
+        {
+            NotifyError("Error.ProductIsNotFound");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var candidateVendorIds = productInfos.SelectMany(p => p.AvailableVendors).Select(v => v.Id).Distinct().ToList();
+        var validVendorIds = candidateVendorIds.Where(vendorId => productInfos.All(p => p.AvailableVendors.Any(v => v.Id == vendorId))).ToList();
+
+        if (!validVendorIds.Contains(purchaseOrder.VendorId))
+        {
+            NotifyError("Error.PurchaseOrder.VendorIsNotAppropriate");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var result = await _mediator.Send(new CopyPurchaseOrderCommand(id));
         if (result.Success && result.CreatedId.HasValue)
         {
@@ -371,9 +412,55 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Split([FromBody] SplitPurchaseOrderCommand command)
     {
+        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(command.PurchaseOrderId);
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+        }
+
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
+        if (vendor is null)
+        {
+            NotifyError("Error.VendorIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+        }
+
+        if (command.Items.Count == 0)
+        {
+            NotifyError("Error.PurchaseOrderItemRequired");
+            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+        }
+
+        var selectedPurchaseOrderItems = purchaseOrder.Items.Where(item => command.Items.Any(selectedItem => selectedItem.ItemId == item.Id)).ToList();
+        var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = selectedPurchaseOrderItems.Select(i => i.ProductId).Distinct().ToList()
+        });
+
+        if (selectedPurchaseOrderItems.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
+        {
+            NotifyError("Error.ProductIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+        }
+
+        var candidateVendorIds = productInfos.SelectMany(p => p.AvailableVendors).Select(v => v.Id).Distinct().ToList();
+        var validVendorIds = candidateVendorIds.Where(vendorId => productInfos.All(p => p.AvailableVendors.Any(v => v.Id == vendorId))).ToList();
+
+        if (!validVendorIds.Contains(purchaseOrder.VendorId))
+        {
+            NotifyError("Error.PurchaseOrder.VendorIsNotAppropriate");
+            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+        }
+
         var result = await _mediator.Send(command);
         if (result.Success && result.CreatedId.HasValue)
-            return this.JsonOk(new { newPurchaseOrderId = result.CreatedId.Value });
+        {
+            return this.JsonOk(new
+            {
+                newPurchaseOrderId = result.CreatedId.Value
+            }, Localizer["Msg.PurchaseOrders.CreateSuccess"]);
+        }
 
         return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest"));
     }
@@ -739,7 +826,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(Array.Empty<object>());
 
         var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
-        var productIds = items.Select(i => i.ProductId).Distinct();
+        var productIds = items.Select(i => i.ProductId).Distinct().ToList();
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 

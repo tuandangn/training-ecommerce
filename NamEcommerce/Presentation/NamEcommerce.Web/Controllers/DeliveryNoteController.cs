@@ -425,7 +425,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             DeliveryNoteId = id
         });
 
-        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
+        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct().ToList();
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 

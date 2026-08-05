@@ -18,8 +18,9 @@
         </div>
         <div class="col-sm-6">
             <label asp-for="ExpectedDeliveryDate" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
-            <input asp-for="ExpectedDeliveryDate" class="form-control" type="datetime-local"
-                   value="@(Model.ExpectedDeliveryDate.HasValue ? Model.ExpectedDeliveryDate.Value.ToString("s") : "")" />
+            <input asp-for="ExpectedDeliveryDate" class="form-control" type="datetime-local" placeholder="Ngày nhập dự kiến"
+                   value="@(Model.ExpectedDeliveryDate.HasValue ? Model.ExpectedDeliveryDate.Value.ToString("s") : "")"
+                   data-val="true" data-val-range="Ngày nhập dự kiến không nhỏ hơn ngày đặt hàng" data-val-range-min="@Model.PlacedOn.ToString("s")" />
             <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
         </div>
     </div>
@@ -42,6 +43,7 @@
 <div class="mb-3">
     <label asp-for="Note" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
     <textarea asp-for="Note" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>
+    <span asp-validation-for="Note" class="small text-danger"></span>
 </div>
 @if (Model.CanChangeFees)
 {

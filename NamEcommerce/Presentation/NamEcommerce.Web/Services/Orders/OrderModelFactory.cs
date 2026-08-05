@@ -86,7 +86,7 @@ public sealed class OrderModelFactory(
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await mediator.Send(new GetProductsByIdsForOrderQuery
@@ -145,7 +145,7 @@ public sealed class OrderModelFactory(
             PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOn
         };
-        var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
+        var orderProductIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
         var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
         var orderDecimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
@@ -342,7 +342,7 @@ public sealed class OrderModelFactory(
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await mediator.Send(new GetProductsByIdsForOrderQuery

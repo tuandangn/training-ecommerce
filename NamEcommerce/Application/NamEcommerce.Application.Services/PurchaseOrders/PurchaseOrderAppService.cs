@@ -1,8 +1,12 @@
+using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -13,6 +17,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
@@ -22,6 +27,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -34,24 +40,28 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
+    private readonly IRepository<PurchaseOrder> _purchaseOrderRepository;
     private readonly IEntityDataReader<PurchaseOrderItemAllocation> _purchaseOrderItemAllocationDataReader;
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
     private readonly IEntityDataReader<Customer> _customerDataReader;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
+    private readonly ICurrentUserAccessor _currentUserAccessor;
+    private readonly IVendorDebtAppService _vendorDebtAppService;
+    private readonly IBankAccountAppService _bankAccountAppService;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-        IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+        IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, 
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
         IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
         IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
-        IEntityDataReader<Customer> customerDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
+        IEntityDataReader<Customer> customerDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+        ICurrentUserAccessor currentUserAccessor, IRepository<PurchaseOrder> purchaseOrderRepository,
+        IVendorDebtAppService vendorDebtAppService, IBankAccountAppService bankAccountAppService)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
-        _purchaseOrderDataReader = purchaseOrderDataReader;
         _vendorDataReader = vendorDataReader;
         _warehouseDataReader = warehouseDataReader;
         _userDataReader = userDataReader;
@@ -62,6 +72,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _orderDataReader = orderDataReader;
         _customerDataReader = customerDataReader;
         _unitMeasurementDataReader = unitMeasurementDataReader;
+        _currentUserAccessor = currentUserAccessor;
+        _purchaseOrderRepository = purchaseOrderRepository;
+        _vendorDebtAppService = vendorDebtAppService;
+        _bankAccountAppService = bankAccountAppService;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -188,18 +202,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
             Note = dto.Note,
             TaxAmount = dto.TaxAmount,
-            ShippingAmount = dto.ShippingAmount
-        };
-        foreach (var item in dto.Items)
-        {
-            createPurchaseOrderDto.Items.Add(new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
+            ShippingAmount = dto.ShippingAmount,
+            Items = dto.Items.Select(item => new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
                 ProductId = item.ProductId ?? Guid.Empty,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost,
                 Note = item.Note
-            });
-        }
+            }).ToList()
+        };
         var result = await _purchaseOrderManager.CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultAppDto
@@ -277,6 +288,31 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
+        if (dto.IsPaid)
+        {
+            if (dto.Payment!.PaymentMethod == (int)PaymentMethod.BankTransfer)
+            {
+                if (!dto.Payment.BankAccountId.HasValue)
+                {
+                    return new PurchaseOrderQuickCreateResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.BankTransferMethodRequireBankAccount"
+                    };
+                }
+
+                var bankAccount = await _bankAccountAppService.GetBankAccountByIdAsync(dto.Payment.BankAccountId.Value).ConfigureAwait(false);
+                if (bankAccount is null)
+                {
+                    return new PurchaseOrderQuickCreateResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.BankAccountIsNotFound"
+                    };
+                }
+            }
+        }
+
         foreach (var item in dto.Items)
         {
             if (item.WarehouseId.HasValue)
@@ -319,34 +355,71 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        var result = await _purchaseOrderManager.QuickCreatePurchaseOrderAsync(new PurchaseOrderQuickCreateDto
+        var createPurchaseOrderResult = await _purchaseOrderManager.CreatePurchaseOrderAsync(new CreatePurchaseOrderDto
         {
-            PlacedOnUtc = dto.PlacedOnUtc,
+            PlacedOnUtc = DateTime.UtcNow,
             VendorId = dto.VendorId,
-            DefaultWarehouseId = dto.IsReceived ? dto.DefaultWarehouseId : null,
-            ReceivedOnUtc = dto.IsReceived ? dto.ReceivedOnUtc : null,
+            WarehouseId = dto.IsReceived ? dto.DefaultWarehouseId : null,
             Note = dto.Note,
-            IsReceived = dto.IsReceived,
-            IsPaid = dto.IsPaid,
-            PictureIds = dto.PictureIds,
-            Items = dto.Items.Select(i => new PurchaseOrderQuickCreateDto.PurchaseOrderQuickCreateItemDto
+            Items = dto.Items.Select(item => new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
-                ProductId = i.ProductId,
-                Quantity = i.Quantity,
-                UnitCost = i.UnitCost,
-                WarehouseId = dto.IsReceived ? i.WarehouseId : null
+                ProductId = item.ProductId,
+                QuantityOrdered = item.Quantity,
+                UnitCost = item.UnitCost ?? 0
             }).ToList(),
-            Payment = !dto.IsPaid || dto.Payment is null ? null : new PurchaseOrderQuickCreateDto.PurchaseOrderQuickCreatePaymentDto
-            {
-                PaidAmount = dto.Payment.PaidAmount,
-                PaymentMethod = (PaymentMethod)dto.Payment.PaymentMethod
-            }
+            ShippingAmount = dto.IsReceived && dto.ShippingAmount.HasValue ? dto.ShippingAmount.Value : 0,
+            TaxAmount = dto.IsReceived && dto.TaxAmount.HasValue ? dto.TaxAmount.Value : 0
         }).ConfigureAwait(false);
+
+        await SubmitsPurchaseOrderAsync(createPurchaseOrderResult.CreatedId).ConfigureAwait(false);
+        await ApprovePurchaseOrderAsync(createPurchaseOrderResult.CreatedId).ConfigureAwait(false);
+
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(createPurchaseOrderResult.CreatedId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new InvalidOperationException("Purchase order is not found");
+
+        Guid? currentUserId = null;
+        if (dto.IsReceived || dto.IsPaid)
+        {
+            var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+            currentUserId = currentUser?.Id;
+        }
+
+        if (dto.IsReceived)
+        {
+            await _purchaseOrderManager.BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(purchaseOrder.Id)
+            {
+                ReceivedByUserId = currentUserId,
+                ReceivedOnUtc = dto.ReceivedOnUtc,
+                Lines = purchaseOrder.Items.Select(item => new BulkReceiveGoodsForPurchaseOrderLineDto
+                {
+                    PurchaseOrderItemId = item.Id,
+                    ReceivedQuantity = item.QuantityOrdered,
+                    WarehouseId = dto.DefaultWarehouseId!.Value,
+                    ActualUnitCost = item.UnitCost
+                }).ToList()
+            }).ConfigureAwait(false);
+        }
+
+        if (dto.IsPaid)
+        {
+            await _vendorDebtAppService.RecordFlexiblePaymentForVendorAsync(new CreateVendorPaymentAppDto
+            {
+                VendorId = dto.VendorId,
+                Amount = dto.Payment!.PaidAmount,
+                PaidOnUtc = dto.ReceivedOnUtc ?? dto.PlacedOnUtc,
+                PaymentMethod = dto.Payment.PaymentMethod,
+                PurchaseOrderId = createPurchaseOrderResult.CreatedId,
+                RecordedByUserId = currentUserId,
+                PaymentType = (int)PaymentType.VendorDebtPayment,
+                BankAccountId = dto.Payment.BankAccountId
+            }).ConfigureAwait(false);
+        }
 
         return new PurchaseOrderQuickCreateResultAppDto
         {
             Success = true,
-            CreatedId = result.PurchaseOrderId
+            CreatedId = createPurchaseOrderResult.CreatedId
         };
     }
 

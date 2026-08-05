@@ -121,16 +121,16 @@
                                 <div>
                                     @if (poStatus != PurchaseOrderStatus.Cancelled)
                                     {
-                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
+                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline" id="copyForm">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary border">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-copy me-1"></i>Sao chép
                                             </button>
                                         </form>
                                     }
                                     @if (canSplit)
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#splitPOModal">
                                             <i class="bi bi-scissors me-1"></i>Chia đơn
                                         </button>
                                     }
@@ -306,10 +306,10 @@
     <div class="modal fade" id="poEditInfoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content purchaseorder-modal-content">
-                <form asp-action="Edit" asp-controller="PurchaseOrder">
+                <form asp-action="Edit" asp-controller="PurchaseOrder" method="post" id="editForm">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
-                            <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa thông tin đơn
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa thông tin
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>

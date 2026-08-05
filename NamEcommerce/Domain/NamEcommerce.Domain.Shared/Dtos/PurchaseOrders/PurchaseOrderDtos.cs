@@ -50,7 +50,7 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 [Serializable]
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 {
-    public IList<CreatedPurchaseOrderItemDto> Items { get; } = [];
+    public required IList<CreatedPurchaseOrderItemDto> Items { get; init; }
 
     public decimal TaxAmount { get; init; }
     public decimal ShippingAmount { get; init; }

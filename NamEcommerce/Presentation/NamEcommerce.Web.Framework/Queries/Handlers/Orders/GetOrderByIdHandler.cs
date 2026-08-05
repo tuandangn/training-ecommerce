@@ -29,7 +29,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
         var order = await _orderAppService.GetOrderByIdAsync(request.Id).ConfigureAwait(false);
         if (order is null) return null;
 
-        var customer = order.CanUpdateInfo 
+        var customer = order.CanUpdateInfo
             ? await _customerAppService.GetCustomerByIdAsync(order.CustomerId).ConfigureAwait(false)
             : null;
         var model = new OrderModel
@@ -59,7 +59,10 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             PaidAmount = order.PaidAmount,
             CreatedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc)
         };
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId) }, cancellationToken).ConfigureAwait(false);
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = order.Items.Select(i => i.ProductId).Distinct().ToList()
+        }, cancellationToken).ConfigureAwait(false);
         foreach (var orderItem in order.Items)
         {
             var product = products.FirstOrDefault(p => p.Id == orderItem.ProductId);

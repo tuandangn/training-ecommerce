@@ -164,7 +164,7 @@ public sealed class DeliveryNoteModelFactory(
                 group => group.Key,
                 group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
 
-        var productIds = order.Items.Select(i => i.ProductId).Distinct();
+        var productIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
         var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
@@ -232,7 +232,7 @@ public sealed class DeliveryNoteModelFactory(
         var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
-        var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct();
+        var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct().ToList();
         var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = products.ToDictionary(product => product.Id, product => product.QuantityDecimalPlaces);
 
