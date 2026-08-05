@@ -367,6 +367,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost ?? 0
             }).ToList(),
+            ExpectedDeliveryDateUtc = dto.IsReceived || !dto.ExpectedDeliveryOnUtc.HasValue ? null : dto.ExpectedDeliveryOnUtc,
             ShippingAmount = dto.IsReceived && dto.ShippingAmount.HasValue ? dto.ShippingAmount.Value : 0,
             TaxAmount = dto.IsReceived && dto.TaxAmount.HasValue ? dto.TaxAmount.Value : 0
         }).ConfigureAwait(false);
@@ -397,7 +398,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     ReceivedQuantity = item.QuantityOrdered,
                     WarehouseId = dto.DefaultWarehouseId!.Value,
                     ActualUnitCost = item.UnitCost
-                }).ToList()
+                }).ToList(),
+                PictureIds = dto.PictureIds
             }).ConfigureAwait(false);
         }
 

@@ -24,10 +24,11 @@ public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<PurchaseOr
             VendorId = request.VendorId,
             DefaultWarehouseId = request.DefaultWarehouseId,
             ReceivedOnUtc = request.IsReceived ? DateTimeHelper.ToUniversalTime(request.ReceivedOn) : null,
+            ExpectedDeliveryOnUtc = request.IsReceived || !request.ExpectedDeliveryDate.HasValue ? null : DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate.Value),
             Note = request.Note,
             IsReceived = request.IsReceived,
             IsPaid = request.IsPaid,
-            PictureIds = request.PictureIds ?? [],
+            PictureIds = request.IsReceived ? request.PictureIds ?? [] : [],
             Items = request.Items.Select(i => new PurchaseOrderQuickCreateAppDto.PurchaseOrderQuickCreateItemAppDto
             {
                 ProductId = i.ProductId,

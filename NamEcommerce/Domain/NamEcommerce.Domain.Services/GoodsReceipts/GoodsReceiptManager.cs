@@ -66,13 +66,21 @@ public sealed class GoodsReceiptManager(
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), currentUserAccessor, goodsReceiptRepository);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
-        goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
+        if (dto.ReceivedOnUtc.HasValue)
+            goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc.Value);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
         foreach (var item in dto.Items)
             await goodsReceipt.AddItemAsync(item.ProductId, item.WarehouseId, item.Quantity, item.UnitCost, productDataReader, warehouseSettings, warehouseDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.PictureIds)
             await goodsReceipt.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
+
+        if (dto.PurchaseOrderId.HasValue)
+        {
+            var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId.Value).ConfigureAwait(false)
+                ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId.Value);
+            goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
+        }
 
         if (dto.VendorId.HasValue)
         {
@@ -312,54 +320,6 @@ public sealed class GoodsReceiptManager(
 
         goodsReceipt.MarkDeleted();
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
-    }
-
-    public async Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-        dto.Verify();
-
-        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
-            ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
-
-        var createdByUser = purchaseOrder.CreatedByUserId.HasValue
-                ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
-                : null;
-        var goodsReceipt = await GoodsReceipt.CreateAsync(
-            Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
-        if (dto.ReceivedOnUtc.HasValue)
-            goodsReceipt.CreatedOnUtc = dto.ReceivedOnUtc.Value;
-        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
-        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
-        goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
-
-        // Gắn vendor từ PO (nếu có)
-        if (dto.VendorId.HasValue)
-        {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is not null)
-                goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
-        }
-
-        // Thêm item — dùng WarehouseId từ dto (đã được PurchaseOrderManager resolve)
-        await goodsReceipt.AddItemAsync(
-            dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
-            productDataReader, warehouseSettings, warehouseDataReader
-        ).ConfigureAwait(false);
-
-        // MarkCreated → GoodsReceiptCreatedHandler: cộng tồn + thử sinh VendorDebt
-        goodsReceipt.MarkCreated();
-
-        // Nếu item đã có UnitCost, cũng fire GoodsReceiptItemUnitCostSet
-        // → GoodsReceiptItemUnitCostSetHandler: chốt inventory cost layer + thử sinh VendorDebt (idempotent)
-        if (dto.UnitCost.HasValue)
-        {
-            var addedItem = goodsReceipt.Items.Last();
-            goodsReceipt.MarkItemUnitCostSet(addedItem.Id);
-        }
-
-        var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
-        return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
     }
 
     public async Task<Guid> CreateFromVendorOversupplyAsync(CreateGoodsReceiptFromVendorOversupplyDto dto)

@@ -12,6 +12,7 @@ public sealed class PurchaseOrderQuickCreateCommand : ICommand<QuickCreatePurcha
     public required IList<PurchaseOrderQuickCreateItemModel> Items { get; init; }
     public Guid? DefaultWarehouseId { get; set; }
     public DateTime? ReceivedOn { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
     public string? Note { get; set; }
     public IList<Guid>? PictureIds { get; set; }
     public PurchaseOrderQuickCreatePaymentModel? PaymentInfo { get; set; }

@@ -62,6 +62,7 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
     public Guid? ReceivedByUserId { get; set; }
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
+    public IList<Guid> PictureIds { get; set; } = [];
 
     public void Verify()
     {
@@ -88,6 +89,7 @@ public sealed record BulkReceiveGoodsForPurchaseOrderDto(Guid PurchaseOrderId)
     public DateTime? ReceivedOnUtc { get; set; }
     public required IList<BulkReceiveGoodsForPurchaseOrderLineDto> Lines { get; init; }
     public Guid? ReceivedByUserId { get; init; }
+    public IList<Guid> PictureIds { get; set; } = [];
 
     public void Verify()
     {

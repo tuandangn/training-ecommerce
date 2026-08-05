@@ -197,7 +197,15 @@
                             </div>
                             <span class="text-danger small" asp-validation-for="IsReceived"></span>
                             <div class="tab-content" id="navShippingContent">
-                                <div class="tab-pane fade" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                <div class="tab-pane fade border rounded p-3" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
+                                    <div>
+                                        <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                            Ngày dự kiến giao
+                                        </label>
+                                        <input type="datetime-local" asp-for="ExpectedDeliveryDate" class="form-control text-sm" placeholder="Ngày dự kiến giao"
+                                            data-val-range-min="@DateTime.Now.ToString("s")" />
+                                        <span asp-validation-for="ExpectedDeliveryDate" class="small text-danger"></span>
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade border rounded p-3" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
                                     <div class="row g-3">
@@ -219,8 +227,17 @@
                                             </select>
                                             <span asp-validation-for="DefaultWarehouseId" class="small text-danger"></span>
                                         </div>
+                                        <div class="col-md-12">
+                                            @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
+                                            {
+                                                FieldName = "PictureIds",
+                                                Label = "Bằng chứng nhận",
+                                                MaxFiles = 3,
+                                                Required = false,
+                                                ExistingPictureIds = Model.PictureIds
+                                            })
+                                        </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
@@ -254,7 +271,7 @@
                                             <div class="col-md-6">
                                                 <label class="form-label small fw-bold text-muted text-uppercase">Số tiền</label>
                                                 <input type="text" asp-for="PaidAmount" id="paymentAmount" class="form-control include-suffix"
-                                                       data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric" 
+                                                       data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
                                                        data-val="true" data-val-required="Vui lòng nhập số tiền"
                                                        data-val-range="" data-val-range-min="0.1"
                                                        data-val-range-max="" data-val-number="Số tiền phải là số" />
@@ -265,7 +282,7 @@
                                                 <select id="paymentMethod" class="form-select" asp-for="PaymentMethod">
                                                     @foreach (var paymentMethod in PaymentMethod.GetOptions())
                                                     {
-                                                        <option value="@paymentMethod.value" selected="@(paymentMethod.value == (int) Model.PaymentMethod)">@paymentMethod.text</option>
+                                                        <option value="@paymentMethod.value" selected="@(paymentMethod.value == (int)Model.PaymentMethod)">@paymentMethod.text</option>
                                                     }
                                                 </select>
                                                 <span class="text-danger small" asp-validation-for="PaymentMethod"></span>

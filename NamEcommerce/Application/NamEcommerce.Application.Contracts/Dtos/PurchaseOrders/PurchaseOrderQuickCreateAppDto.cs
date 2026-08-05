@@ -13,6 +13,7 @@ public sealed record PurchaseOrderQuickCreateAppDto
     public IList<Guid> PictureIds { get; init; } = [];
     public decimal? ShippingAmount { get; set; }
     public decimal? TaxAmount { get; set; }
+    public DateTime? ExpectedDeliveryOnUtc { get; set; }
 
     public required bool IsPaid { get; init; }
     public PurchaseOrderQuickCreatePaymentAppDto? Payment { get; init; }
@@ -33,6 +34,11 @@ public sealed record PurchaseOrderQuickCreateAppDto
                 return (false, "Error.WarehouseRequired");
             if (ReceivedOnUtc > DateTime.UtcNow)
                 return (false, "Error.ReceivedDateCannotBeInFuture");
+        }
+        else
+        {
+            if(ExpectedDeliveryOnUtc.HasValue && ExpectedDeliveryOnUtc < DateTime.UtcNow)
+                return (false, "Error.ExpectedDeliveryDateCannotBeInPast");
         }
         if (ShippingAmount.HasValue && ShippingAmount <= 0)
             return (false, "Error.ShippingAmountCannotBeNegative");

@@ -15,6 +15,7 @@ public sealed class PurchaseOrderQuickCreateValidator : AbstractValidator<Purcha
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.PlaceOrderDate"]])
             .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.PlacedOrderDateCannotBeInFuture"]);
 
+
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
         RuleForEach(p => p.Items).SetValidator(m => new PurchaseOrderQuickCreateItemValidator(localizer));
@@ -30,6 +31,10 @@ public sealed class PurchaseOrderQuickCreateValidator : AbstractValidator<Purcha
                 .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.ReceivedOn"]])
                 .GreaterThanOrEqualTo(p => p.PlacedOn).WithMessage(p => localizer["Error.ReceivedOnMustBeAfterPlacedOn"])
                 .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.ReceivedDateCannotBeInFuture"]);
+        }).Otherwise(() =>
+        {
+            RuleFor(p => p.ExpectedDeliveryDate)
+                .GreaterThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.ExpectedDeliveryDateCannotBeInPast"]);
         });
 
         When(p => p.IsPaid, () =>

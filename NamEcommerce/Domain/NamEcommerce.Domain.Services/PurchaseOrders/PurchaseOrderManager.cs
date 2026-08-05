@@ -94,13 +94,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderVendorIsNotAppropriateException();
 
         var purchaseOrder = await CreatePurchaseOrderAggregateAsync(
-            dto.VendorId,
-            dto.WarehouseId,
-            dto.PlacedOnUtc,
-            dto.ExpectedDeliveryDateUtc,
-            dto.Note,
-            dto.TaxAmount,
-            dto.ShippingAmount).ConfigureAwait(false);
+            dto.VendorId, dto.WarehouseId, dto.PlacedOnUtc,
+            dto.ExpectedDeliveryDateUtc, dto.Note,
+            dto.TaxAmount, dto.ShippingAmount).ConfigureAwait(false);
         foreach (var orderItem in dto.Items)
         {
             await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)
@@ -620,16 +616,18 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
-        var grResult = await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
+        var grResult = await _goodsReceiptManager.CreateGoodsReceiptAsync(new CreateGoodsReceiptDto
         {
+            PictureIds = dto.PictureIds,
             ReceivedOnUtc = dto.ReceivedOnUtc,
             PurchaseOrderId = purchaseOrder.Id,
-            PurchaseOrderCode = purchaseOrder.Code,
             VendorId = purchaseOrder.VendorId,
-            ProductId = purchaseOrderItem.ProductId,
-            WarehouseId = warehouseId.Value,
-            Quantity = dto.ReceivedQuantity,
-            UnitCost = dto.ActualUnitCost ?? purchaseOrderItem.UnitCost
+            Items = [new AddGoodsReceiptItemDto {
+                ProductId = purchaseOrderItem.ProductId,
+                Quantity = dto.ReceivedQuantity,
+                WarehouseId = dto.WarehouseId,
+                UnitCost = dto.ActualUnitCost
+            }]
         }).ConfigureAwait(false);
 
         var distributeResult = await _purchaseOrderAllocationManager
@@ -710,7 +708,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 ReceivedByUserId = dto.ReceivedByUserId,
                 ReceivedQuantity = line.ReceivedQuantity,
                 WarehouseId = line.WarehouseId,
-                ActualUnitCost = line.ActualUnitCost
+                ActualUnitCost = line.ActualUnitCost,
+                PictureIds = dto.PictureIds
             }).ConfigureAwait(false);
 
             if (result.CreatedGoodsReceiptId.HasValue)

@@ -52,6 +52,7 @@ export default class QuickCreatePurchaseOrderController {
         this.inputReceivedOn = document.getElementById('ReceivedOn');
         this.inputReceivedOn.setAttribute('data-val-required', 'Vui lòng nhập Ngày nhận.')
         this.inputReceivedOn.setAttribute('data-val-range', 'Ngày nhận hàng phải lớn hơn ngày đặt và nhỏ hơn ngày hiện tại')
+        this.inputExpectedDeliveryOn = document.getElementById('ExpectedDeliveryDate');
 
         this.inputWarehouse = document.getElementById('DefaultWarehouseId');
         this.inputWarehouse.setAttribute('data-val-required', 'Vui lòng nhập Kho hàng.')
@@ -345,9 +346,11 @@ export default class QuickCreatePurchaseOrderController {
             } else {
                 this.inputReceivedDate.setAttribute('data-val-range-min', '');
             }
+            this.inputExpectedDeliveryOn.setAttribute('data-val', 'false');
         } else {
             this.inputReceivedOn.setAttribute('data-val', 'false');
             this.inputWarehouse.setAttribute('data-val', 'false');
+            this.inputExpectedDeliveryOn.setAttribute('data-val', 'true');
         }
 
         this.btnIsPaid.classList.toggle('disabled', subTotal == 0 && total == 0);

@@ -209,12 +209,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         if (goodsReceipt is null)
             return (false, "Error.GoodsReceipt.IsNotFound");
 
-        var deleteDto = new DeleteGoodsReceiptDto(id)
-        {
-            ReceivedOnUtc = goodsReceipt.ReceivedOnUtc,
-            PictureIds = goodsReceipt.PictureIds
-        };
-
+        var deleteDto = new DeleteGoodsReceiptDto(id);
         await _goodsReceiptManager.DeleteGoodsReceiptAsync(deleteDto).ConfigureAwait(false);
 
         return (true, null);

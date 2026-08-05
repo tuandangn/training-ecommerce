@@ -115,8 +115,6 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderBulkItemDto
 [Serializable]
 public abstract record BaseGoodsReceiptDto
 {
-    public required DateTime ReceivedOnUtc { get; init; }
-
     public string? TruckDriverName { get; set; }
     public string? TruckNumberSerial { get; set; }
 
@@ -128,17 +126,13 @@ public abstract record BaseGoodsReceiptDto
 
     public virtual void Verify()
     {
-        if (PictureIds is null || !PictureIds.Any())
-            throw new GoodsReceiptProofPictureRequired();
-
-        if (ReceivedOnUtc > DateTime.UtcNow)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
     }
 }
 
 [Serializable]
 public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 {
+    public DateTime ReceivedOnUtc { get; set; }
     public string Code { get; init; } = string.Empty;
     public required IEnumerable<GoodsReceiptItemDto> Items { get; init; }
     public bool IsPendingCosting { get; init; }
@@ -156,10 +150,16 @@ public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 [Serializable]
 public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required IList<AddGoodsReceiptItemDto> Items { get; init; }
+
+    public Guid? PurchaseOrderId { get; set; }
 
     public override void Verify()
     {
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+
         foreach (var item in Items)
             item.Verify();
 
@@ -174,7 +174,18 @@ public sealed record CreateGoodsReceiptResultDto
 }
 
 [Serializable]
-public sealed record UpdateGoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto;
+public sealed record UpdateGoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
+{
+    public DateTime ReceivedOnUtc { get; set; }
+
+    public override void Verify()
+    {
+        if (ReceivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+
+        base.Verify();
+    }
+}
 
 [Serializable]
 public sealed record UpdateGoodsReceiptResultDto
@@ -183,7 +194,7 @@ public sealed record UpdateGoodsReceiptResultDto
 }
 
 [Serializable]
-public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId) : BaseGoodsReceiptDto;
+public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId);
 
 [Serializable]
 public sealed record SetGoodsReceiptVendorDto(Guid GoodsReceiptId)
