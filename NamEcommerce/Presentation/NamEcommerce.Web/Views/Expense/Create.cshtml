@@ -15,7 +15,7 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Expense" class="text-decoration-none">Chi phí</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Expense" class="text-decoration-none">Quản lý chi phí</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
             </ol>
         </nav>
@@ -30,18 +30,23 @@
             <div class="row g-3">
                 <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
                 <div class="col-md-6">
-                    <label asp-for="Title" class="form-label">Khoản chi</label>
-                    <input asp-for="Title" class="form-control" placeholder="Khoản chi" />
+                    <label asp-for="Title" class="form-label">Tên khoản chi</label>
+                    <input asp-for="Title" class="form-control" placeholder="Tên khoản chi" 
+                        data-val-required="Tên khoản chi không được để trống" />
                     <span asp-validation-for="Title" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
-                    <input asp-for="IncurredDate" type="date" class="form-control" placeholder="Ngày phát sinh" data-val-range-max="@DateTime.Today.ToString("s")"/>
+                    <input asp-for="IncurredDate" type="date" class="form-control" placeholder="Ngày phát sinh"
+                           data-val-range-max="@DateTime.Today.ToString("s")" data-val-required="Vui lòng nhập Ngày phát sinh" />
                     <span asp-validation-for="IncurredDate" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="AmountWithoutTax" class="form-label">Số tiền</label>
-                    <input asp-for="AmountWithoutTax" data-decimal="currency" class="form-control" placeholder="Số tiền" inputmode="numeric" />
+                    <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control text-end"
+                           placeholder="Số tiền" inputmode="numeric" data-decimal="currency"
+                           data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                           data-val-number="Số tiền phải là số" data-val-required="Vui lòng nhập Số tiền" />
                     <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
@@ -49,7 +54,7 @@
                     <select asp-for="ExpenseType" class="form-select">
                         @foreach (var (value, text) in ExpenseType.GetOptions())
                         {
-                            <option value="@value" selected="@(value == (int)Model.ExpenseType)">@text</option>
+                            <option value="@value" selected="@(value == (int)Model.ExpenseType)" disabled="@(value == (int) ExpenseType.AssetDisposal)">@text</option>
                         }
                     </select>
                     <span asp-validation-for="ExpenseType" class="text-danger small"></span>

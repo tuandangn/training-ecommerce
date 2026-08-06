@@ -565,7 +565,10 @@
     <value>Tên khoản chi không được để trống.</value>
   </data>
   <data name="Error.ExpenseTitleTooLong" xml:space="preserve">
-    <value>Tên khoản chi quá dài (tối đa 255 ký tự).</value>
+    <value>Tên khoản chi tối đa 255 ký tự.</value>
+  </data>
+  <data name="Error.ExpenseDescriptionTooLong" xml:space="preserve">
+    <value>Ghi chú tối đa 500 ký tự.</value>
   </data>
   <data name="Error.ExpenseAmountRequired" xml:space="preserve">
     <value>Số tiền chi không được để trống.</value>
@@ -1070,5 +1073,8 @@
   </data>
   <data name="Label.IncurredDate" xml:space="preserve">
     <value>Ngày phát sinh</value>
+  </data>
+  <data name="Error.ExpenseTypeIsNotAllow" xml:space="preserve">
+    <value>Loại khoản chi không hợp lệ</value>
   </data>
 </root>

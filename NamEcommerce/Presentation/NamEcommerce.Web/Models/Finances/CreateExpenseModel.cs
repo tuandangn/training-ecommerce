@@ -5,7 +5,7 @@ namespace NamEcommerce.Web.Models.Finances;
 [Serializable]
 public sealed class CreateExpenseModel
 {
-    public string? Title { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 
     public string? Description { get; set; }
 

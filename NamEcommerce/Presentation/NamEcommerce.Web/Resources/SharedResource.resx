@@ -565,7 +565,10 @@
     <value>Expense title is required.</value>
   </data>
   <data name="Error.ExpenseTitleTooLong" xml:space="preserve">
-    <value>Expense title is too long (maximum 255 characters).</value>
+    <value>Title maximum length is 255 characters.</value>
+  </data>
+  <data name="Error.ExpenseDescriptionTooLong" xml:space="preserve">
+    <value>Description maximum length is 500 characters</value>
   </data>
   <data name="Error.ExpenseAmountRequired" xml:space="preserve">
     <value>Expense amount is required.</value>
@@ -1070,5 +1073,8 @@
   </data>
   <data name="Label.IncurredDate" xml:space="preserve">
     <value>Incurred date</value>
+  </data>
+  <data name="Error.ExpenseTypeIsNotAllow" xml:space="preserve">
+    <value>Expense type is not allow</value>
   </data>
 </root>

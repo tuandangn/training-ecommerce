@@ -8,14 +8,14 @@
 @section TitleSection {
     <h1 class="topbar-page-title">
         Chi phí
-        <span class="text-muted">@Model.Title</span>
+        <span class="text-muted">"@Model.Title"</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Expense" class="text-decoration-none">Chi phí</a></li>
-                <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Expense" class="text-decoration-none">Quản lý chi phí</a></li>
+                <li class="breadcrumb-item active" aria-current="page">"@Model.Title"</li>
             </ol>
         </nav>
     </div>
@@ -37,52 +37,73 @@
                 <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
                 <input type="hidden" asp-for="Id" />
                 <div class="col-md-6">
-                    <label asp-for="Title" class="form-label">Khoản chi</label>
-                    <input asp-for="Title" class="form-control" disabled="@(Model.IsSystemGenerated)" />
+                    <label asp-for="Title" class="form-label">Tên khoản chi</label>
                     @if (Model.IsSystemGenerated)
                     {
+                        <span>@Model.Title</span>
                         <input type="hidden" asp-for="Title" />
                     }
-                    <span asp-validation-for="Title" class="text-danger small"></span>
+                    else
+                    {
+                        <input asp-for="Title" class="form-control" placeholder="Tên khoản chi"
+                               data-val-required="Tên khoản chi không được để trống" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    }
                 </div>
                 <div class="col-md-6">
                     <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
-                    <input asp-for="IncurredDate" type="date" class="form-control" data-val-range-max="@DateTime.Today.ToString("s")" disabled="@(Model.IsSystemGenerated)" />
                     @if (Model.IsSystemGenerated)
                     {
+                        <span>@Model.IncurredDate.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                         <input type="hidden" asp-for="IncurredDate" />
                     }
-                    <span asp-validation-for="IncurredDate" class="text-danger small"></span>
+                    else
+                    {
+                        <input asp-for="IncurredDate" type="date" class="form-control" placeholder="Ngày phát sinh"
+                               data-val-range-max="@DateTime.Today.ToString("s")" data-val-required="Vui lòng nhập Ngày phát sinh" />
+                        <span asp-validation-for="IncurredDate" class="text-danger small"></span>
+                    }
                 </div>
                 <div class="col-md-6">
                     <label asp-for="AmountWithoutTax" class="form-label">
                         Số tiền
                     </label>
-                    <input asp-for="AmountWithoutTax" data-decimal="currency" class="form-control" disabled="@(Model.IsSystemGenerated)" inputmode="numeric" />
                     @if (Model.IsSystemGenerated)
                     {
+                        <span>@Model.AmountWithoutTax.DisplayCurrencyWithSymbol()</span>
                         <input type="hidden" asp-for="AmountWithoutTax" />
                     }
-                    <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
+                    else
+                    {
+                        <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control"
+                               placeholder="Số tiền" inputmode="numeric" data-decimal="currency"
+                               data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                               data-val-number="Số tiền phải là số" data-val-required="Vui lòng nhập Số tiền" />
+                        <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
+                    }
                 </div>
 
                 <div class="col-md-6">
                     <label asp-for="ExpenseType" class="form-label">Loại phí</label>
-                    <select asp-for="ExpenseType" class="form-select" disabled="@(Model.IsSystemGenerated)">
-                        @foreach (var (value, text) in ExpenseType.GetOptions())
-                        {
-                            <option value="@value" selected="@(value == (int)Model.ExpenseType)">@text</option>
-                        }
-                    </select>
                     @if (Model.IsSystemGenerated)
                     {
+                        <span>@Model.ExpenseType.GetDisplayText()</span>
                         <input type="hidden" asp-for="ExpenseType" />
                     }
-                    <span asp-validation-for="ExpenseType" class="text-danger small"></span>
+                    else
+                    {
+                        <select asp-for="ExpenseType" class="form-select">
+                            @foreach (var (value, text) in ExpenseType.GetOptions())
+                            {
+                                <option value="@value" selected="@(value == (int)Model.ExpenseType)" disabled="@(value == (int)ExpenseType.AssetDisposal)">@text</option>
+                            }
+                        </select>
+                        <span asp-validation-for="ExpenseType" class="text-danger small"></span>
+                    }
                 </div>
                 <div class="col-12">
-                    <label asp-for="Description" class="form-label">Ghi chú thêm</label>
-                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <label asp-for="Description" class="form-label">Ghi chú</label>
+                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>
                     <span asp-validation-for="Description" class="text-danger small"></span>
                 </div>
             </div>

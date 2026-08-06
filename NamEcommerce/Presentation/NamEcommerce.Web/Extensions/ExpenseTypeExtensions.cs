@@ -24,5 +24,17 @@ public static class ExpenseTypeExtensions
             ExpenseType.AssetDisposal => "Khấu hao",
             _ => throw new InvalidDataException(nameof(type)),
         };
+
+        public string GetDisplayColor() => type switch
+        {
+            ExpenseType.Payroll => "bg-info text-light",
+            ExpenseType.Rent => "bg-warning text-light",
+            ExpenseType.Marketing => "bg-primary text-light",
+            ExpenseType.Utilities => "bg-secondary text-light",
+            ExpenseType.General => "bg-light",
+            ExpenseType.ReturnCost => "bg-danger text-light",
+            ExpenseType.AssetDisposal => "bg-secondary text-light",
+            _ => throw new InvalidDataException(nameof(type)),
+        };
     }
 }

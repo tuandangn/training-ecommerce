@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Office2010.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +59,12 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
         if (!ModelState.IsValid)
             return View(model);
 
+        if (model.ExpenseType == ExpenseType.AssetDisposal)
+        {
+            AddLocalizedModelError("Error.ExpenseTypeIsNotAllow");
+            return View(model);
+        }
+
         var result = await mediator.Send(new CreateExpenseCommand
         {
             Title = model.Title!,
@@ -107,13 +114,26 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
         if (!ModelState.IsValid)
             return View(model);
 
+        var dto = await mediator.Send(new GetExpenseByIdQuery(model.Id));
+        if (dto is null)
+        {
+            NotifyError("Error.ExpenseIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        if (model.ExpenseType == ExpenseType.AssetDisposal && !dto.IsSystemGenerated)
+        {
+            AddLocalizedModelError("Error.ExpenseTypeIsNotAllow");
+            return View(model);
+        }
+
         var result = await mediator.Send(new UpdateExpenseCommand
         {
             Id = model.Id,
             Title = model.Title!,
             Description = model.Description,
-            Amount = model.AmountWithoutTax ?? 0,
-            ExpenseType = (int) model.ExpenseType,
+            Amount = model.AmountWithoutTax,
+            ExpenseType = (int)model.ExpenseType,
             IncurredDate = model.IncurredDate
         });
 

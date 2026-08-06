@@ -14,14 +14,15 @@ public sealed class EditExpenseValidator : AbstractValidator<EditExpenseModel>
             .MaximumLength(255).WithMessage(m => localizer["Error.ExpenseTitleTooLong"]);
 
         RuleFor(m => m.IncurredDate)
-            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.IncurredDate"]])
-            .LessThanOrEqualTo(DateTime.Now).WithMessage(m => localizer["Error.ExpenseIncurredDateCannotBeInFuture"]);
+            .LessThanOrEqualTo(DateTime.Today).WithMessage(m => localizer["Error.ExpenseIncurredDateCannotBeInFuture"]);
 
         RuleFor(m => m.AmountWithoutTax)
-            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Amount"]])
             .GreaterThan(0).WithMessage(m => localizer["Error.ExpenseAmountMustBePositive"]);
 
         RuleFor(m => m.TaxRate)
             .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.ExpenseTaxRateInvalid"]);
+
+        RuleFor(m => m.Description)
+            .MaximumLength(500).WithMessage(m => localizer["Error.ExpenseDescriptionTooLong"]);
     }
 }

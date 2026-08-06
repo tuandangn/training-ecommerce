@@ -14,7 +14,6 @@ public sealed class CreateExpenseValidator : AbstractValidator<CreateExpenseMode
             .MaximumLength(255).WithMessage(m => localizer["Error.ExpenseTitleTooLong"]);
 
         RuleFor(m => m.IncurredDate)
-            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.IncurredDate"]])
             .LessThanOrEqualTo(DateTime.Today).WithMessage(m => localizer["Error.ExpenseIncurredDateCannotBeInFuture"]);
 
         RuleFor(m => m.AmountWithoutTax)
@@ -22,5 +21,8 @@ public sealed class CreateExpenseValidator : AbstractValidator<CreateExpenseMode
 
         RuleFor(m => m.TaxRate)
             .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.ExpenseTaxRateInvalid"]);
+
+        RuleFor(m => m.Description)
+            .MaximumLength(500).WithMessage(m => localizer["Error.ExpenseDescriptionTooLong"]);
     }
 }
