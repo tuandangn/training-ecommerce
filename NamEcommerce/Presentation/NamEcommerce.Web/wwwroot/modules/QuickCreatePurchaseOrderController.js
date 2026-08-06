@@ -137,39 +137,16 @@ export default class QuickCreatePurchaseOrderController {
         }
     }
 
-    #bindToggles() {
-        // const receiveToggle = getEl('receiveImmediately');
-        // const paymentSection = getEl('paymentSection');
-        // const paidToggle = getEl('isPaid');
-
-        // receiveToggle?.addEventListener('change', () => {
-        //     const on = receiveToggle.checked;
-        //     paymentSection?.classList.toggle('d-none', !on);
-        //     if (!on) {
-        //         if (paidToggle) paidToggle.checked = false;
-        //         getEl('paymentFields')?.classList.add('d-none');
-        //     }
-        //     this.#renderSummary();
-        // });
-
-        // paidToggle?.addEventListener('change', () => {
-        //     const show = paidToggle.checked;
-        //     getEl('paymentFields')?.classList.toggle('d-none', !show);
-        //     if (show) this.#syncPaymentAmount();
-        // });
-    }
-
     #bindEvents() {
         this.inputPlacedDate.addEventListener('change', e => {
             this.#render();
-            if (this.#isDelivered()) {
-                validateElement(this.inputReceivedDate);
-            }
+            reValidateDates();
         });
 
         this.form.addEventListener('change', e => {
             if (e.target.name == 'IsReceived') {
                 this.#render();
+                reValidateDates();
             }
             if (e.target.name == 'IsPaid') {
                 this.#render();
@@ -182,6 +159,18 @@ export default class QuickCreatePurchaseOrderController {
                 return;
             this.#handleFormSubmit();
         });
+
+        var reValidateDates = () => {
+            if (this.#isDelivered()) {
+                validateElement(this.inputReceivedDate);
+                reparseForm(this.form);
+                initFlatPickrDateTime(this.inputReceivedDate);
+            } else {
+                validateElement(this.inputExpectedDeliveryOn);
+                reparseForm(this.form);
+                initFlatPickrDateTime(this.inputExpectedDeliveryOn);
+            }
+        }
     }
 
     #isValidProduct(product) {
@@ -365,7 +354,6 @@ export default class QuickCreatePurchaseOrderController {
             this.inputPaidAmount.setAttribute('data-val-range-max', '');
             this.inputPaidAmount.setAttribute('data-val-range', '');
         }
-
         reparseForm(this.form);
     }
     #getItems() {

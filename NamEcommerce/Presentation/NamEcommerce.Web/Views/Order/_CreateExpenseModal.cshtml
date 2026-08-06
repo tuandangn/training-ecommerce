@@ -11,7 +11,7 @@
             <form id="orderExpenseForm" method="post" asp-action="AddExpense" asp-controller="Order">
                 <div class="modal-body py-3">
                     <input type="hidden" asp-for="OrderId" />
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-7">
                             <label asp-for="Title" class="form-label">Tên khoản chi</label>
                             <input asp-for="Title" class="form-control" placeholder="Tên khoản chi"
@@ -29,7 +29,7 @@
                             <span asp-validation-for="ExpenseType" class="text-danger small"></span>
                         </div>
                     </div>
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="form-label" asp-for="AmountWithoutTax">Số tiền</label>
                             <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control text-end"
@@ -50,7 +50,7 @@
                             <span asp-validation-for="TaxRate" class="text-danger small"></span>
                         </div>
                     </div>
-                    <div class="mb-3 mt-3">
+                    <div class="mb-3">
                         <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
                         <input asp-for="IncurredDate" type="date" class="form-control" placeholder="Ngày phát sinh"
                                data-min-date="@Model.OrderPlacedOn.Date.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" data-val-range-max="@DateTime.Today.ToString("s")"

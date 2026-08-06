@@ -209,14 +209,15 @@
                                 </div>
                                 <div class="tab-pane fade border rounded p-3" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
                                     <div class="row g-3">
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-4 col-md-6">
                                             <label asp-for="ReceivedOn" class="form-label small fw-bold text-muted text-uppercase d-block">
                                                 Ngày nhận
                                             </label>
-                                            <input type="datetime-local" asp-for="ReceivedOn" class="form-control text-sm" placeholder="Ngày nhận" data-val-range-max="@DateTime.Now.ToString("s")" />
+                                            <input type="datetime-local" asp-for="ReceivedOn" class="form-control text-sm" placeholder="Ngày nhận"
+                                                   data-val-range-max="@DateTime.Now.ToString("s")" data-val-range-min="@Model.PlacedOn.ToString("s")" />
                                             <span asp-validation-for="ReceivedOn" class="small text-danger"></span>
                                         </div>
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-4 col-md-6">
                                             <label asp-for="DefaultWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
                                             <select asp-for="DefaultWarehouseId" class="form-select">
                                                 <option value="">-- Chọn kho --</option>
@@ -227,8 +228,10 @@
                                             </select>
                                             <span asp-validation-for="DefaultWarehouseId" class="small text-danger"></span>
                                         </div>
-                                        <div class="col-lg-4">
-                                            <label class="form-label small fw-bold text-muted text-uppercase">Tiền xe</label>
+                                        <div class="col-lg-4 col-md-6">
+                                            <label class="form-label small fw-bold text-muted text-uppercase">
+                                                Tiền xe
+                                            </label>
                                             <input type="text" asp-for="ShippingAmount" id="shippingAmount" class="form-control include-suffix"
                                                    data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
                                                    data-val="true" data-val-number="Số tiền phải là số"
@@ -335,8 +338,11 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script type="module">
+    <script type="module" defer>
         import QuickCreatePurchaseOrderController from "/modules/QuickCreatePurchaseOrderController.js";
-        new QuickCreatePurchaseOrderController();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuickCreatePurchaseOrderController();
+        });
     </script>
 }

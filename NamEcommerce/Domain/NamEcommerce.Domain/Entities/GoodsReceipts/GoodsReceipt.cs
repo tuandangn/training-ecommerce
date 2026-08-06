@@ -27,6 +27,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
         Code = string.Empty;
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
+        ReceivedOnUtc = DateTime.UtcNow;
         CreatedOnUtc = DateTime.UtcNow;
     }
 

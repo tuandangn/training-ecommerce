@@ -120,7 +120,6 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = oldModel ?? new PurchaseOrderQuickCreateModel
         {
             PlacedOn = DateTime.Now,
-            ReceivedOn = DateTime.Now,
             PaymentMethod = PaymentMethod.Cash
         };
 
