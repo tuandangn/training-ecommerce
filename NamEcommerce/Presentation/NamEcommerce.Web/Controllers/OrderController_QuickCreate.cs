@@ -168,7 +168,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                     total = info.OrderTotal,
                     subTotal = info.OrderSubTotal,
                     discount = info.OrderDiscount
-                });
+                }, Localizer["Msg.SaveSuccess"]);
             }
 
             NotifySuccess("Msg.SaveSuccess");
@@ -225,7 +225,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         });
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
         return this.JsonError(result.ErrorMessage!);
     }
 

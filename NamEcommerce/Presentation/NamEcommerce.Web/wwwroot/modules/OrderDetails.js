@@ -13,7 +13,7 @@ async function submitFormAsync(form) {
         formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
     }
 
-    return apiPost(form.action, formData);
+    return await apiPost(form.action, formData);
 }
 
 function parseDecimalInput(input) {
@@ -581,17 +581,11 @@ function parseDecimalInput(input) {
             const expenseModal = new PromiseModal('#orderExpenseModal');
             expenseModal.hide();
 
-            try {
-                const result = await submitFormAsync(this);
-                if (result.success) {
-                    location.reload();
-                } else {
-                    hidePageLoading();
-                    toast('Lỗi', result.message || 'Không thể thêm chi phí phát sinh.', 'error');
-                }
-            } catch (err) {
+            const result = await submitFormAsync(this);
+            if (result.success) {
+                location.reload();
+            } else {
                 hidePageLoading();
-                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
             }
         });
     }

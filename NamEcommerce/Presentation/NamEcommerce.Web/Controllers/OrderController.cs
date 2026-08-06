@@ -5,15 +5,18 @@ using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Orders;
-using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Web.Services.Orders;
@@ -30,11 +33,14 @@ public sealed partial class OrderController : BaseAuthorizedController
     private readonly IBankTransferPaymentIntentAppService _paymentIntentAppService;
     private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
     private readonly IWarehouseAppService _warehouseAppService;
+    private readonly AppConfig _appConfig;
 
     public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory,
         IProductAppService productAppService, ICachedValuesService cachedValuesService,
         IBankTransferPaymentIntentAppService paymentIntentAppService,
-        BankTransferPaymentSettings bankTransferPaymentSettings, IWarehouseAppService warehouseAppService, IOrderAppService orderAppService)
+        BankTransferPaymentSettings bankTransferPaymentSettings,
+        IWarehouseAppService warehouseAppService, IOrderAppService orderAppService,
+        AppConfig appConfig)
     {
         _mediator = mediator;
         _orderModelFactory = orderModelFactory;
@@ -44,6 +50,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         _bankTransferPaymentSettings = bankTransferPaymentSettings;
         _warehouseAppService = warehouseAppService;
         _orderAppService = orderAppService;
+        _appConfig = appConfig;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -379,20 +386,37 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddExpense(CreateExpenseCommand command)
+    public async Task<IActionResult> AddExpense(CreateOrderExpenseModel model)
     {
-        if (!command.SourceOrderId.HasValue || command.SourceOrderId == Guid.Empty)
-            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+        if (!ModelState.IsValid)
+            return this.JsonError(GetErrorMessage());
 
-        var order = await _mediator.Send(new GetOrderByIdQuery { Id = command.SourceOrderId.Value });
+        var order = await _orderAppService.GetOrderByIdAsync(model.OrderId);
         if (order is null)
-            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+            return this.JsonError(Localizer["Error.OrderIsNotFound"]);
+        else if(model.IncurredDate < DateTimeHelper.ToLocalTime(order.CreatedOnUtc))
+            return this.JsonError(Localizer["Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate"]);
 
-        var result = await _mediator.Send(command);
+        if (model.ExpenseType == ExpenseType.AssetDisposal)
+            return this.JsonError(Localizer["Error.ExpenseTypeIsNotAllow"]);
+
+        if (model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
+            return this.JsonError(Localizer["Error.ExpenseTaxRateInvalid"]);
+
+        var result = await _mediator.Send(new CreateExpenseCommand
+        {
+            Title = model.Title,
+            AmountWithoutTax = model.AmountWithoutTax,
+            TaxRate = model.TaxRate,
+            ExpenseType = (int)model.ExpenseType,
+            IncurredDate = model.IncurredDate,
+            Description = model.Description,
+            OrderId = model.OrderId
+        });
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(result.ErrorMessage!);
 
-        return Json(new { success = true, message = string.Empty });
+        return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
     }
 
     [HttpPost]

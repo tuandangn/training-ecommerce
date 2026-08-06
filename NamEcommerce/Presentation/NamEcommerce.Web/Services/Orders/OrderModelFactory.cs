@@ -143,7 +143,8 @@ public sealed class OrderModelFactory(
             PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment,
             PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
-            CreatedOn = order.CreatedOn
+            CreatedOn = order.CreatedOn,
+            PlacedOn = order.CreatedOn
         };
         var orderProductIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
         var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);

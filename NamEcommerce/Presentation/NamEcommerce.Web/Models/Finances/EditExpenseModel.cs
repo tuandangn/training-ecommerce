@@ -13,6 +13,8 @@ public sealed class EditExpenseModel
 
     public decimal AmountWithoutTax { get; set; }
     public decimal? TaxRate { get; set; }
+    [ValidateNever]
+    public IList<decimal> AvailableTaxRates { get; set; } = [];
 
     public ExpenseType ExpenseType { get; set; }
 

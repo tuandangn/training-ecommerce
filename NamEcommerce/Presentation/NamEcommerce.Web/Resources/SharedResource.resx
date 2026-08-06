@@ -1077,4 +1077,13 @@
   <data name="Error.ExpenseTypeIsNotAllow" xml:space="preserve">
     <value>Expense type is not allow</value>
   </data>
+  <data name="Error.ExpenseCannotDeleted" xml:space="preserve">
+    <value>Expense cannot be deleted</value>
+  </data>
+  <data name="Error.OrderIdIsRequired" xml:space="preserve">
+    <value>Order ID is required</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
+    <value>Expense incurred date cannot be less than order creation date</value>
+  </data>
 </root>

@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Domain.Shared.Enums.Finance;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 
 namespace NamEcommerce.Web.Models.Finances;
 
@@ -11,6 +12,8 @@ public sealed class CreateExpenseModel
 
     public decimal AmountWithoutTax { get; set; }
     public decimal? TaxRate { get; set; }
+    [ValidateNever]
+    public IList<decimal> AvailableTaxRates { get; set; } = [];
 
     public ExpenseType ExpenseType { get; set; }
 

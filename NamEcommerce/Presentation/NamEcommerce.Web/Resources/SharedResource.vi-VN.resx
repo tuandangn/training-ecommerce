@@ -1077,4 +1077,13 @@
   <data name="Error.ExpenseTypeIsNotAllow" xml:space="preserve">
     <value>Loại khoản chi không hợp lệ</value>
   </data>
+  <data name="Error.ExpenseCannotDeleted" xml:space="preserve">
+    <value>Không thể xóa khoản chi này.</value>
+  </data>
+  <data name="Error.OrderIdIsRequired" xml:space="preserve">
+    <value>Không có ID đơn bán</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
+    <value>Ngày phát sinh chi phí không nhỏ hơn ngày tạo đơn</value>
+  </data>
 </root>

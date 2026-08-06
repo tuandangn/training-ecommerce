@@ -15,7 +15,7 @@ public sealed record CreateExpenseAppDto
     public DateTime IncurredDateUtc { get; set; }
 
     public Guid? RecordedByUserId { get; set; }
-    public Guid? SourceOrderId { get; set; }
+    public Guid? OrderId { get; set; }
 
     public (bool isValid, string? errorMessage) Validate()
     {

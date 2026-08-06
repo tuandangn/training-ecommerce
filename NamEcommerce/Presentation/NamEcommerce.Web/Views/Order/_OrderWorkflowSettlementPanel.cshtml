@@ -81,7 +81,7 @@
                 </div>
                 <div class="workflow-metric @(Model.Settlement.Profit >= 0 ? "profit-positive" : "profit-negative")">
                     <span>Lãi / lỗ</span>
-                    <strong>@(Model.Settlement.Profit >= 0 ? "" : "-")@Model.Settlement.Profit.DisplayCurrencyWithSymbol()</strong>
+                    <strong>@Model.Settlement.Profit.DisplayCurrencyWithSymbol()</strong>
                 </div>
             </div>
 
@@ -350,7 +350,7 @@
                         <div class="col-5">
                             <label class="form-label" for="orderSettlementPaymentPaidOn">Ngày thu</label>
                             <input id="orderSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control"
-                                   value="@DateTime.Now.ToString("s")" placeholder="Nhập ngày thu tiền" 
+                                   value="@DateTime.Now.ToString("s")" placeholder="Nhập ngày thu tiền"
                                    data-min-date-s="@Model.CreatedOn.Date.ToString("s")" data-max-date-s="@DateTime.Now.Date.AddDays(1).ToString("s")" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="PaidOn" data-valmsg-replace="true"></span>
                         </div>
@@ -424,65 +424,12 @@
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="orderExpenseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ui-modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Thêm chi phí</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="orderExpenseForm" method="post" action="/Order/AddExpense">
-                <div class="modal-body py-3">
-                    <input type="hidden" name="SourceOrderId" value="@Model.Id" />
-                    <div class="mb-3">
-                        <label class="form-label" for="orderExpenseTitle">Khoản chi</label>
-                        <input id="orderExpenseTitle" name="Title" class="form-control" placeholder="Nhập khoản chi"
-                            data-val="true" data-val-required="Vui lòng nhập khoản chi" data-val-maxlength="Tối đa 200 kí tự" data-val-maxlength-max="200"/>
-                        <span class="small text-danger field-validation-valid" data-valmsg-for="Title" data-valmsg-replace="true"></span>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label" for="orderExpenseAmount">Số tiền</label>
-                            <input id="orderExpenseAmount" name="Amount" class="form-control" inputmode="numeric" placeholder="Nhập số tiền"
-                                   data-decimal="currency" value="0" autocomplete="off" 
-                                   data-val="true" data-val-required="Vui lòng nhập số tiền"
-                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
-                                   data-val-number="Số tiền phải là số" />
-                        <span class="small text-danger field-validation-valid" data-valmsg-for="Amount" data-valmsg-replace="true"></span>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="orderExpenseType">Loại phí</label>
-                            <select id="orderExpenseType" name="ExpenseType" class="form-select">
-                                <option value="5">Khác</option>
-                                <option value="1">Lương thưởng</option>
-                                <option value="2">Mặt bằng</option>
-                                <option value="3">Tiếp thị</option>
-                                <option value="4">Điện nước</option>
-                            </select>
-                            <span class="small text-danger field-validation-valid" data-valmsg-for="ExpenseType" data-valmsg-replace="true"></span>
-                        </div>
-                    </div>
-                    <div class="mb-3 mt-3">
-                        <label class="form-label" for="orderExpenseDate">Ngày phát sinh</label>
-                        <input id="orderExpenseDate" name="IncurredDate" type="date" class="form-control" placeholder="Nhập ngày phát sinh"
-                               value="@DateTime.Today.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" data-val="true" data-val-required="Chọn ngày phát sinh" />
-                        <span class="small text-danger field-validation-valid" data-valmsg-for="IncurredDate" data-valmsg-replace="true"></span>
-                    </div>
-                    <div>
-                        <label class="form-label" for="orderExpenseDescription">Lý do</label>
-                        <textarea id="orderExpenseDescription" name="Description" class="form-control" rows="3" placeholder="Nhập lý do phát sinh chi phí"
-                            data-val="true" data-val-maxlength="Tối đa 500 kí tự" data-val-maxlength-max="500"></textarea>
-                        <span class="small text-danger field-validation-valid" data-valmsg-for="Description" data-valmsg-replace="true"></span>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 pb-3">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-floppy me-1"></i>Lưu lại
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@{
+    var createExpenseModel = new CreateOrderExpenseModel
+    {
+        OrderId = Model.Id,
+        IncurredDate = DateTime.Now,
+        OrderPlacedOn = Model.PlacedOn
+    };
+}
+<partial name="_CreateExpenseModal" model="createExpenseModel" />

@@ -1,0 +1,75 @@
+﻿@using NamEcommerce.Domain.Shared.Enums.Finance
+@inject AppConfig AppConfig
+@model CreateOrderExpenseModel
+<div class="modal fade" id="orderExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ui-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thêm chi phí</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="orderExpenseForm" method="post" asp-action="AddExpense" asp-controller="Order">
+                <div class="modal-body py-3">
+                    <input type="hidden" asp-for="OrderId" />
+                    <div class="row g-3">
+                        <div class="col-7">
+                            <label asp-for="Title" class="form-label">Tên khoản chi</label>
+                            <input asp-for="Title" class="form-control" placeholder="Tên khoản chi"
+                                   data-val="true" data-val-required="Tên khoản chi không được để trống" />
+                            <span class="small text-danger" asp-validation-for="Title"></span>
+                        </div>
+                        <div class="col-5">
+                            <label asp-for="ExpenseType" class="form-label">Loại phí</label>
+                            <select asp-for="ExpenseType" class="form-select">
+                                @foreach (var (value, text) in ExpenseType.GetOptions())
+                                {
+                                    <option value="@value" selected="@(value == (int)Model.ExpenseType)" disabled="@(value == (int)ExpenseType.AssetDisposal)">@text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="ExpenseType" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label" asp-for="AmountWithoutTax">Số tiền</label>
+                            <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control text-end"
+                                   placeholder="Số tiền" inputmode="numeric" data-decimal="currency"
+                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                                   data-val-number="Số tiền phải là số" data-val-required="Vui lòng nhập Số tiền" />
+                            <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="TaxRate" class="form-label">Thuế</label>
+                            <select asp-for="TaxRate" class="form-select">
+                                <option value="" selected="@(!Model.TaxRate.HasValue)">Không thuế</option>
+                                @foreach (var taxRate in AppConfig.TaxRates)
+                                {
+                                    <option value="@taxRate" selected="@(taxRate == Model.TaxRate)">@(taxRate)%</option>
+                                }
+                            </select>
+                            <span asp-validation-for="TaxRate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
+                        <input asp-for="IncurredDate" type="date" class="form-control" placeholder="Ngày phát sinh"
+                               data-min-date="@Model.OrderPlacedOn.Date.ToString("s")" data-max-date="@DateTime.Now.ToString("s")" data-val-range-max="@DateTime.Today.ToString("s")"
+                               data-val-required="Vui lòng nhập Ngày phát sinh" />
+                        <span asp-validation-for="IncurredDate" class="text-danger small"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Description" class="form-label">Ghi chú</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy me-1"></i>Lưu lại
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

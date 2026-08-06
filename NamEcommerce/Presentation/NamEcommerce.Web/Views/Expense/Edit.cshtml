@@ -50,7 +50,7 @@
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     }
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 col-lg-3">
                     <label asp-for="IncurredDate" class="form-label">Ngày phát sinh</label>
                     @if (Model.IsSystemGenerated)
                     {
@@ -64,26 +64,7 @@
                         <span asp-validation-for="IncurredDate" class="text-danger small"></span>
                     }
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="AmountWithoutTax" class="form-label">
-                        Số tiền
-                    </label>
-                    @if (Model.IsSystemGenerated)
-                    {
-                        <span>@Model.AmountWithoutTax.DisplayCurrencyWithSymbol()</span>
-                        <input type="hidden" asp-for="AmountWithoutTax" />
-                    }
-                    else
-                    {
-                        <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control"
-                               placeholder="Số tiền" inputmode="numeric" data-decimal="currency"
-                               data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
-                               data-val-number="Số tiền phải là số" data-val-required="Vui lòng nhập Số tiền" />
-                        <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
-                    }
-                </div>
-
-                <div class="col-md-6">
+                <div class="col-md-6 col-lg-3">
                     <label asp-for="ExpenseType" class="form-label">Loại phí</label>
                     @if (Model.IsSystemGenerated)
                     {
@@ -101,6 +82,36 @@
                         <span asp-validation-for="ExpenseType" class="text-danger small"></span>
                     }
                 </div>
+                <div class="col-md-8">
+                    <label asp-for="AmountWithoutTax" class="form-label">
+                        Số tiền
+                    </label>
+                    @if (Model.IsSystemGenerated)
+                    {
+                        <span>@Model.AmountWithoutTax.DisplayCurrencyWithSymbol()</span>
+                        <input type="hidden" asp-for="AmountWithoutTax" />
+                    }
+                    else
+                    {
+                        <input asp-for="AmountWithoutTax" value="@Model.AmountWithoutTax.DisplayCurrency()" class="form-control"
+                               placeholder="Số tiền" inputmode="numeric" data-decimal="currency"
+                               data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.001"
+                               data-val-number="Số tiền phải là số" data-val-required="Vui lòng nhập Số tiền" />
+                        <span asp-validation-for="AmountWithoutTax" class="text-danger small"></span>
+                    }
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label asp-for="TaxRate" class="form-label">Thuế</label>
+                    <select asp-for="TaxRate" class="form-select">
+                        <option value="" selected="@(!Model.TaxRate.HasValue)">Không thuế</option>
+                        @foreach (var taxRate in Model.AvailableTaxRates)
+                        {
+                            <option value="@taxRate" selected="@(taxRate == Model.TaxRate)">@(taxRate)%</option>
+                        }
+                    </select>
+                    <span asp-validation-for="TaxRate" class="text-danger small"></span>
+                </div>
+
                 <div class="col-12">
                     <label asp-for="Description" class="form-label">Ghi chú</label>
                     <textarea asp-for="Description" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>

@@ -6,11 +6,12 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.Finance;
 public sealed class CreateExpenseCommand : ICommand<CommonActionResultModel>
 {
     public required string Title { get; init; }
-    public string? Description { get; init; }
-    public required decimal Amount { get; init; }
+    public string? Description { get; set; }
+    public required decimal AmountWithoutTax { get; init; }
+    public decimal? TaxRate { get; set; }
     public required int ExpenseType { get; init; }
     public required DateTime IncurredDate { get; init; }
-    public Guid? SourceOrderId { get; init; }
+    public Guid? OrderId { get; init; }
 }
 
 [Serializable]
@@ -18,8 +19,9 @@ public sealed class UpdateExpenseCommand : ICommand<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
     public required string Title { get; init; }
-    public string? Description { get; init; }
-    public required decimal Amount { get; init; }
+    public string? Description { get; set; }
+    public required decimal AmountWithoutTax { get; init; }
+    public decimal? TaxRate { get; set; }
     public required int ExpenseType { get; init; }
     public required DateTime IncurredDate { get; init; }
 }

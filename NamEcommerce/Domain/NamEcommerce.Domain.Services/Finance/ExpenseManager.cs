@@ -38,12 +38,15 @@ public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataR
             RecordedByUserId = dto.RecordedByUserId,
             SourceVendorReturnId = dto.SourceVendorReturnId,
             SourceCustomerReturnId = dto.SourceCustomerReturnId,
-            SourceOrderId = dto.SourceOrderId,
+            SourceOrderId = dto.OrderId,
             Description = dto.Description,
         };
-        expense.SetAmount(dto.AmountWithoutTax, dto.TaxRate);
+        decimal? taxRate = null;
+        if (dto.TaxRate.HasValue)
+            taxRate = dto.TaxRate.Value / 100;
+        expense.SetAmount(dto.AmountWithoutTax, taxRate);
 
-        await expenseRepository.InsertAsync(expense);
+        await expenseRepository.InsertAsync(expense).ConfigureAwait(false);
         return new CreateExpenseResultDto { CreatedId = expense.Id };
     }
 
@@ -60,9 +63,12 @@ public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataR
         expense.Description = dto.Description;
         expense.IncurredDate = dto.IncurredDateUtc;
         expense.ExpenseType = dto.ExpenseType;
-        expense.SetAmount(dto.AmountWithoutTax, dto.TaxRate);
+        decimal? taxRate = null;
+        if (dto.TaxRate.HasValue)
+            taxRate = dto.TaxRate.Value / 100;
+        expense.SetAmount(dto.AmountWithoutTax, taxRate);
 
-        await expenseRepository.UpdateAsync(expense);
+        await expenseRepository.UpdateAsync(expense).ConfigureAwait(false);
     }
 
     public async Task DeleteExpenseAsync(Guid id)
@@ -137,14 +143,14 @@ public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataR
             SourceVendorReturnId = expense.SourceVendorReturnId,
             AmountWithoutTax = expense.AmountExcludingTax,
             TaxAmount = expense.TaxAmount,
-            TaxRate = expense.TaxRate,
+            TaxRate = expense.TaxRate.HasValue ? expense.TaxRate.Value * 100 : null,
             IsSystemGenerated = expense.IsSystemGenerated()
         }).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<ExpenseDto?> GetExpenseByIdAsync(Guid id)
     {
-        var expense = await expenseRepository.GetByIdAsync(id);
+        var expense = await expenseRepository.GetByIdAsync(id).ConfigureAwait(false);
 
         if (expense is null)
             return null;
@@ -162,7 +168,7 @@ public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataR
             SourceVendorReturnId = expense.SourceVendorReturnId,
             AmountWithoutTax = expense.AmountExcludingTax,
             TaxAmount = expense.TaxAmount,
-            TaxRate = expense.TaxRate,
+            TaxRate = expense.TaxRate.HasValue ? expense.TaxRate.Value * 100 : null,
             IsSystemGenerated = expense.IsSystemGenerated()
         };
     }

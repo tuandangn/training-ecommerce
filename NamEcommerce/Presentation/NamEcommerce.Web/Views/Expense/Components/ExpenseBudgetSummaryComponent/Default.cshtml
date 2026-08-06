@@ -1,0 +1,38 @@
+﻿@using NamEcommerce.Domain.Shared.Enums.Finance
+@using NamEcommerce.Web.Contracts.Models.Finance
+@model ExpenseBudgetListModel
+<div class="content-card mb-3">
+    <div class="content-card-header">
+        <h5>Ngân sách tháng @Model.Month/@Model.Year</h5>
+        <div>
+            <a asp-action="Budgets" class="btn btn-sm btn-outline-secondary">
+                Xem chi tiết
+            </a>
+        </div>
+    </div>
+    <div class="content-card-body px-4">
+        <div class="row g-4">
+            @foreach (var item in Model.Items)
+            {
+                var pct = item.BudgetAmount > 0 ? Math.Min(100, (int)(item.ActualAmount * 100 / item.BudgetAmount)) : (item.ActualAmount > 0 ? 100 : 0);
+                var isOver = item.BudgetAmount > 0 && item.ActualAmount > item.BudgetAmount;
+                var barClass = isOver ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary";
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-semibold">@(((ExpenseType)item.ExpenseType).GetDisplayText())</small>
+                        <small class="@(isOver ? "text-danger fw-semibold" : "text-muted")">
+                            @item.ActualAmount.DisplayCurrencyWithSymbol()
+                            @if (item.BudgetAmount > 0)
+                            {
+                                <span class="text-muted fw-normal">/ @item.BudgetAmount.DisplayCurrencyWithSymbol()</span>
+                            }
+                        </small>
+                    </div>
+                    <div class="progress ui-h-5">
+                        <div class="progress-bar @barClass" data-progress-width="@pct"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

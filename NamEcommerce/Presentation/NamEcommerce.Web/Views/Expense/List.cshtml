@@ -35,264 +35,231 @@
         </nav>
     </div>
 }
-@if (Model.Summary.Any())
-{
-    var now = DateTime.Now;
-    <div class="content-card mb-3">
-        <div class="content-card-header">
-            <h5>Ngân sách tháng @now.Month/@now.Year</h5>
-            <div>
-                <a asp-action="Budgets" class="btn btn-sm btn-outline-secondary">
-                    Chi tiết
-                </a>
+<div class="row g-3">
+    <div class="col-xl-9">
+        <div class="content-card" data-responsive-list data-list-key="expense-list">
+            <div class="content-card-header">
+                <h5 class="flex-grow-1">Danh sách khoản chi</h5>
+                <div class="d-flex align-items-center gap-3 flex-grow-1 flex-sm-grow-0 flex-wrap">
+                    <a asp-action="Create" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm mới
+                    </a>
+                    <partial name="_ResponsiveListToolbar" />
+                </div>
             </div>
-        </div>
-        <div class="content-card-body px-4">
-            <div class="row g-4">
-                @foreach (var s in Model.Summary)
-                {
-                    var pct = s.BudgetAmount > 0 ? Math.Min(100, (int)(s.TotalAmount * 100 / s.BudgetAmount)) : (s.TotalAmount > 0 ? 100 : 0);
-                    var isOver = s.BudgetAmount > 0 && s.TotalAmount > s.BudgetAmount;
-                    var barClass = isOver ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary";
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="fw-semibold">@(((ExpenseType)s.ExpenseType).GetDisplayText())</small>
-                            <small class="@(isOver ? "text-danger fw-semibold" : "text-muted")">
-                                @s.TotalAmount.DisplayCurrencyWithSymbol()
-                                @if (s.BudgetAmount > 0)
+            <form method="get">
+                <input type="hidden" name="sortBy" value="@Model.SortBy" />
+                <input type="hidden" name="sortDesc" value="@Model.SortDesc" />
+                <fieldset>
+                    <div class="action-toolbar justify-content-start flex-xl-nowrap flex-lg-wrap flex-sm-nowrap">
+                        <div>
+                            <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Tìm kiếm</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" name="keywords" id="keywords" class="form-control border-start-0 ps-0" placeholder="Tên khoản chi..."
+                                       value="@Model.Keywords" inputmode="search" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Từ ngày</label>
+                            <input type="date" name="fromDate" class="form-control" value="@Model.FromDate" placeholder="Từ ngày" />
+                        </div>
+                        <div>
+                            <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Đến ngày</label>
+                            <input type="date" name="toDate" class="form-control" value="@Model.ToDate" placeholder="Đến ngày" />
+                        </div>
+                        <div>
+                            <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Loại phí</label>
+                            <select name="expenseType" class="form-select">
+                                <option value="" selected="@(!Model.ExpenseType.HasValue)">-- Tất cả --</option>
+                                @foreach (var (value, text) in ExpenseType.GetOptions())
                                 {
-                                    <span class="text-muted fw-normal">/ @s.BudgetAmount.DisplayCurrencyWithSymbol()</span>
+                                    <option value="@value" selected="@(value == Model.ExpenseType)">@text</option>
                                 }
-                            </small>
-                        </div>
-                        <div class="progress ui-h-5">
-                            <div class="progress-bar @barClass" data-progress-width="@pct"></div>
+                            </select>
                         </div>
                     </div>
-                }
-            </div>
-        </div>
-    </div>
-}
-<div class="content-card" data-responsive-list data-list-key="expense-list">
-    <div class="action-toolbar">
-        <div class="d-flex gap-2">
-            @if (Model.Summary.Count == 0)
-            {
-                <a asp-action="Budgets" class="btn btn-outline-secondary flex-grow-1">
-                    <i class="bi bi-pie-chart me-1"></i>Ngân sách
-                </a>
-            }
-            <a asp-action="Create" class="btn btn-primary flex-grow-1">
-                <i class="bi bi-plus-lg me-1"></i>Thêm Mới
-            </a>
-        </div>
-        <partial name="_ResponsiveListToolbar" />
-    </div>
-    <form method="get">
-        <input type="hidden" name="sortBy" value="@Model.SortBy" />
-        <input type="hidden" name="sortDesc" value="@Model.SortDesc" />
-        <fieldset>
-            <div class="action-toolbar justify-content-start">
-                <div>
-                    <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Tìm kiếm</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="keywords" id="keywords" class="form-control border-start-0 ps-0" placeholder="Tên khoản chi..."
-                               value="@Model.Keywords" inputmode="search" />
-                    </div>
-                </div>
-                <div>
-                    <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Từ ngày</label>
-                    <input type="date" name="fromDate" class="form-control" value="@Model.FromDate" placeholder="Từ ngày" />
-                </div>
-                <div>
-                    <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Đến ngày</label>
-                    <input type="date" name="toDate" class="form-control" value="@Model.ToDate" placeholder="Đến ngày" />
-                </div>
-                <div>
-                    <label class="form-label text-muted fw-semibold small mb-1 visually-hidden">Loại phí</label>
-                    <select name="expenseType" class="form-select">
-                        <option value="" selected="@(!Model.ExpenseType.HasValue)">-- Tất cả --</option>
-                        @foreach (var (value, text) in ExpenseType.GetOptions())
-                        {
-                            <option value="@value" selected="@(value == Model.ExpenseType)">@text</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        </fieldset>
-    </form>
-    <div class="content-card-body-flush">
-        <div class="responsive-list-panel" data-list-view-panel="list">
-            <div class="table-responsive">
-                <table class="table data-table">
-                    <thead>
-                        <tr>
-                            <th class="ps-4 ui-w-120">
-                                <a href="@SortLink("date")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
-                                    Ngày <i class="@SortIcon("date")"></i>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="@SortLink("title")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
-                                    Khoản chi <i class="@SortIcon("title")"></i>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="@SortLink("type")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
-                                    Loại phí <i class="@SortIcon("type")"></i>
-                                </a>
-                            </th>
-                            <th class="text-end">
-                                <a href="@SortLink("amount")" class="text-decoration-none text-reset d-inline-flex align-items-center justify-content-end gap-1">
-                                    Số tiền <i class="@SortIcon("amount")"></i>
-                                </a>
-                            </th>
-                            <th class="ui-w-100"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Data.Pagination.TotalCount > 0)
-                        {
-                            @foreach (var item in Model.Data)
-                            {
-                                var expenseType = (ExpenseType)item.ExpenseType;
+                </fieldset>
+            </form>
+            <div class="content-card-body-flush">
+                <div class="responsive-list-panel" data-list-view-panel="list">
+                    <div class="table-responsive">
+                        <table class="table data-table">
+                            <thead>
                                 <tr>
-                                    <td class="ps-4">@item.IncurredDate.ToString("dd/MM/yyyy")</td>
-                                    <td>
-                                        <div>
+                                    <th class="ps-4 ui-w-120">
+                                        <a href="@SortLink("date")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                                            Ngày <i class="@SortIcon("date")"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="@SortLink("title")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                                            Khoản chi <i class="@SortIcon("title")"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="@SortLink("type")" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                                            Loại phí <i class="@SortIcon("type")"></i>
+                                        </a>
+                                    </th>
+                                    <th class="text-end">
+                                        <a href="@SortLink("amount")" class="text-decoration-none text-reset d-inline-flex align-items-center justify-content-end gap-1">
+                                            Số tiền <i class="@SortIcon("amount")"></i>
+                                        </a>
+                                    </th>
+                                    <th class="ui-w-100"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Data.Pagination.TotalCount > 0)
+                                {
+                                    @foreach (var item in Model.Data)
+                                    {
+                                        var expenseType = (ExpenseType)item.ExpenseType;
+                                        <tr>
+                                            <td class="ps-4">@item.IncurredDate.ToString(ViewConstants.DefaultDateFormat)</td>
+                                            <td>
+                                                <div>
+                                                    @item.Title
+                                                    @if (item.IsSystemGenerated)
+                                                    {
+                                                        <span class="badge bg-light text-secondary border ms-1 ui-fs-065">Hệ thống</span>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <div class="text-muted small">
+                                                        @item.Description
+                                                    </div>
+                                                }
+                                                @if (item.SourceOrderId.HasValue)
+                                                {
+                                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.SourceOrderId" class="text-decoration-none small d-block">
+                                                        <i class="bi bi-box me-1"></i>Đơn hàng
+                                                    </a>
+                                                }
+                                                @if (item.SourceCustomerReturnId.HasValue)
+                                                {
+                                                    <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@item.SourceCustomerReturnId" class="text-decoration-none small d-block">
+                                                        <i class="bi bi-arrow-return-left me-1"></i>Khách trả
+                                                    </a>
+                                                }
+                                                @if (item.SourceVendorReturnId.HasValue)
+                                                {
+                                                    <a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@item.SourceVendorReturnId" class="text-decoration-none small d-block">
+                                                        <i class="bi bi-arrow-return-right me-1"></i>Trả hàng NCC
+                                                    </a>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="status-badge @expenseType.GetDisplayColor()">
+                                                    @expenseType.GetDisplayText()
+                                                </span>
+                                            </td>
+                                            <td class="text-end fw-bold text-danger">
+                                                @item.Amount.DisplayCurrencyWithSymbol()
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button type="button" class="btn-table-action danger btnDelete"
+                                                        data-id="@item.Id" data-name="@item.Title" title="Xóa" disabled="@(item.IsSystemGenerated)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="empty-state">
+                                                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                                                <h5>Chưa có chi phí nào</h5>
+                                                <p>Tạo khoản chi phí đầu tiên của bạn.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            @if (Model.Data.Pagination.TotalCount > 0)
+                            {
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="fw-bold text-end text-uppercase small text-muted pe-3">Tổng cộng:</td>
+                                        <td class="fw-bold text-danger fs-6 text-end">@Model.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            }
+                        </table>
+                    </div>
+                </div>
+                <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Data)
+                        {
+                            var expenseType = (ExpenseType)item.ExpenseType;
+                            <article class="list-card">
+                                <div class="list-card-header">
+                                    <div class="list-card-title-group">
+                                        <div class="list-card-title">
                                             @item.Title
                                             @if (item.IsSystemGenerated)
                                             {
                                                 <span class="badge bg-light text-secondary border ms-1 ui-fs-065">Hệ thống</span>
                                             }
                                         </div>
-                                        @if (!string.IsNullOrEmpty(item.Description))
-                                        {
-                                            <div class="text-muted small">@item.Description</div>
-                                        }
-                                        @if (item.SourceOrderId.HasValue)
-                                        {
-                                            <div class="small"><a asp-controller="Order" asp-action="Details" asp-route-id="@item.SourceOrderId" class="text-decoration-none"><i class="bi bi-box me-1"></i>Đơn hàng</a></div>
-                                        }
-                                        @if (item.SourceCustomerReturnId.HasValue)
-                                        {
-                                            <div class="small"><a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@item.SourceCustomerReturnId" class="text-decoration-none"><i class="bi bi-arrow-return-left me-1"></i>Hoàn hàng KH</a></div>
-                                        }
-                                        @if (item.SourceVendorReturnId.HasValue)
-                                        {
-                                            <div class="small"><a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@item.SourceVendorReturnId" class="text-decoration-none"><i class="bi bi-arrow-return-right me-1"></i>Trả NCC</a></div>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="status-badge @expenseType.GetDisplayColor()">
-                                            @expenseType.GetDisplayText()
-                                        </span>
-                                    </td>
-                                    <td class="text-end fw-bold text-danger">@item.Amount.DisplayCurrencyWithSymbol()</td>
-                                    <td class="text-end pe-3">
-                                        @if (!item.IsSystemGenerated)
-                                        {
-                                            <button type="button" class="btn-table-action danger btnDelete"
-                                                    data-id="@item.Id" data-name="@item.Title" title="Xóa">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        }
-                                        <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="5">
-                                    <div class="empty-state">
-                                        <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
-                                        <h5>Chưa có chi phí nào</h5>
-                                        <p>Tạo khoản chi phí đầu tiên của bạn.</p>
+                                        <div class="list-card-meta small">@item.IncurredDate.ToString("dd/MM/yyyy")</div>
                                     </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                    @if (Model.Data.Pagination.TotalCount > 0)
-                    {
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="3" class="fw-bold text-end text-uppercase small text-muted pe-3">Tổng trang này:</td>
-                                <td class="fw-bold text-danger fs-6 text-end">@Model.PageTotal.DisplayCurrencyWithSymbol()</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    }
-                </table>
-            </div>
-        </div>
-        <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
-            @if (Model.Data.Pagination.TotalCount > 0)
-            {
-                @foreach (var item in Model.Data)
-                {
-                    var expenseType = (ExpenseType)item.ExpenseType;
-                    <article class="list-card">
-                        <div class="list-card-header">
-                            <div class="list-card-title-group">
-                                <div class="list-card-title">
-                                    @item.Title
-                                    @if (item.IsSystemGenerated)
+                                    <span class="status-badge @expenseType.GetDisplayColor()">@expenseType.GetDisplayText()</span>
+                                </div>
+                                <div class="list-card-fields">
+                                    <div class="list-card-field">
+                                        <span class="list-card-label">Số tiền</span>
+                                        <span class="list-card-value text-danger">@item.Amount.DisplayCurrencyWithSymbol()</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Description))
                                     {
-                                        <span class="badge bg-light text-secondary border ms-1 ui-fs-065">Hệ thống</span>
+                                        <div class="list-card-field">
+                                            <span class="list-card-label">Mô tả</span>
+                                            <span class="list-card-value text-muted fw-normal small">@item.Description</span>
+                                        </div>
                                     }
                                 </div>
-                                <div class="list-card-meta small">@item.IncurredDate.ToString("dd/MM/yyyy")</div>
-                            </div>
-                            <span class="status-badge @expenseType.GetDisplayColor()">@expenseType.GetDisplayText()</span>
-                        </div>
-                        <div class="list-card-fields">
-                            <div class="list-card-field">
-                                <span class="list-card-label">Số tiền</span>
-                                <span class="list-card-value text-danger">@item.Amount.DisplayCurrencyWithSymbol()</span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(item.Description))
-                            {
-                                <div class="list-card-field">
-                                    <span class="list-card-label">Mô tả</span>
-                                    <span class="list-card-value text-muted fw-normal small">@item.Description</span>
+                                <div class="list-card-actions">
+                                    <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn-table-action danger btnDelete"
+                                            data-id="@item.Id" data-name="@item.Title" title="Xóa" disabled="@(item.IsSystemGenerated)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
-                            }
+                            </article>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                            <h5>Chưa có chi phí nào</h5>
+                            <p>Tạo khoản chi phí đầu tiên của bạn.</p>
                         </div>
-                        <div class="list-card-actions">
-                            @if (!item.IsSystemGenerated)
-                            {
-                                <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@item.Id" data-name="@item.Title" title="Xóa">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            }
-                            <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </div>
-                    </article>
-                }
-            }
-            else
-            {
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
-                    <h5>Chưa có chi phí nào</h5>
-                    <p>Tạo khoản chi phí đầu tiên của bạn.</p>
+                    }
                 </div>
-            }
+                @if (Model.Data.Pagination.TotalCount > 0)
+                {
+                    <partial name="_Pager" model="Model.Data.Pagination" />
+                }
+            </div>
         </div>
-        @if (Model.Data.Pagination.TotalCount > 0)
-        {
-            <partial name="_Pager" model="Model.Data.Pagination" />
-        }
+    </div>
+    <div class="col-xl-3">
+        @await Component.InvokeAsync("ExpenseBudgetSummaryComponent", new { month = DateTime.Now.Month })
     </div>
 </div>
 @foreach (var item in Model.Data.Where(x => !x.IsSystemGenerated))
@@ -317,11 +284,23 @@
 
         $('.btnDelete').on('click', async function(e) {
             e.preventDefault();
+            this.disabled = true;
+
+            const deleteForm = document.getElementById(`deleteForm${$(this).data('id')}`);
+            if (!deleteForm) {
+                this.disabled = false;
+                return;
+            }
+
             const name = $(this).data('name');
-            $(this).prop('disabled', true);
             const confirmed = await confirm('Xóa khoản chi phí', `Bạn muốn xóa khoản chi phí <strong>${name}</strong>?`);
-            if (!confirmed) { $(this).prop('disabled', false); return; }
-            $(`#deleteForm${$(this).data('id')}`).submit();
+            if (!confirmed) {
+                this.disabled = false;
+                return;
+            }
+
+            showPageLoading();
+            deleteForm.submit();
         });
     </script>
 }

@@ -48,7 +48,7 @@ public class ExpenseAppService(IExpenseManager expenseManager,
 
     public async Task<ExpenseAppDto?> GetExpenseByIdAsync(Guid id)
     {
-        var expense = await expenseManager.GetExpenseByIdAsync(id);
+        var expense = await expenseManager.GetExpenseByIdAsync(id).ConfigureAwait(false);
 
         if (expense is null) 
             return null;
@@ -84,8 +84,8 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             ExpenseType = (ExpenseType)dto.ExpenseType,
             IncurredDateUtc = dto.IncurredDateUtc,
             RecordedByUserId = dto.RecordedByUserId,
-            SourceOrderId = dto.SourceOrderId,
-        });
+            OrderId = dto.OrderId,
+        }).ConfigureAwait(false);
 
         return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
     }
@@ -93,10 +93,12 @@ public class ExpenseAppService(IExpenseManager expenseManager,
     public async Task<UpdateExpenseResultAppDto> UpdateExpenseAsync(UpdateExpenseAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
-        if (!valid) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
+        if (!valid) 
+            return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-        var expense = await expenseDataReader.GetByIdAsync(dto.Id);
-        if (expense is null) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
+        var expense = await expenseDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (expense is null) 
+            return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await expenseManager.UpdateExpenseAsync(new UpdateExpenseDto
         {
@@ -104,19 +106,20 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             Title = dto.Title,
             Description = dto.Description,
             AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
             IncurredDateUtc = dto.IncurredDateUtc,
             ExpenseType = (ExpenseType) dto.ExpenseType
-        });
+        }).ConfigureAwait(false);
 
         return new UpdateExpenseResultAppDto { Success = true, UpdatedId = dto.Id };
     }
 
     public async Task<DeleteExpenseResultAppDto> DeleteExpenseAsync(Guid id)
     {
-        var expense = await expenseDataReader.GetByIdAsync(id);
+        var expense = await expenseDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (expense is null) return new DeleteExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
-        await expenseManager.DeleteExpenseAsync(id);
+        await expenseManager.DeleteExpenseAsync(id).ConfigureAwait(false);
         return new DeleteExpenseResultAppDto { Success = true };
     }
 

@@ -324,7 +324,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         });
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
 
         return this.JsonError(LocalizeError(result.ErrorMessage!), data: new
         {
@@ -349,7 +349,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!result.Success)
             return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.DeliveryNoteMarkDeliveringFailed"));
 
-        return this.JsonOk();
+        return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
     }
 
     [HttpPost]
@@ -390,7 +390,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         });
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
 
         return this.JsonError(LocalizeError(result.ErrorMessage!));
 
@@ -452,7 +452,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             };
         }).ToList();
 
-        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect });
+        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect }, Localizer["Msg.SaveSuccess"]);
     }
 
     [HttpPost]
