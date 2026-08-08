@@ -23,7 +23,7 @@
                             <i class="bi @item.Icon"></i>
                         </div>
                         <div class="workflow-timeline-content">
-                            <time>@item.OccurredOn.ToString($"{ViewConstants.DefaultDateFormat} HH:mm")</time>
+                            <time>@item.OccurredOn.ToString(ViewConstants.DateTimeFormat)</time>
                             <strong>@item.Title</strong>
                             @if (!string.IsNullOrWhiteSpace(item.Description))
                             {

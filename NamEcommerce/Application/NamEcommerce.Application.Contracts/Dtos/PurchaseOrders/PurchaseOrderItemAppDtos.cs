@@ -54,16 +54,22 @@ public sealed record CreatePurchaseOrderItemAppDto
 public sealed record AddPurchaseOrderItemAppDto() : BasePurchaseOrderItemAppDto;
 
 [Serializable]
-public sealed record UpdatePurchaseOrderItemAppDto() : BasePurchaseOrderItemAppDto
+public sealed record UpdatePurchaseOrderItemAppDto()
 {
+    public required Guid PurchaseOrderId { get; init; }
     public required Guid PurchaseOrderItemId { get; init; }
+    public required decimal Quantity { get; init; }
+    public decimal UnitCost { get; set; }
+    public string? Note { get; set; }
 
-    public new (bool valid, string? errorMessage) Validate()
+    public (bool valid, string? errorMessage) Validate()
     {
-        if (PurchaseOrderItemId == Guid.Empty)
-            return (false, "Error.PurchaseOrderItemIsNotFound");
+        if (Quantity <= 0)
+            return (false, "Error.PurchaseOrderQuantityMustBePositive");
+        if (UnitCost < 0)
+            return (false, "Error.PurchaseOrderItemUnitCostCannotBeNegative");
 
-        return base.Validate();
+        return (true, string.Empty);
     }
 }
 

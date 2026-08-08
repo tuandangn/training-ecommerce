@@ -79,7 +79,7 @@
     }
 
     function formatCurrencyWithSymbol(raw) {
-        return formatCurrency(raw, '\u20ab');
+        return formatCurrency(raw, getCurrencySymbol());
     }
 
     function formatQuantity(raw, decimals) {
@@ -112,6 +112,10 @@
         var type = input.dataset.decimal || "quantity";
         var decimals = parseInt(input.dataset.decimals, 10) || 0;
         return type === 'currency' ? formatCurrency(value) : formatQuantity(value, decimals);
+    }
+
+    function getCurrencySymbol() {
+        return '\u20ab';
     }
 
     function setValue(input, value) {
@@ -480,6 +484,11 @@
         if (!form || !(form instanceof HTMLFormElement))
             throw new Error('Form is required');
         const formData = new FormData(form);
+        processFormData(form, formData);
+    }
+    function processFormData(form, formData) {
+        if (!formData || !(formData instanceof FormData))
+            throw new Error('FormData is required');
         const decimalFields = form.querySelectorAll('.decimal-input');
         for (const decimalField of decimalFields) {
             formData.set(decimalField.name, DecimalFields.stripInputFormatting(decimalField))
@@ -507,7 +516,9 @@
         stripFormatting: stripFormatting,
         stripInputFormatting: stripInputFormatting,
         getFormData: getFormData,
-        getValue: getValue
+        processFormData: processFormData,
+        getValue: getValue,
+        getCurrencySymbol: getCurrencySymbol
     };
 
 })(window);

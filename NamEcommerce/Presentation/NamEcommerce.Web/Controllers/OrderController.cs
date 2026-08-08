@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Debts;
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Settings;
@@ -32,14 +31,12 @@ public sealed partial class OrderController : BaseAuthorizedController
     private readonly ICachedValuesService _cachedValuesService;
     private readonly IBankTransferPaymentIntentAppService _paymentIntentAppService;
     private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
-    private readonly IWarehouseAppService _warehouseAppService;
     private readonly AppConfig _appConfig;
 
     public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory,
         IProductAppService productAppService, ICachedValuesService cachedValuesService,
         IBankTransferPaymentIntentAppService paymentIntentAppService,
-        BankTransferPaymentSettings bankTransferPaymentSettings,
-        IWarehouseAppService warehouseAppService, IOrderAppService orderAppService,
+        BankTransferPaymentSettings bankTransferPaymentSettings, IOrderAppService orderAppService,
         AppConfig appConfig)
     {
         _mediator = mediator;
@@ -48,7 +45,6 @@ public sealed partial class OrderController : BaseAuthorizedController
         _cachedValuesService = cachedValuesService;
         _paymentIntentAppService = paymentIntentAppService;
         _bankTransferPaymentSettings = bankTransferPaymentSettings;
-        _warehouseAppService = warehouseAppService;
         _orderAppService = orderAppService;
         _appConfig = appConfig;
     }

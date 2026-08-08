@@ -28,7 +28,7 @@ public sealed class OrderQuickCreateValidator : AbstractValidator<OrderQuickCrea
         RuleForEach(p => p.Items).SetValidator(m => new OrderQuickCreateItemValidator(localizer));
 
         RuleFor(p => p.Note)
-            .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
+            .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 500]);
     }
 }
 

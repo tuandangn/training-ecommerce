@@ -1,8 +1,6 @@
-using DocumentFormat.OpenXml.Office2010.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
@@ -613,23 +611,62 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
 
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    public async Task<IActionResult> UpdatePurchaseOrderItem(Guid id, Guid itemId)
+    {
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
+            return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
+        if (!purchaseOrder.CanAddItems)
+            return this.JsonError(Localizer["Error.PurchaseOrderCannotAddItems"]);
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == itemId);
+        if (purchaseOrderItem is null)
+            return this.JsonError(Localizer["Error.PurchaseOrderItemIsNotFound"]);
+
+        var model = new EditPurchaseOrderItemModel
+        {
+            PurchaseOrderId = purchaseOrder.Id,
+            PurchaseOrderItemId = purchaseOrderItem.Id,
+            Quantity = purchaseOrderItem.QuantityOrdered,
+            UnitCost = purchaseOrderItem.UnitCost,
+            Note = purchaseOrderItem.Note,
+            ProductName = purchaseOrderItem.ProductName,
+            QuantityDecimalPlaces = purchaseOrderItem.QuantityDecimalPlaces
+        };
+
+        return PartialView(model);
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
-    public async Task<IActionResult> UpdatePurchaseOrderItem([FromBody] EditPurchaseOrderItemModel model)
+    public async Task<IActionResult> UpdatePurchaseOrderItem(EditPurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
+        {
+            NotifyError("Error.InvalidRequest", GetErrorMessage());
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
-            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderIsNotFound") });
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == model.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
-            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderItemIsNotFound") });
+        {
+            NotifyError("Error.PurchaseOrderItemIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
         if (!purchaseOrder.CanAddItems)
-            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems") });
+        {
+            NotifyError("Error.PurchaseOrderCannotUpdateOrderItems");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
         var result = await _mediator.Send(new UpdatePurchaseOrderItemCommand
         {
@@ -641,15 +678,18 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, errorMessage = LocalizeError(result.ErrorMessage!) });
+        {
+            NotifyError(result.ErrorMessage!);
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
-        return Json(new { success = true });
+        NotifySuccess("Msg.SaveSuccess");
+        return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
-
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
-    public async Task<IActionResult> BulkReceive(Guid id)
+    public async Task<IActionResult> BulkReceiveItems(Guid id)
     {
         if (!ModelState.IsValid)
             return this.JsonError(Localizer["Error.InvalidRequest", GetErrorMessage()]);
@@ -671,7 +711,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
-    public async Task<IActionResult> BulkReceive(PurchaseOrderBulkReceiveItemsModel model)
+    public async Task<IActionResult> BulkReceiveItems(PurchaseOrderBulkReceiveItemsModel model)
     {
         if (!ModelState.IsValid)
         {

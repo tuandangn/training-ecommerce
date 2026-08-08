@@ -1,0 +1,54 @@
+﻿@model EditPurchaseOrderItemModel
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content purchaseorder-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Sửa hàng nhập</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editProductForm" method="post" asp-action="UpdatePurchaseOrderItem">
+                <fieldset>
+                    <input type="hidden" asp-for="@Model.PurchaseOrderId" id="edit@(Html.IdFor(m => m.PurchaseOrderId))" />
+                    <input type="hidden" asp-for="@Model.PurchaseOrderItemId" id="edit@(Html.IdFor(m => m.PurchaseOrderItemId))" />
+                    <div class="modal-body py-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted text-uppercase">Hàng hóa</label>
+                            <div class="fw-bold">@Model.ProductName</div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted text-uppercase" asp-for="Quantity" for="edit@(Html.IdFor(m => m.Quantity))">Số lượng</label>
+                                <input class="edit-item-qty" asp-for="Quantity" id="edit@(Html.IdFor(m => m.Quantity))"
+                                       data-val="true" data-val-required="Vui lòng nhập số lượng." value="@Model.Quantity?.DisplayQuantity(Model.QuantityDecimalPlaces)"
+                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.001" placeholder="Số lượng"
+                                       data-val-number="Số lượng phải là số" data-decimal="quantity" data-decimals="@Model.QuantityDecimalPlaces" inputmode="decimal" />
+                                <span class="small text-danger" asp-validation-for="Quantity"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted text-uppercase" asp-for="UnitCost" for="edit@(Html.IdFor(m => m.UnitCost))">Đơn giá</label>
+                                <input class="edit-item-unit-cost include-suffix" asp-for="UnitCost" id="edit@(Html.IdFor(m => m.UnitCost))"
+                                       data-val="true" data-val-required="Vui lòng nhập giá nhập" value="@Model.UnitCost.DisplayCurrency()"
+                                       data-val-range="Giá nhập phải lớn hơn 0" data-val-range-min="0.001" placeholder="Giá nhập"
+                                       data-val-number="Giá nhập phải là số" data-decimal="currency" inputmode="numeric" />
+                                <span class="small text-danger" asp-validation-for="UnitCost"></span>
+                                <input type="hidden" asp-for="QuantityDecimalPlaces" />
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label small fw-semibold text-muted text-uppercase" asp-for="Note" for="edit@(Html.IdFor(m => m.Note))">Ghi chú</label>
+                            <textarea asp-for="Note" name="note" class="form-control" rows="3" id="edit@(Html.IdFor(m => m.Note))" placeholder="Ghi chú"
+                                      data-val="true" data-val-maxlength="500" data-val-maxlength-max="Ghi chú tối đa 500 ký tự"></textarea>
+                            <span class="small text-danger" asp-validation-for="Note"></span>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>

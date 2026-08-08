@@ -601,7 +601,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (purchaseOrder is null)
             return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
 
-        if (!await _purchaseOrderManager.CanAddPurchaseOrderItemsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
+        if (!purchaseOrder.CanAddItems)
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotAddItems");
 
         var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
@@ -648,12 +648,26 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (!purchaseOrder.CanAddItems)
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotUpdateOrderItems");
 
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+            return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
+
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                if (!NumberHelper.IsValidDecimalPlace(dto.Quantity, unitMeasurement.DecimalPlaces))
+                    return CommonActionResultDto.CreateError("Error.QuantityMustBeInteger");
+            }
+        }
+
         await _purchaseOrderManager.UpdatePurchaseOrderItemAsync(new UpdatePurchaseOrderItemDto
         {
             PurchaseOrderId = dto.PurchaseOrderId,
             PurchaseOrderItemId = dto.PurchaseOrderItemId,
             ProductId = purchaseOrderItem.ProductId,
-            QuantityOrdered = dto.QuantityOrdered,
+            QuantityOrdered = dto.Quantity,
             UnitCost = dto.UnitCost,
             Note = dto.Note
         }).ConfigureAwait(false);

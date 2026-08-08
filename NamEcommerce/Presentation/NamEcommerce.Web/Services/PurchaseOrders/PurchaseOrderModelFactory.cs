@@ -631,7 +631,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         }
 
         timeline = timeline
-            .OrderByDescending(item => item.OccurredOn)
+            .OrderBy(item => item.OccurredOn)
             .ThenBy(item => item.Title)
             .ToList();
         timeline.Insert(0, initialPurchase);

@@ -63,17 +63,17 @@ async function request(method, url, body, options) {
         return { success: false, error: errorMessage, status: response.status };
     }
 
-    if (method === 'GET')
-        return await response.text();
-
     if (parsed && typeof parsed.success === 'boolean') {
         return parsed;  // already in JsonNotificationResult shape
     }
 
+    if (!parsed && method === 'GET')
+        return await response.text();
+
     return { success: response.ok, data: parsed, status: response.status };
 }
 
-export const apiGet    = (url, options)        => request('GET',    url, null, options);
-export const apiPost   = (url, body, options)  => request('POST',   url, body, options);
-export const apiPut    = (url, body, options)  => request('PUT',    url, body, options);
-export const apiDelete = (url, body, options)  => request('DELETE', url, body, options);
+export const apiGet = (url, options) => request('GET', url, null, options);
+export const apiPost = (url, body, options) => request('POST', url, body, options);
+export const apiPut = (url, body, options) => request('PUT', url, body, options);
+export const apiDelete = (url, body, options) => request('DELETE', url, body, options);

@@ -30,6 +30,9 @@ public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
         RuleForEach(p => p.Items).SetValidator(new CreateOrderItemValidator(localizer));
+
+        RuleFor(p => p.Note)
+            .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 500]);
     }
 }
 

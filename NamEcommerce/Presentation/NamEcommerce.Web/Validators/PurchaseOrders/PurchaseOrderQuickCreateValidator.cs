@@ -21,7 +21,7 @@ public sealed class PurchaseOrderQuickCreateValidator : AbstractValidator<Purcha
         RuleForEach(p => p.Items).SetValidator(m => new PurchaseOrderQuickCreateItemValidator(localizer));
 
         RuleFor(p => p.Note)
-            .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
+            .MaximumLength(500).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Note"], 500]);
 
         When(p => p.IsReceived, () =>
         {

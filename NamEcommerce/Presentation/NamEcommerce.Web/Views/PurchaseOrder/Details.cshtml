@@ -18,6 +18,7 @@
     var hasAnyAllocations = allocationCount > 0;
     var receivingDocumentCount = Model.RelatedGoodsReceipts.Count + Model.RelatedVendorReturns.Count;
 }
+
 @functions {
     string BuildReceiptItemsHtml(IList<RelatedGoodsReceiptItemModel> items)
     {
@@ -94,6 +95,7 @@
         _ => "secondary"
     };
 }
+
 @section TitleSection {
     <h1 class="topbar-page-title">
         Đơn nhập
@@ -117,6 +119,11 @@
         </nav>
     </div>
 }
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/purchaseorder-details.css" asp-append-version="true" />
+}
+
 @await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
 
 <div class="order-workflow-layout">
@@ -130,6 +137,7 @@
         @await Html.PartialAsync("_PurchaseOrderWorkflowTimeline", Model)
     </aside>
 </div>
+
 @if (Model.Info.Status == (int)PurchaseOrderStatus.Receiving)
 {
     <div class="modal fade" id="closePartialModal" tabindex="-1" aria-hidden="true">
@@ -166,6 +174,7 @@
         </div>
     </div>
 }
+
 @if (Model.Info.CanAddItems)
 {
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -240,52 +249,6 @@
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="btnAddItem" class="btn btn-success d-none">
                             <i class="bi bi-plus-lg me-1"></i>Thêm vào
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-}
-@if (Model.Info.CanAddItems)
-{
-    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content purchaseorder-modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Sửa dòng hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="editProductForm">
-                    <input type="hidden" id="editPurchaseOrderId" value="@Model.Info.Id" />
-                    <input type="hidden" id="editPurchaseOrderItemId" />
-                    <div class="modal-body py-3">
-                        <div class="alert alert-light border mb-3">
-                            <div class="small text-muted">Hàng hóa</div>
-                            <div class="fw-semibold" id="editProductName"></div>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label small fw-medium text-muted" for="editItemQuantity">Số lượng</label>
-                                <input id="editItemQuantity" class="form-control no-additional-element"
-                                       data-decimal="quantity" inputmode="decimal" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-medium text-muted" for="editItemUnitCost">Đơn giá</label>
-                                <input id="editItemUnitCost" class="form-control no-additional-element"
-                                       data-decimal="currency" inputmode="numeric" />
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="form-label small fw-medium text-muted" for="editItemNote">Ghi chú</label>
-                            <textarea id="editItemNote" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div id="editProductError" class="alert alert-danger d-none mt-3 mb-0"></div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
                         </button>
                     </div>
                 </form>
@@ -635,14 +598,9 @@
         </div>
     </div>
 }
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/pages/purchaseorder-details.css" asp-append-version="true" />
-}
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
-    // Workflow panel switching
     <script>
         (function() {
             function activatePanel(targetId) {
@@ -771,7 +729,7 @@
             submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
             orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
             customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
-                                                                        };
+                                                                                };
 
         document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -855,6 +813,7 @@
 
     <script type="module">
         import ProductPicker from '/modules/ProductPicker.js';
+        import { apiGet } from '/modules/ajax-helper.js';
 
         let productPickerInstance = null;
 
@@ -1088,9 +1047,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                            <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
-                                                                                            <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                                                                                        </div>`;
+                                                                                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                                                                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
+                                                                                                </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsOrderId').value = order.orderId;
@@ -1114,9 +1073,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                            <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
-                                                                                            <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
-                                                                                        </div>`;
+                                                                                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                                                                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
+                                                                                                </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
@@ -1229,82 +1188,55 @@
 
             // Handle Edit Item Button
             document.querySelectorAll('.btnEditItem').forEach(btn => {
-                btn.addEventListener('click', function(e) {
+                btn.addEventListener('click', async function(e) {
                     e.preventDefault();
-                    const modal = document.getElementById('editProductModal');
-                    if (!modal) return;
-                    document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
-                    document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
-                    document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
-                    const editQtyInput = document.getElementById('editItemQuantity');
-                    editQtyInput.value = this.getAttribute('data-quantity') || '';
-                    const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
-                    editQtyInput.dataset.decimals = String(editDecimalPlaces);
-                    editQtyInput.dataset.decimalBound = '';
-                    document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
-                    document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
-                    document.getElementById('editProductError')?.classList.add('d-none');
-                    window.DecimalFields?.autoWrap?.(modal);
+                    const btn = this;
+                    const itemId = btn.dataset.id;
+                    if (!itemId) return;
+                    btn.disabled = true;
+                    showPageLoading();
 
-                    new bootstrap.Modal(modal).show();
+                    const response = await apiGet(`@Url.Action("UpdatePurchaseOrderItem")?id=@Model.Info.Id&itemId=${itemId}`);
+
+                    hidePageLoading();
+                    if (!response)
+                        return;
+
+                    document.body.insertAdjacentHTML('beforeend', response);
+
+                    const modalElement = document.getElementById('editProductModal');
+                    attachEditEventHandler(modalElement);
+                    DecimalFields.autoWrap(modalElement);
+
+                    modalElement.addEventListener('hidden.bs.modal', () => {
+                        modalElement.remove();
+                    }, { once: true });
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    btn.disabled = false;
                 });
             });
 
-            document.getElementById('editProductForm')?.addEventListener('submit', async function(e) {
-                e.preventDefault();
+            function attachEditEventHandler(modalElement) {
+                const form = modalElement.querySelector('#editProductForm');
+                if (!form) return;
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const submitBtn = form.querySelector('[type="submit"]');
+                    submitBtn.disabled = true;
 
-                const errorEl = document.getElementById('editProductError');
-                const submitBtn = document.getElementById('btnEditItemSubmit');
-                errorEl?.classList.add('d-none');
-
-                const payload = {
-                    purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
-                    purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
-                    quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
-                    unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
-                    note: document.getElementById('editItemNote')?.value || null
-                };
-
-                if (!payload.quantity || payload.quantity <= 0) {
-                    showEditProductError('Số lượng phải lớn hơn 0.');
-                    return;
-                }
-                if (payload.unitCost < 0) {
-                    showEditProductError('Đơn giá không được âm.');
-                    return;
-                }
-
-                submitBtn.disabled = true;
-                const originalHtml = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
-                showPageLoading();
-
-                try {
-                    const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
-                        setTimeout(() => location.reload(), 300);
+                    if (!isFormValid(form)){
+                        submitBtn.disabled = false;
                         return;
                     }
-                    hidePageLoading();
-                    showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
-                } catch (error) {
-                    hidePageLoading();
-                    console.error('Error:', error);
-                    showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalHtml;
-                }
-            });
+
+                    showPageLoading();
+                    form.submit();
+                    const fieldset = form.querySelector('fieldset');
+                    fieldset.disabled = true;
+                });
+            }
 
             // Handle Remove Item Button
             document.querySelectorAll('.btnRemoveItem').forEach(btn => {
@@ -1420,15 +1352,15 @@
                 tr.style.cursor = 'pointer';
                 tr.title = `Đơn: ${p.purchaseOrderCode}`;
                 tr.innerHTML = `
-                                                                            <td class="ps-0 py-1 text-nowrap">
-                                                                                ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
-                                                                                <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
-                                                                                <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
-                                                                            </td>
-                                                                            <td class="text-end py-1 fw-semibold text-nowrap">
-                                                                                ${DecimalFields.formatCurrency(String(p.unitCost))}
-                                                                            </td>
-                                                                            <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
+                                                                                    <td class="ps-0 py-1 text-nowrap">
+                                                                                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                                                                                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
+                                                                                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
+                                                                                    </td>
+                                                                                    <td class="text-end py-1 fw-semibold text-nowrap">
+                                                                                        ${DecimalFields.formatCurrency(String(p.unitCost))}
+                                                                                    </td>
+                                                                                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
 
                 tr.addEventListener('click', () => {
                     const priceInput = document.getElementById('itemUnitPrice');
@@ -1571,6 +1503,7 @@
         }
 
     </script>
+
     <script type="module">
         import { Vendor, default as VendorPicker } from '/modules/VendorPicker.js';
 
@@ -1615,6 +1548,7 @@
             }
         })();
     </script>
+
     @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
     {
         <script type="module" defer>
@@ -1626,7 +1560,7 @@
                 btn.disabled = true;
                 showPageLoading();
 
-                const response = await apiGet('@Url.Action("BulkReceive", new { id = Model.Info.Id })');
+                const response = await apiGet('@Url.Action("BulkReceiveItems", new { id = Model.Info.Id })');
 
                 hidePageLoading();
                 if (!response)
@@ -1647,6 +1581,7 @@
             });
         </script>
     }
+
     @if (Model.CanAllocateItems)
     {
         <script>
@@ -1725,16 +1660,16 @@
                                 tr.dataset.customerPhone = item.customerPhone || '';
                                 tr.dataset.customerName = item.customerName || '';
                                 tr.innerHTML = `
-                                                                                                                <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                                                                                                <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
-                                                                                                                <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
-                                                                                                                <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
-                                                                                                                <td class="pe-2">
-                                                                                                                    <div class="d-flex align-items-center justify-content-end">
-                                                                                                                        <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
-                                                                                                                               data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
-                                                                                                                   </div>
-                                                                                                                </td>`;
+                                                                                                                            <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                                                                                                            <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                                                                                                            <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                                                                                                            <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                                                                                                            <td class="pe-2">
+                                                                                                                                <div class="d-flex align-items-center justify-content-end">
+                                                                                                                                    <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
+                                                                                                                                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
+                                                                                                                               </div>
+                                                                                                                            </td>`;
                                 tbody.appendChild(tr);
                                 window.DecimalFields?.autoWrap?.(tr);
                                 tr.addEventListener('click', e => {
@@ -1853,6 +1788,7 @@
             })();
         </script>
     }
+
     @if (Model.AllocationsPerItem.Values.Any(allocations => allocations.Count > 0))
     {
         <script type="module">
@@ -1881,8 +1817,8 @@
                 });
             });
         </script>
-
     }
+
     @if (Model.Info.CanReceiveGoods)
     {
         <script>

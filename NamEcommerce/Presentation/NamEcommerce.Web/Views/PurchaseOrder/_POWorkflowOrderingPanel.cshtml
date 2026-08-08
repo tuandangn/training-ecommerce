@@ -1,3 +1,4 @@
+@using System.Globalization
 @using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
 @model PurchaseOrderDetailsModel
 @{
@@ -94,12 +95,6 @@
                     {
                         <div class="text-muted small fst-italic">Không có ghi chú</div>
                     }
-                    @if (Model.Info.TotalShipping > 0)
-                    {
-                        <div class="small mt-2">
-                            <span class="me-2">Vận chuyển: <strong>@Model.Info.TotalShipping.DisplayCurrencyWithSymbol()</strong></span>
-                        </div>
-                    }
                 </div>
             </div>
             <div class="table-responsive">
@@ -170,14 +165,14 @@
                                         <input type="hidden" class="product-id" value="@item.ProductId" />
                                     </td>
                                     <td class="text-end">
-                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
+                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity(item.QuantityDecimalPlaces)</span>
                                         <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
                                     </td>
                                     <td class="text-end">
                                         @if (item.QuantityReceived >= item.QuantityOrdered)
                                         {
                                             <span class="status-badge success py-1 px-2">
-                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
+                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity(item.QuantityDecimalPlaces)
                                             </span>
                                         }
                                         else if (item.QuantityReceived > 0)
@@ -205,14 +200,14 @@
                                                 <li>
                                                     <button class="dropdown-item btnEditItem"
                                                             data-id="@item.Id"
-                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-purchase-order="@Model.Info.Id"
                                                             data-name="@item.ProductName"
-                                                            data-quantity="@item.QuantityOrdered"
-                                                            data-unitcost="@item.UnitCost"
-                                                            data-note="@item.Note"
-                                                            data-decimalplaces="@item.QuantityDecimalPlaces">
+                                                            data-quantity="@item.QuantityOrdered.ToString(CultureInfo.InvariantCulture)"
+                                                            data-unit-cost="@item.UnitCost.ToString(CultureInfo.InvariantCulture)"
+                                                            data-decimal-places="@item.QuantityDecimalPlaces">
                                                         <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
                                                     </button>
+                                                    <span id="itemNote@(item.Id)" class="visually-hidden d-none">@item.Note</span>
                                                 </li>
                                                 <li>
                                                     <button class="dropdown-item btnRemoveItem"
@@ -268,6 +263,24 @@
                     <span class="label">Tổng cộng</span>
                     <span class="value" id="grandTotal">@Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</span>
                 </div>
+                @if (Model.Info.TotalShipping > 0)
+                {
+                    <div class="order-summary-row">
+                        @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
+                        {
+                            <span class="label">
+                                Tổng phí vận chuyển
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label">
+                                Phí vận chuyển
+                            </span>
+                        }
+                        <span class="value text-muted">@Model.Info.TotalShipping.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
             </div>
         </div>
     </div>

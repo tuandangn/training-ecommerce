@@ -1,6 +1,7 @@
-﻿@model PurchaseOrderBulkReceiveItemsModel
+﻿@using System.Globalization
+@model PurchaseOrderBulkReceiveItemsModel
 <div class="modal fade" id="bulkReceiveModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content purchaseorder-modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold">
@@ -9,43 +10,43 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form asp-action="BulkReceive" method="post" id="bulkReceiveForm">
+            <form asp-action="BulkReceiveItems" method="post" id="bulkReceiveForm">
                 <fieldset>
                     <input type="hidden" asp-for="PurchaseOrderId" />
 
                     <script type="application/json" id="bulkReceiveData">
-                                            {
-                                                "defaultWarehouseId": "@Model.DefaultWarehouseId",
-                                                "items": [
-                                                    @for (var idx = 0; idx < Model.RemainingReceivableItems.Count; idx++)
-                                                    {
-                                                                        var item = Model.RemainingReceivableItems[idx];
-                                                                        var itemDsRemaining = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
-                                                                                                                                        ? itemDsAllocs.Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m).Sum(a => a.AllocatedQuantity - a.ReceivedQuantity) : 0m;
-                                                                        <text>{
-                                                                                            "id": "@item.Id",
-                                                                                            "name": @Json.Serialize(item.ProductName),
-                                                                                            "remaining": @item.RemainingQuantity.ToString("#0"),
-                                                                                            "unitCost": @item.UnitCost.ToString("#0"),
-                                                                                            "dsRemaining": @itemDsRemaining.ToString("#0"),
-                                                                                            "decimalPlaces": @item.QuantityDecimalPlaces,
-                                                                                            "unitMeasurement": "@item.UnitMeasurement"
-                                                                                        }@(idx < Model.RemainingReceivableItems.Count - 1 ? "," : "")
-                                                                        </text>
-                                                    }
-                                                ],
-                                                "warehouses": [
-                                                    @for (var w = 0; w < Model.AvailableWarehouses.Count; w++)
-                                                    {
-                                                                        var option = Model.AvailableWarehouses[w];
-                                                                        <text>{
-                                                                                            "id": "@option.Id",
-                                                                                            "name": @Json.Serialize(option.Name)
-                                                                                        }@(w < Model.AvailableWarehouses.Count - 1 ? "," : "")
-                                                                        </text>
-                                                    }
-                                                ]
-                                            }
+                        {
+                            "defaultWarehouseId": "@Model.DefaultWarehouseId",
+                            "items": [
+                                @for (var idx = 0; idx < Model.RemainingReceivableItems.Count; idx++)
+                                {
+                                    var item = Model.RemainingReceivableItems[idx];
+                                    var itemDsRemaining = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
+                                                ? itemDsAllocs.Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m).Sum(a => a.AllocatedQuantity - a.ReceivedQuantity) : 0m;
+                                    <text>{
+                                            "id": "@item.Id",
+                                            "name": @Json.Serialize(item.ProductName),
+                                            "remaining": @item.RemainingQuantity.ToString(CultureInfo.InvariantCulture),
+                                            "unitCost": @item.UnitCost.ToString(CultureInfo.InvariantCulture),
+                                            "dsRemaining": @itemDsRemaining.ToString(CultureInfo.InvariantCulture),
+                                            "decimalPlaces": @item.QuantityDecimalPlaces,
+                                            "unitMeasurement": "@item.UnitMeasurement"
+                                        }@(idx < Model.RemainingReceivableItems.Count - 1 ? "," : "")
+                                    </text>
+                                }
+                            ],
+                            "warehouses": [
+                                @for (var w = 0; w < Model.AvailableWarehouses.Count; w++)
+                                {
+                                    var option = Model.AvailableWarehouses[w];
+                                    <text>{
+                                            "id": "@option.Id",
+                                            "name": @Json.Serialize(option.Name)
+                                        }@(w < Model.AvailableWarehouses.Count - 1 ? "," : "")
+                                    </text>
+                                }
+                            ]
+                        }
                     </script>
 
                     <div class="modal-body py-3">
@@ -58,9 +59,11 @@
                             <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
                                 <thead class="text-muted small text-uppercase">
                                     <tr>
+                                        <th class="text-center"></th>
                                         <th class="ps-2">Hàng hóa</th>
+                                        <th class="text-end pe-2 d-none d-xl-table-cell">Còn</th>
                                         <th class="text-end pe-2">Số lượng</th>
-                                        <th class="text-end pe-3">Giá vốn thực tế</th>
+                                        <th class="text-end pe-3">Giá nhập</th>
                                         <th class="ps-2">Kho nhận</th>
                                         <th class="text-end pe-2"></th>
                                     </tr>
@@ -83,7 +86,7 @@
                                     Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
                                 </label>
                                 <input id="bulkAdditionalShipping" name="AdditionalShipping"
-                                       class="form-control" inputmode="numeric"
+                                       class="form-control include-suffix" inputmode="numeric"
                                        data-decimal="currency" value="" placeholder="Nhập phí vận chuyển" />
                             </div>
                             <div class="col-md-6">
@@ -99,9 +102,8 @@
                                             <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModePercent">%</label>
                                         </div>
                                     </div>
-                                    <input id="bulkAdditionalTaxInput" class="form-control text-end"
-                                           data-decimal="currency" value="" placeholder="Nhập thuế" inputmode="numeric" />
-                                    <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
+                                    <input id="bulkAdditionalTaxInput" class="form-control text-end" data-decimal="currency" value="" placeholder="Nhập thuế" inputmode="numeric" />
+                                    <span class="input-group-text" id="bulkAdditionalTaxSuffix">@ViewConstants.DefaultCurrencySymbol</span>
                                 </div>
                                 <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
                                 <div class="small text-muted mt-1 d-none" id="bulkAdditionalTaxHint"></div>
@@ -132,7 +134,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-success" id="bulkReceiveSubmit">
-                            <i class="bi bi-check-lg me-1"></i> Xác nhận nhận hàng
+                            <i class="bi bi-check-lg-all me-1"></i> Xác nhận
                         </button>
                     </div>
                 </fieldset>
