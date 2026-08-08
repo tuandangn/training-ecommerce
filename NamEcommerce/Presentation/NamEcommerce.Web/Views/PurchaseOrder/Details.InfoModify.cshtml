@@ -6,7 +6,8 @@
             @if (Model.CanChangeDate)
             {
                 <label asp-for="PlacedOn" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
-                <input asp-for="PlacedOn" class="form-control" type="datetime-local" value="@Model.PlacedOn.ToString("s")" />
+                <input asp-for="PlacedOn" class="form-control" type="datetime-local" value="@Model.PlacedOn.ToString("s")" 
+                    data-val-range-max="@DateTime.Now.ToString("s")"/>
                 <span asp-validation-for="PlacedOn" class="text-danger small"></span>
             }
             else
@@ -19,8 +20,9 @@
         <div class="col-sm-6">
             <label asp-for="ExpectedDeliveryDate" class="form-label small fw-semibold text-muted text-uppercase mb-1"></label>
             <input asp-for="ExpectedDeliveryDate" class="form-control" type="datetime-local" placeholder="Ngày nhập dự kiến"
-                   value="@(Model.ExpectedDeliveryDate.HasValue ? Model.ExpectedDeliveryDate.Value.ToString("s") : "")"
-                   data-val="true" data-val-range="Ngày nhập dự kiến không nhỏ hơn ngày đặt hàng" data-val-range-min="@Model.PlacedOn.ToString("s")" />
+                   value="@(Model.ExpectedDeliveryDate.HasValue ? Model.ExpectedDeliveryDate.Value.ToString("s") : "")" data-val="true" 
+                   data-val-range="Ngày giao hàng dự kiến không thể là ngày trong quá khứ"
+                   data-val-range-min="@(Model.ExpectedDeliveryDate.HasValue ? Model.PlacedOn.ToString("s") : DateTime.Now.ToString("s"))" />
             <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
         </div>
     </div>

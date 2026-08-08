@@ -19,11 +19,17 @@ public sealed class PurchaseOrderModel
     public int Status { get; set; }
     public string? Note { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
+
     public decimal ShippingAmount { get; set; }
-    public decimal TaxAmount { get; set; }
     public decimal AccumulatedShippingAmount { get; set; }
+    public decimal TotalShipping => ShippingAmount + AccumulatedShippingAmount;
+
+    public decimal TaxAmount { get; set; }
     public decimal AccumulatedTaxAmount { get; set; }
+    public decimal TotalTaxAmount => TaxAmount + AccumulatedTaxAmount;
+
     public decimal TotalAmount { get; set; }
+    public decimal SubTotal => TotalAmount - TotalTaxAmount;
 
     public DateTime CreatedOn { get; set; }
 

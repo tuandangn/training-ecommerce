@@ -20,6 +20,12 @@
                 <h5>Kết sổ</h5>
                 <div class="text-muted small">Công nợ và thanh toán với nhà cung cấp</div>
             </div>
+            @if (poStatus == PurchaseOrderStatus.Receiving)
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#closePartialModal">
+                    <i class="bi bi-archive me-1"></i>Đóng đơn
+                </button>
+            }
             <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#poSettlementPaymentModal">
                 <i class="bi bi-cash-coin me-1"></i>Thanh toán
             </button>

@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml.Office2010.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
@@ -49,47 +50,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         var model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel();
         return View(model);
-    }
-
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
-    public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
-    {
-        var model = await _mediator.Send(query);
-        return View(model);
-    }
-
-    public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return Json(result);
-    }
-
-    public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return Json(result);
-    }
-
-    [HttpPost]
-    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
-    public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
-    {
-        var result = await _mediator.Send(command);
-        if (!result.Success)
-            return this.JsonError(LocalizeError(result.ErrorMessage!));
-
-        if (_purchaseOrderSettings.CreateFromShortageAutoApproved)
-        {
-            foreach (var purchaseOrderInfo in result.Items)
-            {
-                if (!purchaseOrderInfo.CreatedNew)
-                    continue;
-                await _mediator.Send(new SubmitsPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
-                await _mediator.Send(new ApprovesPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
-            }
-        }
-
-        return this.JsonOk(result.Items, Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value);
     }
 
     [HttpPost]
@@ -166,6 +126,48 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
+
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
+    public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
+    {
+        var model = await _mediator.Send(query);
+        return View(model);
+    }
+
+    public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return Json(result);
+    }
+
+    public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return Json(result);
+    }
+
+    [HttpPost]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.Success)
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
+
+        if (_purchaseOrderSettings.CreateFromShortageAutoApproved)
+        {
+            foreach (var purchaseOrderInfo in result.Items)
+            {
+                if (!purchaseOrderInfo.CreatedNew)
+                    continue;
+                await _mediator.Send(new SubmitsPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+                await _mediator.Send(new ApprovesPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+            }
+        }
+
+        return this.JsonOk(result.Items, Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value);
+    }
+
 
     [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
     public async Task<IActionResult> QuickCreate()
@@ -308,6 +310,61 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         {
             NotifyError("Error.InvalidRequest", GetErrorMessage());
             return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (model.ExpectedDeliveryDate < DateTime.Now && model.ExpectedDeliveryDate != purchaseOrder.ExpectedDeliveryDate)
+        {
+            NotifyError("Error.ExpectedDeliveryDateCannotBeInPast");
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (!purchaseOrder.CanChangeDate && model.PlacedOn != purchaseOrder.PlacedOn)
+        {
+            NotifyError("Error.PurchaseOrderCannotUpdateInfo");
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (!purchaseOrder.CanChangeVendor && model.VendorId != purchaseOrder.VendorId)
+        {
+            NotifyError("Error.PurchaseOrderCannotUpdateVendor");
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (purchaseOrder.CanChangeFees)
+        {
+            if (purchaseOrder.Items.Count == 0)
+            {
+                if (model.ShippingAmount > 0)
+                {
+                    NotifyError("Error.PurchaseOrderHasNoItemsForShipping");
+                    return RedirectToAction(nameof(Details), new { id = model.Id });
+                }
+                if (model.TaxAmount > 0)
+                {
+                    NotifyError("Error.PurchaseOrderHasNoItemsForTax");
+                    return RedirectToAction(nameof(Details), new { id = model.Id });
+                }
+            }
+            else
+            {
+                if (model.TaxAmount < 0)
+                {
+                    NotifyError("Error.TaxAmountCannotBeNegative");
+                    return RedirectToAction(nameof(Details), new { id = model.Id });
+                }
+                if (model.ShippingAmount < 0)
+                {
+                    NotifyError("Error.ShippingAmountCannotBeNegative");
+                    return RedirectToAction(nameof(Details), new { id = model.Id });
+                }
+            }
         }
 
         var updatePurchaseOrderResult = await _mediator.Send(new UpdatePurchaseOrderCommand
@@ -589,9 +646,32 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return Json(new { success = true });
     }
 
+
+    [HttpGet]
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
+    public async Task<IActionResult> BulkReceive(Guid id)
+    {
+        if (!ModelState.IsValid)
+            return this.JsonError(Localizer["Error.InvalidRequest", GetErrorMessage()]);
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
+            return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
+
+        if (!purchaseOrder.CanReceiveGoods)
+            return this.JsonError(Localizer["Error.PurchaseOrderCannotReceiveGoods"]);
+
+        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderBulkReceiveModel(id);
+        if (model is null)
+            return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
+
+        return PartialView(model);
+    }
+
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
-    public async Task<IActionResult> BulkReceive(BulkReceivePurchaseOrderModel model)
+    public async Task<IActionResult> BulkReceive(PurchaseOrderBulkReceiveItemsModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -603,6 +683,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        if (!purchaseOrder.CanReceiveGoods)
+        {
+            NotifyError("Error.PurchaseOrderCannotReceiveGoods");
             return RedirectToAction(nameof(List));
         }
 

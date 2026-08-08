@@ -47,6 +47,7 @@ async function request(method, url, body, options) {
     const isJson = contentType.indexOf('application/json') >= 0;
 
     let parsed = null;
+
     if (isJson) {
         try { parsed = await response.json(); } catch (_) { parsed = null; }
     }
@@ -61,6 +62,9 @@ async function request(method, url, body, options) {
         if (window.NotificationCenter) window.NotificationCenter.error(errorMessage);
         return { success: false, error: errorMessage, status: response.status };
     }
+
+    if (method === 'GET')
+        return await response.text();
 
     if (parsed && typeof parsed.success === 'boolean') {
         return parsed;  // already in JsonNotificationResult shape

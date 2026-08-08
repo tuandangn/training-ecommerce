@@ -56,7 +56,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
     public decimal TotalShipping => ShippingAmount + AccumulatedShippingAmount;
     public decimal TotalTax => TaxAmount + AccumulatedTaxAmount;
     public decimal Subtotal => _items.Sum(x => x.TotalCost);
-    public decimal TotalAmount => Subtotal + TotalShipping + TotalTax;
+    public decimal TotalAmount => Subtotal + TotalTax;
 
     private readonly List<PurchaseOrderItem> _items = [];
     public IEnumerable<PurchaseOrderItem> Items => _items.AsReadOnly();

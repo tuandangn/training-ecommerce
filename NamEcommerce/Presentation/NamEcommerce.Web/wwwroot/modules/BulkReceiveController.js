@@ -1,12 +1,3 @@
-/**
- * BulkReceiveController
- * Quản lý modal "Nhận nhiều hàng" trong trang PurchaseOrder/Details.
- *
- * Đọc dữ liệu khởi tạo từ <script type="application/json" id="bulkReceiveData">.
- * Mỗi dòng (row) = 1 lần nhận: chọn item, kho và số lượng.
- * Cùng 1 item có thể có nhiều dòng vào các kho khác nhau — kiểm tra aggregate
- * qty không vượt RemainingQuantity.
- */
 export default class BulkReceiveController {
     #purchaseOrderId;
 
@@ -78,6 +69,7 @@ export default class BulkReceiveController {
         this.#bindEvents();
 
         // Khi modal mở: reset và prefill 1 dòng cho mỗi item còn lại
+        DecimalFields.autoWrap(this.#modalEl);
         this.#modalEl.addEventListener('show.bs.modal', () => this.#prefillRows());
     }
 
@@ -164,12 +156,17 @@ export default class BulkReceiveController {
                 const item = this.#itemsById.get(e.target.value);
                 const qtyInput = tr.querySelector('.bulk-row-qty');
                 if (qtyInput && item) {
+                    const oldDecimalPlaces = qtyInput.dataset.decimals;
                     const dp = String(item.decimalPlaces ?? 0);
                     qtyInput.dataset.decimals = dp;
                     qtyInput.dataset.decimalBound = '';
                     window.DecimalFields?.bindInput?.(qtyInput);
                     const dpInput = tr.querySelector('.bulk-row-decimal-places');
                     if (dpInput) dpInput.value = dp;
+                    tr.dataset.decimalPlaces = dp;
+                    if (oldDecimalPlaces != dp) {
+                        qtyInput.value = '';
+                    }
                 }
                 this.#refreshRowHint(tr);
                 this.#syncRowWarehouse(tr);
@@ -213,16 +210,21 @@ export default class BulkReceiveController {
         if (!this.#tbody) return;
         this.#tbody.innerHTML = '';
         this.#rowSeq = 0;
-        this.#items.forEach(item => this.#addRow(item.id, item.remaining));
+        this.#items.forEach(item => this.#addRow(item));
         this.#recompute();
     }
 
-    #addRow(presetItemId = '', presetQty = '') {
+    #addRow(item) {
         if (!this.#tbody) return;
+        const presetItemId = item?.id ?? '';
+        const presetQty = item?.remaining ?? 0;
+
         const idx = this.#rowSeq++;
         const tr = document.createElement('tr');
         tr.classList.add('align-top');
         tr.dataset.rowIndex = String(idx);
+        tr.dataset.decimalPlaces = item?.decimalPlaces ?? 0;
+        tr.dataset.unitMeasurement = item?.unitMeasurement ?? '';
 
         const itemOptions = this.#items.map(it =>
             `<option value="${escapeHtml(it.id)}" ${it.id === presetItemId ? 'selected' : ''}>${escapeHtml(it.name)}</option>`
@@ -244,18 +246,20 @@ export default class BulkReceiveController {
                     <option value="">-- Chọn hàng hóa --</option>
                     ${itemOptions}
                 </select>
-                <div class="small text-muted mt-1 bulk-row-hint"></div>
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${idx}].Quantity" inputmode="decimal"
                        class="form-control form-control-sm text-end bulk-row-qty"
-                       data-decimal="quantity" data-decimals="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
-                <input type="hidden" name="Items[${idx}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" />
+                       data-decimal="quantity" data-decimals="${item?.decimalPlaces ?? 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
+                <input type="hidden" name="Items[${idx}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${item?.decimalPlaces ?? 0}" />
+                <div class="small text-muted mt-1 bulk-row-hint-qty"></div>
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${idx}].ActualUnitCost" inputmode="numeric"
                        class="form-control form-control-sm text-end bulk-row-cost"
-                       data-decimal="currency" value="" placeholder="Cập nhật giá vốn" title="Nhập nếu giá vốn khác giá trong đơn nhập" />
+                       data-decimal="currency" value="${this.#formatCurrency(item?.unitCost ?? 0)}" 
+                       placeholder="Giá vốn" />
+                <div class="small text-muted mt-1 bulk-row-hint-cost"></div>
             </td>
             <td class="ps-2">
                 <select name="Items[${idx}].WarehouseId"
@@ -459,23 +463,35 @@ export default class BulkReceiveController {
 
     #refreshRowHint(tr) {
         if (!tr) return;
-        const select = tr.querySelector('.bulk-row-item');
-        const hint = tr.querySelector('.bulk-row-hint');
-        if (!select || !hint) return;
-        const item = this.#itemsById.get(select.value);
+        const productSelect = tr.querySelector('.bulk-row-item');
+        if (!productSelect) return;
+        const item = this.#itemsById.get(productSelect.value);
+        const displayHintQty = tr.querySelector('.bulk-row-hint-qty');
+        const displayHintCost = tr.querySelector('.bulk-row-hint-cost');
         if (!item) {
-            hint.innerHTML = '';
+            displayHintQty.innerHTML = '';
+            displayHintCost.innerHTML = '';
             return;
         }
-        const remaining = this.#formatQty(item.remaining);
-        const unitCost = this.#formatCurrency(item.unitCost);
-        const dsRem = item.dsRemaining ?? 0;
-        let hintHtml = `Còn lại: ${remaining} • Giá vốn: ${unitCost}`;
-        if (dsRem > 0) {
-            const dsQtyFmt = this.#formatQty(String(dsRem));
-            hintHtml += ` · <span class="text-info"><i class="bi bi-send me-1"></i>${dsQtyFmt} chờ GT</span>`;
+
+        if (displayHintQty) {
+            const itemQtyUnique = `hintQty${item.id}`;
+            displayHintQty.dataset.id = itemQtyUnique;
+            const decimalPlaces = Number(tr.dataset.decimalPlaces) || 0;
+            const remainingQty = this.#formatQty(item.remaining, decimalPlaces);
+            let hintQtyHtml = `Còn ${remainingQty}`;
+            const directRemainingQty = item.dsRemaining ?? 0;
+            if (directRemainingQty > 0) {
+                hintQtHtml += ` · <span class="text-info"><i class="bi bi-send me-1"></i>${this.#formatQty(String(directRemainingQty, decimalPlaces))} giao thẳng</span>`;
+            }
+            displayHintQty.innerHTML = hintQtyHtml;
         }
-        hint.innerHTML = hintHtml;
+
+        if (displayHintCost) {
+            const itemCostUnique = `hintCost${item.id}`;
+            displayHintCost.dataset.id = itemCostUnique;
+            displayHintCost.innerHTML = `Giá đặt ${this.#formatCurrencyWithSymbol(item.unitCost)}`;
+        }
     }
 
     #parseQty(value) {
@@ -494,15 +510,16 @@ export default class BulkReceiveController {
         const n = parseFloat(stripped);
         return isNaN(n) ? 0 : n;
     }
-    #formatCurrency(n) {
-        if (window.DecimalFields?.formatCurrency)
-            return DecimalFields.formatCurrency(String(Math.trunc(n)));
-        return String(Math.trunc(n));
+    #formatCurrency(n, includeSymbol) {
+        if (includeSymbol)
+            return DecimalFields.formatCurrencyWithSymbol(String(Math.trunc(n)));
+        return DecimalFields.formatCurrency(String(Math.trunc(n)));
     }
-    #formatQty(n) {
-        if (window.DecimalFields?.formatQuantity)
-            return DecimalFields.formatQuantity(n);
-        return String(n);
+    #formatCurrencyWithSymbol(n) {
+        return DecimalFields.formatCurrencyWithSymbol(String(Math.trunc(n)));
+    }
+    #formatQty(n, d) {
+        return DecimalFields.formatQuantity(n, d);
     }
 
     #recompute() {
@@ -525,7 +542,7 @@ export default class BulkReceiveController {
             tax = Math.round(subtotal * taxRaw / 100);
             if (this.#taxHint) {
                 this.#taxHint.textContent = taxRaw > 0
-                    ? `= ${this.#formatCurrency(tax)} (${taxRaw}% × tạm tính ${this.#formatCurrency(subtotal)})`
+                    ? `= ${this.#formatCurrencyWithSymbol(tax)} (${taxRaw}% × tạm tính ${this.#formatCurrencyWithSymbol(subtotal)})`
                     : '';
                 this.#taxHint.classList.toggle('d-none', taxRaw <= 0);
             }
@@ -538,13 +555,25 @@ export default class BulkReceiveController {
         }
         if (this.#taxHidden) this.#taxHidden.value = String(tax);
 
-        if (this.#subtotalEl) this.#subtotalEl.textContent = this.#formatCurrency(subtotal);
-        if (this.#shippingDisplayEl) this.#shippingDisplayEl.textContent = this.#formatCurrency(shipping);
-        if (this.#taxDisplayEl) this.#taxDisplayEl.textContent = this.#formatCurrency(tax);
-        if (this.#grandTotalEl) this.#grandTotalEl.textContent = this.#formatCurrency(subtotal + shipping + tax);
+        if (this.#subtotalEl) this.#subtotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal);
+        if (this.#shippingDisplayEl) {
+            this.#shippingDisplayEl.textContent = this.#formatCurrencyWithSymbol(shipping);
+            this.#shippingDisplayEl.closest('div').classList.toggle('d-none', shipping == 0);
+        }
+        if (this.#taxDisplayEl) {
+            this.#taxDisplayEl.textContent = this.#formatCurrencyWithSymbol(tax);
+            this.#taxDisplayEl.closest('div').classList.toggle('d-none', tax == 0);
+        }
+        if (this.#grandTotalEl) this.#grandTotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal + tax);
     }
 
     #onSubmit(e) {
+        e.preventDefault();
+        showPageLoading();
+        this.#submitBtn.disabled = true;
+
+        const fieldset = this.#form.querySelector('fieldset');
+
         const rows = Array.from(this.#tbody?.querySelectorAll('tr[data-row-index]') ?? []);
         const validLines = [];
         let firstInvalidRow = null;
@@ -554,6 +583,7 @@ export default class BulkReceiveController {
         rows.forEach(tr => {
             const itemSel = tr.querySelector('.bulk-row-item');
             const qtyInput = tr.querySelector('.bulk-row-qty');
+            const decimalPlaces = Number(tr.dataset.decimalPlaces) || 0;
             tr.classList.remove('table-danger');
 
             const itemId = itemSel?.value;
@@ -564,7 +594,7 @@ export default class BulkReceiveController {
                 return;
             }
             totalsByItem.set(itemId, (totalsByItem.get(itemId) ?? 0) + qty);
-            validLines.push({ tr, itemId, qty });
+            validLines.push({ tr, itemId, qty, decimalPlaces });
         });
 
         // Kiểm tra vượt remaining
@@ -572,19 +602,22 @@ export default class BulkReceiveController {
             const item = this.#itemsById.get(itemId);
             if (!item) continue;
             if (total > item.remaining + 1e-9) {
-                e.preventDefault();
-                this.#itemsError.textContent = `Tổng số lượng nhận của "${item.name}" (${this.#formatQty(total)}) vượt số còn lại (${this.#formatQty(item.remaining)}).`;
+                this.#itemsError.textContent = `Tổng số lượng nhận của "${item.name}" (${this.#formatQty(total, item.decimalPlaces)}) vượt số còn lại (${this.#formatQty(item.remaining, item.decimalPlaces)}).`;
                 this.#itemsError.classList.remove('d-none');
                 validLines.filter(l => l.itemId === itemId).forEach(l => l.tr.classList.add('table-danger'));
+
+                hidePageLoading();
+                this.#submitBtn.disabled = false;
                 return;
             }
         }
 
         if (validLines.length === 0) {
-            e.preventDefault();
             this.#itemsError.textContent = 'Vui lòng thêm ít nhất một dòng nhận hàng hợp lệ.';
             this.#itemsError.classList.remove('d-none');
             if (firstInvalidRow) firstInvalidRow.classList.add('table-danger');
+            hidePageLoading();
+            this.#submitBtn.disabled = false;
             return;
         }
 
@@ -613,11 +646,14 @@ export default class BulkReceiveController {
             }
         });
         if (!dsValid) {
-            e.preventDefault();
+            hidePageLoading();
+            this.#submitBtn.disabled = false;
             return;
         }
 
         this.#itemsError.classList.add('d-none');
+        this.#form.submit();
+        fieldset.disabled = true;
     }
 }
 

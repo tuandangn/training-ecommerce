@@ -221,7 +221,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 PurchaseOrderId = purchaseOrderInfo.Id
             };
         }
-        else if (model.Info.CanReceiveGoods)
+        if (model.Info.CanReceiveGoods)
         {
             foreach (var item in model.Info.Items)
             {
@@ -301,6 +301,52 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         }
 
         PrepareWorkflow(model, itemChangeAudits, vendorDebts, vendorPayments.Items, vendorBalance);
+
+        return model;
+    }
+
+    public async Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id)
+    {
+        var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+        if (purchaseOrderInfo == null)
+            return null;
+        if (!purchaseOrderInfo.CanReceiveGoods)
+            return null;
+
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+
+        var model = new PurchaseOrderBulkReceiveItemsModel
+        {
+            PurchaseOrderId = purchaseOrderInfo.Id,
+            DefaultWarehouseId = purchaseOrderInfo.WarehouseId,
+            AvailableWarehouses = availableWarehouses.Options.ToList(),
+            RemainingReceivableItems = purchaseOrderInfo.Items.Where(item => item.RemainingQuantity > 0).ToList()
+        };
+
+        var poItemIds = model.RemainingReceivableItems.Select(item => (purchaseOrderInfo.Id, item.Id)).ToList();
+        var dsAllocations = await _directShipAppService.GetDirectShipAllocationsForPoItemsAsync(poItemIds).ConfigureAwait(false);
+
+        foreach (var alloc in dsAllocations)
+        {
+            if (!model.DirectShipAllocationsPerItem.TryGetValue(alloc.PurchaseOrderItemId, out var list))
+            {
+                list = [];
+                model.DirectShipAllocationsPerItem[alloc.PurchaseOrderItemId] = list;
+            }
+            list.Add(new PurchaseOrderDetailsModel.DirectShipAllocationForPoModel
+            {
+                AllocationId = alloc.AllocationId,
+                DirectShipAddress = alloc.DirectShipAddress,
+                DirectShipContactName = alloc.DirectShipContactName,
+                DirectShipContactPhone = alloc.DirectShipContactPhone,
+                AllocatedQuantity = alloc.AllocatedQuantity,
+                ReceivedQuantity = alloc.ReceivedQuantity,
+                Status = alloc.Status,
+                DeliveryStatus = alloc.DeliveryStatus,
+                DeliveryNoteId = alloc.DeliveryNoteId,
+                DeliveryNoteCode = alloc.DeliveryNoteCode
+            });
+        }
 
         return model;
     }

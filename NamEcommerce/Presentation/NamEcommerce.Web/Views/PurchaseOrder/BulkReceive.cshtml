@@ -1,0 +1,142 @@
+﻿@model PurchaseOrderBulkReceiveItemsModel
+<div class="modal fade" id="bulkReceiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content purchaseorder-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-box-arrow-in-down me-2 text-success"></i>
+                    Nhận hàng cùng lúc
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="BulkReceive" method="post" id="bulkReceiveForm">
+                <fieldset>
+                    <input type="hidden" asp-for="PurchaseOrderId" />
+
+                    <script type="application/json" id="bulkReceiveData">
+                                            {
+                                                "defaultWarehouseId": "@Model.DefaultWarehouseId",
+                                                "items": [
+                                                    @for (var idx = 0; idx < Model.RemainingReceivableItems.Count; idx++)
+                                                    {
+                                                                        var item = Model.RemainingReceivableItems[idx];
+                                                                        var itemDsRemaining = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
+                                                                                                                                        ? itemDsAllocs.Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m).Sum(a => a.AllocatedQuantity - a.ReceivedQuantity) : 0m;
+                                                                        <text>{
+                                                                                            "id": "@item.Id",
+                                                                                            "name": @Json.Serialize(item.ProductName),
+                                                                                            "remaining": @item.RemainingQuantity.ToString("#0"),
+                                                                                            "unitCost": @item.UnitCost.ToString("#0"),
+                                                                                            "dsRemaining": @itemDsRemaining.ToString("#0"),
+                                                                                            "decimalPlaces": @item.QuantityDecimalPlaces,
+                                                                                            "unitMeasurement": "@item.UnitMeasurement"
+                                                                                        }@(idx < Model.RemainingReceivableItems.Count - 1 ? "," : "")
+                                                                        </text>
+                                                    }
+                                                ],
+                                                "warehouses": [
+                                                    @for (var w = 0; w < Model.AvailableWarehouses.Count; w++)
+                                                    {
+                                                                        var option = Model.AvailableWarehouses[w];
+                                                                        <text>{
+                                                                                            "id": "@option.Id",
+                                                                                            "name": @Json.Serialize(option.Name)
+                                                                                        }@(w < Model.AvailableWarehouses.Count - 1 ? "," : "")
+                                                                        </text>
+                                                    }
+                                                ]
+                                            }
+                    </script>
+
+                    <div class="modal-body py-3">
+                        <div class="alert alert-info border-0 small mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Mỗi dòng = một lần nhận: cùng một hàng hóa có thể chia ra nhiều dòng để nhận vào các kho khác nhau.
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
+                                <thead class="text-muted small text-uppercase">
+                                    <tr>
+                                        <th class="ps-2">Hàng hóa</th>
+                                        <th class="text-end pe-2">Số lượng</th>
+                                        <th class="text-end pe-3">Giá vốn thực tế</th>
+                                        <th class="ps-2">Kho nhận</th>
+                                        <th class="text-end pe-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bulkReceiveTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkReceiveAddRow">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm dòng
+                            </button>
+                            <span class="small text-danger d-none" id="bulkReceiveItemsError">
+                                Vui lòng thêm ít nhất một dòng nhận hàng.
+                            </span>
+                        </div>
+                        <hr class="my-3" />
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium text-muted" for="bulkAdditionalShipping">
+                                    Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
+                                </label>
+                                <input id="bulkAdditionalShipping" name="AdditionalShipping"
+                                       class="form-control" inputmode="numeric"
+                                       data-decimal="currency" value="" placeholder="Nhập phí vận chuyển" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium text-muted d-flex justify-content-between align-items-end" for="bulkAdditionalTax">
+                                    <span>Thuế <span class="text-body-tertiary fw-normal">(tùy chọn)</span></span>
+                                </label>
+                                <div class="input-group">
+                                    <div class="input-group-text bg-white">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Chế độ thuế">
+                                            <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModeAmount" value="amount" checked />
+                                            <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModeAmount">Số tiền</label>
+                                            <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModePercent" value="percent" />
+                                            <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModePercent">%</label>
+                                        </div>
+                                    </div>
+                                    <input id="bulkAdditionalTaxInput" class="form-control text-end"
+                                           data-decimal="currency" value="" placeholder="Nhập thuế" inputmode="numeric" />
+                                    <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
+                                </div>
+                                <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
+                                <div class="small text-muted mt-1 d-none" id="bulkAdditionalTaxHint"></div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <div class="order-summary">
+                            <div class="order-summary-row">
+                                <span class="label">Tạm tính</span>
+                                <span class="value" id="bulkSubtotal">0</span>
+                            </div>
+                            <div class="order-summary-row d-none">
+                                <span class="label">Thuế</span>
+                                <span class="value text-muted" id="bulkTaxDisplay">0</span>
+                            </div>
+                            <div class="order-summary-row total">
+                                <span class="label">Tổng cộng</span>
+                                <span class="value" id="bulkGrandTotal">0</span>
+                            </div>
+                            <div class="order-summary-row d-none">
+                                <span class="label">Phí vận chuyển</span>
+                                <span class="value text-muted" id="bulkShippingDisplay">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success" id="bulkReceiveSubmit">
+                            <i class="bi bi-check-lg me-1"></i> Xác nhận nhận hàng
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>

@@ -578,11 +578,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        return await ReceiveSingleItemAsync(purchaseOrder, dto).ConfigureAwait(false);
-    }
-
-    private async Task<ReceivedGoodsForItemResultDto> ReceiveSingleItemAsync(PurchaseOrder purchaseOrder, ReceivedGoodsForItemDto dto)
-    {
         if (!purchaseOrder.CanReceiveGoods())
             throw new PurchaseOrderCannotReceiveGoodsException();
 

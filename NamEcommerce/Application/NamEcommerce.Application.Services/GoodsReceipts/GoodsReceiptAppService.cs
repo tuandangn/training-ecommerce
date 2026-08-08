@@ -1,6 +1,5 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
@@ -284,31 +283,11 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         };
     }
 
-    public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto)
-    {
-        try
-        {
-            return await _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
-    }
+    public Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto) 
+        => _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto);
 
-    public async Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
-    {
-        try
-        {
-            return await _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
-    }
+    public Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
+        => _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto);
 
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptAppDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
     {

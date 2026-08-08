@@ -43,6 +43,16 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
                 ErrorMessage = "Error.ProductIsNotFound"
             };
         }
+
+        if (!purchaseOrder.CanReceiveGoods)
+        {
+            return new ReceivePurchaseOrderItemResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrderCannotReceiveGoods"
+            };
+        }
+
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == request.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
         {

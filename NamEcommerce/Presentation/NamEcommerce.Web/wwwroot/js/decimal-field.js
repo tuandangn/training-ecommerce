@@ -185,7 +185,7 @@
         if (input._focusHandler)
             input.removeEventListener('focus', input._focusHandler);
         input.addEventListener('focus', function onFocus() {
-            this._focusHandler = onFocus;
+            input._focusHandler = onFocus;
             this.value = stripInputFormatting(this);
             if (this.value == '0')
                 this.select();
@@ -193,10 +193,11 @@
                 focusEnd(this);
         });
 
+
         if (input._blurHandler)
             input.removeEventListener('blur', input._blurHandler);
         input.addEventListener('blur', function onBlur(e) {
-            this._blurHandler = onBlur;
+            input._blurHandler = onBlur;
             // parseTypedDecimal vì tại đây value do user gõ, "." là thập phân
             // stripInputFormatting dùng heuristic "3 chữ số sau dấu chấm = hàng nghìn"
             // sẽ sai khi user gõ "1.004" với ý nghĩa một phẩy lẻ bốn
@@ -213,12 +214,15 @@
                 var decimals = parseInt(this.dataset.decimals, 10) || 0;
                 this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw, decimals);
             }
+
+            e.stopImmediatePropagation();
         });
+
 
         if (input._keyPressHandler)
             input.removeEventListener('keypress', input._keyPressHandler);
         input.addEventListener('keypress', function onKeyPress(e) {
-            this._keyPressHandler = onKeyPress;
+            input._keyPressHandler = onKeyPress;
             if (e.key == 'Enter' || e.code == 'Enter' || e.keyCode == 13)
                 return;
             var decimals = parseInt(this.dataset.decimals || '0', 10);
@@ -230,7 +234,7 @@
         if (input._pasteHandler)
             input.removeEventListener('paste', input._pasteHandler);
         input.addEventListener('paste', function onPaste(e) {
-            this._pasteHandler = onPaste;
+            input._pasteHandler = onPaste;
             e.preventDefault();
             var decimals = parseInt(this.dataset.decimals || '0', 10);
             var pasted = (e.clipboardData || window.clipboardData).getData('text');

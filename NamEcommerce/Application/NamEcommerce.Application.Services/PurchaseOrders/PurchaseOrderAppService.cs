@@ -741,42 +741,35 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }
 
         Guid? createdGoodsReceiptId = null;
-        try
+        var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, dto.ReceivedQuantity);
+        if (receiveDirectShipQty > 0)
         {
-            var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, dto.ReceivedQuantity);
-            if (receiveDirectShipQty > 0)
+            var directTransitWarehouseId = await _directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
+            var directShipReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
             {
-                var directTransitWarehouseId = await _directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
-                var directShipReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
-                {
-                    ReceivedByUserId = dto.ReceivedByUserId,
-                    ReceivedQuantity = receiveDirectShipQty,
-                    WarehouseId = directTransitWarehouseId,
-                    SellingPrice = null,
-                    ActualUnitCost = dto.ActualUnitCost
-                });
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = receiveDirectShipQty,
+                WarehouseId = directTransitWarehouseId,
+                SellingPrice = null,
+                ActualUnitCost = dto.ActualUnitCost
+            });
 
-                if (!physicalWarehouseRequired) createdGoodsReceiptId = directShipReceiveResult.CreatedGoodsReceiptId;
-            }
-
-            var receiveWarehouseQty = Math.Max(0, dto.ReceivedQuantity - receiveDirectShipQty);
-            if (receiveWarehouseQty > 0)
-            {
-                var warehouseReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
-                {
-                    ReceivedByUserId = dto.ReceivedByUserId,
-                    ReceivedQuantity = receiveWarehouseQty,
-                    WarehouseId = warehouseId,
-                    SellingPrice = dto.SellingPrice,
-                    ActualUnitCost = dto.ActualUnitCost
-                });
-
-                createdGoodsReceiptId = warehouseReceiveResult.CreatedGoodsReceiptId;
-            }
+            if (!physicalWarehouseRequired) createdGoodsReceiptId = directShipReceiveResult.CreatedGoodsReceiptId;
         }
-        catch (NamEcommerceDomainException ex)
+
+        var receiveWarehouseQty = Math.Max(0, dto.ReceivedQuantity - receiveDirectShipQty);
+        if (receiveWarehouseQty > 0)
         {
-            return ReceiveItemResultAppDto.CreateError(ex.ErrorCode);
+            var warehouseReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+            {
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = receiveWarehouseQty,
+                WarehouseId = warehouseId,
+                SellingPrice = dto.SellingPrice,
+                ActualUnitCost = dto.ActualUnitCost
+            });
+
+            createdGoodsReceiptId = warehouseReceiveResult.CreatedGoodsReceiptId;
         }
 
         if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
@@ -915,20 +908,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
     {
-        try
-        {
-            await _purchaseOrderManager.RemoveGoodsReceiptFromPurchaseOrderAsync(
-                new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
+        await _purchaseOrderManager.RemoveGoodsReceiptFromPurchaseOrderAsync(
+            new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id)
