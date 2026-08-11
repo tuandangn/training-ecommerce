@@ -58,7 +58,9 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
 {
     public DateTime? ReceivedOnUtc { get; set; }
     public required decimal ReceivedQuantity { get; init; }
+    public decimal QuantityDecimalPlaces { get; set; }
     public required Guid? WarehouseId { get; init; }
+    public decimal? TaxRate { get; set; }
     public Guid? ReceivedByUserId { get; set; }
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
@@ -81,6 +83,7 @@ public sealed record ReceivedGoodsForItemResultDto(Guid PurchaseOrderId, Guid Pu
 {
     public required decimal ReceivedQuantity { get; init; }
     public Guid? CreatedGoodsReceiptId { get; init; }
+    public decimal TaxAmount { get; set; }
 }
 
 [Serializable]
@@ -90,6 +93,8 @@ public sealed record BulkReceiveGoodsForPurchaseOrderDto(Guid PurchaseOrderId)
     public required IList<BulkReceiveGoodsForPurchaseOrderLineDto> Lines { get; init; }
     public Guid? ReceivedByUserId { get; init; }
     public IList<Guid> PictureIds { get; set; } = [];
+    public decimal? TaxRate { get; set; }
+    public decimal? ShippingAmount { get; set; }
 
     public void Verify()
     {

@@ -11,8 +11,7 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 namespace NamEcommerce.Domain.Services.Debts;
 
 public sealed class VendorLedgerManager(
-    IDbContext dbContext,
-    IUnitOfWork unitOfWork,
+    IUnitOfWork unitOfWork, IDbContext dbContext,
     IRepository<VendorLedgerEntry> entryRepository,
     IEntityDataReader<VendorLedgerEntry> entryReader,
     IRepository<VendorAccountBalance> balanceRepository,
@@ -75,7 +74,7 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = await entryReader.DataSource
+            var existing = await entryReader.TrackingDataSource
                 .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.ReturnCredit
                     && e.ReferenceId == dto.ReferenceId.Value)
@@ -105,7 +104,7 @@ public sealed class VendorLedgerManager(
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.RefundReceipt, 
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.RefundReceipt,
             dto.Amount, VendorLedgerReferenceType.VendorRefund, dto.ReferenceId, dto.ReferenceCode,
             dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc, dto.CreatedByUserId);
 
@@ -142,21 +141,18 @@ public sealed class VendorLedgerManager(
         if (from.HasValue) query = query.Where(e => e.OccurredAtUtc >= from.Value);
         if (to.HasValue) query = query.Where(e => e.OccurredAtUtc <= to.Value);
 
-        query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
+        int? total = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        if (total.HasValue && total == 0)
+            return PagedDataDto.Create(Enumerable.Empty<VendorLedgerStatementEntryDto>(), 0, pageSize, 0);
+
+        query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
             ? 0m
-            : await entryReader.DataSource
-                .Where(e => e.VendorId == vendorId
-                    && (from == null || e.OccurredAtUtc >= from.Value)
-                    && (to == null || e.OccurredAtUtc <= to.Value))
-                .OrderBy(e => e.OccurredAtUtc)
-                .ThenBy(e => e.CreatedOnUtc)
-                .Take(pageIndex * pageSize)
-                .SumAsync(e => e.Amount).ConfigureAwait(false);
+            : await query.Take(pageIndex * pageSize).SumAsync(e => e.Amount).ConfigureAwait(false);
 
         var result = new List<VendorLedgerStatementEntryDto>(items.Count);
         foreach (var item in items)
@@ -238,7 +234,7 @@ public sealed class VendorLedgerManager(
 
     private async Task UpsertBalanceAsync(Guid vendorId, decimal delta, DateTime occurredAtUtc)
     {
-        var existingId = await balanceReader.DataSource
+        var existingId = await balanceReader.TrackingDataSource
             .Where(b => b.VendorId == vendorId)
             .Select(b => b.Id)
             .FirstOrDefaultAsync().ConfigureAwait(false);

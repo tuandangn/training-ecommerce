@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.Extensions.Localization;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Resources;
 
@@ -47,6 +48,11 @@ public sealed class PurchaseOrderQuickCreateValidator : AbstractValidator<Purcha
                 .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.PaidAmount"]])
                 .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.PaidAmount"]])
                 .LessThanOrEqualTo(m => m.Items.Sum(item => item.SubTotal)).WithMessage(p => localizer["Error.PaidAmountExceedsOrderTotal"]);
+        });
+        When(p => p.IsPaid && p.PaymentMethod == PaymentMethod.BankTransfer, () =>
+        {
+            RuleFor(p => p.BankAccountId)
+                .NotEmpty().WithMessage(p => localizer["Error.BankTransferMethodRequireBankAccount"]);
         });
     }
 }

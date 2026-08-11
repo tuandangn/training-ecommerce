@@ -77,8 +77,13 @@ public sealed record UpdatePurchaseOrderItemAppDto()
 public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
     public required decimal ReceivedQuantity { get; init; }
+    public decimal QuantityDecimalPlaces { get; set; }
+
     public required Guid? WarehouseId { get; init; }
+
     public Guid? ReceivedByUserId { get; set; }
+
+    public decimal? TaxRate { get; set; }
 
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }

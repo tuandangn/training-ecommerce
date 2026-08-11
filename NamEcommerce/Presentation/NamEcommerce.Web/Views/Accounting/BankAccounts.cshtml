@@ -56,8 +56,8 @@
                         </td>
                         <td class="font-monospace">@acc.AccountNumber</td>
                         <td>@acc.AccountHolderName</td>
-                        <td class="text-end">@acc.OpeningBalance.ToString("N0")</td>
-                        <td class="text-end fw-semibold">@acc.CurrentBalance.ToString("N0")</td>
+                        <td class="text-end">@acc.OpeningBalance.DisplayCurrencyWithSymbol()</td>
+                        <td class="text-end fw-semibold">@acc.CurrentBalance.DisplayCurrencyWithSymbol()</td>
                         <td class="text-end pe-3 text-nowrap">
                             <button class="btn btn-sm btn-outline-secondary me-1 btn-edit-account"
                                     data-id="@acc.Id"

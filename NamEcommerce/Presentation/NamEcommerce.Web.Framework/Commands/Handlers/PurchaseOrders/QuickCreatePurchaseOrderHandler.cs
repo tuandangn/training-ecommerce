@@ -40,8 +40,10 @@ public sealed class QuickCreatePurchaseOrderHandler : IRequestHandler<PurchaseOr
             Payment = !request.IsPaid || request.PaymentInfo is null ? null : new PurchaseOrderQuickCreateAppDto.PurchaseOrderQuickCreatePaymentAppDto
             {
                 PaidAmount = request.PaymentInfo.PaidAmount,
-                PaymentMethod = request.PaymentInfo.PaymentMethod
-            }
+                PaymentMethod = request.PaymentInfo.PaymentMethod,
+                BankAccountId = request.PaymentInfo.BankAccountId
+            },
+            TaxRate = request.IsReceived ? request.TaxRate : null
         }).ConfigureAwait(false);
 
         return new QuickCreatePurchaseOrderResultModel

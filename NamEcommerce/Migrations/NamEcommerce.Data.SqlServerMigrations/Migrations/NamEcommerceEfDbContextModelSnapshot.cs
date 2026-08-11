@@ -2008,6 +2008,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DueDateUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("GoodsReceiptCode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid?>("GoodsReceiptId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2518,8 +2521,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "CustomerInfo", "NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote.CustomerInfo#CustomerInfo", b1 =>
                         {
-                            b1.IsRequired();
-
                             b1.Property<string>("Address")
                                 .IsRequired()
                                 .HasMaxLength(500)
@@ -5653,7 +5654,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasOne("NamEcommerce.Domain.Entities.Orders.OrderItem", null)
                         .WithMany()
                         .HasForeignKey("OrderItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

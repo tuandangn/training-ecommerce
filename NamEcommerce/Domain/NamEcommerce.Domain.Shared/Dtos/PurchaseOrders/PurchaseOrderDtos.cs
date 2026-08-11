@@ -99,6 +99,15 @@ public sealed class SplitPurchaseOrderDto
 {
     public Guid SourcePurchaseOrderId { get; init; }
     public IList<SplitPurchaseOrderItemDto> Items { get; init; } = [];
+
+    public void Verify()
+    {
+        if (Items.Count == 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrderItemRequired");
+
+        foreach (var item in Items)
+            item.Verify();
+    }
 }
 
 [Serializable]
@@ -106,6 +115,12 @@ public sealed class SplitPurchaseOrderItemDto
 {
     public Guid ItemId { get; init; }
     public decimal Quantity { get; init; }
+
+    public void Verify()
+    {
+        if (Quantity<= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+    }
 }
 
 [Serializable]

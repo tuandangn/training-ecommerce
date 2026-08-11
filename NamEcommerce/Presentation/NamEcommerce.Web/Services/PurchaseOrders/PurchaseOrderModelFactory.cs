@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Finance;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Extensions;
@@ -120,8 +121,19 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = oldModel ?? new PurchaseOrderQuickCreateModel
         {
             PlacedOn = DateTime.Now,
+            ReceivedOn = DateTime.Now,
             PaymentMethod = PaymentMethod.Cash
         };
+
+        model.AvailableTaxRates = _appConfig.TaxRates;
+
+        var bankAccounts = await _mediator.Send(new GetBankAccountsQuery()).ConfigureAwait(false);
+        model.AvailableBankAccounts = bankAccounts.Select(bankAccount => new PurchaseOrderQuickCreateModel.QuickCreateBankAccountModel
+        {
+            Id = bankAccount.Id,
+            DisplayName = bankAccount.DisplayName,
+            IsDefault = bankAccount.IsDefault
+        });
 
         var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         model.AvailableWarehouses = warehouses.Options;
@@ -179,7 +191,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var relatedReturns = await _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
         var itemChangeAudits = await _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id).ConfigureAwait(false);
         var vendorDebts = await _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
-        var vendorPayments = await _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, 100).ConfigureAwait(false);
+        var vendorPayments = await _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, int.MaxValue).ConfigureAwait(false);
         var vendorBalance = await _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
@@ -187,10 +199,10 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             Info = purchaseOrderInfo,
             AvailableWarehouses = availableWarehouses,
             RelatedGoodsReceipts = relatedReceipts,
-            RelatedVendorReturns = relatedReturns
+            RelatedVendorReturns = relatedReturns.Where(r => r.Status != (int) VendorReturnStatus.Cancelled).ToList(),
+            CanModifyInfo = purchaseOrderInfo.CanModifyInfo,
+            CanAllocateItems = purchaseOrderInfo.CanAllocation
         };
-        model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
-        model.CanAllocateItems = purchaseOrderInfo.CanAllocation;
         if (model.CanModifyInfo)
         {
             model.ModifyInfo = new EditPurchaseOrderModel
@@ -320,7 +332,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             PurchaseOrderId = purchaseOrderInfo.Id,
             DefaultWarehouseId = purchaseOrderInfo.WarehouseId,
             AvailableWarehouses = availableWarehouses.Options.ToList(),
-            RemainingReceivableItems = purchaseOrderInfo.Items.Where(item => item.RemainingQuantity > 0).ToList()
+            RemainingReceivableItems = purchaseOrderInfo.Items.Where(item => item.RemainingQuantity > 0).ToList(),
+            AvailableTaxRates = _appConfig.TaxRates
         };
 
         var poItemIds = model.RemainingReceivableItems.Select(item => (purchaseOrderInfo.Id, item.Id)).ToList();
@@ -347,6 +360,29 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 DeliveryNoteCode = alloc.DeliveryNoteCode
             });
         }
+
+        return model;
+    }
+
+    public async Task<SplitsPurchaseOrderModel?> PrepareSplitsPurchaseOrderModel(Guid id)
+    {
+        var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+
+        if (purchaseOrderInfo == null)
+            return null;
+
+        if (!purchaseOrderInfo.CanAddItems)
+            return null;
+
+        if (!purchaseOrderInfo.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
+            return null;
+
+        var model = new SplitsPurchaseOrderModel
+        {
+            PurchaseOrderId = purchaseOrderInfo.Id,
+            PurchaseOrderCode = purchaseOrderInfo.Code,
+            AvailableSplitableItems = purchaseOrderInfo.Items.Where(i => i.QuantityOrdered - i.QuantityReceived > 0).ToList()
+        };
 
         return model;
     }
@@ -430,17 +466,20 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     {
         var debts = GetVendorDebtsForPurchaseOrder(model, vendorDebts);
         var payments = GetVendorPaymentsForPurchaseOrder(model, vendorDebts, vendorPayments);
-        var purchaseTotal = model.Info.TotalAmount;
         var returnTotal = model.RelatedVendorReturns.Sum(item => item.TotalAmount);
+        var returnCredits = vendorDebts?.UnappliedCreditNotes.Where(credit => model.RelatedVendorReturns.Any(vendorReturn => vendorReturn.Id == credit.SourceReturnId)).ToList() ?? [];
 
         return new PurchaseOrderDetailsModel.SettlementModel
         {
-            PurchaseTotal = purchaseTotal,
+            PurchaseSubTotal = model.Info.SubTotal,
+            PurchaseTotal = model.Info.TotalAmount,
             ReturnTotal = returnTotal,
-            NetPayable = purchaseTotal - returnTotal,
+            NetPayable = model.Info.TotalAmount - returnTotal,
             DebtTotal = debts.Sum(debt => debt.TotalAmount),
-            PaidTotal = debts.Sum(debt => debt.PaidAmount),
-            RemainingDebt = debts.Sum(debt => debt.RemainingAmount),
+            PaidTotal = payments.Sum(payment => payment.Amount),
+            RemainingDebt = Math.Max(0, debts.Sum(debt => debt.TotalAmount) 
+                - returnCredits.Sum(credit => credit.Amount)
+                - payments.Sum(payment => payment.Amount)),
             DebtCount = debts.Count,
             PaymentCount = payments.Count,
             VendorAccountBalance = vendorBalance,
@@ -456,7 +495,27 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     Note = payment.Note,
                     PaidOn = DateTimeHelper.ToLocalTime(payment.PaidOnUtc)
                 })
-                .ToList()
+                .ToList(),
+            Credits = returnCredits
+                .OrderByDescending(credit => credit.CreatedOnUtc)
+                .Select(credit => new PurchaseOrderDetailsModel.SettlementCreditModel
+                {
+                    Id = credit.Id,
+                    Code = credit.Code,
+                    Amount = credit.Amount,
+                    VendorReturnCode = credit.SourceReturnCode,
+                    VendorReturnId = credit.SourceReturnId,
+                    CreatedOn = DateTimeHelper.ToLocalTime(credit.CreatedOnUtc)
+                })
+                .ToList() ?? [],
+            Debts = debts.OrderByDescending(debt => debt.DueDateUtc)
+                .Select(debt => new PurchaseOrderDetailsModel.SettlementDebtModel
+                {
+                    Id = debt.Id,
+                    Code = debt.Code,
+                    Amount = debt.TotalAmount,
+                    CreatedOn = DateTimeHelper.ToLocalTime(debt.CreatedOnUtc)
+                }).ToList()
         };
     }
 

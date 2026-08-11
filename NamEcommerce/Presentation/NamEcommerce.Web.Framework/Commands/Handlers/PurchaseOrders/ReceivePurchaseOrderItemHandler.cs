@@ -1,6 +1,5 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
@@ -184,7 +183,9 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             ReceivedByUserId = currentUser?.Id,
             SellingPrice = request.SellingPrice,
             ActualUnitCost = request.ActualUnitCost,
-            OversupplyAction = request.OversupplyAction
+            OversupplyAction = request.OversupplyAction,
+            TaxRate = request.TaxRate,
+            QuantityDecimalPlaces = request.QuantityDecimalPlaces
         }).ConfigureAwait(false);
 
         return new ReceivePurchaseOrderItemResultModel

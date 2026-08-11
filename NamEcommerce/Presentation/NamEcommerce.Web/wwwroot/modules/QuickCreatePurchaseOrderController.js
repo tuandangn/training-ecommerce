@@ -65,9 +65,18 @@ export default class QuickCreatePurchaseOrderController {
         this.emptyItems = document.getElementById('emptyItems');
         this.tableBody = document.getElementById('itemsBody');
 
+        this.orderSubTotal = document.getElementById('orderSubTotal');
+        this.orderTaxRate = document.getElementById('orderTaxRate');
+        this.orderTaxAmount = document.getElementById('orderTaxAmount');
         this.orderTotal = document.getElementById('orderTotal');
+        this.orderShippingAmount = document.getElementById('orderShippingAmount');
+        this.orderShippingAmountHint = document.getElementById('orderShippingAmountHint');
 
+        this.inputShippingAmount = document.getElementById('ShippingAmount');
+        this.inputTaxRate = document.getElementById('TaxRate');
         this.inputPaidAmount = document.getElementById('paymentAmount');
+        this.inputPaymentMethod = document.getElementById('paymentMethod');
+        this.inputBankAccount = document.getElementById('BankAccountId');
 
         this.btnSubmit = document.getElementById('btnSubmit');
         this.form = document.getElementById('purchaseOrderQuickCreateForm');
@@ -152,6 +161,16 @@ export default class QuickCreatePurchaseOrderController {
                 this.#render();
             }
         });
+
+
+        const totalChanged = debounce(() => {
+            this.#renderSummary();
+        }, 500);
+        this.inputShippingAmount.addEventListener('input', totalChanged);
+        this.inputShippingAmount.addEventListener('change', totalChanged.flush);
+        this.inputTaxRate.addEventListener('change', totalChanged.flush);
+
+        this.inputPaymentMethod.addEventListener('change', () => this.#render());
 
         this.form.addEventListener('submit', e => {
             e.preventDefault();
@@ -309,7 +328,7 @@ export default class QuickCreatePurchaseOrderController {
 
     #render() {
         const subTotal = this.#calculateSubTotal();
-        const total = subTotal;
+        const total = this.#calculateTotal();
 
         this.#renderItems();
         this.#renderSummary();
@@ -347,12 +366,20 @@ export default class QuickCreatePurchaseOrderController {
         this.#togglePaymentTabs();
         if (this.#isPaid()) {
             this.inputPaidAmount.setAttribute('data-val', 'true');
-            this.inputPaidAmount.setAttribute('data-val-range-max', subTotal);
-            this.inputPaidAmount.setAttribute('data-val-range', 'Số tiền thanh toán phải lớn hơn 0 và nhỏ hơn hoặc bằng ' + DecimalFields.formatCurrencyWithSymbol(subTotal));
+            this.inputPaidAmount.setAttribute('data-val-range-max', total);
+            this.inputPaidAmount.setAttribute('data-val-range', 'Số tiền thanh toán phải lớn hơn 0 và nhỏ hơn hoặc bằng ' + DecimalFields.formatCurrencyWithSymbol(total));
+
+            const paymentSelectedOption = Array.from(this.inputPaymentMethod.options).find(option => option.selected);
+            const requiresBankAccount = paymentSelectedOption.dataset.requireBankAccount == 'true';
+            this.inputBankAccount.disabled = !requiresBankAccount;
+            this.inputBankAccount.closest('div').classList.toggle('d-none', !requiresBankAccount);
+            this.inputBankAccount.setAttribute('data-val', requiresBankAccount);
         } else {
             this.inputPaidAmount.setAttribute('data-val', 'false');
             this.inputPaidAmount.setAttribute('data-val-range-max', '');
             this.inputPaidAmount.setAttribute('data-val-range', '');
+            this.inputBankAccount.setAttribute('data-val', 'false');
+            this.inputBankAccount.disabled = true;
         }
         reparseForm(this.form);
     }
@@ -477,13 +504,38 @@ export default class QuickCreatePurchaseOrderController {
     }
     #renderSummary() {
         const subTotal = this.#calculateSubTotal();
-        if (this.orderTotal)
-            this.orderTotal.textContent = DecimalFields.formatCurrencyWithSymbol(subTotal);
-        this.#syncPaymentAmount();
+        const [taxAmount, taxRate] = this.#calculateTaxAmount();
+        const total = this.#calculateTotal();
+        const shippingAmount = this.#isDelivered() ? DecimalFields.getValue(this.inputShippingAmount) : 0;
+
+        this.orderSubTotal.textContent = DecimalFields.formatCurrencyWithSymbol(subTotal);
+        this.orderTaxAmount.textContent = DecimalFields.formatCurrencyWithSymbol(taxAmount);
+        this.orderTaxRate.textContent = taxRate === null ? '' : `${taxRate}%`;
+        this.orderTaxRate.classList.toggle('d-none', taxRate === null);
+        this.orderTaxAmount.closest('.order-summary-row').classList.toggle('d-none', taxAmount == 0);
+        this.orderTotal.textContent = DecimalFields.formatCurrencyWithSymbol(total);
+        this.orderShippingAmount.textContent = DecimalFields.formatCurrencyWithSymbol(shippingAmount);
+        this.orderShippingAmount.closest('.order-summary-row').classList.toggle('d-none', shippingAmount == 0);
+        this.orderShippingAmountHint.classList.toggle('d-none', shippingAmount == 0);
     }
     #calculateSubTotal() {
         return this.#items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
     }
+    #calculateTotal() {
+        const subTotal = this.#calculateSubTotal();
+        const [taxAmount] = this.#calculateTaxAmount();
+        return subTotal + taxAmount;
+    }
+    #calculateTaxAmount() {
+        if (!this.#isDelivered())
+            return [0, null];
+        if (!this.inputTaxRate.value)
+            return [0, null];
+        const taxRate = Number(this.inputTaxRate.value);
+        const subTotal = this.#calculateSubTotal();
+        return [Math.round(subTotal * taxRate / 100), taxRate];
+    }
+
     #toggleDeliveryTabs() {
         if (this.#isDelivered()) {
             if (this.btnDelivered.classList.contains('disabled')) {
@@ -528,14 +580,6 @@ export default class QuickCreatePurchaseOrderController {
     }
     #isPaid() {
         return this.chkboxIsPaid?.checked ?? false;
-    }
-
-    #syncPaymentAmount() {
-        // if (!this.chkboxIsPaid?.checked) return;
-        // if (!this.inputPaidAmount)
-        //     return;
-        // const total = this.#calculateSubTotal();
-        // this.inputPaidAmount.value = DecimalFields.formatCurrency(total);
     }
 
     async #handleFormSubmit() {

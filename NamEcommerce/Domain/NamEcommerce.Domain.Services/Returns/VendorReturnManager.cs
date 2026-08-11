@@ -1,13 +1,17 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
-using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
@@ -15,15 +19,11 @@ using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
-using NamEcommerce.Domain.Shared.Services.Finance;
-using NamEcommerce.Domain.Shared.Services.Returns;
-using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Services.Debts;
-using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
-using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -40,6 +40,7 @@ public sealed class VendorReturnManager(
     IInventoryCostingManager inventoryCostingManager,
     IExpenseManager expenseManager,
     IVendorDebtManager vendorDebtManager,
+    IVendorLedgerManager vendorLedgerManager,
     ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator entityCodeGenerator) : IVendorReturnManager
 {
@@ -326,11 +327,20 @@ public sealed class VendorReturnManager(
             vendorReturn.PurchaseOrderId,
             totalReturnAmount).ConfigureAwait(false);
 
-        if (creditNote.RemainingAmount > 0)
+        await vendorLedgerManager.RecordReturnCreditAsync(new RecordVendorLedgerReturnCreditDto
         {
-            vendorReturn.MarkOverRecovered(creditNote.RemainingAmount);
-            await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
-        }
+            VendorId = vendorReturn.VendorId,
+            Amount = totalReturnAmount,
+            ReferenceId = returnId,
+            ReferenceCode = vendorReturn.Code,
+            OccurredAtUtc = vendorReturn.ConfirmedOnUtc ?? vendorReturn.CreatedOnUtc
+        }).ConfigureAwait(false);
+
+        //if (creditNote.RemainingAmount > 0)
+        //{
+        //    vendorReturn.MarkOverRecovered(creditNote.RemainingAmount);
+        //    await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+        //}
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

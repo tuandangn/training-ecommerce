@@ -75,7 +75,7 @@ public sealed class AccountingReportService : IAccountingReportService
 
         var deliveredNoteIds = allDeliveryNotes
             .Where(dn => dn.Status == DeliveryNoteStatus.Delivered
-                      && dn.DeliveredOnUtc >= start && dn.DeliveredOnUtc <= end)
+                && dn.DeliveredOnUtc >= start && dn.DeliveredOnUtc <= end)
             .Select(dn => dn.Id)
             .ToHashSet();
 
@@ -104,17 +104,18 @@ public sealed class AccountingReportService : IAccountingReportService
         var cogs = _costLedger.DataSource
             .Where(e => e.MovementType == InventoryCostMovementType.SaleDispatch
                      && deliveredNoteIds.Contains(e.ReferenceId))
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+            .Sum(e => e.TotalCost) ?? 0;
 
         var vendorReturnCost = _costLedger.DataSource
             .Where(e => e.MovementType == InventoryCostMovementType.VendorReturn
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+            .Sum(e => e.TotalCost) ?? 0;
+        grossRevenue -= vendorReturnCost;
 
         var customerReturnCost = _costLedger.DataSource
             .Where(e => e.MovementType == InventoryCostMovementType.CustomerReturn
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
-            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+            .Sum(e => e.TotalCost) ?? 0;
 
         var sellingExp = _expenses.DataSource
             .Where(e => (e.ExpenseType == ExpenseType.Marketing || e.ExpenseType == ExpenseType.ReturnCost)
@@ -151,7 +152,7 @@ public sealed class AccountingReportService : IAccountingReportService
             TradeDiscounts = tradeDiscounts,
             SalesReturns = salesReturns,
             CostOfGoodsSold = cogs,
-            VendorReturnAdjustment = vendorReturnCost,
+            VendorReturnAdjustment = 0,//vendorReturnCost,
             CustomerReturnAdjustment = customerReturnCost,
             SellingExpenses = sellingExp,
             SellingDepreciation = sellingDepreciation,

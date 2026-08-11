@@ -7,7 +7,7 @@
         .FirstOrDefault();
     var summaryTone = activeSchedules.Count == 0
         ? "secondary"
-        : nextSchedule?.ScheduledFromUtc < DateTime.UtcNow.Date
+        : nextSchedule?.ScheduledFromUtc < DateTime.Today.ToUniversalTime()
             ? "danger"
             : nextSchedule?.ScheduledFromUtc <= DateTime.UtcNow.AddDays(1)
                 ? "warning"

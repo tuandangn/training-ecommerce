@@ -18,7 +18,9 @@ public static class GoodsReceiptExtensions
                 WarehouseId = item.WarehouseId,
                 WarehouseName = item.WarehouseName,
                 Quantity = item.Quantity,
-                UnitCost = item.UnitCost
+                UnitCost = item.UnitCost,
+                TaxAmount = item.TaxAmount,
+                TaxRate = item.TaxRate.HasValue ? item.TaxRate * 100 : null
             }),
             Note = goodsReceipt.Note,
             PictureIds = goodsReceipt.PictureIds,

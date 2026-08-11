@@ -34,7 +34,9 @@ public static class GoodsReceiptExtensions
                 WarehouseName = item.WarehouseName,
                 Quantity = item.Quantity,
                 UnitCost = item.UnitCost,
-                IsPendingCosting = !item.UnitCost.HasValue
+                IsPendingCosting = !item.UnitCost.HasValue,
+                TaxRate = item.TaxRate,
+                TaxAmount = item.TaxAmount
             });
         }
 

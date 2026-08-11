@@ -459,6 +459,9 @@
   <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
     <value>Nhà cung cấp không phù hợp cung cấp hàng hóa trong đơn</value>
   </data>
+  <data name="Error.PurchaseOrder.NoItemsForSplit" xml:space="preserve">
+    <value>Không có mặt hàng thích hợp để chia đơn</value>
+  </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Không thể xác nhận đơn mua hàng ở trạng thái hiện tại.</value>
   </data>
@@ -1085,5 +1088,20 @@
   </data>
   <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
     <value>Ngày phát sinh chi phí không nhỏ hơn ngày tạo đơn</value>
+  </data>
+  <data name="Label.PurchaseOrderItemId" xml:space="preserve">
+    <value>ID hàng hóa</value>
+  </data>
+  <data name="Msg.PurchaseOrder.YouAreWatchingNewPurchaseOrder" xml:space="preserve">
+    <value>Bạn đang ở đơn nhập mới được tạo.</value>
+  </data>
+  <data name="Error.DataIsInvalid" xml:space="preserve">
+    <value>Dữ liệu không hợp lệ</value>
+  </data>
+  <data name="Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder" xml:space="preserve">
+    <value>Không thể xóa phiếu nhập được tạo khi nhận hàng bởi đơn nhập</value>
+  </data>
+  <data name="Error.TaxRateIsNotAllowed" xml:space="preserve">
+    <value>Tỉ lệ thuế không hợp lệ</value>
   </data>
 </root>

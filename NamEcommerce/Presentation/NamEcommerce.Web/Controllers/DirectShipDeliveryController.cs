@@ -6,6 +6,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
@@ -127,10 +128,10 @@ public sealed class DirectShipDeliveryController(IMediator mediator, IDirectShip
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
-    public async Task<IActionResult> UpdateAddress([FromBody] UpdateDirectShipAddressRequest request)
+    public async Task<IActionResult> UpdateAddress(UpdateDirectShipAddressRequest request)
     {
-        if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.NewAddress))
-            return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
+        if (request.AllocationId == Guid.Empty || string.IsNullOrEmpty(request.NewContactPhone) || string.IsNullOrEmpty(request.NewAddress))
+            return this.JsonError(LocalizeError("Error.DataIsInvalid"));
 
         var result = await mediator.Send(new UpdateDirectShipAddressCommand
         {
@@ -142,9 +143,8 @@ public sealed class DirectShipDeliveryController(IMediator mediator, IDirectShip
         });
 
         if (result.Success)
-            return Json(new { success = true });
-
-        return Json(new { success = false, message = result.ErrorMessage });
+            return this.JsonOk(message: LocalizeError("Msg.SaveSuccess"));
+        return this.JsonError(result.ErrorMessage!);
     }
 }
 

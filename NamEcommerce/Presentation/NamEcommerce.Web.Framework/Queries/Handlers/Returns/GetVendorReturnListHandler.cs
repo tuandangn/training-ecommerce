@@ -19,13 +19,13 @@ public sealed class GetVendorReturnListHandler : IRequestHandler<GetVendorReturn
     public async Task<VendorReturnListModel> Handle(GetVendorReturnListQuery request, CancellationToken cancellationToken)
     {
         var (total, items) = await _vendorReturnAppService.GetListAsync(
+            request.PageIndex,
+            request.PageSize
+,
             request.VendorId,
             request.PurchaseOrderId,
             request.GoodsReceiptId,
-            request.Status,
-            request.PageIndex,
-            request.PageSize
-        ).ConfigureAwait(false);
+            request.Status).ConfigureAwait(false);
 
         var itemModels = items.Select(dto => new VendorReturnListModel.ItemModel(dto.Id)
         {

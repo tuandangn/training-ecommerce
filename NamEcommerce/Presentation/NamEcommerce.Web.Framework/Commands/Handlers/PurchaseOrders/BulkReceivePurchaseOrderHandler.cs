@@ -28,6 +28,7 @@ public sealed class BulkReceivePurchaseOrderHandler : IRequestHandler<BulkReceiv
                 ReceivedQuantity = item.Quantity,
                 WarehouseId = item.WarehouseId,
                 ActualUnitCost = item.ActualUnitCost,
+                TaxRate = request.TaxRate,
                 DirectShipOrderId = item.DirectShipOrderId,
                 DirectShipOrderItemId = item.DirectShipOrderItemId,
                 DirectShipAddress = item.DirectShipAddress,
@@ -51,12 +52,11 @@ public sealed class BulkReceivePurchaseOrderHandler : IRequestHandler<BulkReceiv
                 createdGoodsReceiptIds.Add(receiveResult.CreatedGoodsReceiptId.Value);
         }
 
-        if (request.AdditionalShipping > 0 || request.AdditionalTax > 0)
+        if (request.AdditionalShipping > 0)
         {
             var feeResult = await _purchaseOrderAppService.AddReceiptFeesAsync(
                 request.PurchaseOrderId,
-                request.AdditionalShipping,
-                request.AdditionalTax).ConfigureAwait(false);
+                request.AdditionalShipping).ConfigureAwait(false);
 
             if (!feeResult.Success)
             {

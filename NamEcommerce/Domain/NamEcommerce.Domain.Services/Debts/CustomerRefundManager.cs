@@ -22,7 +22,7 @@ public sealed class CustomerRefundManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PC-KH-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => refundReader.SecuredDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => refundReader.TrackingDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     public async Task<CustomerRefundDto> CreateAsync(CreateCustomerRefundDto dto)

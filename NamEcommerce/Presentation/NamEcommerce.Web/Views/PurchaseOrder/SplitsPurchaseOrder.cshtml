@@ -1,0 +1,90 @@
+﻿@using System.Globalization
+@model SplitsPurchaseOrderModel
+<div class="modal fade" id="splitPurchaseOrderModal" tabindex="-1" aria-labelledby="splitPurchaseOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="splitPurchaseOrderModalLabel">
+                    Chia đơn <strong>@Model.PurchaseOrderCode</strong>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="SplitsPurchaseOrder" method="post" id="splitsPurchaseOrderForm">
+                <fieldset>
+                    <div class="modal-body">
+                        @if (Model.AvailableSplitableItems.Count > 0)
+                        {
+                            <p class="text-muted small mb-3">
+                                Nhập số lượng chuyển sang đơn nhập mới. Phần còn lại ở lại đơn hiện tại.
+                                <span class="fw-medium">
+                                    Để trống hoặc nhập 0 để giữ nguyên.
+                                </span>
+                            </p>
+                            <input type="hidden" asp-for="PurchaseOrderId" id="split@(Html.IdFor(m => m.PurchaseOrderId))" />
+                            <div class="table-responsive">
+                                <table class="table data-table align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3">Hàng hóa</th>
+                                            <th class="text-end">Đặt hàng</th>
+                                            <th class="text-end">Đã nhận</th>
+                                            <th class="text-end">Chuyển sang PO2</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (var i = 0; i < Model.AvailableSplitableItems.Count; i++)
+                                        {
+                                            var splitableItem = Model.AvailableSplitableItems[i];
+                                            <tr>
+                                                <td class="ps-3 fw-medium">
+                                                    <input type="hidden" name="@Html.NameFor(m => m.Items[i].ItemId)" value="@splitableItem.Id" id="split@(Html.IdFor(m => m.Items[i].ItemId))" />
+                                                    @splitableItem.ProductName
+                                                </td>
+                                                <td class="text-end text-muted">@splitableItem.QuantityOrdered.DisplayQuantity(splitableItem.QuantityDecimalPlaces)</td>
+                                                <td class="text-end text-muted">
+                                                    @if (splitableItem.QuantityReceived > 0)
+                                                    {
+                                                        <span class="status-badge warning py-1">@splitableItem.QuantityReceived.DisplayQuantity(splitableItem.QuantityDecimalPlaces)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted fst-italic small">0</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end pe-3">
+                                                    <input class="form-control form-control-sm text-end split-qty-input" name="@Html.NameFor(m => m.Items[i].Quantity)"
+                                                           id="split@(Html.IdFor(m => m.Items[i].Quantity))" data-val="true" value="0" 
+                                                           data-val-range="Số lượng phải nhỏ hơn @splitableItem.RemainingQuantity.DisplayQuantity(splitableItem.QuantityDecimalPlaces)"
+                                                           data-val-range-min="0" data-val-range-max="@splitableItem.RemainingQuantity.ToString(CultureInfo.InvariantCulture)" placeholder="Số lượng"
+                                                           data-val-number="Số lượng phải là số" data-decimal="quantity" data-decimals="@splitableItem.QuantityDecimalPlaces" inputmode="decimal" />
+                                                    <span class="small text-danger" asp-validation-for="Items[i].Quantity"></span>
+                                                    <input type="hidden" name="@Html.NameFor(m => m.Items[i].QuantityDecimalPlaces)" id="split@(Html.IdFor(m => m.Items[i].QuantityDecimalPlaces))" value="@splitableItem.QuantityDecimalPlaces" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="py-4 text-center text-muted">
+                                Không có hàng hóa phù hợp để chia
+                            </div>
+                        }
+                        <div id="splitErrorMsg" class="alert alert-danger mb-0 d-none small"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        @if (Model.AvailableSplitableItems.Count > 0)
+                        {
+                            <button type="submit" class="btn btn-primary" id="btnConfirmSplit">
+                                <i class="bi bi-check-all me-1"></i>Xác nhận
+                            </button>
+                        }
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>

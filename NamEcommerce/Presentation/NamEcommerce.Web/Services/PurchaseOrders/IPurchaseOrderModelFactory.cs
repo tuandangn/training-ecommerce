@@ -11,4 +11,5 @@ public interface IPurchaseOrderModelFactory
     Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null);
     Task<PurchaseOrderQuickCreateModel> PrepareQuickCreatePurchaseOrderModel(PurchaseOrderQuickCreateModel? oldModel = null);
     Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id);
+    Task<SplitsPurchaseOrderModel?> PrepareSplitsPurchaseOrderModel(Guid id);
 }

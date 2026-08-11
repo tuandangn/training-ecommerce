@@ -33,21 +33,21 @@ public sealed class CustomerDebtManager(
     private async Task<string> GenerateDebtCodeAsync()
     {
         var prefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => debtReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => debtReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
         var prefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => paymentReader.SecuredDataSource.CountAsync(p => p.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => paymentReader.TrackingDataSource.CountAsync(p => p.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 
     private async Task<string> GenerateCreditNoteCodeAsync()
     {
         var prefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.SecuredDataSource.CountAsync(c => c.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.TrackingDataSource.CountAsync(c => c.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 

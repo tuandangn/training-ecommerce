@@ -55,7 +55,7 @@ public sealed class GoodsReceiptManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => goodsReceiptDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => goodsReceiptDataReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -71,7 +71,12 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
         foreach (var item in dto.Items)
-            await goodsReceipt.AddItemAsync(item.ProductId, item.WarehouseId, item.Quantity, item.UnitCost, productDataReader, warehouseSettings, warehouseDataReader).ConfigureAwait(false);
+        {
+            var goodsReceiptItem = await goodsReceipt.AddItemAsync(item.ProductId, item.WarehouseId, item.Quantity, item.UnitCost,
+                productDataReader, warehouseSettings, warehouseDataReader).ConfigureAwait(false);
+            if (dto.TaxRate.HasValue)
+                goodsReceiptItem.SetTaxRate(dto.TaxRate.Value / 100);
+        }
         foreach (var pictureId in dto.PictureIds)
             await goodsReceipt.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
 
@@ -95,7 +100,7 @@ public sealed class GoodsReceiptManager(
 
         var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
 
-        return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
+        return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id, TaxAmount = goodsReceipt.TotalTaxAmount };
     }
 
     public async Task<UpdateGoodsReceiptResultDto> UpdateGoodsReceiptAsync(UpdateGoodsReceiptDto dto)
@@ -252,10 +257,12 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.OpeningBalance;
 
-        await goodsReceipt.AddItemAsync(
+        var goodsReceiptItem = await goodsReceipt.AddItemAsync(
             dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
             productRepository, warehouseSettings, warehouseDataReader
         ).ConfigureAwait(false);
+        if (dto.TaxRate.HasValue)
+            goodsReceiptItem.SetTaxRate(dto.TaxRate.Value / 100);
 
         goodsReceipt.MarkCreated();
         goodsReceipt.MarkItemUnitCostSet(goodsReceipt.Items.First().Id);
@@ -343,66 +350,18 @@ public sealed class GoodsReceiptManager(
             ?? throw new VendorIsNotFoundException(dto.VendorId);
         goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
 
-        await goodsReceipt.AddItemAsync(
+        var goodsReceiptItem = await goodsReceipt.AddItemAsync(
             dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
             productDataReader, warehouseSettings, warehouseDataReader
         ).ConfigureAwait(false);
+        if (dto.TaxRate.HasValue)
+            goodsReceiptItem.SetTaxRate(dto.TaxRate.Value / 100);
 
         goodsReceipt.MarkCreated();
         goodsReceipt.MarkItemUnitCostSet(goodsReceipt.Items.Last().Id);
 
         var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
         return inserted.Id;
-    }
-
-    public async Task<CreateGoodsReceiptResultDto> CreateBulkFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderBulkDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-        dto.Verify();
-
-        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
-            ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
-
-        var createdByUser = purchaseOrder.CreatedByUserId.HasValue
-                ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
-                : null;
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptRepository).ConfigureAwait(false);
-        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
-        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
-        goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
-
-        if (dto.BulkReceiveBatchId.HasValue)
-            goodsReceipt.SetBulkReceiveBatchId(dto.BulkReceiveBatchId.Value);
-
-        if (dto.VendorId.HasValue)
-        {
-            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is not null)
-                goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
-        }
-
-        // Track items đã có UnitCost để fire MarkItemUnitCostSet sau khi thêm xong.
-        var itemsWithCost = new List<Guid>();
-        foreach (var line in dto.Items)
-        {
-            await goodsReceipt.AddItemAsync(
-                line.ProductId, dto.WarehouseId, line.Quantity, line.UnitCost,
-                productDataReader, warehouseSettings, warehouseDataReader
-            ).ConfigureAwait(false);
-
-            if (line.UnitCost.HasValue)
-                itemsWithCost.Add(goodsReceipt.Items.Last().Id);
-        }
-
-        // MarkCreated chạy 1 lần — handler cộng tồn cho TỪNG item + sinh VendorDebt cho cả phiếu.
-        goodsReceipt.MarkCreated();
-
-        // Sau khi insert, fire MarkItemUnitCostSet cho các item đã có cost để chốt inventory cost layer.
-        foreach (var itemId in itemsWithCost)
-            goodsReceipt.MarkItemUnitCostSet(itemId);
-
-        var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
-        return new CreateGoodsReceiptResultDto { CreatedId = inserted.Id };
     }
 
     public async Task<Guid> CreateFromCustomerReturnAsync(CreateGoodsReceiptFromCustomerReturnDto dto)
@@ -423,12 +382,14 @@ public sealed class GoodsReceiptManager(
         foreach (var item in customerReturn.Items.Where(i => i.AcceptedQuantity > 0))
         {
             var unitCost = await ResolveCustomerReturnUnitCostAsync(customerReturn.DeliveryNoteId, item).ConfigureAwait(false);
-            await goodsReceipt.AddItemAsync(
+            var goodsReceiptItem = await goodsReceipt.AddItemAsync(
                 item.ProductId, dto.WarehouseId, item.AcceptedQuantity, unitCost,
                 productDataReader, warehouseSettings, warehouseDataReader
             ).ConfigureAwait(false);
             if (item.DeliveryNoteItemId.HasValue)
                 goodsReceipt.Items.Last().SourceDeliveryNoteItemId = item.DeliveryNoteItemId.Value;
+            if (dto.TaxRate.HasValue)
+                goodsReceiptItem.SetTaxRate(dto.TaxRate.Value / 100);
         }
 
         // MarkCreated → GoodsReceiptCreatedHandler sẽ cộng tồn kho.

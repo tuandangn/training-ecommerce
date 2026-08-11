@@ -168,7 +168,7 @@ public sealed class OrderFulfillmentScheduleAppService(
             return CommonActionResultDto.CreateSuccess();
 
         var poItemIds = purchaseOrderItemIds.Select(id => id.purchaseOrderItemId).Distinct().ToList();
-        var orderItemIds = allocationDataReader.DataSource
+        var orderItemIds = allocationDataReader.TrackingDataSource
             .Where(allocation => poItemIds.Contains(allocation.PurchaseOrderItemId.SecondaryId))
             .Select(allocation => allocation.OrderItemId)
             .Distinct()

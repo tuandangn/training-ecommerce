@@ -7,7 +7,7 @@ public static class VendorReturnStatusExtensions
     public static string GetDisplayText(this VendorReturnStatus type) => type switch
     {
         VendorReturnStatus.Draft => "Nháp",
-        VendorReturnStatus.Inspecting => "Đang kiểm",
+        VendorReturnStatus.Inspecting => "Đang kiểm tra",
         VendorReturnStatus.Confirmed => "Đã xác nhận",
         VendorReturnStatus.Cancelled => "Đã hủy",
         VendorReturnStatus.Reversed => "Đã hoàn tác",

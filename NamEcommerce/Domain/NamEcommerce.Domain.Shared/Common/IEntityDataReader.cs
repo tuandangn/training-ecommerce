@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Shared.Common;
 public interface IEntityDataReader<TEntity> : IGetByIdService<TEntity> where TEntity : AppEntity
 {
     IQueryable<TEntity> DataSource { get; }
-    IQueryable<TEntity> SecuredDataSource { get; }
+    IQueryable<TEntity> TrackingDataSource { get; }
 
     Task<IEnumerable<TEntity>> GetAllAsync();
     Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids);

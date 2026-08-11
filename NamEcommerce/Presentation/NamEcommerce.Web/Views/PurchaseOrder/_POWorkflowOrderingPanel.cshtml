@@ -97,36 +97,33 @@
                     }
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table data-table mb-0 caption-top">
-                    @if (Model.Info.CanAddItems)
-                    {
-                        <caption>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    @if (poStatus != PurchaseOrderStatus.Cancelled)
-                                    {
-                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline" id="copyForm">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-copy me-1"></i>Sao chép
-                                            </button>
-                                        </form>
-                                    }
-                                    @if (canSplit)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#splitPOModal">
-                                            <i class="bi bi-scissors me-1"></i>Chia đơn
-                                        </button>
-                                    }
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                    <i class="bi bi-plus-lg me-1"></i>
-                                    <span class="d-none d-md-inline">Thêm hàng hóa</span>
+            @if (Model.Info.CanAddItems)
+            {
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        @if (poStatus != PurchaseOrderStatus.Cancelled)
+                        {
+                            <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline" id="copyForm">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-copy me-1"></i>Sao chép
                                 </button>
-                            </div>
-                        </caption>
-                    }
+                            </form>
+                        }
+                        @if (canSplit)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSplitPurchaseOrder">
+                                <i class="bi bi-scissors me-1"></i>Chia đơn
+                            </button>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        <span>Thêm hàng hóa</span>
+                    </button>
+                </div>
+            }
+            <div class="table-responsive">
+                <table class="table data-table mb-0">
                     <thead>
                         <tr>
                             <th class="ps-3">Hàng hóa</th>
@@ -304,7 +301,7 @@
                     <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>

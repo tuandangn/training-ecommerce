@@ -44,13 +44,12 @@
 
             @if (currentUser is not null)
             {
+                @await Component.InvokeAsync("AdminResetDataComponent")
                 <div class="d-grid p-3 pb-3">
                     <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary btn-sm">
                         Đăng xuất
                     </a>
                 </div>
-
-                @await Component.InvokeAsync("AdminResetDataComponent")
             }
         </aside>
         <div class="main-area">

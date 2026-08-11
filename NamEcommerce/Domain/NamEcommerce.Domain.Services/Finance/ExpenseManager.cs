@@ -20,14 +20,14 @@ public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataR
 
         if (dto.SourceVendorReturnId.HasValue)
         {
-            var existing = await expenseDataReader.DataSource
+            var existing = await expenseDataReader.TrackingDataSource
                 .FirstOrDefaultAsync(e => e.SourceVendorReturnId == dto.SourceVendorReturnId.Value).ConfigureAwait(false);
             if (existing is not null)
                 return new CreateExpenseResultDto { CreatedId = existing.Id };
         }
         if (dto.SourceCustomerReturnId.HasValue)
         {
-            var existing = await expenseDataReader.DataSource
+            var existing = await expenseDataReader.TrackingDataSource
                 .FirstOrDefaultAsync(e => e.SourceCustomerReturnId == dto.SourceCustomerReturnId.Value).ConfigureAwait(false);
             if (existing is not null)
                 return new CreateExpenseResultDto { CreatedId = existing.Id };

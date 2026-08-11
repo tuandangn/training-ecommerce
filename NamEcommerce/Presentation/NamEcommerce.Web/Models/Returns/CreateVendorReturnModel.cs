@@ -28,7 +28,7 @@ public sealed class CreateVendorReturnModel
     public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     [Display(Name = "Chi phí phát sinh")]
-    public decimal AdditionalCost { get; set; }
+    public decimal? AdditionalCost { get; set; }
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }

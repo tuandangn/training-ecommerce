@@ -32,6 +32,8 @@ using NamEcommerce.Domain.Values;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Domain.Shared.Specifications;
 using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -47,16 +49,16 @@ public sealed class DeliveryNoteManager(
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<VendorReturn> vendorReturnReader,
     IEntityDataReader<CustomerPayment> customerPaymentReader,
-    IEntityDataReader<Customer> customerReader,
     ICustomerReturnManager customerReturnManager,
     IEntityDataReader<DeliveryRun> deliveryRunReader,
+    IEntityDataReader<Vendor> vendorReader,
     IRepository<DeliveryRun> deliveryRunRepository,
     EntityCodeGenerator entityCodeGenerator) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{DeliveryNote.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => deliveryNoteReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => deliveryNoteReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task<decimal> GetDisplayCostAsync(Guid productId)
@@ -149,6 +151,92 @@ public sealed class DeliveryNoteManager(
         var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
 
         return MapToDto(inserted);
+    }
+
+    public async Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
+
+        var vendor = await vendorReader.GetByIdAsync(vendorReturn.VendorId).ConfigureAwait(false)
+            ?? throw new VendorIsNotFoundException(vendorReturn.VendorId);
+
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
+        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, 0, 0)
+        {
+            SourceType = DeliveryNoteSourceType.ToVendorReturn,
+            CreatedByUserId = vendorReturn.CreatedByUserId,
+            ShippingAddress = vendor.Address,
+            ShippingPhoneNumber = vendor.PhoneNumber
+        };
+
+        foreach (var item in dto.Items)
+            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
+
+        foreach (var item in deliveryNote.Items)
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+
+        // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
+        // DeliveryNoteDeliveredStockHandler sẽ dispatch stock; DeliveryNoteDeliveredEventHandler có guard
+        // SourceType == ToVendorReturn → skip sinh CustomerDebt.
+        deliveryNote.MarkAsDeliveredFromVendorReturn();
+
+        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
+
+        return inserted.Id;
+    }
+
+    public async Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderReader.DataSource
+            .FirstOrDefaultAsync(o => o.OrderItems.Any(oi => oi.Id == dto.OrderItemId)).ConfigureAwait(false)
+            ?? throw new OrderIsNotFoundException(dto.OrderItemId);
+
+        var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
+        await EnsureQuantitiesCanBeDeliveredAsync(order,
+            new Dictionary<SecondaryItemId, decimal>
+            {
+                [(SecondaryItemId)(order.Id, orderItem.Id)] = dto.Quantity
+            }, includeDirectShipOutstanding: false).ConfigureAwait(false);
+
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
+        string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
+            ? order.CustomerInfo.FullName
+            : dto.ContactName.Trim();
+        string contactPhone = string.IsNullOrWhiteSpace(dto.ContactPhone)
+            ? order.CustomerInfo.PhoneNumber
+            : dto.ContactPhone.Trim();
+
+        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, 0, 0)
+        {
+            OrderCode = order.Code,
+            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress)
+            {
+                IsRetailWalkInCustomer = order.CustomerInfo.IsRetailWalkInCustomer
+            },
+            ShippingAddress = dto.ShippingAddress,
+            ShippingPhoneNumber = contactPhone
+        };
+
+        deliveryNote.AddItem(
+            orderItemId: orderItem.Id,
+            productId: orderItem.ProductId,
+            productName: orderItem.ProductName ?? string.Empty,
+            quantity: dto.Quantity,
+            unitPrice: orderItem.UnitPrice,
+            warehouseId: dto.DirectShipWarehouseId);
+
+        deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
+        deliveryNote.MarkCreated();
+        deliveryNote.Confirm();
+
+        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
+
+        return inserted.Id;
     }
 
     public async Task ConfirmAsync(Guid id)
@@ -396,87 +484,6 @@ public sealed class DeliveryNoteManager(
 
         if (transitionedToDelivered)
             await MarkRelatedOrderItemsReceivedByCustomerAsync(deliveryNote).ConfigureAwait(false);
-    }
-
-    public async Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId).ConfigureAwait(false)
-            ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
-
-        var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var deliveryNote = new DeliveryNote(code, Guid.Empty, Guid.Empty, 0, 0)
-        {
-            SourceType = DeliveryNoteSourceType.ToVendorReturn,
-            CreatedByUserId = vendorReturn.CreatedByUserId
-        };
-
-        foreach (var item in dto.Items)
-            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
-
-        foreach (var item in deliveryNote.Items)
-            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-
-        // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
-        // DeliveryNoteDeliveredStockHandler sẽ dispatch stock; DeliveryNoteDeliveredEventHandler có guard
-        // SourceType == ToVendorReturn → skip sinh CustomerDebt.
-        deliveryNote.MarkAsDeliveredFromVendorReturn();
-
-        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
-
-        return inserted.Id;
-    }
-
-    public async Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        var order = await orderReader.DataSource
-            .FirstOrDefaultAsync(o => o.OrderItems.Any(oi => oi.Id == dto.OrderItemId)).ConfigureAwait(false)
-            ?? throw new OrderIsNotFoundException(dto.OrderItemId);
-
-        var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        await EnsureQuantitiesCanBeDeliveredAsync(order,
-            new Dictionary<SecondaryItemId, decimal>
-            {
-                [(SecondaryItemId)(order.Id, orderItem.Id)] = dto.Quantity
-            }, includeDirectShipOutstanding: false).ConfigureAwait(false);
-
-        var code = await GenerateCodeAsync().ConfigureAwait(false);
-        string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
-            ? order.CustomerInfo.FullName
-            : dto.ContactName.Trim();
-        string contactPhone = string.IsNullOrWhiteSpace(dto.ContactPhone)
-            ? order.CustomerInfo.PhoneNumber
-            : dto.ContactPhone.Trim();
-
-        var deliveryNote = new DeliveryNote(code, order.Id, order.CustomerId, 0, 0)
-        {
-            OrderCode = order.Code,
-            CustomerInfo = new CustomerInfo(contactName, contactPhone, dto.ShippingAddress)
-            {
-                IsRetailWalkInCustomer = order.CustomerInfo.IsRetailWalkInCustomer
-            },
-            ShippingAddress = dto.ShippingAddress,
-            ShippingPhoneNumber = contactPhone
-        };
-
-        deliveryNote.AddItem(
-            orderItemId: orderItem.Id,
-            productId: orderItem.ProductId,
-            productName: orderItem.ProductName ?? string.Empty,
-            quantity: dto.Quantity,
-            unitPrice: orderItem.UnitPrice,
-            warehouseId: dto.DirectShipWarehouseId);
-
-        deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
-        deliveryNote.MarkCreated();
-        deliveryNote.Confirm();
-
-        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
-
-        return inserted.Id;
     }
 
     public async Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
@@ -1265,9 +1272,9 @@ public sealed class DeliveryNoteManager(
             AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
             AssignedDeliveryOnUtc = deliveryNote.AssignedDeliveryOnUtc,
             CustomerId = deliveryNote.CustomerId,
-            CustomerName = deliveryNote.CustomerInfo.FullName,
-            CustomerPhone = deliveryNote.CustomerInfo.PhoneNumber,
-            CustomerAddress = deliveryNote.CustomerInfo.Address,
+            CustomerName = deliveryNote.CustomerInfo?.FullName,
+            CustomerPhone = deliveryNote.CustomerInfo?.PhoneNumber,
+            CustomerAddress = deliveryNote.CustomerInfo?.Address,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShippingPhoneNumber = deliveryNote.ShippingPhoneNumber,
             CanUpdateShippingInfo = deliveryNote.CanEditShippingInfo(),

@@ -26,10 +26,9 @@ public sealed record DeliveryNote : AppAggregateEntity
         AmountToCollect = amountToCollect;
         Status = DeliveryNoteStatus.Draft;
         CreatedOnUtc = DateTime.UtcNow;
-        _items = [];
     }
 
-    public string Code { get; private set; }
+    public string Code { get; private set; } = string.Empty;
     public DeliveryNoteStatus Status { get; private set; }
     public Guid? CreatedByUserId { get; internal set; }
     public bool ShowPrice { get; internal set; }
@@ -47,7 +46,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DateTime? AssignedDeliveryOnUtc { get; private set; }
 
     public Guid CustomerId { get; private set; }
-    public CustomerInfo CustomerInfo { get; internal set; }
+    public CustomerInfo? CustomerInfo { get; internal set; }
     public NormalizableString ShippingAddress { get; internal set; }
     public string? ShippingPhoneNumber { get; internal set; }
 
@@ -64,7 +63,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? InvoiceSeries { get; internal set; }
     public DateTime? InvoiceDate { get; internal set; }
 
-    private readonly List<DeliveryNoteItem> _items;
+    private readonly List<DeliveryNoteItem> _items = [];
     public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
 
     public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;

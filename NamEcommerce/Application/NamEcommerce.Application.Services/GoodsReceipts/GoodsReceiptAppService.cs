@@ -10,6 +10,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace NamEcommerce.Application.Services.GoodsReceipts;
 
@@ -141,14 +142,15 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
                 WarehouseId = item.WarehouseId,
                 Quantity = item.Quantity,
                 UnitCost = item.UnitCost
-            }).ToList()
+            }).ToList(),
+            TaxRate = dto.TaxRate
         };
         var result = await _goodsReceiptManager.CreateGoodsReceiptAsync(createDto).ConfigureAwait(false);
 
         return new CreateGoodsReceiptResultAppDto
         {
             Success = true,
-            CreatedId = result.CreatedId
+            CreatedId = result.CreatedId,
         };
     }
 
@@ -207,6 +209,9 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         var goodsReceipt = await _goodsReceiptManager.GetGoodsReceiptByIdAsync(id).ConfigureAwait(false);
         if (goodsReceipt is null)
             return (false, "Error.GoodsReceipt.IsNotFound");
+
+        //if (goodsReceipt.PurchaseOrderId.HasValue)
+        //    return (false, "Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder");
 
         var deleteDto = new DeleteGoodsReceiptDto(id);
         await _goodsReceiptManager.DeleteGoodsReceiptAsync(deleteDto).ConfigureAwait(false);
@@ -283,7 +288,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         };
     }
 
-    public Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto) 
+    public Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto)
         => _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto);
 
     public Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)

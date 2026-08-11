@@ -99,20 +99,20 @@
                     var refType = (VendorLedgerReferenceType)entry.ReferenceType;
                     var isCharge = entry.Amount > 0;
                     <tr>
-                        <td class="ps-4 text-muted small text-nowrap">
+                        <td class="ps-4 text-muted text-nowrap">
                             @entry.OccurredAtUtc.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
                         </td>
                         <td>
                             @{
                                 var (badgeClass, label) = entryType switch
                                 {
-                                    VendorLedgerEntryType.GoodsReceiptCharge => ("bg-danger-subtle text-danger", "Nhập hàng"),
-                                    VendorLedgerEntryType.OpeningBalance => ("bg-secondary-subtle text-secondary", "Đầu kỳ"),
-                                    VendorLedgerEntryType.Payment => ("bg-success-subtle text-success", "Chi tiền"),
-                                    VendorLedgerEntryType.ReturnCredit => ("bg-info-subtle text-info", "Trả hàng NCC"),
-                                    VendorLedgerEntryType.RefundReceipt => ("bg-warning-subtle text-warning", "Nhận hoàn tiền"),
-                                    VendorLedgerEntryType.Correction => ("bg-secondary-subtle text-secondary", "Điều chỉnh"),
-                                    _ => ("bg-light text-muted", entryType.ToString())
+                                    VendorLedgerEntryType.GoodsReceiptCharge => ("bg-danger text-light", "Nhập hàng"),
+                                    VendorLedgerEntryType.OpeningBalance => ("bg-secondary text-light", "Đầu kỳ"),
+                                    VendorLedgerEntryType.Payment => ("bg-success text-light", "Chi tiền"),
+                                    VendorLedgerEntryType.ReturnCredit => ("bg-info text-light", "Trả hàng NCC"),
+                                    VendorLedgerEntryType.RefundReceipt => ("bg-warning text-light", "Nhận hoàn tiền"),
+                                    VendorLedgerEntryType.Correction => ("bg-secondary text-light", "Điều chỉnh"),
+                                    _ => ("bg-light text-dark", entryType.ToString())
                                 };
                             }
                             <span class="badge @badgeClass fw-normal">@label</span>
@@ -189,7 +189,7 @@
         <div class="card-footer bg-light border-top py-3 px-4 d-flex justify-content-center gap-2">
             @if (Model.PageIndex > 1)
             {
-                <a asp-action="Details" asp-route-vendorId="@Model.VendorId" asp-route-pageIndex="@(Model.PageIndex - 1)"
+                <a asp-action="Details" asp-route-id="@Model.VendorId" asp-route-pageIndex="@(Model.PageIndex - 1)"
                    class="btn btn-sm btn-outline-secondary rounded-3">
                     <i class="bi bi-chevron-left me-1"></i>Trước
                 </a>
@@ -197,7 +197,7 @@
             <span class="btn btn-sm btn-outline-secondary border rounded-3 disabled">Trang @Model.PageIndex</span>
             @if (Model.TotalCount > Model.PageIndex * 50)
             {
-                <a asp-action="Details" asp-route-vendorId="@Model.VendorId" asp-route-pageIndex="@(Model.PageIndex + 1)"
+                <a asp-action="Details" asp-route-id="@Model.VendorId" asp-route-pageIndex="@(Model.PageIndex + 1)"
                    class="btn btn-sm btn-outline-secondary rounded-3">
                     Sau<i class="bi bi-chevron-right ms-1"></i>
                 </a>

@@ -39,6 +39,5 @@ public sealed class ReceivePurchaseOrderItemValidator : AbstractValidator<Receiv
     }
 
     private static bool HasDirectShipRequest(ReceivePurchaseOrderItemModel model)
-        => model.DirectShipOrderId.HasValue
-           || model.DirectShipOrderItemId.HasValue;
+        => model.DirectShipOrderId.HasValue || model.DirectShipOrderItemId.HasValue;
 }

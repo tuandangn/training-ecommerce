@@ -280,7 +280,7 @@
                                                            data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                                            data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                                                            data-val-number="Đơn giá phải là số" />
-                                                       <span class="small text-danger field-validation-valid" data-valmsg-for="unitCost@(item.OrderItemId)" data-valmsg-replace="true"></span>
+                                                    <span class="small text-danger field-validation-valid" data-valmsg-for="unitCost@(item.OrderItemId)" data-valmsg-replace="true"></span>
                                                 </div>
                                                 <span>đ</span>
                                             </label>
@@ -319,11 +319,8 @@
                                             </label>
                                             <label class="shortage-ds-field">
                                                 <span>Người nhận:</span>
-                                                <input type="text" class="form-control ds-contact-name" placeholder="Người nhận"
-                                                       maxlength="200" name="ds@(item.OrderItemId)_contactName"
-                                                       data-val="true"
-                                                       data-val-maxlength="Tên người nhận tối đa 200 ký tự"
-                                                       data-val-maxlength-max="200" />
+                                                <input type="text" class="form-control ds-contact-name" placeholder="Người nhận" name="ds@(item.OrderItemId)_contactName"
+                                                       data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
                                                 <span class="small text-danger field-validation-valid" data-valmsg-for="ds@(item.OrderItemId)_contactName" data-valmsg-replace="true"></span>
                                             </label>
                                             <label class="shortage-ds-field">
@@ -336,7 +333,7 @@
                                             </label>
                                             <label class="shortage-ds-field shortage-ds-priority-field">
                                                 <span>Ưu tiên:</span>
-                                                <input type="number" class="form-control ds-priority" min="0" step="1" value="0" inputmode="numeric"/>
+                                                <input type="number" class="form-control ds-priority" min="0" step="1" value="0" inputmode="numeric" />
                                             </label>
                                         </div>
                                     </div>
@@ -420,7 +417,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-dark" id="btnConfirmCreateFromShortage">Xác nhận</button>
+                <button type="button" class="btn btn-dark" id="btnConfirmCreateFromShortage">
+                    <i class="bi bi-check-all me-1"></i>Xác nhận
+                </button>
             </div>
         </div>
     </div>
@@ -505,7 +504,7 @@
                 });
 
                 DecimalFields.autoWrap(group);
-                if(window.initFlatPickrControls)
+                if (window.initFlatPickrControls)
                     window.initFlatPickrControls(group);
             }
 
@@ -569,7 +568,7 @@
                 if (lastPriceEl) {
                     lastPriceEl.textContent = suggestion.lastUnitPrice != null
                         ? ` · Giá lần trước ${DecimalFields.formatCurrency(suggestion.lastUnitPrice)}` +
-                          (suggestion.lastPurchaseDate ? ` (${suggestion.lastPurchaseDate})` : '')
+                        (suggestion.lastPurchaseDate ? ` (${suggestion.lastPurchaseDate})` : '')
                         : '';
                 }
 
@@ -658,7 +657,7 @@
                         row.classList.toggle('is-not-selected', !checked);
                         ['input', 'select', 'textarea'].forEach(tag =>
                             row.querySelectorAll(tag).forEach(control => {
-                                if (control.classList.contains('item-check')) 
+                                if (control.classList.contains('item-check'))
                                     return;
                                 control.disabled = !checked;
                             })
@@ -728,41 +727,41 @@
                 return groups
                     .filter(group => !group.classList.contains('d-none'))
                     .flatMap(group => Array.from(group.querySelectorAll('.shortage-order-item'))
-                    .filter(row => !row.classList.contains('d-none') && row.querySelector('.item-check')?.checked)
-                    .map(row => {
-                        const dsCheck = row.querySelector('.direct-ship-check');
-                        const isDirectShip = dsCheck?.checked || false;
-                        const dsForm = row.querySelector('.shortage-direct-ship-form');
-                        const quantity = readQuantity(row.querySelector('.quantity-to-order'));
-                        const shortageQuantity = parseDecimal(row.dataset.shortageQuantity);
-                        const allocationQuantity = Math.min(quantity, shortageQuantity > 0 ? shortageQuantity : quantity);
-                        const directShip = isDirectShip && allocationQuantity > 0 && dsForm ? {
-                            address: dsForm.querySelector('.ds-address')?.value?.trim() || '',
-                            contactName: dsForm.querySelector('.ds-contact-name')?.value?.trim() || null,
-                            contactPhone: dsForm.querySelector('.ds-contact-phone')?.value?.trim() || null,
-                            priority: parseInt(dsForm.querySelector('.ds-priority')?.value || '0', 10) || 0
-                        } : null;
+                        .filter(row => !row.classList.contains('d-none') && row.querySelector('.item-check')?.checked)
+                        .map(row => {
+                            const dsCheck = row.querySelector('.direct-ship-check');
+                            const isDirectShip = dsCheck?.checked || false;
+                            const dsForm = row.querySelector('.shortage-direct-ship-form');
+                            const quantity = readQuantity(row.querySelector('.quantity-to-order'));
+                            const shortageQuantity = parseDecimal(row.dataset.shortageQuantity);
+                            const allocationQuantity = Math.min(quantity, shortageQuantity > 0 ? shortageQuantity : quantity);
+                            const directShip = isDirectShip && allocationQuantity > 0 && dsForm ? {
+                                address: dsForm.querySelector('.ds-address')?.value?.trim() || '',
+                                contactName: dsForm.querySelector('.ds-contact-name')?.value?.trim() || null,
+                                contactPhone: dsForm.querySelector('.ds-contact-phone')?.value?.trim() || null,
+                                priority: parseInt(dsForm.querySelector('.ds-priority')?.value || '0', 10) || 0
+                            } : null;
 
-                        return {
-                            group,
-                            row,
-                            vendorId: group.dataset.vendorId,
-                            vendorName: group.dataset.vendorName || '',
-                            orderId: row.dataset.orderId,
-                            orderItemId: row.dataset.orderItemId,
-                            orderCode: row.dataset.orderCode || '',
-                            productId: row.dataset.productId,
-                            productName: row.dataset.productName || '',
-                            unitName: row.dataset.unitName || 'sp',
-                            quantity,
-                            allocationQuantity,
-                            unitCost: readCurrency(row.querySelector('.unit-cost')),
-                            expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
-                            note: group.querySelector('.group-note')?.value || null,
-                            directShip
-                        };
-                    })
-                    .filter(line => line.quantity > 0));
+                            return {
+                                group,
+                                row,
+                                vendorId: group.dataset.vendorId,
+                                vendorName: group.dataset.vendorName || '',
+                                orderId: row.dataset.orderId,
+                                orderItemId: row.dataset.orderItemId,
+                                orderCode: row.dataset.orderCode || '',
+                                productId: row.dataset.productId,
+                                productName: row.dataset.productName || '',
+                                unitName: row.dataset.unitName || 'sp',
+                                quantity,
+                                allocationQuantity,
+                                unitCost: readCurrency(row.querySelector('.unit-cost')),
+                                expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
+                                note: group.querySelector('.group-note')?.value || null,
+                                directShip
+                            };
+                        })
+                        .filter(line => line.quantity > 0));
             }
 
             function validateDirectShipLines(lines) {
@@ -849,9 +848,9 @@
 
                 if (lines) {
                     let html = `<div class="alert alert-success d-flex align-items-center mb-4 border-0 shadow-sm">
-                                    <i class="bi bi-check-circle-fill fs-4 me-3"></i>
-                                    <div>Đã xử lý thành công <strong>${result.data.length}</strong> đơn nhập hàng từ danh sách hàng thiếu.</div>
-                                </div>`;
+                                            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+                                            <div>Đã xử lý thành công <strong>${result.data.length}</strong> đơn nhập hàng từ danh sách hàng thiếu.</div>
+                                        </div>`;
 
                     const vendorIds = [...new Set(result.data.map(po => String(po.vendorId).toLowerCase()))];
 
@@ -861,25 +860,25 @@
                         const vendorName = poLines.length > 0 ? poLines[0].vendorName : 'Nhà cung cấp';
 
                         html += `
-                        <div class="card mb-3 border-0 shadow-sm">
-                            <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
-                                <span class="fw-bold fs-6"><i class="bi bi-building me-2 text-muted"></i>${escapeHtml(vendorName)}</span>
-                                <div>
-                                    ${vendorPos.map(po => `<a href="/PurchaseOrder/Details/${po.purchaseOrderId}" class="btn btn-sm btn-outline-dark ms-2 fw-medium">Xem chi tiết ${escapeHtml(po.purchaseOrderCode)} <i class="bi bi-arrow-right-short"></i></a>`).join('')}
+                                <div class="card mb-3 border-0 shadow-sm">
+                                    <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold fs-6"><i class="bi bi-building me-2 text-muted"></i>${escapeHtml(vendorName)}</span>
+                                        <div>
+                                            ${vendorPos.map(po => `<a href="/PurchaseOrder/Details/${po.purchaseOrderId}" class="btn btn-sm btn-outline-dark ms-2 fw-medium">Xem chi tiết ${escapeHtml(po.purchaseOrderCode)} <i class="bi bi-arrow-right-short"></i></a>`).join('')}
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <ul class="list-group list-group-flush border-top">
+                                            ${poLines.map(l => `
+                                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
+                                                    <span class="text-body">${escapeHtml(l.productName)}</span>
+                                                    <span class="fw-medium text-body-secondary">${formatQuantity(l.quantity, l.unitName)}</span>
+                                                </li>
+                                            `).join('')}
+                                        </ul>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="card-body p-0">
-                                <ul class="list-group list-group-flush border-top">
-                                    ${poLines.map(l => `
-                                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
-                                            <span class="text-body">${escapeHtml(l.productName)}</span>
-                                            <span class="fw-medium text-body-secondary">${formatQuantity(l.quantity, l.unitName)}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        </div>
-                        `;
+                                `;
                     });
 
                     sessionStorage.setItem('shortageCreatedHtml', html);
@@ -896,37 +895,37 @@
                 const maxAttr = maxQuantity ? `data-val-range-max="${formatInputNumber(maxQuantity)}"` : '';
                 const rowClass = isNew ? 'table-primary bg-opacity-10' : '';
                 const actionIcon = isNew ? '<i class="bi bi-plus-circle text-primary me-2"></i>' :
-                                   actionType === 'AllocateFromExisting' ? '<i class="bi bi-box-seam text-success me-2"></i>' :
-                                   '<i class="bi bi-diagram-3 text-warning me-2"></i>';
+                    actionType === 'AllocateFromExisting' ? '<i class="bi bi-box-seam text-success me-2"></i>' :
+                        '<i class="bi bi-diagram-3 text-warning me-2"></i>';
 
                 return `
-                    <tr class="po-action-row ${rowClass}">
-                        <td class="text-center align-middle">
-                            <input class="form-check-input related-action-check fs-5 m-0" type="checkbox" ${checked ? 'checked' : ''}
-                                   data-action-type="${escapeHtml(actionType)}"
-                                   data-po-id="${escapeHtml(poId || '')}"
-                                   data-po-item-id="${escapeHtml(poItemId || '')}">
-                        </td>
-                        <td class="fw-medium align-middle text-nowrap">
-                            ${actionIcon}
-                            ${label}
-                        </td>
-                        <td class="align-middle">
-                            ${details}
-                            ${statusBadge ? ` <span class="ms-2">${statusBadge}</span>` : ''}
-                        </td>
-                        <td class="align-middle">
-                            <div class="input-group input-group-sm ui-float-end-w-140">
-                                <input class="form-control text-end related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
-                                       ${maxAttr} data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
-                                       data-val="true" data-val-required="Vui lòng nhập số lượng"
-                                       data-val-range="Số lượng phải lớn hơn 0 ${maxAttr ? ` và nhỏ hơn ${DecimalFields.formatQuantity(maxQuantity)}` : ''}"
-                                       data-val-range-min="0.0001"
-                                       data-val-number="Số lượng phải là số"
-                                       value="${DecimalFields.formatQuantity(quantity)}">
-                            </div>
-                        </td>
-                    </tr>`;
+                            <tr class="po-action-row ${rowClass}">
+                                <td class="text-center align-middle">
+                                    <input class="form-check-input related-action-check fs-5 m-0" type="checkbox" ${checked ? 'checked' : ''}
+                                           data-action-type="${escapeHtml(actionType)}"
+                                           data-po-id="${escapeHtml(poId || '')}"
+                                           data-po-item-id="${escapeHtml(poItemId || '')}">
+                                </td>
+                                <td class="fw-medium align-middle text-nowrap">
+                                    ${actionIcon}
+                                    ${label}
+                                </td>
+                                <td class="align-middle">
+                                    ${details}
+                                    ${statusBadge ? ` <span class="ms-2">${statusBadge}</span>` : ''}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="input-group input-group-sm ui-float-end-w-140">
+                                        <input class="form-control text-end related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
+                                               ${maxAttr} data-decimal="quantity" value="1" autocomplete="off" inputmode="decimal"
+                                               data-val="true" data-val-required="Vui lòng nhập số lượng"
+                                               data-val-range="Số lượng phải lớn hơn 0 ${maxAttr ? ` và nhỏ hơn ${DecimalFields.formatQuantity(maxQuantity)}` : ''}"
+                                               data-val-range-min="0.0001"
+                                               data-val-number="Số lượng phải là số"
+                                               value="${DecimalFields.formatQuantity(quantity)}">
+                                    </div>
+                                </td>
+                            </tr>`;
             }
 
             function renderPurchaseOrderCard(po, line, allocationRows, mergeRow) {
@@ -993,32 +992,32 @@
                     : '';
 
                 return `
-                    <div class="card related-line-card mb-4 border shadow-sm" data-line-index="${index}" data-quantity="${formatInputNumber(line.quantity)}" data-unit-cost="${formatInputNumber(line.unitCost)}" data-unit-name="${escapeHtml(line.unitName)}">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                            <div>
-                                <div class="fw-bold fs-6 text-dark">${escapeHtml(line.productName)}</div>
-                                <div class="text-secondary small mt-1">Cần xử lý: <strong class="text-dark">${formatQuantity(line.quantity, line.unitName)}</strong> · NCC: ${escapeHtml(line.vendorName)}</div>
-                                ${orderBreakdown}
-                            </div>
-                            <div class="related-line-balance badge bg-secondary px-3 py-2 fs-6 rounded-pill" data-line-balance></div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 border-top">
-                                <thead class="table-light text-muted small">
-                                    <tr>
-                                        <th class="text-center border-bottom-0 ui-w-50">Chọn</th>
-                                        <th class="border-bottom-0 ui-w-25p">Giải pháp xử lý</th>
-                                        <th class="border-bottom-0">Thông tin chi tiết</th>
-                                        <th class="text-end border-bottom-0 pe-4 ui-w-150">Số lượng</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${poCards || '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2 text-black-50"></i>Không có PO phù hợp để lấy hàng hoặc ghép.</td></tr>'}
-                                    ${newRow}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>`;
+                            <div class="card related-line-card mb-4 border shadow-sm" data-line-index="${index}" data-quantity="${formatInputNumber(line.quantity)}" data-unit-cost="${formatInputNumber(line.unitCost)}" data-unit-name="${escapeHtml(line.unitName)}">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                                    <div>
+                                        <div class="fw-bold fs-6 text-dark">${escapeHtml(line.productName)}</div>
+                                        <div class="text-secondary small mt-1">Cần xử lý: <strong class="text-dark">${formatQuantity(line.quantity, line.unitName)}</strong> · NCC: ${escapeHtml(line.vendorName)}</div>
+                                        ${orderBreakdown}
+                                    </div>
+                                    <div class="related-line-balance badge bg-secondary px-3 py-2 fs-6 rounded-pill" data-line-balance></div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0 border-top">
+                                        <thead class="table-light text-muted small">
+                                            <tr>
+                                                <th class="text-center border-bottom-0 ui-w-50">Chọn</th>
+                                                <th class="border-bottom-0 ui-w-25p">Giải pháp xử lý</th>
+                                                <th class="border-bottom-0">Thông tin chi tiết</th>
+                                                <th class="text-end border-bottom-0 pe-4 ui-w-150">Số lượng</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${poCards || '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2 text-black-50"></i>Không có PO phù hợp để lấy hàng hoặc ghép.</td></tr>'}
+                                            ${newRow}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>`;
             }
 
             function groupLinesForDisplay(lines) {
@@ -1152,7 +1151,7 @@
             }
 
             async function beginCreateFromShortage() {
-                if(!$(form).valid())
+                if (!$(form).valid())
                     return;
 
                 const lines = getSelectedLines();

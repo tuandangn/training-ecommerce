@@ -46,6 +46,7 @@ public sealed record CreateGoodsReceiptFromVendorOversupplyDto
     public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitCost { get; init; }
+    public decimal? TaxRate { get; set; }
 
     public void Verify()
     {
@@ -152,6 +153,7 @@ public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 {
     public DateTime? ReceivedOnUtc { get; set; }
     public required IList<AddGoodsReceiptItemDto> Items { get; init; }
+    public decimal? TaxRate { get; set; }
 
     public Guid? PurchaseOrderId { get; set; }
 
@@ -171,6 +173,7 @@ public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 public sealed record CreateGoodsReceiptResultDto
 {
     public required Guid CreatedId { get; init; }
+    public decimal TaxAmount { get; set; }
 }
 
 [Serializable]
@@ -223,6 +226,8 @@ public sealed record CreateOpeningInventoryReceiptDto
     public required decimal UnitCost { get; init; }
     public Guid? CreatedByUserId { get; init; }
 
+    public decimal? TaxRate { get; set; }
+
     public void Verify()
     {
         if (ProductId == Guid.Empty)
@@ -242,6 +247,7 @@ public sealed record CreateGoodsReceiptFromCustomerReturnDto
     public required Guid CustomerReturnId { get; init; }
     public required Guid WarehouseId { get; init; }
     public required IEnumerable<CreateGoodsReceiptFromCustomerReturnItemDto> Items { get; init; }
+    public decimal? TaxRate { get; set; }
 }
 
 [Serializable]

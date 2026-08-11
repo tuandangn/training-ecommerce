@@ -8,8 +8,6 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.PurchaseOrders;
 public sealed class GetRelatedVendorReturnsByPurchaseOrderHandler
     : IRequestHandler<GetRelatedVendorReturnsByPurchaseOrderQuery, IList<RelatedVendorReturnModel>>
 {
-    private const int FullPageSize = 500;
-
     private readonly IVendorReturnAppService _vendorReturnAppService;
 
     public GetRelatedVendorReturnsByPurchaseOrderHandler(IVendorReturnAppService vendorReturnAppService)
@@ -20,12 +18,12 @@ public sealed class GetRelatedVendorReturnsByPurchaseOrderHandler
     public async Task<IList<RelatedVendorReturnModel>> Handle(GetRelatedVendorReturnsByPurchaseOrderQuery request, CancellationToken cancellationToken)
     {
         var (_, items) = await _vendorReturnAppService.GetListAsync(
+            pageIndex: 0,
+            pageSize: int.MaxValue,
             vendorId: null,
             purchaseOrderId: request.PurchaseOrderId,
             goodsReceiptId: null,
-            status: null,
-            pageIndex: 0,
-            pageSize: FullPageSize).ConfigureAwait(false);
+            status: null).ConfigureAwait(false);
 
         return items
             .OrderByDescending(vr => vr.ReturnDate)

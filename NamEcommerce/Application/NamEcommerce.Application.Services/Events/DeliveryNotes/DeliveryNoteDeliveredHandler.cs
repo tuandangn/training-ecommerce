@@ -94,8 +94,8 @@ public sealed class DeliveryNoteDeliveredStockHandler(
         var releaseReservedStock = deliveryNote.OrderId != Guid.Empty
             && (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer || deliveryNote.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer);
         var referenceType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
-            ? (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn
-            : (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.SalesOrder;
+            ? (int)Domain.Entities.Inventory.StockReferenceType.VendorReturn
+            : (int)Domain.Entities.Inventory.StockReferenceType.SalesOrder;
 
         var dispatchGroups = deliveryNote.Items
             .GroupBy(item => new
@@ -121,7 +121,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
                 group.Quantity,
                 deliveryNote.Id,
                 Guid.Empty,
-                $"Xuat hang cho phieu xuat {deliveryNote.Code}",
+                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
                 releaseReservedStock: releaseReservedStock,
                 referenceType: referenceType).ConfigureAwait(false);
         }

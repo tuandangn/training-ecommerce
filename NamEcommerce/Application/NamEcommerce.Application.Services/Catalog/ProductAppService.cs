@@ -54,6 +54,7 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
+        var quantityDecimalPlaces = 0;
         if (dto.UnitMeasurementId.HasValue)
         {
             var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
@@ -65,6 +66,7 @@ public sealed class ProductAppService : IProductAppService
                     ErrorMessage = "Error.UnitMeasurementIsNotFound"
                 };
             }
+            quantityDecimalPlaces = unitMeasurement.DecimalPlaces;
         }
 
         var createProductDto = new CreateProductDto
@@ -87,7 +89,7 @@ public sealed class ProductAppService : IProductAppService
                 ProductId = creationResult.CreatedId,
                 WarehouseId = stock.WarehouseId,
                 Quantity = stock.Quantity,
-                UnitCost = stock.UnitCost
+                UnitCost = stock.UnitCost,
             }).ConfigureAwait(false);
         }
 

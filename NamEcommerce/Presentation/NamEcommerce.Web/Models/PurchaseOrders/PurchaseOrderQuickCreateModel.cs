@@ -30,15 +30,29 @@ public sealed class PurchaseOrderQuickCreateModel
     public DateTime? ExpectedDeliveryDate { get; set; }
     public decimal? ShippingAmount { get; set; }
 
+    public decimal? TaxRate { get; set; }
+    [ValidateNever]
+    public decimal[] AvailableTaxRates { get; set; } = [];
+    [ValidateNever]
+    public decimal TaxAmount => IsReceived && TaxRate.HasValue ? SubTotal * TaxRate.Value / 100 : 0;
+
     public bool IsPaid { get; set; }
     public decimal? PaidAmount { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    public Guid? BankAccountId { get; set; }
+    [ValidateNever]
+    public IEnumerable<QuickCreateBankAccountModel> AvailableBankAccounts { get; set; } = [];
 
     public Guid? DefaultWarehouseId { get; set; }
     [ValidateNever]
     public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableWarehouses { get; set; } = [];
 
     public IList<QuickCreatePurchaseOrderItemModel> Items { get; set; } = [];
+
+    [ValidateNever]
+    public decimal SubTotal => Items.Sum(item => item.SubTotal);
+    [ValidateNever]
+    public decimal Total => SubTotal + TaxAmount;
 
     [Serializable]
     public sealed class QuickCreatePurchaseOrderItemModel
@@ -59,4 +73,16 @@ public sealed class PurchaseOrderQuickCreateModel
         [ValidateNever]
         public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableVendors { get; set; } = [];
     }
+
+    [Serializable]
+    public sealed class QuickCreateBankAccountModel
+    {
+        [ValidateNever]
+        public required Guid Id { get; set; }
+        [ValidateNever]
+        public required string DisplayName { get; set; } = string.Empty;
+        [ValidateNever]
+        public bool IsDefault { get; set; }
+    }
+
 }

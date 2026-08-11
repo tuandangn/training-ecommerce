@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using System.ComponentModel.DataAnnotations;
-using static NamEcommerce.Web.Models.PurchaseOrders.PurchaseOrderDetailsModel;
 
 namespace NamEcommerce.Web.Models.PurchaseOrders;
 
@@ -15,7 +14,8 @@ public sealed class PurchaseOrderBulkReceiveItemsModel
     public decimal? AdditionalShipping { get; set; }
 
     [Display(Name = "Thuế")]
-    public decimal? AdditionalTax { get; set; }
+    public decimal? TaxRate { get; set; }
+    public decimal[] AvailableTaxRates { get; set; } = [];
 
     [Display(Name = "Hàng hóa nhận")]
     public IList<BulkReceiveLineModel> Items { get; set; } = [];
@@ -24,8 +24,8 @@ public sealed class PurchaseOrderBulkReceiveItemsModel
     public IList<PurchaseOrderModel.ItemModel> RemainingReceivableItems { get; set; } = [];
 
     [ValidateNever]
-    public IDictionary<Guid, IList<DirectShipAllocationForPoModel>> DirectShipAllocationsPerItem { get; set; }
-        = new Dictionary<Guid, IList<DirectShipAllocationForPoModel>>();
+    public IDictionary<Guid, IList<PurchaseOrderDetailsModel.DirectShipAllocationForPoModel>> DirectShipAllocationsPerItem { get; set; }
+        = new Dictionary<Guid, IList<PurchaseOrderDetailsModel.DirectShipAllocationForPoModel>>();
 
     [ValidateNever]
     public Guid? DefaultWarehouseId { get; set; }

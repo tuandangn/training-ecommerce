@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Security;
@@ -22,16 +24,18 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IOrderAppService _orderAppService;
     private readonly PurchaseOrderSettings _purchaseOrderSettings;
+    private readonly AppConfig _appConfig;
 
     public PurchaseOrderController(IMediator mediator, IOrderAppService orderAppService,
         IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
-        PurchaseOrderSettings purchaseOrderSettings)
+        PurchaseOrderSettings purchaseOrderSettings, AppConfig appConfig)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
         _purchaseOrderAppService = purchaseOrderAppService;
         _orderAppService = orderAppService;
         _purchaseOrderSettings = purchaseOrderSettings;
+        _appConfig = appConfig;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -234,8 +238,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
             if (model.IsPaid)
             {
-                var subTotal = model.Items.Sum(item => item.SubTotal);
-                if (subTotal < model.PaidAmount)
+                if (model.Total < model.PaidAmount)
                 {
                     AddLocalizedModelError("Error.PaidAmountExceedsOrderTotal");
                     model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
@@ -243,6 +246,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 }
             }
         }
+
+        if (model.IsReceived && model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
+        {
+            AddLocalizedModelError("Error.TaxRateIsNotAllowed");
+            model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+            return View(model);
+        }
+
 
         var result = await _mediator.Send(prepareQuickCreateCommand());
         if (result.Success)
@@ -282,6 +293,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 command.ReceivedOn = model.ReceivedOn;
                 command.PictureIds = model.PictureIds;
                 command.ShippingAmount = model.ShippingAmount;
+                command.TaxRate = model.TaxRate;
             }
             else
             {
@@ -292,7 +304,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 command.PaymentInfo = new PurchaseOrderQuickCreateCommand.PurchaseOrderQuickCreatePaymentModel
                 {
                     PaidAmount = model.PaidAmount!.Value,
-                    PaymentMethod = (int)model.PaymentMethod
+                    PaymentMethod = (int)model.PaymentMethod,
+                    BankAccountId = model.PaymentMethod == PaymentMethod.BankTransfer ? model.BankAccountId : null
                 };
             }
 
@@ -314,7 +327,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(Details), new { id = model.Id });
+            return RedirectToAction(nameof(List));
         }
 
         if (model.ExpectedDeliveryDate < DateTime.Now && model.ExpectedDeliveryDate != purchaseOrder.ExpectedDeliveryDate)
@@ -422,7 +435,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(List));
         }
 
         var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
@@ -469,31 +482,51 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
+    public async Task<IActionResult> SplitsPurchaseOrder(Guid id)
+    {
+        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
+        if (purchaseOrder is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
+
+        if (!purchaseOrder.CanAddItems)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems"));
+
+        if (!purchaseOrder.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
+            return this.JsonError(LocalizeError("Error.PurchaseOrder.NoItemsForSplit"));
+
+        var model = await _purchaseOrderModelFactory.PrepareSplitsPurchaseOrderModel(id);
+        if (model is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
+
+        return PartialView(model);
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
-    public async Task<IActionResult> Split([FromBody] SplitPurchaseOrderCommand command)
+    public async Task<IActionResult> SplitsPurchaseOrder(SplitsPurchaseOrderModel model)
     {
-        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(command.PurchaseOrderId);
+        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(model.PurchaseOrderId);
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+            return RedirectToAction(nameof(List));
         }
 
         var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
         if (vendor is null)
         {
             NotifyError("Error.VendorIsNotFound");
-            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        if (command.Items.Count == 0)
+        if (model.Items.Count == 0 || !model.Items.Any(item => item.Quantity > 0))
         {
             NotifyError("Error.PurchaseOrderItemRequired");
-            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var selectedPurchaseOrderItems = purchaseOrder.Items.Where(item => command.Items.Any(selectedItem => selectedItem.ItemId == item.Id)).ToList();
+        var selectedPurchaseOrderItems = purchaseOrder.Items.Where(item => model.Items.Any(selectedItem => selectedItem.ItemId == item.Id)).ToList();
         var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
         {
             Ids = selectedPurchaseOrderItems.Select(i => i.ProductId).Distinct().ToList()
@@ -502,7 +535,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (selectedPurchaseOrderItems.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
         {
             NotifyError("Error.ProductIsNotFound");
-            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
         var candidateVendorIds = productInfos.SelectMany(p => p.AvailableVendors).Select(v => v.Id).Distinct().ToList();
@@ -511,19 +544,27 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!validVendorIds.Contains(purchaseOrder.VendorId))
         {
             NotifyError("Error.PurchaseOrder.VendorIsNotAppropriate");
-            return RedirectToAction(nameof(Details), new { id = command.PurchaseOrderId });
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var result = await _mediator.Send(command);
-        if (result.Success && result.CreatedId.HasValue)
+        var result = await _mediator.Send(new SplitPurchaseOrderCommand
         {
-            return this.JsonOk(new
+            PurchaseOrderId = model.PurchaseOrderId,
+            Items = model.Items.Where(item => item.Quantity > 0).Select(item => new SplitPurchaseOrderCommand.SplitItemCommand
             {
-                newPurchaseOrderId = result.CreatedId.Value
-            }, Localizer["Msg.PurchaseOrders.CreateSuccess"]);
+                ItemId = item.ItemId,
+                Quantity = item.Quantity
+            }).ToList()
+        });
+        if (result.Success)
+        {
+            NotifySuccess("Msg.SaveSuccess");
+            NotifyInfo("Msg.PurchaseOrder.YouAreWatchingNewPurchaseOrder");
+            return RedirectToAction(nameof(Details), new { id = result.CreatedId });
         }
 
-        return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest"));
+        NotifyError(LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest"));
+        return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
 
     [HttpPost]
@@ -590,6 +631,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = model.PurchaseOrderId,
             PurchaseOrderItemId = model.PurchaseOrderItemId,
             ReceivedQuantity = model.ReceivedQuantity,
+            TaxRate = model.TaxRate,
             WarehouseId = model.WarehouseId,
             SellingPrice = model.SellingPrice,
             OversupplyAction = model.OversupplyAction,
@@ -652,7 +694,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+            return RedirectToAction(nameof(List));
         }
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == model.PurchaseOrderItemId);
@@ -708,17 +750,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return PartialView(model);
     }
 
-
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> BulkReceiveItems(PurchaseOrderBulkReceiveItemsModel model)
     {
-        if (!ModelState.IsValid)
-        {
-            NotifyError("Error.InvalidRequest", GetErrorMessage());
-            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
-        }
-
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
         {
@@ -726,10 +761,22 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
+        if (!ModelState.IsValid)
+        {
+            NotifyError("Error.InvalidRequest", GetErrorMessage());
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
         if (!purchaseOrder.CanReceiveGoods)
         {
             NotifyError("Error.PurchaseOrderCannotReceiveGoods");
-            return RedirectToAction(nameof(List));
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
+        if (model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
+        {
+            NotifyError("Error.TaxRateIsNotAllowed");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
         var lines = (model.Items ?? [])
@@ -760,7 +807,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = model.PurchaseOrderId,
             Items = lines,
             AdditionalShipping = model.AdditionalShipping ?? 0,
-            AdditionalTax = model.AdditionalTax ?? 0
+            TaxRate = model.TaxRate
         });
 
         if (!result.Success)

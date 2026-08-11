@@ -12,13 +12,6 @@ public interface IGoodsReceiptManager
     Task<Guid> CreateFromVendorOversupplyAsync(CreateGoodsReceiptFromVendorOversupplyDto dto);
 
     /// <summary>
-    /// Tự động tạo 1 GoodsReceipt cho nhiều items cùng nhập vào 1 kho từ 1 PurchaseOrder.
-    /// Dùng cho <c>PurchaseOrderManager.BulkReceiveItemsAsync</c> — caller đã group lines theo WarehouseId trước khi gọi.
-    /// MarkCreated chạy 1 lần (thay vì N) → handler cộng tồn cho từng item + sinh VendorDebt 1 lần.
-    /// </summary>
-    Task<CreateGoodsReceiptResultDto> CreateBulkFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderBulkDto dto);
-
-    /// <summary>
     /// Tự động tạo GoodsReceipt khi CustomerReturn được Confirm (SourceType=FromCustomerReturn).
     /// Không sinh VendorDebt. Chỉ cộng tồn kho qua GoodsReceiptCreatedHandler (có guard SourceType).
     /// UnitCost được phục hồi từ allocation gốc nếu đã có, nếu chưa có thì để pending.

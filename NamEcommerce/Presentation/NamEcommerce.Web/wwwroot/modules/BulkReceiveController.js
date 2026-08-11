@@ -9,11 +9,8 @@ export default class BulkReceiveController {
     #itemsError;
 
     #shippingInput;
-    #taxInput;
-    #taxHidden;
-    #taxSuffix;
+    #taxRate;
     #taxHint;
-    #taxModeRadios;
 
     #subtotalEl;
     #shippingDisplayEl;
@@ -55,15 +52,13 @@ export default class BulkReceiveController {
         this.#itemsError = document.getElementById('bulkReceiveItemsError');
 
         this.#shippingInput = document.getElementById('bulkAdditionalShipping');
-        this.#taxInput = document.getElementById('bulkAdditionalTaxInput');
-        this.#taxHidden = document.getElementById('bulkAdditionalTax');
-        this.#taxSuffix = document.getElementById('bulkAdditionalTaxSuffix');
+        this.#shippingDisplayEl = document.getElementById('bulkShippingDisplay');
+
         this.#taxHint = document.getElementById('bulkAdditionalTaxHint');
-        this.#taxModeRadios = document.querySelectorAll('input[name="bulkTaxMode"]');
+        this.#taxRate = document.getElementById('bulkTaxRate');
+        this.#taxDisplayEl = document.getElementById('bulkTaxDisplay');
 
         this.#subtotalEl = document.getElementById('bulkSubtotal');
-        this.#shippingDisplayEl = document.getElementById('bulkShippingDisplay');
-        this.#taxDisplayEl = document.getElementById('bulkTaxDisplay');
         this.#grandTotalEl = document.getElementById('bulkGrandTotal');
 
         this.#bindEvents();
@@ -223,19 +218,9 @@ export default class BulkReceiveController {
 
         this.#shippingInput.addEventListener('input', onTotalChanged);
         this.#shippingInput.addEventListener('change', onTotalChanged.flush);
-        this.#taxInput.addEventListener('input', onTotalChanged);
-        this.#taxInput.addEventListener('change', onTotalChanged.flush);
-
-        this.#taxModeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (!radio.checked)
-                    return;
-                this.#taxMode = radio.value;
-                this.#taxSuffix.textContent = this.#taxMode == 'percent' ? '%' : DecimalFields.getCurrencySymbol();
-                if (this.#taxInput) this.#taxInput.value = '';
-                onTotalChanged.flush();
-            });
-        });
+        this.#taxRate.addEventListener('change', () => {
+            onTotalChanged.flush();
+        })
 
         this.#form.addEventListener('formdata', e => {
             DecimalFields.processFormData(this.#form, e.formData);
@@ -604,35 +589,20 @@ export default class BulkReceiveController {
         });
 
         const shipping = this.#parseCurrency(this.#shippingInput?.value);
-        const taxRaw = this.#parseCurrency(this.#taxInput?.value);
-        let tax = 0;
-        if (this.#taxMode === 'percent') {
-            tax = Math.round(subtotal * taxRaw / 100);
-            if (this.#taxHint) {
-                this.#taxHint.textContent = taxRaw > 0
-                    ? `= ${this.#formatCurrencyWithSymbol(tax)} (${taxRaw}% × tạm tính ${this.#formatCurrencyWithSymbol(subtotal)})`
-                    : '';
-                this.#taxHint.classList.toggle('d-none', taxRaw <= 0);
-            }
-        } else {
-            tax = taxRaw;
-            if (this.#taxHint) {
-                this.#taxHint.textContent = '';
-                this.#taxHint.classList.add('d-none');
-            }
-        }
-        if (this.#taxHidden) this.#taxHidden.value = String(tax);
+        this.#shippingDisplayEl.textContent = this.#formatCurrencyWithSymbol(shipping);
+        this.#shippingDisplayEl.closest('div').classList.toggle('d-none', shipping == 0);
 
-        if (this.#subtotalEl) this.#subtotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal);
-        if (this.#shippingDisplayEl) {
-            this.#shippingDisplayEl.textContent = this.#formatCurrencyWithSymbol(shipping);
-            this.#shippingDisplayEl.closest('div').classList.toggle('d-none', shipping == 0);
-        }
-        if (this.#taxDisplayEl) {
-            this.#taxDisplayEl.textContent = this.#formatCurrencyWithSymbol(tax);
-            this.#taxDisplayEl.closest('div').classList.toggle('d-none', tax == 0);
-        }
-        if (this.#grandTotalEl) this.#grandTotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal + tax);
+        const taxRate = this.#parseCurrency(this.#taxRate.value);
+        let tax = Math.round(subtotal * taxRate / 100);
+        this.#taxHint.textContent = tax > 0
+            ? `(${this.#formatCurrencyWithSymbol(tax)})`
+            : '';
+        this.#taxHint.classList.toggle('d-none', tax <= 0);
+        this.#taxDisplayEl.textContent = this.#formatCurrencyWithSymbol(tax);
+        this.#taxDisplayEl.closest('div').classList.toggle('d-none', tax == 0);
+
+        this.#subtotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal);
+        this.#grandTotalEl.textContent = this.#formatCurrencyWithSymbol(subtotal + tax);
     }
 
     #onSubmit(e) {

@@ -168,7 +168,7 @@ public sealed partial class OrderController : BaseAuthorizedController
                     total = info.OrderTotal,
                     subTotal = info.OrderSubTotal,
                     discount = info.OrderDiscount
-                }, Localizer["Msg.SaveSuccess"]);
+                });
             }
 
             NotifySuccess("Msg.SaveSuccess");

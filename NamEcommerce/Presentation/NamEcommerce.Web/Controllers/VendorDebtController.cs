@@ -25,11 +25,11 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     }
 
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
-    public async Task<IActionResult> Details(Guid vendorId, int pageIndex = 1)
+    public async Task<IActionResult> Details(Guid id, int pageIndex = 1)
     {
         var model = await _mediator.Send(new GetVendorLedgerDetailsQuery
         {
-            VendorId = vendorId,
+            VendorId = id,
             PageIndex = pageIndex
         });
         if (model == null)

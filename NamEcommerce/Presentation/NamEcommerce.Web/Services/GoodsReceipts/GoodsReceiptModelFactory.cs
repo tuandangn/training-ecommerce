@@ -108,7 +108,6 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
-        // Tổng số lượng đã trả NCC (Confirmed) — group theo GoodsReceiptItemId.
         var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByGoodsReceiptQuery
         {
             GoodsReceiptId = id
@@ -130,6 +129,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
                 PendingReturnQuantity = summary?.PendingQuantity ?? 0m
             });
         }
+        model.HasReturns = returnedQuantities.Count > 0;
 
         return model;
     }

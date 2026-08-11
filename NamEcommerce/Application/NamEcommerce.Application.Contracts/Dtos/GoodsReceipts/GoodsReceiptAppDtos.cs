@@ -47,6 +47,7 @@ public sealed record GoodsReceiptAppDto(Guid Id) : BaseGoodsReceiptAppDto
 public sealed record CreateGoodsReceiptAppDto : BaseGoodsReceiptAppDto
 {
     public required IList<CreateGoodsReceiptItemAppDto> Items { get; init; }
+    public decimal? TaxRate { get; set; }
 
     public override (bool valid, string? errorMessage) Validate()
     {

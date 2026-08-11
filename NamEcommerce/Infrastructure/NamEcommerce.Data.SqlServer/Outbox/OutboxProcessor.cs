@@ -106,7 +106,7 @@ public sealed class OutboxProcessor : BackgroundService
         var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
 
         var message = await db.Set<OutboxMessage>()
-            .FindAsync(new object?[] { messageId }, cancellationToken)
+            .FindAsync([messageId], cancellationToken)
             .ConfigureAwait(false);
 
         if (message is null) return;

@@ -71,7 +71,7 @@ function isFormValid(form) {
 function validateElement(element) {
     if (!element || !element.form)
         return;
-    $(element.form).data('validator')?.element(element);
+    return $(element.form).data('validator')?.element(element);
 }
 
 function enableSubmitButtons(form, enabled) {

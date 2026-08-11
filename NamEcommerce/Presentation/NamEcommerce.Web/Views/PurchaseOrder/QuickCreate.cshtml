@@ -165,13 +165,35 @@
                 </div>
                 <div class="content-card-footer bg-white py-2">
                     <div class="order-summary" id="tableFooter">
-                        <div class="order-summary-row total border-top-0 pt-0 mt-0">
+                        <div class="order-summary-row">
+                            <span class="label">Tạm tính</span>
+                            <span class="value">
+                                <span id="orderSubTotal">@Model.SubTotal.DisplayCurrencyWithSymbol()</span>
+                            </span>
+                        </div>
+                        <div class="order-summary-row @(Model.TaxAmount > 0 ? "" : "d-none")">
+                            <span class="label">
+                                Thuế
+                                <span id="orderTaxRate" class="@(Model.TaxRate.HasValue ? "" : "d-none")">@(Model.TaxRate)%</span>
+                            </span>
+                            <span class="value text-muted">
+                                <span id="orderTaxAmount">@Model.TaxAmount.DisplayCurrencyWithSymbol()</span>
+                            </span>
+                        </div>
+                        <div class="order-summary-row total">
                             <span class="label">Tổng cộng</span>
                             <span class="value">
-                                <span id="orderTotal">0 đ</span>
+                                <span id="orderTotal">@Model.Total.DisplayCurrencyWithSymbol()</span>
+                            </span>
+                        </div>
+                        <div class="order-summary-row @(Model.ShippingAmount > 0 ? "" : "d-none")">
+                            <span class="label">Phí vận chuyển</span>
+                            <span class="value text-muted">
+                                <span id="orderShippingAmount">@Model.ShippingAmount.DisplayCurrencyWithSymbol()</span>
                             </span>
                         </div>
                     </div>
+                    <div class="alert alert-info text-end mb-0 @(Model.ShippingAmount > 0 ? "" : "d-none")" id="orderShippingAmountHint">Phí vận chuyển đã trả sẽ được cộng vào chi phí và không được tính vào công nợ NCC</div>
                 </div>
                 <div class="content-card-body">
                     <div class="d-flex flex-column gap-3">
@@ -209,7 +231,7 @@
                                 </div>
                                 <div class="tab-pane fade border rounded p-3" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
                                     <div class="row g-3">
-                                        <div class="col-lg-4 col-md-6">
+                                        <div class="col-xl-3 col-lg-6">
                                             <label asp-for="ReceivedOn" class="form-label small fw-bold text-muted text-uppercase d-block">
                                                 Ngày nhận
                                             </label>
@@ -217,7 +239,7 @@
                                                    data-val-range-max="@DateTime.Now.ToString("s")" data-val-range-min="@Model.PlacedOn.ToString("s")" />
                                             <span asp-validation-for="ReceivedOn" class="small text-danger"></span>
                                         </div>
-                                        <div class="col-lg-4 col-md-6">
+                                        <div class="col-xl-3 col-lg-6">
                                             <label asp-for="DefaultWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
                                             <select asp-for="DefaultWarehouseId" class="form-select">
                                                 <option value="">-- Chọn kho --</option>
@@ -228,15 +250,28 @@
                                             </select>
                                             <span asp-validation-for="DefaultWarehouseId" class="small text-danger"></span>
                                         </div>
-                                        <div class="col-lg-4 col-md-6">
-                                            <label class="form-label small fw-bold text-muted text-uppercase">
-                                                Tiền xe
+                                        <div class="col-xl-3 col-lg-6">
+                                            <label class="form-label small fw-bold text-muted text-uppercase" asp-for="ShippingAmount">
+                                                Vận chuyển
                                             </label>
-                                            <input type="text" asp-for="ShippingAmount" id="shippingAmount" class="form-control include-suffix"
+                                            <input type="text" asp-for="ShippingAmount" class="form-control include-suffix"
                                                    data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
                                                    data-val="true" data-val-number="Số tiền phải là số"
                                                    data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.1" />
                                             <span class="text-danger small" asp-validation-for="ShippingAmount"></span>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-6">
+                                            <label class="form-label small fw-bold text-muted text-uppercase" asp-for="TaxRate">
+                                                Thuế
+                                            </label>
+                                            <select asp-for="TaxRate" class="form-select">
+                                                <option value="" selected="@(!Model.TaxRate.HasValue)">Không thuế</option>
+                                                @foreach (var taxRate in Model.AvailableTaxRates)
+                                                {
+                                                    <option value="@taxRate" selected="@(taxRate == Model.TaxRate)">@(taxRate)%</option>
+                                                }
+                                            </select>
+                                            <span class="text-danger small" asp-validation-for="TaxRate"></span>
                                         </div>
                                         <div class="col-12">
                                             @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
@@ -279,8 +314,8 @@
                                 <div class="tab-pane fade border rounded p-3" id="navPaid" role="tabpanel" aria-labelledby="navPaid-tab" tabindex="0">
                                     <div>
                                         <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label small fw-bold text-muted text-uppercase">Số tiền</label>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold text-muted text-uppercase" for="paymentAmount">Số tiền</label>
                                                 <input type="text" asp-for="PaidAmount" id="paymentAmount" class="form-control include-suffix"
                                                        data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
                                                        data-val="true" data-val-required="Vui lòng nhập số tiền"
@@ -288,15 +323,30 @@
                                                        data-val-range-max="" data-val-number="Số tiền phải là số" />
                                                 <span class="text-danger small" asp-validation-for="PaidAmount"></span>
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label small fw-bold text-muted text-uppercase">Hình thức thanh toán</label>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold text-muted text-uppercase" for="paymentMethod">Hình thức thanh toán</label>
                                                 <select id="paymentMethod" class="form-select" asp-for="PaymentMethod">
                                                     @foreach (var paymentMethod in PaymentMethod.GetOptions())
                                                     {
-                                                        <option value="@paymentMethod.value" selected="@(paymentMethod.value == (int)Model.PaymentMethod)">@paymentMethod.text</option>
+                                                        <option value="@paymentMethod.value" selected="@(paymentMethod.value == (int)Model.PaymentMethod)"
+                                                                data-require-bank-account="@(paymentMethod.value == (int)PaymentMethod.BankTransfer ? "true" : "false")">
+                                                            @paymentMethod.text
+                                                        </option>
                                                     }
                                                 </select>
                                                 <span class="text-danger small" asp-validation-for="PaymentMethod"></span>
+                                            </div>
+                                            <div class="col-md-4 @(Model.PaymentMethod == PaymentMethod.BankTransfer ? "" : "d-none")">
+                                                <label class="form-label small fw-bold text-muted text-uppercase" asp-for="BankAccountId">Tài khoản</label>
+                                                <select class="form-select" asp-for="BankAccountId" data-val="false" data-val-required="Vui lòng chọn tài khoản đã chuyển khoản">
+                                                    @foreach (var bankAccount in Model.AvailableBankAccounts)
+                                                    {
+                                                        <option value="@bankAccount.Id" selected="@((Model.BankAccountId.HasValue && Model.BankAccountId.Value == bankAccount.Id) || (!Model.BankAccountId.HasValue && bankAccount.IsDefault))">
+                                                            @bankAccount.DisplayName
+                                                        </option>
+                                                    }
+                                                </select>
+                                                <span class="text-danger small" asp-validation-for="BankAccountId"></span>
                                             </div>
                                         </div>
                                     </div>

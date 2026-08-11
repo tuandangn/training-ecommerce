@@ -149,7 +149,7 @@ public sealed class OrderFulfillmentScheduleManager(
 
     public async Task DeleteScheduleItemsOfOrderItemsAsync(Guid orderId, IList<Guid> orderItemIds)
     {
-        var schedules = await scheduleDataReader.SecuredDataSource
+        var schedules = await scheduleDataReader.TrackingDataSource
             .Where(schedule => schedule.OrderId == orderId && schedule.Items.Any(item => orderItemIds.Contains(item.OrderItemId)))
             .ToListAsync().ConfigureAwait(false);
 
@@ -211,7 +211,7 @@ public sealed class OrderFulfillmentScheduleManager(
         if (orderItemIds.Count == 0)
             return;
 
-        var schedules = await scheduleDataReader.DataSource
+        var schedules = await scheduleDataReader.TrackingDataSource
             .Where(schedule => schedule.IsActive
                 && schedule.Mode == OrderFulfillmentScheduleMode.WhenStockAvailable
                 && schedule.Items.Any(item => orderItemIds.Any(orderItemId => orderItemId.SecondaryId == item.OrderItemId)))

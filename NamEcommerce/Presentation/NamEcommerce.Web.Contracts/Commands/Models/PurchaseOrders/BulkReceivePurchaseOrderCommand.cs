@@ -8,7 +8,7 @@ public sealed class BulkReceivePurchaseOrderCommand : ICommand<BulkReceivePurcha
     public required Guid PurchaseOrderId { get; init; }
     public IList<BulkReceiveLineCommand> Items { get; init; } = [];
     public decimal AdditionalShipping { get; set; }
-    public decimal AdditionalTax { get; set; }
+    public decimal? TaxRate { get; set; }
 }
 
 [Serializable]

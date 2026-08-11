@@ -459,6 +459,9 @@
   <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
     <value>Vendor is not appropriate for products</value>
   </data>
+  <data name="Error.PurchaseOrder.NoItemsForSplit" xml:space="preserve">
+    <value>Purchase order don't have  any appropriate items for split</value>
+  </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Purchase order cannot be submitted at current state.</value>
   </data>
@@ -1085,5 +1088,20 @@
   </data>
   <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
     <value>Expense incurred date cannot be less than order creation date</value>
+  </data>
+  <data name="Label.PurchaseOrderItemId" xml:space="preserve">
+    <value>Purchase order item ID</value>
+  </data>
+  <data name="Msg.PurchaseOrder.YouAreWatchingNewPurchaseOrder" xml:space="preserve">
+    <value>You're watching new created purchase order</value>
+  </data>
+  <data name="Error.DataIsInvalid" xml:space="preserve">
+    <value>Data is invalid</value>
+  </data>
+  <data name="Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder" xml:space="preserve">
+    <value>The goods receipt cannot delete when it's associated with purchase order</value>
+  </data>
+  <data name="Error.TaxRateIsNotAllowed" xml:space="preserve">
+    <value>Tax rate is not allowed</value>
   </data>
 </root>

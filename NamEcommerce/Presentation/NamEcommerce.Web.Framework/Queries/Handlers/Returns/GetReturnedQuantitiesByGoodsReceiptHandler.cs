@@ -24,12 +24,12 @@ public sealed class GetReturnedQuantitiesByGoodsReceiptHandler
     public async Task<IReadOnlyDictionary<Guid, ReturnedQuantitySummary>> Handle(GetReturnedQuantitiesByGoodsReceiptQuery request, CancellationToken cancellationToken)
     {
         var (_, items) = await _vendorReturnAppService.GetListAsync(
+            pageIndex: 0,
+            pageSize: FullPageSize,
             vendorId: null,
             purchaseOrderId: null,
             goodsReceiptId: request.GoodsReceiptId,
-            status: null,
-            pageIndex: 0,
-            pageSize: FullPageSize).ConfigureAwait(false);
+            status: null).ConfigureAwait(false);
 
         var dict = items
             .Where(r => r.Status != CancelledStatus)

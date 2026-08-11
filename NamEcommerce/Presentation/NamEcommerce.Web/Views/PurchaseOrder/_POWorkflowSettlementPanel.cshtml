@@ -5,10 +5,9 @@
     var poStatus = (PurchaseOrderStatus)Model.Info.Status;
     var totalShipping = Model.Info.ShippingAmount + Model.Info.AccumulatedShippingAmount;
     var totalTax = Model.Info.TaxAmount + Model.Info.AccumulatedTaxAmount;
-    var s = Model.Settlement;
-    var now = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
-    var vendorBalance = s.VendorAccountBalance;
-    var vendorBalanceLabel = vendorBalance > 0 ? "Số dư tài khoản NCC" : vendorBalance < 0 ? "Đã ứng trước NCC" : "Đã tất toán";
+    var purchaseOrderSettlement = Model.Settlement;
+    var vendorBalance = purchaseOrderSettlement.VendorAccountBalance;
+    var vendorBalanceLabel = vendorBalance > 0 ? "Tổng công nợ NCC" : vendorBalance < 0 ? "Đã ứng trước NCC" : "Đã tất toán";
     var vendorBalanceClass = vendorBalance > 0 ? "text-danger" : vendorBalance < 0 ? "text-primary" : "text-success";
     var paymentDefaultAmount = vendorBalance > 0 ? vendorBalance : 0m;
 }
@@ -20,33 +19,28 @@
                 <h5>Kết sổ</h5>
                 <div class="text-muted small">Công nợ và thanh toán với nhà cung cấp</div>
             </div>
-            @if (poStatus == PurchaseOrderStatus.Receiving)
-            {
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#closePartialModal">
-                    <i class="bi bi-archive me-1"></i>Đóng đơn
+            <div class="d-flex align-items-center gap-2">
+                @if (poStatus == PurchaseOrderStatus.Receiving)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#closePartialModal">
+                        <i class="bi bi-archive me-1"></i>Đóng đơn
+                    </button>
+                }
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#poSettlementPaymentModal">
+                    <i class="bi bi-cash-coin me-1"></i>Thanh toán
                 </button>
-            }
-            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#poSettlementPaymentModal">
-                <i class="bi bi-cash-coin me-1"></i>Thanh toán
-            </button>
+            </div>
         </div>
 
         <div class="content-card-body">
             <div class="row g-4">
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase fw-semibold mb-3 ui-fs-072-caps">Chi phí đơn nhập</h6>
+                    <h6 class="text-muted fw-medium mb-3 text-end fs-6 pe-3">Tổng đơn hàng</h6>
                     <div class="order-summary">
                         <div class="order-summary-row">
                             <span class="label">Tiền hàng</span>
-                            <span class="value">@s.PurchaseTotal.DisplayCurrencyWithSymbol()</span>
+                            <span class="value text-muted">@purchaseOrderSettlement.PurchaseSubTotal.DisplayCurrencyWithSymbol()</span>
                         </div>
-                        @if (totalShipping > 0)
-                        {
-                            <div class="order-summary-row">
-                                <span class="label">Phí vận chuyển</span>
-                                <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
-                            </div>
-                        }
                         @if (totalTax > 0)
                         {
                             <div class="order-summary-row">
@@ -54,45 +48,105 @@
                                 <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
                             </div>
                         }
-                        @if (s.ReturnTotal > 0)
+                        <div class="order-summary-row total">
+                            <span class="label">Tổng cộng</span>
+                            <span class="value">@purchaseOrderSettlement.PurchaseTotal.DisplayCurrencyWithSymbol()</span>
+                        </div>
+                        @if (Model.Returns.TotalAmount > 0)
                         {
                             <div class="order-summary-row">
-                                <span class="label">Trả hàng (@Model.Returns.ReturnCount phiếu)</span>
-                                <span class="value text-success">-@s.ReturnTotal.DisplayCurrencyWithSymbol()</span>
+                                <span class="label">Trả hàng</span>
+                                <span class="value text-muted">-@Model.Returns.TotalAmount.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                            <div class="order-summary-row total">
+                                <span class="label">Còn lại</span>
+                                <span class="value text-danger">@purchaseOrderSettlement.NetPayable.DisplayCurrencyWithSymbol()</span>
                             </div>
                         }
-                        <div class="order-summary-row total">
-                            <span class="label">Cần thanh toán</span>
-                            <span class="value">@s.NetPayable.DisplayCurrencyWithSymbol()</span>
-                        </div>
                     </div>
                 </div>
 
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase fw-semibold mb-3 ui-fs-072-caps">Công nợ nhà cung cấp</h6>
+                    <h6 class="text-muted fw-medium mb-3 text-end fs-6 pe-3">Công nợ đơn hàng</h6>
                     <div class="order-summary">
                         <div class="order-summary-row">
-                            <span class="label">Công nợ đã tạo (@s.DebtCount)</span>
-                            <span class="value text-danger">@s.DebtTotal.DisplayCurrencyWithSymbol()</span>
-                        </div>
-                        <div class="order-summary-row total">
-                            <span class="label">Còn lại</span>
-                            <span class="value @(s.RemainingDebt > 0 && s.DebtCount > 0 ? "text-danger" : "text-success")">
-                                @if (s.RemainingDebt <= 0 && s.DebtTotal > 0)
+                            <span class="label">
+                                Công nợ
+                                @if (purchaseOrderSettlement.DebtCount > 1)
                                 {
-                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    <span>
+                                        (@purchaseOrderSettlement.DebtCount)
+                                    </span>
                                 }
-                                @s.RemainingDebt.DisplayCurrencyWithSymbol()
+                            </span>
+                            <span class="value text-muted">
+                                @if (purchaseOrderSettlement.DebtTotal > 0)
+                                {
+                                    @purchaseOrderSettlement.DebtTotal.DisplayCurrencyWithSymbol()
+                                }
+                                else
+                                {
+                                    @:Chưa phát sinh
+                                }
                             </span>
                         </div>
+                        @if (purchaseOrderSettlement.ReturnTotal > 0)
+                        {
+                            <div class="order-summary-row">
+                                <span class="label">
+                                    Trả hàng
+                                </span>
+                                <span class="value text-muted">-@purchaseOrderSettlement.ReturnTotal.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                            <div class="order-summary-row total">
+                                <span class="label">
+                                    Tổng cộng
+                                </span>
+                                <span class="value">
+                                    @((purchaseOrderSettlement.DebtTotal - purchaseOrderSettlement.ReturnTotal).DisplayCurrencyWithSymbol())
+                                </span>
+                            </div>
+                        }
+                        @if (purchaseOrderSettlement.PaidTotal > 0)
+                        {
+                            <div class="order-summary-row">
+                                <span class="label">
+                                    Thanh toán
+                                    @if (purchaseOrderSettlement.Payments.Count > 1)
+                                    {
+                                        <span>
+                                            (@purchaseOrderSettlement.Payments.Count)
+                                        </span>
+                                    }
+                                </span>
+                                <span class="value text-muted">-@(Math.Min(purchaseOrderSettlement.DebtTotal - purchaseOrderSettlement.ReturnTotal, purchaseOrderSettlement.PaidTotal).DisplayCurrencyWithSymbol())</span>
+                            </div>
+                            <div class="order-summary-row">
+                                <span class="label">Còn lại</span>
+                                <span class="value @(purchaseOrderSettlement.RemainingDebt > 0 ? "text-muted" : "text-success")">
+                                    @if (purchaseOrderSettlement.RemainingDebt <= 0 && purchaseOrderSettlement.DebtTotal > 0 || vendorBalance == 0)
+                                    {
+                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                    }
+                                    @purchaseOrderSettlement.RemainingDebt.DisplayCurrencyWithSymbol()
+                                </span>
+                            </div>
+                        }
+                        @if (vendorBalance > 0)
+                        {
+                            <div class="order-summary-row total">
+                                <span class="label">Còn phải thanh toán</span>
+                                <span class="value text-danger">
+                                    @vendorBalance.DisplayCurrencyWithSymbol()
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-end mb-3">
+                                <a asp-action="Details" asp-controller="VendorDebt" asp-route-id="@Model.Info.VendorId" class="btn-link text-muted text-decoration-none">
+                                    Xem công nợ <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        }
                     </div>
-                    @if (Model.Returns.TotalAmount > 0)
-                    {
-                        <div class="alert alert-info border-0 small mt-3 mb-0">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Tổng thu hồi từ trả hàng: <strong>@Model.Returns.TotalAmount.DisplayCurrencyWithSymbol()</strong>
-                        </div>
-                    }
                     @if (Model.Receiving.HasPendingCosting)
                     {
                         <div class="alert alert-warning border-0 small mt-3 mb-0">
@@ -103,21 +157,47 @@
                 </div>
             </div>
 
-            <h6 class="text-muted text-uppercase fw-semibold mt-4 mb-3 ui-fs-072-caps">Thanh toán đã ghi nhận</h6>
-            @if (s.Payments.Count == 0)
+            <h6 class="text-muted fw-medium mt-4 fs-6">Công nợ</h6>
+            @if (purchaseOrderSettlement.Debts.Count == 0)
             {
-                <div class="workflow-soft-empty">
+                <div class="workflow-soft-empty mb-3">
                     <i class="bi bi-cash-stack"></i>
-                    <span>Chưa ghi nhận khoản chi nào cho đơn nhập này.</span>
+                    <span>Chưa ghi nhận công nợ nào cho đơn nhập này.</span>
                 </div>
             }
             else
             {
-                <div class="table-responsive">
+                <div class="table-responsive mb-3">
                     <table class="table data-table mb-0">
                         <thead>
                             <tr>
-                                <th>Mã chi</th>
+                                <th>Mã</th>
+                                <th class="text-end">Số tiền</th>
+                                <th class="text-end">Ngày phát sinh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var debt in purchaseOrderSettlement.Debts)
+                            {
+                                <tr>
+                                    <td class="fw-600">@debt.Code</td>
+                                    <td class="text-end text-success fw-bold">@debt.Amount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@debt.CreatedOn.ToString(ViewConstants.DateTimeFormat)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (purchaseOrderSettlement.Payments.Count > 0)
+            {
+                <h6 class="text-muted fw-medium fs-6">Thanh toán</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
                                 <th>Hình thức</th>
                                 <th>Loại</th>
                                 <th>Ghi chú</th>
@@ -126,7 +206,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var payment in s.Payments)
+                            @foreach (var payment in purchaseOrderSettlement.Payments)
                             {
                                 <tr>
                                     <td class="fw-600">@payment.Code</td>
@@ -134,7 +214,40 @@
                                     <td>@payment.PaymentTypeText</td>
                                     <td>@(payment.Note ?? "-")</td>
                                     <td class="text-end text-success fw-bold">@payment.Amount.DisplayCurrencyWithSymbol()</td>
-                                    <td class="text-end">@payment.PaidOn.ToString($"{ViewConstants.DefaultDateFormat} HH:mm")</td>
+                                    <td class="text-end">@payment.PaidOn.ToString(ViewConstants.DateTimeFormat)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (purchaseOrderSettlement.Credits.Count > 0)
+            {
+                <h6 class="text-muted fw-medium fs-6">Trả hàng</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
+                                <th>Phiếu trả</th>
+                                <th class="text-end">Số tiền</th>
+                                <th class="text-end">Ngày trả</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var credit in purchaseOrderSettlement.Credits)
+                            {
+                                <tr>
+                                    <td class="fw-600">@credit.Code</td>
+                                    <td>
+                                        <a asp-action="Details" asp-controller="VendorReturn" asp-route-id="@credit.VendorReturnId"
+                                           class="text-decoration-none fw-medium text-nowrap">
+                                            @credit.VendorReturnCode
+                                        </a>
+                                    </td>
+                                    <td class="text-end text-success fw-bold">@credit.Amount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@credit.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>
                                 </tr>
                             }
                         </tbody>
@@ -172,7 +285,7 @@
                             </div>
                             <div class="col-5">
                                 <label class="form-label" for="poSettlementPaymentPaidOn">Ngày chi</label>
-                                <input id="poSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control" value="@now"
+                                <input id="poSettlementPaymentPaidOn" name="PaidOn" type="datetime-local" class="form-control" value="@DateTime.Now.ToString("s")"
                                        data-val="true" data-val-required="Vui lòng nhập ngày chi" />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="PaidOn" data-valmsg-replace="true"></span>
                             </div>
@@ -198,7 +311,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-floppy me-1"></i>Xác nhận thanh toán
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>

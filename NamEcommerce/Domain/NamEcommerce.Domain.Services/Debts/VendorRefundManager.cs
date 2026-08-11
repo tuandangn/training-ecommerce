@@ -24,7 +24,7 @@ public sealed class VendorRefundManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PT-NCC-R-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => refundReader.SecuredDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => refundReader.TrackingDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     public async Task<VendorRefundDto> CreateAsync(CreateVendorRefundDto dto)

@@ -115,6 +115,7 @@ public sealed class PurchaseOrderDetailsModel
     [Serializable]
     public sealed record SettlementModel
     {
+        public decimal PurchaseSubTotal { get; init; }
         public decimal PurchaseTotal { get; init; }
         public decimal ReturnTotal { get; init; }
         public decimal NetPayable { get; init; }
@@ -124,7 +125,9 @@ public sealed class PurchaseOrderDetailsModel
         public int DebtCount { get; init; }
         public int PaymentCount { get; init; }
         public decimal VendorAccountBalance { get; init; }
+        public IList<SettlementDebtModel> Debts { get; init; } = [];
         public IList<SettlementPaymentModel> Payments { get; init; } = [];
+        public IList<SettlementCreditModel> Credits { get; init; } = [];
     }
 
     [Serializable]
@@ -138,6 +141,28 @@ public sealed class PurchaseOrderDetailsModel
         public string? Note { get; init; }
         public DateTime PaidOn { get; init; }
     }
+
+    [Serializable]
+    public sealed record SettlementCreditModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public Guid VendorReturnId { get; set; }
+        public string VendorReturnCode { get; set; } = string.Empty;
+        public decimal Amount { get; init; }
+        public string? Note { get; init; }
+        public DateTime CreatedOn { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementDebtModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public decimal Amount { get; init; }
+        public DateTime CreatedOn { get; init; }
+    }
+
 
     [Serializable]
     public sealed record TimelineEventModel

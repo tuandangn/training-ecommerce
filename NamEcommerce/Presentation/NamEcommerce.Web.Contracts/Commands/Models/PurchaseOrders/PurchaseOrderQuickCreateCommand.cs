@@ -16,6 +16,7 @@ public sealed class PurchaseOrderQuickCreateCommand : ICommand<QuickCreatePurcha
     public DateTime? ExpectedDeliveryDate { get; set; }
     public IList<Guid>? PictureIds { get; set; }
     public decimal? ShippingAmount { get; set; }
+    public decimal? TaxRate { get; set; }
 
     public required bool IsPaid { get; init; }
     public PurchaseOrderQuickCreatePaymentModel? PaymentInfo { get; set; }
@@ -34,6 +35,7 @@ public sealed class PurchaseOrderQuickCreateCommand : ICommand<QuickCreatePurcha
     {
         public required decimal PaidAmount { get; init; }
         public required int PaymentMethod { get; init; }
+        public Guid? BankAccountId { get; set; }
     }
 }
 

@@ -36,15 +36,14 @@
                         </div>
                         <div class="mt-3">
                             <label class="form-label small fw-semibold text-muted text-uppercase" asp-for="Note" for="edit@(Html.IdFor(m => m.Note))">Ghi chú</label>
-                            <textarea asp-for="Note" name="note" class="form-control" rows="3" id="edit@(Html.IdFor(m => m.Note))" placeholder="Ghi chú"
-                                      data-val="true" data-val-maxlength="500" data-val-maxlength-max="Ghi chú tối đa 500 ký tự"></textarea>
+                            <textarea asp-for="Note" name="note" class="form-control" rows="3" id="edit@(Html.IdFor(m => m.Note))" placeholder="Ghi chú"></textarea>
                             <span class="small text-danger" asp-validation-for="Note"></span>
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                            <i class="bi bi-check-lg-all me-1"></i>Lưu lại
                         </button>
                     </div>
                 </fieldset>

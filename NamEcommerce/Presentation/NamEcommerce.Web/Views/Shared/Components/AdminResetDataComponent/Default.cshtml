@@ -1,7 +1,7 @@
 <form asp-action="ResetData" asp-controller="Administration" method="post" asp-antiforgery="true" id="resetDataForm">
 
-    <div class="d-grid px-3 pb-3">
-        <button type="submit" class="btn btn-danger btn-sm">
+    <div class="d-grid px-3">
+        <button type="submit" class="btn btn-danger btn-sm" disabled>
             Reset dữ liệu
         </button>
     </div>
@@ -19,6 +19,7 @@
                     resetDataForm.submit();
                 }
             });
+            resetDataForm.querySelector('[type=submit]').disabled = false;
         }
     });
 </script>

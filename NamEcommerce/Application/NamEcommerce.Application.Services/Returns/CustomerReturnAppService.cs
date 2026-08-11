@@ -70,131 +70,60 @@ public sealed class CustomerReturnAppService(
             }
         }
 
-        try
+        var domainDto = new CreateCustomerReturnDto
         {
-            var domainDto = new CreateCustomerReturnDto
+            DeliveryNoteId = dto.DeliveryNoteId,
+            CustomerId = dto.CustomerId,
+            WarehouseId = dto.WarehouseId,
+            Note = dto.Note,
+            AdditionalCost = dto.AdditionalCost,
+            CompensateInNextDelivery = dto.CompensateInNextDelivery,
+            ExcludeCustomerReturnRequestId = dto.ExcludeCustomerReturnRequestId,
+            Items = dto.Items.Select(i => new CreateCustomerReturnItemDto
             {
-                DeliveryNoteId = dto.DeliveryNoteId,
-                CustomerId = dto.CustomerId,
-                WarehouseId = dto.WarehouseId,
-                Note = dto.Note,
-                AdditionalCost = dto.AdditionalCost,
-                CompensateInNextDelivery = dto.CompensateInNextDelivery,
-                ExcludeCustomerReturnRequestId = dto.ExcludeCustomerReturnRequestId,
-                Items = dto.Items.Select(i => new CreateCustomerReturnItemDto
-                {
-                    ProductId = i.ProductId,
-                    DeliveryNoteItemId = i.DeliveryNoteItemId,
-                    RequestedQuantity = i.RequestedQuantity,
-                    AcceptedQuantity = i.AcceptedQuantity,
-                    OriginalUnitPrice = i.OriginalUnitPrice,
-                    ReturnUnitPrice = i.ReturnUnitPrice
-                })
-            };
+                ProductId = i.ProductId,
+                DeliveryNoteItemId = i.DeliveryNoteItemId,
+                RequestedQuantity = i.RequestedQuantity,
+                AcceptedQuantity = i.AcceptedQuantity,
+                OriginalUnitPrice = i.OriginalUnitPrice,
+                ReturnUnitPrice = i.ReturnUnitPrice
+            })
+        };
 
-            var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
-            return new CreateCustomerReturnResultAppDto { Success = true, CreatedId = result.Id };
-        }
-        catch (ReturnDataIsInvalidException ex)
-        {
-            return new CreateCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new CreateCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
+        return new CreateCustomerReturnResultAppDto { Success = true, CreatedId = result.Id };
     }
 
     public async Task<UpdateCustomerReturnResultAppDto> UpdateAsync(UpdateCustomerReturnAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        try
+        var domainDto = new UpdateCustomerReturnDto(dto.Id)
         {
-            var domainDto = new UpdateCustomerReturnDto(dto.Id)
-            {
-                Note = dto.Note,
-                ReturnDate = dto.ReturnDate
-            };
+            Note = dto.Note,
+            ReturnDate = dto.ReturnDate
+        };
 
-            await _manager.UpdateAsync(domainDto).ConfigureAwait(false);
-            return new UpdateCustomerReturnResultAppDto { Success = true };
-        }
-        catch (CustomerReturnNotFoundException ex)
-        {
-            return new UpdateCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new UpdateCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.UpdateAsync(domainDto).ConfigureAwait(false);
+        return new UpdateCustomerReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmCustomerReturnResultAppDto> MoveToInspectingAsync(Guid id)
     {
-        try
-        {
-            await _manager.MoveToInspectingAsync(id).ConfigureAwait(false);
-            return new ConfirmCustomerReturnResultAppDto { Success = true };
-        }
-        catch (CustomerReturnNotFoundException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.MoveToInspectingAsync(id).ConfigureAwait(false);
+        return new ConfirmCustomerReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmCustomerReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
-        try
-        {
-            await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
-            return new ConfirmCustomerReturnResultAppDto { Success = true };
-        }
-        catch (CustomerReturnNotFoundException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ExceedsDeliveredQuantityException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
+        return new ConfirmCustomerReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmCustomerReturnResultAppDto> CancelAsync(Guid id)
     {
-        try
-        {
-            await _manager.CancelAsync(id).ConfigureAwait(false);
-            return new ConfirmCustomerReturnResultAppDto { Success = true };
-        }
-        catch (CustomerReturnNotFoundException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmCustomerReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.CancelAsync(id).ConfigureAwait(false);
+        return new ConfirmCustomerReturnResultAppDto { Success = true };
     }
 
     public async Task<CustomerReturnAppDto?> GetByIdAsync(Guid id)
@@ -306,8 +235,7 @@ public sealed class CustomerReturnAppService(
         return Task.FromResult(result);
     }
 
-    public Task<List<ReturnableItemAppDto>> GetReturnableItemsByCustomerAsync(
-        Guid customerId, Guid? excludeReturnId = null)
+    public Task<List<ReturnableItemAppDto>> GetReturnableItemsByCustomerAsync(Guid customerId, Guid? excludeReturnId = null)
     {
         if (customerId == Guid.Empty)
             return Task.FromResult(new List<ReturnableItemAppDto>());

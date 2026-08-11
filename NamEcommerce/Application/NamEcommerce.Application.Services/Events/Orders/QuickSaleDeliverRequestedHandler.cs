@@ -2,7 +2,6 @@ using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
-using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
@@ -43,7 +42,7 @@ public sealed class QuickSaleDeliverRequestedHandler(
                 group.Quantity,
                 deliveryNote.Id,
                 Guid.Empty,
-                $"Xuat hang cho phieu xuat {deliveryNote.Code}",
+                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
                 releaseReservedStock: true).ConfigureAwait(false);
         }
 

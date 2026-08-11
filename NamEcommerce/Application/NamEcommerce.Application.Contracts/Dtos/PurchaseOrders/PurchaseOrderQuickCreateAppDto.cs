@@ -12,7 +12,7 @@ public sealed record PurchaseOrderQuickCreateAppDto
     public Guid? DefaultWarehouseId { get; set; }
     public IList<Guid> PictureIds { get; init; } = [];
     public decimal? ShippingAmount { get; set; }
-    public decimal? TaxAmount { get; set; }
+    public decimal? TaxRate { get; set; }
     public DateTime? ExpectedDeliveryOnUtc { get; set; }
 
     public required bool IsPaid { get; init; }
@@ -43,17 +43,12 @@ public sealed record PurchaseOrderQuickCreateAppDto
                 return (false, "Error.ExpectedDeliveryDateCannotBeInPast");
         }
 
-        if (TaxAmount.HasValue && TaxAmount <= 0)
-            return (false, "Error.TaxAmountCannotBeNegative");
-
         if (IsPaid)
         {
             if (Payment is null)
                 return (false, "Error.PaymentInfoRequired");
             if (Payment.PaidAmount <= 0)
                 return (false, "Error.PaymentAmountMustBePositive");
-            if (Payment.PaidAmount > Items.Sum(item => item.Quantity * (item.UnitCost ?? 0)) + (ShippingAmount ?? 0) + (TaxAmount ?? 0))
-                return (false, "Error.PaidAmountExceedsOrderTotal");
         }
         return (true, null);
     }

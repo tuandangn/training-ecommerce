@@ -31,7 +31,7 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
     Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);
 
-    Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
+    Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping);
 
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
     Task ClosePartialAsync(Guid purchaseOrderId, string reason);

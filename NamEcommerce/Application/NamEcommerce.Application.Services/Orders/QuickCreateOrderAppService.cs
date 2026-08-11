@@ -35,7 +35,7 @@ public sealed class QuickCreateOrderAppService(
 {
     public async Task<QuickCreateOrderResultAppDto> QuickCreateOrderAsync(QuickCreateOrderAppDto dto)
     {
-        var validateResult = await ValidateQuickCreateAsync(dto).ConfigureAwait(false);
+        var validateResult = await ValidateAsync(dto).ConfigureAwait(false);
         if (!validateResult.success)
             return QuickCreateOrderResultAppDto.CreateError(validateResult.errorMessage);
 
@@ -152,7 +152,7 @@ public sealed class QuickCreateOrderAppService(
         return CommonActionResultDto.CreateSuccess();
     }
 
-    private async Task<(bool success, string? errorMessage)> ValidateQuickCreateAsync(QuickCreateOrderAppDto dto)
+    private async Task<(bool success, string? errorMessage)> ValidateAsync(QuickCreateOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 

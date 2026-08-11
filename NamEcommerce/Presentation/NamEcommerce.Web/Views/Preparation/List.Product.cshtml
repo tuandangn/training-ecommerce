@@ -1,6 +1,5 @@
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model ProductPreparationListModel
-
 <div>
     <div class="content-card" data-responsive-list data-list-key="preparation-product-list">
         <div class="action-toolbar">
@@ -44,7 +43,7 @@
                                     </span>
                                     @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
                                     {
-                                        var isGroupOverdue = preparationItem.EarliestShippingDate.Value.Date <= DateTime.UtcNow.Date;
+                                        var isGroupOverdue = preparationItem.EarliestShippingDate.Value.Date <= DateTime.Today.ToUniversalTime();
                                         <span class="small @(isGroupOverdue ? "text-danger fw-bold" : "text-muted")">
                                             <i class="bi bi-calendar-event me-1"></i>Giao sớm nhất: @preparationItem.EarliestShippingDate.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
                                         </span>

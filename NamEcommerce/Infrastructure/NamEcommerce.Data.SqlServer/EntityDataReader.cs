@@ -45,7 +45,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public async Task<bool> AnyAsync(ISpecification<TEntity> spec)
         => await DataSource.AnyAsync(spec.Criteria).ConfigureAwait(false);
 
-    public IQueryable<TEntity> SecuredDataSource
+    public IQueryable<TEntity> TrackingDataSource
     {
         get
         {

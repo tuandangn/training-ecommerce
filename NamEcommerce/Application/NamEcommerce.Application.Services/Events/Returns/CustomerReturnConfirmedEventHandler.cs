@@ -34,15 +34,12 @@ public sealed class CustomerReturnConfirmedEventHandler(
 
     public async Task Handle(CustomerReturnConfirmed notification, CancellationToken cancellationToken)
     {
-        // Re-fetch để lấy Items đầy đủ — event chỉ mang Id để tránh reference leak qua event boundary.
         var customerReturn = await _customerReturnManager.GetByIdAsync(notification.CustomerReturnId)
             .ConfigureAwait(false);
         if (customerReturn is null) return;
 
-        // Idempotency guard: đã xử lý rồi thì bỏ qua
         if (customerReturn.GeneratedGoodsReceiptId.HasValue) return;
 
-        // 1. Tạo GoodsReceipt nhận lại hàng (SourceType=FromCustomerReturn, cộng tồn + không sinh VendorDebt)
         var goodsReceiptId = await _goodsReceiptManager.CreateFromCustomerReturnAsync(
             new CreateGoodsReceiptFromCustomerReturnDto
             {
@@ -56,7 +53,6 @@ public sealed class CustomerReturnConfirmedEventHandler(
                 })
             }).ConfigureAwait(false);
 
-        // 2. Ghi nhận GoodsReceiptId + giảm CustomerDebt FIFO (net = Σ AcceptedTotal - AdditionalCost)
         await ReserveCompensatedQuantityAsync(customerReturn).ConfigureAwait(false);
 
         var totalReturnAmount = customerReturn.NetRefundAmount;

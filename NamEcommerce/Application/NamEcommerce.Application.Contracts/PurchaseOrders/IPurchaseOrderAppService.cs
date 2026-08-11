@@ -37,9 +37,7 @@ public interface IPurchaseOrderAppService
 
     Task<ReceiveItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
-    Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto);
-
-    Task<CommonActionResultDto> AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
+    Task<CommonActionResultDto> AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping);
 
     Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderAppDto dto);
 

@@ -143,11 +143,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto)
     {
-        var source = await _purchaseOrderRepository.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
-        if (source is null)
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.SourcePurchaseOrderId);
 
-        if (!source.CanUpdateItems())
+        if (!purchaseOrder.CanUpdateItems())
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
         if (dto.Items.Count == 0)
@@ -155,7 +158,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.FirstOrDefault(i => i.Id == split.ItemId)
+            var srcItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == split.ItemId)
                 ?? throw new PurchaseOrderItemIsNotFoundException();
 
             var available = srcItem.QuantityOrdered - srcItem.QuantityReceived;
@@ -163,7 +166,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
         }
 
-        var hasRemainingInSource = source.Items.Any(srcItem =>
+        var hasRemainingInSource = purchaseOrder.Items.Any(srcItem =>
         {
             var splitItem = dto.Items.FirstOrDefault(s => s.ItemId == srcItem.Id);
             if (splitItem is null) return true;
@@ -175,16 +178,16 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         var now = DateTime.UtcNow;
         var po2 = await CreatePurchaseOrderAggregateAsync(
-            source.VendorId,
-            source.WarehouseId,
+            purchaseOrder.VendorId,
+            purchaseOrder.WarehouseId,
             now,
-            source.ExpectedDeliveryDateUtc > now ? source.ExpectedDeliveryDateUtc : null,
-            source.Note,
+            purchaseOrder.ExpectedDeliveryDateUtc > now ? purchaseOrder.ExpectedDeliveryDateUtc : null,
+            purchaseOrder.Note,
             0, 0).ConfigureAwait(false);
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            var srcItem = purchaseOrder.Items.First(i => i.Id == split.ItemId);
             await po2.AddPurchaseOrderItemAsync(
                 new PurchaseOrderItem(po2.Id, srcItem.ProductId, split.Quantity, srcItem.UnitCost) { Note = srcItem.Note },
                 _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
@@ -195,17 +198,17 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            var srcItem = purchaseOrder.Items.First(i => i.Id == split.ItemId);
             var remaining = srcItem.QuantityOrdered - split.Quantity;
             if (remaining <= 0)
-                source.RemoveOrderItem(split.ItemId);
+                purchaseOrder.RemoveOrderItem(split.ItemId);
             else
-                source.UpdateOrderItem(split.ItemId, remaining, srcItem.UnitCost, srcItem.Note);
+                purchaseOrder.UpdateOrderItem(split.ItemId, remaining, srcItem.UnitCost, srcItem.Note);
         }
 
-        source.UpdatedOnUtc = DateTime.UtcNow;
-        source.MarkUpdated();
-        await _purchaseOrderRepository.UpdateAsync(source).ConfigureAwait(false);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkUpdated();
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultDto { CreatedId = po2.Id };
     }
@@ -606,10 +609,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-
         purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, dto.ReceivedQuantity);
-
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         var grResult = await _goodsReceiptManager.CreateGoodsReceiptAsync(new CreateGoodsReceiptDto
         {
@@ -622,8 +622,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 Quantity = dto.ReceivedQuantity,
                 WarehouseId = dto.WarehouseId,
                 UnitCost = dto.ActualUnitCost
-            }]
+            }],
+            TaxRate = dto.TaxRate
         }).ConfigureAwait(false);
+
+        if (grResult.TaxAmount > 0)
+            purchaseOrder.AccumulatedTaxAmount += grResult.TaxAmount;
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         var distributeResult = await _purchaseOrderAllocationManager
             .SyncReceivedForPurchaseOrderItemAsync(purchaseOrderItem.Id, purchaseOrderItem.QuantityReceived)
@@ -636,7 +641,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
             ReceivedQuantity = dto.ReceivedQuantity,
-            CreatedGoodsReceiptId = grResult.CreatedId
+            CreatedGoodsReceiptId = grResult.CreatedId,
+            TaxAmount = grResult.TaxAmount
         };
     }
 
@@ -695,6 +701,10 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new WarehouseIsNotFoundException(line.WarehouseId);
         }
 
+        if (dto.ShippingAmount.HasValue)
+            purchaseOrder.AccumulatedShippingAmount += dto.ShippingAmount.Value;
+
+        var totalTaxAmount = 0m;
         foreach (var line in dto.Lines)
         {
             var result = await ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, line.PurchaseOrderItemId)
@@ -704,11 +714,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 ReceivedQuantity = line.ReceivedQuantity,
                 WarehouseId = line.WarehouseId,
                 ActualUnitCost = line.ActualUnitCost,
-                PictureIds = dto.PictureIds
+                PictureIds = dto.PictureIds,
+                TaxRate = dto.TaxRate
             }).ConfigureAwait(false);
 
             if (result.CreatedGoodsReceiptId.HasValue)
                 createdReceiptIds.Add(result.CreatedGoodsReceiptId.Value);
+            totalTaxAmount += result.TaxAmount;
+        }
+        if (totalTaxAmount > 0)
+        {
+            purchaseOrder.AccumulatedTaxAmount = totalTaxAmount;
+            purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+            await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
         }
 
         return new BulkReceiveGoodsForPurchaseOrderResultDto
@@ -1033,19 +1051,16 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             .ToList();
     }
 
-    public async Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax)
+    public async Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping)
     {
         if (additionalShipping < 0)
             throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
-        if (additionalTax < 0)
-            throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
 
         var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         purchaseOrder.AccumulatedShippingAmount += additionalShipping;
-        purchaseOrder.AccumulatedTaxAmount += additionalTax;
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
@@ -1127,7 +1142,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return _codeGenerator.NextAsync(prefix, () => _purchaseOrderDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return _codeGenerator.NextAsync(prefix, () => _purchaseOrderDataReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task<PurchaseOrder> CreatePurchaseOrderAggregateAsync(

@@ -147,7 +147,7 @@
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-archive me-2 text-warning"></i>
-                            Đóng đơn dù chưa nhận hết
+                            Đóng đơn
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -166,7 +166,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-warning">
-                            <i class="bi bi-check-lg me-1"></i> Xác nhận đóng đơn
+                            <i class="bi bi-archive me-1"></i>Đóng đơn
                         </button>
                     </div>
                 </form>
@@ -248,7 +248,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="btnAddItem" class="btn btn-success d-none">
-                            <i class="bi bi-plus-lg me-1"></i>Thêm vào
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>
@@ -396,7 +396,7 @@
                     <div class="modal-footer border-0 pt-0 pb-4">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
                         <button type="submit" class="btn btn-success" data-testid="po-receive-submit">
-                            Xác nhận nhập kho
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>
@@ -412,32 +412,36 @@
                 <h5 class="modal-title fw-bold">Sửa địa chỉ giao</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body py-4">
-                <input type="hidden" id="editDsAllocationId" />
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase">Địa chỉ giao <span class="text-danger">*</span></label>
-                    <textarea id="editDsAddress" class="form-control" rows="2"></textarea>
+            <form asp-action="UpdateAddress" asp-controller="DirectShipDelivery" method="post">
+                <div class="modal-body py-4">
+                    <input type="hidden" id="editDsAllocationId" name="AllocationId" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsAddress">Địa chỉ giao</label>
+                        <input name="NewAddress" id="editDsAddress" class="form-control" data-val="true"
+                               data-val-required="Vui lòng nhập địa chỉ" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewAddress" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsContactPhone">Điện thoại</label>
+                        <input id="editDsContactPhone" name="NewContactPhone" type="text" class="form-control" inputmode="tel"
+                               data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
+                               data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewContactPhone" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsContactName">Người nhận</label>
+                        <input id="editDsContactName" name="NewContactName" type="text" class="form-control"
+                               data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewContactName" data-valmsg-replace="true"></span>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase">Người nhận</label>
-                    <input id="editDsContactName" type="text" class="form-control" />
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveDirectShipAddress">
+                        <i class="bi bi-check-lg me-1"></i>Xác nhận
+                    </button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại <span class="text-danger">*</span></label>
-                    <input id="editDsContactPhone" type="text" class="form-control" inputmode="tel" />
-                </div>
-                <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    Đã cập nhật — vui lòng in lại phiếu giao cho NCC.
-                </div>
-                <div id="editDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
-            </div>
-            <div class="modal-footer border-0 pt-0 pb-4">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary" id="btnSaveDirectShipAddress">
-                    <i class="bi bi-save me-1"></i> Lưu
-                </button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -475,7 +479,7 @@
             <div class="modal-footer border-0 pt-0 pb-4">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Btn.Close"]</button>
                 <button type="button" class="btn btn-primary" id="btnMarkDirectShip">
-                    <i class="bi bi-send me-1"></i> @L["PurchaseOrder.MarkDirectShip.Submit"]
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận
                 </button>
             </div>
         </div>
@@ -545,7 +549,7 @@
                 <div class="modal-footer border-0 pt-0 pb-4">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
                     <button type="button" class="btn btn-primary d-none" id="btnAllocateToOrder" data-testid="po-allocate-submit">
-                        <i class="bi bi-check-lg me-1"></i> Xác nhận phân bổ
+                        <i class="bi bi-check-all me-1"></i>Xác nhận
                     </button>
                 </div>
             </div>
@@ -560,7 +564,7 @@
             <div class="modal-content purchaseorder-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">
-                        <i class="bi bi-send me-2 text-primary"></i>Chuyển sang Giao thẳng
+                        Chuyển sang giao thẳng
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -598,6 +602,7 @@
         </div>
     </div>
 }
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
@@ -608,7 +613,7 @@
                 const target = document.getElementById(targetId.replace('#', ''));
                 if (target) {
                     target.classList.add('active');
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    //target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 document.querySelectorAll('.workflow-step').forEach(s => {
                     const href = s.getAttribute('href') || '';
@@ -664,7 +669,7 @@
 
             document.getElementById('copyForm')?.addEventListener('submit', async e => {
                 e.preventDefault();
-                if (!await confirm('Sao chép đơn nhập', 'Tạo đơn nhập mới và xem chi tiết'))
+                if (!await confirm('Sao chép đơn nhập', 'Tạo đơn nhập mới có hàng hóa, số lượng, giá nhập tương tự'))
                     return;
                 showPageLoading();
                 e.target.submit();
@@ -672,53 +677,44 @@
         })();
     </script>
 
-    <script>
-        document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.getElementById('editDsAllocationId').value = this.dataset.allocationId;
-                document.getElementById('editDsAddress').value = this.dataset.address || '';
-                document.getElementById('editDsContactName').value = this.dataset.contactName || '';
-                document.getElementById('editDsContactPhone').value = this.dataset.contactPhone || '';
-                document.getElementById('editDsSuccessBanner').classList.add('d-none');
-                document.getElementById('editDsErrorBanner').classList.add('d-none');
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('editDirectShipAddressModal')).show();
-            });
-        });
+    <script type="module">
+        import { apiPost } from '/modules/ajax-helper.js';
 
-        document.getElementById('btnSaveDirectShipAddress')?.addEventListener('click', async function() {
-            const allocationId = document.getElementById('editDsAllocationId')?.value;
-            const newAddress = document.getElementById('editDsAddress').value.trim();
-            const successBanner = document.getElementById('editDsSuccessBanner');
-            const errorBanner = document.getElementById('editDsErrorBanner');
-            successBanner.classList.add('d-none');
-            errorBanner.classList.add('d-none');
-            if (!newAddress) {
-                errorBanner.textContent = 'Địa chỉ giao không được để trống.';
-                errorBanner.classList.remove('d-none');
-                return;
-            }
-            const newContactPhone = document.getElementById('editDsContactPhone').value.trim();
-            if (!newContactPhone) {
-                errorBanner.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
-                errorBanner.classList.remove('d-none');
-                return;
-            }
-            try {
-                const resp = await fetch('/DirectShipDelivery/UpdateAddress', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
-                    body: JSON.stringify({
-                        allocationId,
-                        newAddress,
-                        newContactName: document.getElementById('editDsContactName').value.trim() || null,
-                        newContactPhone
-                    })
+        //edit direct ship address
+        (function() {
+            const modalElement = document.getElementById('editDirectShipAddressModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = modalElement.querySelector('form');
+
+            document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    modalElement.querySelector('#editDsAllocationId').value = this.dataset.allocationId;
+                    modalElement.querySelector('#editDsAddress').value = this.dataset.address || '';
+                    modalElement.querySelector('#editDsContactName').value = this.dataset.contactName || '';
+                    modalElement.querySelector('#editDsContactPhone').value = this.dataset.contactPhone || '';
+                    modal.show();
                 });
-                const data = await resp.json();
-                if (data.success) successBanner.classList.remove('d-none');
-                else { errorBanner.textContent = data.message || 'Có lỗi xảy ra.'; errorBanner.classList.remove('d-none'); }
-            } catch { errorBanner.textContent = 'Lỗi kết nối.'; errorBanner.classList.remove('d-none'); }
-        });
+            });
+
+            form.addEventListener('submit', async e => {
+                e.preventDefault();
+
+                if(!isFormValid(form))
+                    return;
+
+                const btnSubmit = form.querySelector('[type=submit]');
+                btnSubmit.disabled = true;
+                showPageLoading();
+
+                const response = await apiPost('@Url.Action("UpdateAddress", "DirectShipDelivery")', new FormData(form));
+                if (response.success){
+                    location.reload();
+                    return;
+                }
+                btnSubmit.disabled = false;
+                hidePageLoading();
+            });
+        })();
 
         const markDirectShipText = {
             addressRequired: @Json.Serialize(L["Error.DirectShipAddressRequired"].Value),
@@ -729,7 +725,7 @@
             submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
             orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
             customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
-                                                                                };
+                                                                                                                                };
 
         document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -1047,9 +1043,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
-                                                                                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                                                                                                </div>`;
+                                                                                                                                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                                                                                                                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
+                                                                                                                                                </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsOrderId').value = order.orderId;
@@ -1073,9 +1069,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
-                                                                                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
-                                                                                                </div>`;
+                                                                                                                                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                                                                                                                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
+                                                                                                                                                </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
@@ -1219,14 +1215,15 @@
             });
 
             function attachEditEventHandler(modalElement) {
-                const form = modalElement.querySelector('#editProductForm');
+                const form = modalElement.querySelector('form');
                 if (!form) return;
+                reparseForm(form);
                 form.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     const submitBtn = form.querySelector('[type="submit"]');
                     submitBtn.disabled = true;
 
-                    if (!isFormValid(form)){
+                    if (!isFormValid(form)) {
                         submitBtn.disabled = false;
                         return;
                     }
@@ -1352,15 +1349,15 @@
                 tr.style.cursor = 'pointer';
                 tr.title = `Đơn: ${p.purchaseOrderCode}`;
                 tr.innerHTML = `
-                                                                                    <td class="ps-0 py-1 text-nowrap">
-                                                                                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
-                                                                                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
-                                                                                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
-                                                                                    </td>
-                                                                                    <td class="text-end py-1 fw-semibold text-nowrap">
-                                                                                        ${DecimalFields.formatCurrency(String(p.unitCost))}
-                                                                                    </td>
-                                                                                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
+                                                                                                                                    <td class="ps-0 py-1 text-nowrap">
+                                                                                                                                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                                                                                                                                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
+                                                                                                                                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
+                                                                                                                                    </td>
+                                                                                                                                    <td class="text-end py-1 fw-semibold text-nowrap">
+                                                                                                                                        ${DecimalFields.formatCurrency(String(p.unitCost))}
+                                                                                                                                    </td>
+                                                                                                                                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
 
                 tr.addEventListener('click', () => {
                     const priceInput = document.getElementById('itemUnitPrice');
@@ -1660,16 +1657,16 @@
                                 tr.dataset.customerPhone = item.customerPhone || '';
                                 tr.dataset.customerName = item.customerName || '';
                                 tr.innerHTML = `
-                                                                                                                            <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                                                                                                            <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
-                                                                                                                            <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
-                                                                                                                            <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
-                                                                                                                            <td class="pe-2">
-                                                                                                                                <div class="d-flex align-items-center justify-content-end">
-                                                                                                                                    <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
-                                                                                                                                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
-                                                                                                                               </div>
-                                                                                                                            </td>`;
+                                                                                                                                                                                                    <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                                                                                                                                                                                    <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                                                                                                                                                                                    <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                                                                                                                                                                                    <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                                                                                                                                                                                    <td class="pe-2">
+                                                                                                                                                                                                        <div class="d-flex align-items-center justify-content-end">
+                                                                                                                                                                                                            <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
+                                                                                                                                                                                                                   data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
+                                                                                                                                                                                                       </div>
+                                                                                                                                                                                                    </td>`;
                                 tbody.appendChild(tr);
                                 window.DecimalFields?.autoWrap?.(tr);
                                 tr.addEventListener('click', e => {
@@ -1870,127 +1867,62 @@
 
     @if (Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
     {
-        var splittableItems = Model.Info.Items.Where(i => i.QuantityOrdered - i.QuantityReceived > 0).ToList();
-        <div class="modal fade" id="splitPOModal" tabindex="-1" aria-labelledby="splitPOModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="splitPOModalLabel">
-                            Chia đơn <strong>@Model.Info.Code</strong>
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted small mb-3">
-                            Nhập số lượng chuyển sang đơn nhập mới (PO2). Phần còn lại ở lại đơn hiện tại (PO1).
-                            Để trống hoặc nhập 0 để giữ nguyên.
-                        </p>
-                        <div class="table-responsive">
-                            <table class="table data-table align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end ui-w-120">Đặt hàng</th>
-                                        <th class="text-end ui-w-120">Đã nhận</th>
-                                        <th class="text-end ui-w-150">Chuyển sang PO2</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var si in splittableItems)
-                                    {
-                                        var available = si.QuantityOrdered - si.QuantityReceived;
-                                        <tr data-item-id="@si.Id" data-item-available="@available">
-                                            <td class="ps-3 fw-medium">@si.ProductName</td>
-                                            <td class="text-end text-muted">@si.QuantityOrdered.DisplayQuantity()</td>
-                                            <td class="text-end text-muted">
-                                                @if (si.QuantityReceived > 0)
-                                                {
-                                                    <span class="status-badge warning py-1">@si.QuantityReceived.DisplayQuantity()</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted fst-italic small">—</span>
-                                                }
-                                            </td>
-                                            <td class="text-end pe-3">
-                                                <input type="number" class="form-control form-control-sm text-end split-qty-input ui-w-100 ms-auto"
-                                                       min="0" max="@available" step="1" value="0" inputmode="decimal" />
-                                                <div class="small text-muted mt-1">Tối đa: @available.DisplayQuantity()</div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="splitErrorMsg" class="alert alert-danger mb-0 d-none small"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="button" class="btn btn-primary" id="btnConfirmSplit">
-                            <i class="bi bi-scissors me-1"></i>Chia đơn
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <script type="module" defer>
-            import { confirm } from '/modules/modals.js';
-            import { apiPost } from '/modules/ajax-helper.js';
+            import { apiGet } from '/modules/ajax-helper.js';
 
             (function() {
-                document.getElementById('btnConfirmSplit').addEventListener('click', async function() {
-                    const modalElement = document.getElementById('splitPOModal');
+                document.getElementById('btnSplitPurchaseOrder').addEventListener('click', async function(e) {
+                    e.preventDefault();
                     const btn = this;
-                    const errEl = document.getElementById('splitErrorMsg');
-                    errEl.textContent = '';
-                    errEl.classList.add('d-none');
-
-                    const items = [];
-                    modalElement.querySelectorAll('tr[data-item-id]').forEach(row => {
-                        const qty = parseFloat(row.querySelector('.split-qty-input').value) || 0;
-                        const available = parseFloat(row.dataset.itemAvailable);
-                        if (qty > available) {
-                            errEl.textContent = `Số lượng không được vượt quá số lượng khả dụng.`;
-                            errEl.classList.remove('d-none');
-                            return;
-                        }
-                        if (qty > 0) {
-                            items.push({ itemId: row.dataset.itemId, quantity: qty });
-                        }
-                    });
-
-                    if (errEl.textContent) return;
-
-                    if (items.length === 0) {
-                        errEl.textContent = 'Vui lòng nhập số lượng cho ít nhất một mặt hàng.';
-                        errEl.classList.remove('d-none');
-                        return;
-                    }
-
-                    modalElement.classList.add('d-none');
-                    if (!await confirm('Chia đơn', 'Tạo đơn nhập mới và xem chi tiết đơn')) {
-                        modalElement.classList.remove('d-none');
-                        return;
-                    }
-
                     btn.disabled = true;
                     showPageLoading();
 
-                    const response = await apiPost('@Url.Action("Split", "PurchaseOrder")', {
-                        purchaseOrderId: '@Model.Info.Id',
-                        items
-                    });
-                    debugger;
-                    if (response.success) {
-                        location.href = '/PurchaseOrder/Details/' + response.data.newPurchaseOrderId;
-                        return;
-                    }
+                    const response = await apiGet(`@Url.Action("SplitsPurchaseOrder")?id=@(Model.Info.Id)`);
 
-                    modalElement.classList.remove('d-none');
-                    btn.disabled = false;
                     hidePageLoading();
+                    if (!response)
+                        return;
+
+                    document.body.insertAdjacentHTML('beforeend', response);
+
+                    const modalElement = document.getElementById('splitPurchaseOrderModal');
+                    attachEditEventHandler(modalElement);
+                    DecimalFields.autoWrap(modalElement);
+
+                    modalElement.addEventListener('hidden.bs.modal', () => {
+                        modalElement.remove();
+                    }, { once: true });
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    btn.disabled = false;
                 });
+                function attachEditEventHandler(modalElement) {
+                    const form = modalElement.querySelector('form');
+                    if (!form) return;
+                    reparseForm(form);
+                    form.addEventListener('submit', e => {
+                        e.preventDefault();
+                        if (!isFormValid(form)) return;
+
+                        let hasPositiveQuantity = false;
+                        form.querySelectorAll('.split-qty-input').forEach(inputQty => {
+                            const qty = DecimalFields.getValue(inputQty);
+                            if (qty > 0) {
+                                hasPositiveQuantity = true;
+                            }
+                        });
+                        if (!hasPositiveQuantity) {
+                            NotificationCenter.warning('Vui lòng nhập số lượng mặt hàng cần chia');
+                            return;
+                        }
+
+                        form.querySelector('[type="submit"]').disabled = true;
+                        showPageLoading();
+                        form.submit();
+                        form.querySelector('fieldset').disabled = true;
+                    });
+                }
             })();
         </script>
     }

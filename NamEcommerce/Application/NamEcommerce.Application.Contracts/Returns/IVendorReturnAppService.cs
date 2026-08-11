@@ -13,7 +13,9 @@ public interface IVendorReturnAppService
 
     Task<VendorReturnAppDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<VendorReturnAppDto> Items)> GetListAsync(
-        Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize);
+        int pageIndex, int pageSize, Guid? vendorId = null,
+        Guid? purchaseOrderId = null, Guid? goodsReceiptId = null,
+        int? status = null);
 
     /// <summary>Lấy danh sách phiếu nhập kho (FromVendor) của một NCC — cho AJAX picker. Có thể lọc theo PurchaseOrderId.</summary>
     Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId, Guid? purchaseOrderId = null);

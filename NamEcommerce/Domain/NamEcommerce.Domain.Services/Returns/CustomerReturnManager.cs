@@ -483,7 +483,7 @@ public sealed class CustomerReturnManager(
 
         if (netRefundAmount <= 0) return;
 
-        var creditNote = await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
+        await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
             customerReturn.CustomerId,
             customerReturn.Id,
             customerReturn.Code,

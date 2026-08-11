@@ -27,12 +27,12 @@
                 <table class="table data-table">
                     <thead>
                         <tr>
-                            <th class="ps-4 ui-w-130">Mã phiếu</th>
+                            <th class="ps-4">Mã phiếu</th>
                             <th>Nhà cung cấp</th>
                             <th>Kho xuất</th>
                             <th class="text-end">Giá trị trả</th>
-                            <th class="text-center ui-w-130">Trạng thái</th>
-                            <th class="text-center ui-w-110">Ngày trả</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Ngày trả</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -41,10 +41,10 @@
                         {
                             @foreach (var item in Model.Data)
                             {
+                                var status = (VendorReturnStatus)item.Status;
                                 <tr class="align-middle">
                                     <td class="ps-4">
-                                        <a asp-action="Details" asp-route-id="@item.Id"
-                                           class="fw-semibold text-decoration-none">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="fw-semibold text-decoration-none text-nowrap">
                                             @item.Code
                                         </a>
                                     </td>
@@ -52,17 +52,7 @@
                                     <td class="text-muted small">@item.WarehouseName</td>
                                     <td class="text-end fw-semibold">@item.TotalAmount.DisplayCurrency()</td>
                                     <td class="text-center">
-                                        @{
-                                            var (badgeClass, badgeText) = (VendorReturnStatus)item.Status switch
-                                            {
-                                                VendorReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
-                                                VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
-                                                VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
-                                                VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
-                                                _ => ("bg-secondary", "—")
-                                            };
-                                        }
-                                        <span class="badge @badgeClass">@badgeText</span>
+                                        <span class="badge @status.GetDisplayColor()">@status.GetDisplayText()</span>
                                     </td>
                                     <td class="text-center text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
                                     <td class="text-end pe-3">
@@ -92,22 +82,14 @@
             {
                 @foreach (var item in Model.Data)
                 {
-                    var (badgeClass, badgeText) = (VendorReturnStatus)item.Status switch
-                    {
-                        VendorReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
-                        VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
-                        VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
-                        VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
-                        _ => ("bg-secondary", "—")
-                    };
-
+                    var status = (VendorReturnStatus)item.Status;
                     <article class="list-card">
                         <div class="list-card-header">
                             <div class="list-card-title-group">
                                 <a asp-action="Details" asp-route-id="@item.Id" class="list-card-title">@item.Code</a>
                                 <div class="list-card-meta">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</div>
                             </div>
-                            <span class="badge @badgeClass">@badgeText</span>
+                            <span class="badge @status.GetDisplayColor()">@status.GetDisplayText()</span>
                         </div>
                         <div class="list-card-fields">
                             <div class="list-card-field">

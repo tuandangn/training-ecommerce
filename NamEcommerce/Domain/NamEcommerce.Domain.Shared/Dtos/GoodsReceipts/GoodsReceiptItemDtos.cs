@@ -10,6 +10,8 @@ public record BaseGoodsReceiptItemDto
 
     public required decimal Quantity { get; init; }
     public decimal? UnitCost { get; set; }
+    public decimal? TaxRate { get; set; }
+    public decimal TaxAmount { get; set; }
 
     public void Verify()
     {

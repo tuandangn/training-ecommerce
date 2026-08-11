@@ -3,7 +3,7 @@
 @{
     ViewData[ViewConstants.PageTitle] = $"Phiếu nhập - {Model.CreatedOn.ToString(ViewConstants.DefaultDateFormat)}";
     var totalValue = Model.IsPendingCosting ? (decimal?)null : Model.Items.Sum(i => i.Quantity * (i.UnitCost ?? 0));
-    var taxRates = AppConfig.TaxRates ?? [];
+    var taxRates = AppConfig.TaxRates ?? new decimal[0];
     var defaultTaxRate = AppConfig.DefaultTaxRate;
 }
 @section TitleSection {
@@ -28,9 +28,6 @@
             <div class="content-card-header">
                 <h5 class="mb-0">
                     Danh sách hàng hóa
-                    <span class="badge bg-light text-muted border ms-1 ui-fs-072-fw-500">
-                        @Model.Items.Count mặt hàng
-                    </span>
                 </h5>
                 @if (Model.IsPendingCosting)
                 {
@@ -52,27 +49,28 @@
                 <table class="table data-table mb-0">
                     <thead>
                         <tr>
-                            <th class="ps-4">Sản phẩm</th>
-                            <th class="ui-w-130">Kho</th>
-                            <th class="text-end ui-w-100">SL nhập</th>
+                            <th class="ps-3">Sản phẩm</th>
+                            <th>Kho</th>
+                            <th class="text-end">Số lượng</th>
                             @if (hasReturnedItems)
                             {
-                                <th class="text-end ui-w-110" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
+                                <th class="text-end" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
                             }
-                            <th class="text-end pe-4 ui-w-160">Đơn giá nhập</th>
+                            <th class="text-end">Giá nhập</th>
+                            <th class="text-end pe-3">Thành tiền</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model.Items)
                         {
                             <tr class="align-middle" data-item-id="@item.Id">
-                                <td class="ps-4">
+                                <td class="ps-3">
                                     <a href="@Url.Action("StockList", "Inventory", new { keywords = item.ProductName })"
                                        class="fw-medium text-body text-decoration-none details-product-link">
                                         @item.ProductName
                                     </a>
                                 </td>
-                                <td class="text-muted small">
+                                <td>
                                     @if (!string.IsNullOrEmpty(item.WarehouseName))
                                     {
                                         <i class="bi bi-building me-1"></i>
@@ -116,7 +114,7 @@
                                         }
                                     </td>
                                 }
-                                <td class="text-end pe-4">
+                                <td class="text-end">
                                     @if (item.IsPendingCosting)
                                     {
                                         <button type="button"
@@ -128,9 +126,14 @@
                                     }
                                     else
                                     {
-                                        <div class="fw-semibold">@item.UnitCost!.Value.DisplayCurrency()</div>
-                                        <div class="text-muted ui-fs-075">
-                                            = @((item.Quantity * item.UnitCost.Value).DisplayCurrency())
+                                        <div class="fw-medium">@item.UnitCost!.Value.DisplayCurrency()</div>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    @if (!item.IsPendingCosting)
+                                    {
+                                        <div class="fw-medium">
+                                            @((item.Quantity * item.UnitCost!.Value).DisplayCurrencyWithSymbol())
                                         </div>
                                     }
                                 </td>
@@ -141,80 +144,81 @@
                     {
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="@(hasReturnedItems ? 4 : 3)" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
-                                <td class="text-end pe-4 fw-bold text-dark">@totalValue.Value.DisplayCurrency()</td>
+                                <td colspan="@(hasReturnedItems ? 5 : 4)" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng cộng</td>
+                                <td class="text-end pe-4 fw-bold text-dark">@totalValue.Value.DisplayCurrencyWithSymbol()</td>
                             </tr>
                         </tfoot>
                     }
                 </table>
             </div>
             <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
-                <a asp-action="List" class="btn btn-outline-secondary text-decoration-none">
+                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Trở về
                 </a>
-                <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
-                      onsubmit="return confirm('Bạn có chắc muốn xóa phiếu nhập này?')">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash me-1"></i>Xóa phiếu
-                    </button>
-                </form>
+                <div class="d-flex align-items-center gap-2">
+                    @if (!Model.HasReturns)
+                    {
+                        <a asp-controller="VendorReturn" asp-action="Create"
+                           asp-route-goodsReceiptId="@Model.Id"
+                           asp-route-vendorId="@Model.VendorId"
+                           asp-route-vendorName="@Model.VendorName"
+                           asp-route-goodsReceiptCode="@Model.Code"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-return-right me-1"></i>Tạo phiếu trả
+                        </a>
+                    }
+                    <form method="post" asp-action="Delete" asp-route-id="@Model.Id" onsubmit="return confirm('Bạn có chắc muốn xóa phiếu nhập này?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i>Xóa phiếu
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <!-- Trả hàng NCC -->
-        <div class="content-card mt-3" id="vendorReturnsCard" data-goods-receipt-id="@Model.Id">
-            <div class="content-card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-arrow-return-right me-2 text-warning"></i>Trả hàng NCC
-                </h5>
-                @if (Model.VendorId.HasValue)
-                {
+        @if (Model.HasReturns)
+        {
+            <div class="content-card mt-3" id="vendorReturnsCard" data-goods-receipt-id="@Model.Id">
+                <div class="content-card-header">
+                    <h5 class="mb-0">
+                        Trả hàng
+                    </h5>
                     <a asp-controller="VendorReturn" asp-action="Create"
                        asp-route-goodsReceiptId="@Model.Id"
                        asp-route-vendorId="@Model.VendorId"
                        asp-route-vendorName="@Model.VendorName"
                        asp-route-goodsReceiptCode="@Model.Code"
-                       class="btn btn-sm btn-outline-warning">
+                       class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
                     </a>
-                }
-                else
-                {
-                    <a asp-controller="VendorReturn" asp-action="Create"
-                       asp-route-goodsReceiptId="@Model.Id"
-                       asp-route-goodsReceiptCode="@Model.Code"
-                       class="btn btn-sm btn-outline-warning">
-                        <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
-                    </a>
-                }
-            </div>
-            <div class="content-card-body p-0">
-                <div id="vendorReturnsLoading" class="px-4 py-3 text-center text-muted small">
-                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
                 </div>
-                <div id="vendorReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
-                    — Chưa có phiếu trả hàng NCC nào liên kết
-                </div>
-                <div id="vendorReturnsList" class="d-none">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th class="ps-4">Mã phiếu</th>
-                                <th>Ngày trả</th>
-                                <th class="text-center">Trạng thái</th>
-                                <th class="text-end">Số mặt hàng</th>
-                                <th class="text-end pe-4">Tổng giá trị</th>
-                            </tr>
-                        </thead>
-                        <tbody id="vendorReturnsTableBody"></tbody>
-                    </table>
+                <div class="content-card-body p-0">
+                    <div id="vendorReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                        <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                    </div>
+                    <div id="vendorReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                        — Chưa có phiếu trả hàng NCC nào liên kết
+                    </div>
+                    <div id="vendorReturnsList" class="d-none">
+                        <table class="table data-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">Mã phiếu</th>
+                                    <th>Ngày trả</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th class="text-end">Số mặt hàng</th>
+                                    <th class="text-end pe-4">Tổng giá trị</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendorReturnsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
     </div>
     <div class="col-lg-4 order-0 order-lg-1">
-
         <!-- Thông tin phiếu -->
         <div class="content-card mb-3">
             <div class="content-card-header">
@@ -313,7 +317,7 @@
                                 <dd>
                                     @* Trang VendorDebt/Details liệt kê toàn bộ công nợ của 1 NCC theo vendorId.
                                        Phiếu nợ cụ thể từ phiếu nhập này nằm trong list đó. *@
-                                    <a asp-controller="VendorDebt" asp-action="Details" asp-route-vendorId="@Model.VendorId"
+                                    <a asp-controller="VendorDebt" asp-action="Details" asp-route-id="@Model.VendorId"
                                        class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none">
                                         <i class="bi bi-check-circle-fill me-1"></i>
                                         Đã ghi nợ @(Model.VendorDebtTotalAmount?.DisplayCurrency() ?? "")
@@ -512,7 +516,7 @@
                                 </span>
                             </div>
                             <div>
-                                <input id="quickPoShippingAmount" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập chi phí" inputmode="numeric"/>
+                                <input id="quickPoShippingAmount" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập chi phí" inputmode="numeric" />
                             </div>
                         </div>
                         <div class="col-lg-6">
@@ -553,7 +557,7 @@
                                     </div>
                                 </div>
                                 <div id="quickPoTaxAmountBox">
-                                    <input id="quickPoTaxAmountInput" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập tiền thuế" inputmode="numeric"/>
+                                    <input id="quickPoTaxAmountInput" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập tiền thuế" inputmode="numeric" />
                                 </div>
                             </div>
                         </div>
@@ -767,11 +771,11 @@
 
         // ── Inline Picture Picker ──────────────────────────────────────────────
         (function initInlinePictures() {
-            const dataEl   = document.getElementById('inlinePictureData');
-            const listEl   = document.getElementById('inlinePictureList');
-            const pickEl   = document.getElementById('inlinePicturePicker');
+            const dataEl = document.getElementById('inlinePictureData');
+            const listEl = document.getElementById('inlinePictureList');
+            const pickEl = document.getElementById('inlinePicturePicker');
             const savingEl = document.getElementById('inlinePictureSaving');
-            const errorEl  = document.getElementById('inlinePictureError');
+            const errorEl = document.getElementById('inlinePictureError');
             if (!dataEl || !listEl || !pickEl) return;
 
             const receiptId = dataEl.dataset.receiptId;
@@ -793,7 +797,7 @@
                 const w = document.createElement('div');
                 w.className = 'picture-thumbnail-wrapper';
                 w.innerHTML = `<a href="/Picture/${id}" target="_blank"><img src="/Picture/${id}" class="picture-thumbnail-img" alt="Ảnh chụp"/></a>
-                    <button type="button" class="btn-remove-picture"><i class="bi bi-x-lg"></i></button>`;
+                                                    <button type="button" class="btn-remove-picture"><i class="bi bi-x-lg"></i></button>`;
                 w.querySelector('.btn-remove-picture').onclick = async () => {
                     ids = ids.filter(x => x !== id);
                     w.remove(); renderSlots(); await save();
@@ -805,7 +809,7 @@
                 const s = document.createElement('div');
                 s.className = 'picture-upload-slot';
                 s.innerHTML = `<label class="picture-upload-label"><input type="file" class="d-none" accept="image/*"/>
-                    <div class="picture-upload-placeholder"><i class="bi bi-camera fs-5"></i></div></label>`;
+                                                    <div class="picture-upload-placeholder"><i class="bi bi-camera fs-5"></i></div></label>`;
                 s.querySelector('input').onchange = async e => { if (e.target.files?.[0]) await upload(e.target.files[0], s); };
                 s.addEventListener('dragover', e => { e.preventDefault(); s.querySelector('.picture-upload-label').classList.add('drag-over'); });
                 s.addEventListener('dragleave', () => s.querySelector('.picture-upload-label').classList.remove('drag-over'));
@@ -875,9 +879,9 @@
 
             const receiptId = panel.dataset.receiptId;
             const loadingEl = document.getElementById('poSuggestionsLoading');
-            const listEl    = document.getElementById('poSuggestionsList');
-            const emptyEl   = document.getElementById('poSuggestionsEmpty');
-            const errorEl   = document.getElementById('poSuggestionsError');
+            const listEl = document.getElementById('poSuggestionsList');
+            const emptyEl = document.getElementById('poSuggestionsEmpty');
+            const errorEl = document.getElementById('poSuggestionsError');
 
             async function linkToPurchaseOrder(purchaseOrderId, poCode) {
                 if (!confirm(`Xác nhận gắn phiếu nhập này với phiếu đặt hàng "${poCode}"?`)) return;
@@ -901,31 +905,31 @@
 
             function renderRow(po) {
                 const isFullMatch = po.isFullMatch;
-                const scoreClass  = isFullMatch ? 'po-score-full' : 'po-score-partial';
-                const badgeClass  = isFullMatch ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle';
-                const badgeIcon   = isFullMatch ? 'bi-check-circle-fill' : 'bi-lightning-charge-fill';
-                const badgeLabel  = isFullMatch ? 'Khớp hoàn toàn' : `Khớp ${po.matchScore}%`;
-                const placedDate  = new Date(po.placedOn).toLocaleDateString('vi-VN');
+                const scoreClass = isFullMatch ? 'po-score-full' : 'po-score-partial';
+                const badgeClass = isFullMatch ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle';
+                const badgeIcon = isFullMatch ? 'bi-check-circle-fill' : 'bi-lightning-charge-fill';
+                const badgeLabel = isFullMatch ? 'Khớp hoàn toàn' : `Khớp ${po.matchScore}%`;
+                const placedDate = new Date(po.placedOn).toLocaleDateString('vi-VN');
 
                 const row = document.createElement('div');
                 row.className = 'po-suggestion-row';
                 row.innerHTML = `
-                    <div class="ui-flex-min">
-                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                            <span class="badge border ${badgeClass} py-1 ui-fs-075">
-                                <i class="bi ${badgeIcon} me-1"></i>${badgeLabel}
-                            </span>
-                            <span class="fw-semibold text-truncate ui-fs-0875">${po.purchaseOrderCode}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted ui-fs-075">${placedDate}</span>
-                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}"></div></div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btnSelectPo"
-                            data-po-id="${po.purchaseOrderId}" data-po-code="${po.purchaseOrderCode}">
-                        Chọn
-                    </button>`;
+                                                    <div class="ui-flex-min">
+                                                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                                            <span class="badge border ${badgeClass} py-1 ui-fs-075">
+                                                                <i class="bi ${badgeIcon} me-1"></i>${badgeLabel}
+                                                            </span>
+                                                            <span class="fw-semibold text-truncate ui-fs-0875">${po.purchaseOrderCode}</span>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="text-muted ui-fs-075">${placedDate}</span>
+                                                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}"></div></div>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btnSelectPo"
+                                                            data-po-id="${po.purchaseOrderId}" data-po-code="${po.purchaseOrderCode}">
+                                                        Chọn
+                                                    </button>`;
 
                 row.querySelector('.po-score-fill').style.width = `${po.matchScore}%`;
                 row.querySelector('.btnSelectPo').addEventListener('click', () => {
@@ -1005,20 +1009,20 @@
             const modalEl = document.getElementById('quickCreatePoModal');
             if (!modalEl) return;
 
-            const errorEl    = document.getElementById('quickPoError');
+            const errorEl = document.getElementById('quickPoError');
             const confirmBtn = document.getElementById('btnConfirmQuickCreatePo');
-            const spinner    = document.getElementById('quickPoSpinner');
-            const icon       = document.getElementById('quickPoIcon');
+            const spinner = document.getElementById('quickPoSpinner');
+            const icon = document.getElementById('quickPoIcon');
             if (!confirmBtn) return;
 
-            const receiptId    = modalEl.dataset.receiptId;
+            const receiptId = modalEl.dataset.receiptId;
             const vendorLocked = modalEl.dataset.vendorLocked === 'true';
             const lockedVendorId = modalEl.dataset.vendorId || '';
 
             // Vendor picker chỉ tồn tại khi GR chưa có vendor.
             const vendorPickerEl = document.getElementById('quickPoVendorPicker');
-            const vendorIdInput  = document.getElementById('quickPoSelectedVendorId');
-            const vendorErrorEl  = document.getElementById('quickPoVendorError');
+            const vendorIdInput = document.getElementById('quickPoSelectedVendorId');
+            const vendorErrorEl = document.getElementById('quickPoVendorError');
             let picker = null;
 
             if (!vendorLocked && vendorPickerEl) {
@@ -1034,12 +1038,12 @@
             }
 
             // ── Tax UI helpers ───────────────────────────────────────────────
-            const taxPercentBox  = document.getElementById('quickPoTaxPercentBox');
-            const taxAmountBox   = document.getElementById('quickPoTaxAmountBox');
+            const taxPercentBox = document.getElementById('quickPoTaxPercentBox');
+            const taxAmountBox = document.getElementById('quickPoTaxAmountBox');
             const taxAmountInput = document.getElementById('quickPoTaxAmountInput');
-            const taxCustomBox   = document.getElementById('quickPoTaxCustomBox');
-            const taxCustomRate  = document.getElementById('quickPoTaxCustomRate');
-            const taxPreviewEl   = document.getElementById('quickPoTaxPreview');
+            const taxCustomBox = document.getElementById('quickPoTaxCustomBox');
+            const taxCustomRate = document.getElementById('quickPoTaxCustomRate');
+            const taxPreviewEl = document.getElementById('quickPoTaxPreview');
 
             const fmtVnd = (n) => (Number.isFinite(n) ? n : 0).toLocaleString('vi-VN') + 'đ';
 
@@ -1060,7 +1064,7 @@
                     if (baseTotal > 0) { total += baseTotal; return; }
                     const input = row.querySelector('.quick-po-unitcost');
                     if (input) {
-                        const qty  = parseFloat(input.dataset.quantity) || 0;
+                        const qty = parseFloat(input.dataset.quantity) || 0;
                         const cost = parseFloat(DecimalFields.stripFormatting(input.value)) || 0;
                         total += qty * cost;
                     }
@@ -1173,7 +1177,7 @@
 
                 // 3) Fees
                 const shippingAmount = parseFloat(DecimalFields.stripFormatting(document.getElementById('quickPoShippingAmount').value)) || 0;
-                const taxAmount      = computeTaxAmount();
+                const taxAmount = computeTaxAmount();
                 if (shippingAmount < 0 || taxAmount < 0) {
                     errorEl.textContent = 'Chi phí phát sinh không được âm.';
                     errorEl.classList.remove('d-none');
@@ -1240,9 +1244,9 @@
             if (!card) return;
             const receiptId = card.dataset.goodsReceiptId;
             const loadingEl = document.getElementById('vendorReturnsLoading');
-            const emptyEl   = document.getElementById('vendorReturnsEmpty');
-            const listEl    = document.getElementById('vendorReturnsList');
-            const tbody     = document.getElementById('vendorReturnsTableBody');
+            const emptyEl = document.getElementById('vendorReturnsEmpty');
+            const listEl = document.getElementById('vendorReturnsList');
+            const tbody = document.getElementById('vendorReturnsTableBody');
 
             fetch('/VendorReturn/GetByGoodsReceipt?goodsReceiptId=' + receiptId)
                 .then(r => r.json())

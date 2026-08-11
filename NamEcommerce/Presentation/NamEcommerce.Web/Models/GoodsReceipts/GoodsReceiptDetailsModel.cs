@@ -11,6 +11,7 @@ public sealed class GoodsReceiptDetailsModel
     public IEnumerable<Guid> PictureIds { get; init; } = [];
     public string? Note { get; init; }
 
+    public bool HasReturns { get; set; }
     public bool IsPendingCosting { get; init; }
 
     public Guid? VendorId { get; init; }
@@ -22,7 +23,6 @@ public sealed class GoodsReceiptDetailsModel
     public Guid? VendorDebtId { get; init; }
     public decimal? VendorDebtTotalAmount { get; init; }
 
-    // PurchaseOrder linkage
     public Guid? PurchaseOrderId { get; init; }
     public string? PurchaseOrderCode { get; init; }
 
@@ -33,17 +33,15 @@ public sealed class GoodsReceiptDetailsModel
     {
         public required Guid ProductId { get; init; }
         public string? ProductName { get; init; }
+
         public Guid? WarehouseId { get; init; }
         public string? WarehouseName { get; init; }
-        public decimal Quantity { get; init; }
-        public decimal? UnitCost { get; init; }
 
+        public decimal? UnitCost { get; init; }
         public bool IsPendingCosting { get; init; }
 
-        /// <summary>Tổng đã trả NCC (Confirmed).</summary>
+        public decimal Quantity { get; init; }
         public decimal ReturnedQuantity { get; set; }
-
-        /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
         public decimal PendingReturnQuantity { get; set; }
     }
 }
