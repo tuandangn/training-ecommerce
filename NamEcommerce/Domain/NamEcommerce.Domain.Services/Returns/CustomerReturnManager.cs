@@ -477,7 +477,9 @@ public sealed class CustomerReturnManager(
                 AmountWithoutTax = customerReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
                 IncurredDateUtc = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
-                SourceCustomerReturnId = customerReturn.Id
+                ReferenceId = customerReturn.Id,
+                ReferenceCode = customerReturn.Code,
+                ReferenceType = ExpenseReferenceType.CustomerReturn
             }).ConfigureAwait(false);
         }
 

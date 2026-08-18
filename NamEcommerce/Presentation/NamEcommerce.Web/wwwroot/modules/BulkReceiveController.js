@@ -350,7 +350,7 @@ export default class BulkReceiveController {
         directShipTr.className = 'bulk-ds-row d-none';
         directShipTr.dataset.dsRowFor = String(index);
         directShipTr.innerHTML = `
-            <td colspan="6" class="border-top-0 pt-0 pb-2 px-2">
+            <td colspan="7" class="border-top-0 pt-0 pb-2 px-2">
                 <div class="p-2 bg-primary bg-opacity-10 rounded-2 border border-primary border-opacity-25">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small fw-semibold text-primary"><i class="bi bi-send me-1"></i>Giao thẳng cho đơn hàng</span>
@@ -362,7 +362,7 @@ export default class BulkReceiveController {
                     <div class="bulk-ds-loading d-none text-muted small py-1">
                         <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
                     </div>
-                    <div class="bulk-ds-empty d-none alert alert-warning py-1 small mb-2">
+                    <div class="bulk-ds-empty d-none alert alert-info py-1 small mb-2">
                         <i class="bi bi-exclamation-circle me-1"></i> Không có đơn hàng phù hợp cho sản phẩm này.
                     </div>
                     <div class="bulk-ds-order-list d-none">

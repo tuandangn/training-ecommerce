@@ -19,9 +19,10 @@ public sealed class ExpenseAppDto
     public decimal Amount { get; set; }
     public int ExpenseType { get; set; }
     public DateTime IncurredDateUtc { get; set; }
-    public Guid? SourceOrderId { get; set; }
-    public Guid? SourceCustomerReturnId { get; set; }
-    public Guid? SourceVendorReturnId { get; set; }
 
-    public bool IsSystemGenerated { get; set; }
+    public Guid? ReferenceId { get; set; }
+    public string? ReferenceCode { get; set; }
+    public int ReferenceType { get; set; }
+
+    public bool IsSystemGenerated { get; init; }
 }

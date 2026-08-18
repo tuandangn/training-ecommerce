@@ -375,6 +375,9 @@
   <data name="Error.CustomerReturn.IsNotFound" xml:space="preserve">
     <value>Customer return was not found.</value>
   </data>
+  <data name="Error.CustomerReturnIsNotFound" xml:space="preserve">
+    <value>Customer return was not found.</value>
+  </data>
   <data name="Error.CustomerReturn.ExceedsDeliveredQuantity" xml:space="preserve">
     <value>Return quantity exceeds the remaining returnable quantity.</value>
   </data>
@@ -1103,5 +1106,8 @@
   </data>
   <data name="Error.TaxRateIsNotAllowed" xml:space="preserve">
     <value>Tax rate is not allowed</value>
+  </data>
+  <data name="Error.VendorReturnIsNotFound" xml:space="preserve">
+    <value>Vendor return is not found</value>
   </data>
 </root>

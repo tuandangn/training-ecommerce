@@ -32,9 +32,9 @@ public record Expense : AppAggregateEntity
 
     public Guid? RecordedByUserId { get; internal set; }
 
-    public Guid? SourceVendorReturnId { get; internal set; }
-    public Guid? SourceCustomerReturnId { get; internal set; }
-    public Guid? SourceOrderId { get; internal set; }
+    public Guid? ReferenceId { get; set; }
+    public string? ReferenceCode { get; set; }
+    public ExpenseReferenceType ReferenceType { get; set; }
 
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? ModifiedOnUtc { get; internal set; }
@@ -53,5 +53,5 @@ public record Expense : AppAggregateEntity
         Amount = amountWithoutTax + taxAmount;
     }
 
-    public bool IsSystemGenerated() => ExpenseType == ExpenseType.AssetDisposal || SourceOrderId.HasValue;
+    public bool IsSystemGenerated() => ExpenseType == ExpenseType.AssetDisposal || ReferenceId.HasValue;
 }

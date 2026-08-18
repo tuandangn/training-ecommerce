@@ -23,7 +23,7 @@ public sealed class GetExpenseByIdHandler(IExpenseAppService expenseAppService)
             TaxRate = expense.TaxRate,
             ExpenseType = expense.ExpenseType,
             IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDateUtc),
-            IsSystemGenerated = expense.ExpenseType == 6 || expense.SourceOrderId.HasValue
+            IsSystemGenerated = expense.IsSystemGenerated
         };
     }
 }

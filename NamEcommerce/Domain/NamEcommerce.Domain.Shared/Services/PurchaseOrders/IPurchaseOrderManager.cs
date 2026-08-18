@@ -25,13 +25,11 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto);
     Task UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemDto dto);
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
-    Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
-    Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);
+    Task<ReceivedGoodsResultDto> ReceivesItemAsync(ReceivedGoodsDto dto);
+    Task<BulkReceiveGoodsResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsDto dto);
 
     Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
     Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);
-
-    Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping);
 
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
     Task ClosePartialAsync(Guid purchaseOrderId, string reason);

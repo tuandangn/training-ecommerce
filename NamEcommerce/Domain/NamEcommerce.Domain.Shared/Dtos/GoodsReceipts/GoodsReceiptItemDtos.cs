@@ -11,7 +11,6 @@ public record BaseGoodsReceiptItemDto
     public required decimal Quantity { get; init; }
     public decimal? UnitCost { get; set; }
     public decimal? TaxRate { get; set; }
-    public decimal TaxAmount { get; set; }
 
     public void Verify()
     {
@@ -28,6 +27,7 @@ public sealed record GoodsReceiptItemDto(Guid Id) : BaseGoodsReceiptItemDto
 {
     public string? ProductName { get; set; }
     public string? WarehouseName { get; set; }
+    public decimal TaxAmount { get; set; }
 }
 
 [Serializable]

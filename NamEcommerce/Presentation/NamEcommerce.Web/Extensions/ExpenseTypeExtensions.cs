@@ -15,6 +15,8 @@ public static class ExpenseTypeExtensions
     {
         public string GetDisplayText() => type switch
         {
+            ExpenseType.Sale => "Bán hàng",
+            ExpenseType.Management => "Quản lý",
             ExpenseType.Payroll => "Lương thưởng",
             ExpenseType.Rent => "Mặt bằng",
             ExpenseType.Marketing => "Tiếp thị",
@@ -27,6 +29,8 @@ public static class ExpenseTypeExtensions
 
         public string GetDisplayColor() => type switch
         {
+            ExpenseType.Sale => "bg-primary text-light",
+            ExpenseType.Management => "bg-primary text-light",
             ExpenseType.Payroll => "bg-info text-light",
             ExpenseType.Rent => "bg-warning text-light",
             ExpenseType.Marketing => "bg-primary text-light",

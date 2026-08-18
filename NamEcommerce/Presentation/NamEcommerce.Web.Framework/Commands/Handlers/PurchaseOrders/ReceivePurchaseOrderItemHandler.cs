@@ -10,30 +10,13 @@ using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
-public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePurchaseOrderItemCommand, ReceivePurchaseOrderItemResultModel>
+public sealed class ReceivePurchaseOrderItemHandler(IPurchaseOrderAppService appService, ICurrentUserService currentUserService, ISender sender,
+    IWarehouseAppService warehouseAppService, IProductAppService productAppService, IUnitMeasurementAppService unitMeasurementAppService) 
+    : IRequestHandler<ReceivePurchaseOrderItemCommand, ReceivePurchaseOrderItemResultModel>
 {
-    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ISender _sender;
-    private readonly IWarehouseAppService _warehouseAppService;
-    private readonly IProductAppService _productAppService;
-    private readonly IUnitMeasurementAppService _unitMeasurementAppService;
-
-    public ReceivePurchaseOrderItemHandler(
-        IPurchaseOrderAppService appService, ICurrentUserService currentUserService, ISender sender,
-        IWarehouseAppService warehouseAppService, IProductAppService productAppService, IUnitMeasurementAppService unitMeasurementAppService)
-    {
-        _purchaseOrderAppService = appService;
-        _currentUserService = currentUserService;
-        _sender = sender;
-        _warehouseAppService = warehouseAppService;
-        _productAppService = productAppService;
-        _unitMeasurementAppService = unitMeasurementAppService;
-    }
-
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
-        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(request.PurchaseOrderId);
+        var purchaseOrder = await appService.GetPurchaseOrderByIdAsync(request.PurchaseOrderId);
         if (purchaseOrder is null)
         {
             return new ReceivePurchaseOrderItemResultModel
@@ -62,7 +45,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             };
         }
 
-        var product = await _productAppService.GetProductByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await productAppService.GetProductByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
         {
             return new ReceivePurchaseOrderItemResultModel
@@ -74,7 +57,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
         if (product.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementAppService.GetUnitMeasurementByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await unitMeasurementAppService.GetUnitMeasurementByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
             if (unitMeasurement is not null)
             {
                 if (!NumberHelper.IsValidDecimalPlace(request.ReceivedQuantity, unitMeasurement.DecimalPlaces))
@@ -88,7 +71,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             }
         }
 
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
 
         var upgradeExisting = request.DirectShipExistingAllocationId.HasValue
             && request.DirectShipExistingAllocationId.Value != Guid.Empty;
@@ -123,8 +106,8 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
         if (hasDirectShip)
         {
             maxAllocationQuantity = upgradeExisting
-                ? await _purchaseOrderAppService.GetAllocationRemainingQuantityAsync(request.DirectShipExistingAllocationId!.Value).ConfigureAwait(false)
-                : await _purchaseOrderAppService.GetMaxAllocationQuantityForOrderItemAsync(request.DirectShipOrderId!.Value, request.DirectShipOrderItemId!.Value).ConfigureAwait(false);
+                ? await appService.GetAllocationRemainingQuantityAsync(request.DirectShipExistingAllocationId!.Value).ConfigureAwait(false)
+                : await appService.GetMaxAllocationQuantityForOrderItemAsync(request.DirectShipOrderId!.Value, request.DirectShipOrderItemId!.Value).ConfigureAwait(false);
 
             if (maxAllocationQuantity <= 0)
                 return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.PurchaseOrderItemAllocationQuantityExceedsAvailable" };
@@ -137,7 +120,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
             if (warehouseId.HasValue)
             {
-                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                var warehouse = await warehouseAppService.GetWarehouseByIdAsync(warehouseId.Value).ConfigureAwait(false);
                 if (warehouse is null)
                     return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.WarehouseIsNotFound" };
                 if (physicalWarehouseRequired && !warehouse.IsPhysical)
@@ -147,7 +130,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
         if (upgradeExisting)
         {
-            var markResult = await _sender.Send(new MarkAllocationAsDirectShipCommand
+            var markResult = await sender.Send(new MarkAllocationAsDirectShipCommand
             {
                 AllocationId = request.DirectShipExistingAllocationId!.Value,
                 Address = request.DirectShipAddress!,
@@ -160,7 +143,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
         }
         else if (directShipRequested)
         {
-            var allocationResult = await _sender.Send(new AllocatePoItemForOrderItemCommand
+            var allocationResult = await sender.Send(new AllocatePoItemForOrderItemCommand
             {
                 PurchaseOrderId = request.PurchaseOrderId,
                 PurchaseOrderItemId = request.PurchaseOrderItemId,
@@ -176,7 +159,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
                 return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = allocationResult.ErrorMessage };
         }
 
-        var result = await _purchaseOrderAppService.ReceiveItemAsync(new ReceivedGoodsForItemAppDto(request.PurchaseOrderId, request.PurchaseOrderItemId)
+        var result = await appService.ReceiveItemAsync(new ReceiveGoodsAppDto(request.PurchaseOrderId, request.PurchaseOrderItemId)
         {
             ReceivedQuantity = request.ReceivedQuantity,
             WarehouseId = request.WarehouseId,

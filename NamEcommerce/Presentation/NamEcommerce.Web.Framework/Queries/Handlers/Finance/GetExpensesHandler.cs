@@ -22,18 +22,18 @@ public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IEx
             sortBy: request.SortBy,
             sortDesc: request.SortDesc).ConfigureAwait(false);
 
-        var items = paged.Select(x => new ExpenseListModel.ExpenseItemModel
+        var items = paged.Select(expense => new ExpenseListModel.ExpenseItemModel
         {
-            Id = x.Id,
-            Title = x.Title,
-            Description = x.Description,
-            Amount = x.Amount,
-            ExpenseType = x.ExpenseType,
-            IncurredDate = DateTimeHelper.ToLocalTime(x.IncurredDateUtc),
-            SourceOrderId = x.SourceOrderId,
-            SourceCustomerReturnId = x.SourceCustomerReturnId,
-            SourceVendorReturnId = x.SourceVendorReturnId,
-            IsSystemGenerated = x.ExpenseType == 6 || x.SourceOrderId.HasValue
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            Amount = expense.Amount,
+            ExpenseType = expense.ExpenseType,
+            IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDateUtc),
+            IsSystemGenerated = expense.IsSystemGenerated,
+            ReferenceId = expense.ReferenceId,
+            ReferenceType = expense.ReferenceType,
+            ReferenceCode = expense.ReferenceCode
         }).ToList();
 
         return new ExpenseListModel

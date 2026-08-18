@@ -132,23 +132,31 @@
                                                         @item.Description
                                                     </div>
                                                 }
-                                                @if (item.SourceOrderId.HasValue)
+                                                @if (item.ReferenceId.HasValue)
                                                 {
-                                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.SourceOrderId" class="text-decoration-none small d-block">
-                                                        <i class="bi bi-box me-1"></i>Đơn hàng
-                                                    </a>
-                                                }
-                                                @if (item.SourceCustomerReturnId.HasValue)
-                                                {
-                                                    <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@item.SourceCustomerReturnId" class="text-decoration-none small d-block">
-                                                        <i class="bi bi-arrow-return-left me-1"></i>Khách trả
-                                                    </a>
-                                                }
-                                                @if (item.SourceVendorReturnId.HasValue)
-                                                {
-                                                    <a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@item.SourceVendorReturnId" class="text-decoration-none small d-block">
-                                                        <i class="bi bi-arrow-return-right me-1"></i>Trả hàng NCC
-                                                    </a>
+                                                    @switch ((ExpenseReferenceType)item.ReferenceType)
+                                                    {
+                                                        case ExpenseReferenceType.Order:
+                                                            <a asp-controller="Order" asp-action="Details" asp-route-id="@item.ReferenceId" class="text-decoration-none small d-block">
+                                                                <i class="bi bi-box me-1"></i>Đơn bán
+                                                            </a>
+                                                            break;
+                                                        case ExpenseReferenceType.PurchaseOrder:
+                                                            <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@item.ReferenceId" class="text-decoration-none small d-block">
+                                                                <i class="bi bi-box-arrow-down me-1"></i>Đơn nhập
+                                                            </a>
+                                                            break;
+                                                        case ExpenseReferenceType.CustomerReturn:
+                                                            <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@item.ReferenceId" class="text-decoration-none small d-block">
+                                                                <i class="bi bi-arrow-return-left me-1"></i>Khách trả
+                                                            </a>
+                                                            break;
+                                                        case ExpenseReferenceType.VendorReturn:
+                                                            <a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@item.ReferenceId" class="text-decoration-none small d-block">
+                                                                <i class="bi bi-arrow-return-right me-1"></i>Trả hàng NCC
+                                                            </a>
+                                                            break;
+                                                    }
                                                 }
                                             </td>
                                             <td>

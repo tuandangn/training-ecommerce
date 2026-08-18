@@ -806,7 +806,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         {
             PurchaseOrderId = model.PurchaseOrderId,
             Items = lines,
-            AdditionalShipping = model.AdditionalShipping ?? 0,
+            ShippingAmount = model.AdditionalShipping ?? 0,
             TaxRate = model.TaxRate
         });
 

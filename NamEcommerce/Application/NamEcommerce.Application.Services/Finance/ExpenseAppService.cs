@@ -7,11 +7,15 @@ using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
 
 namespace NamEcommerce.Application.Services.Finance;
 
-public class ExpenseAppService(IExpenseManager expenseManager,
-    IEntityDataReader<Expense> expenseDataReader) : IExpenseAppService
+public class ExpenseAppService(IExpenseManager expenseManager, IEntityDataReader<Expense> expenseDataReader,
+    IEntityDataReader<Order> orderDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    IEntityDataReader<CustomerReturn> customerReturnDataReader, IEntityDataReader<VendorReturn> vendorReturnDataReader) : IExpenseAppService
 {
     public async Task<IPagedDataAppDto<ExpenseAppDto>> GetExpensesAsync(
         int pageIndex = 0, int pageSize = int.MaxValue, IList<Guid>? orderIds = null,
@@ -39,9 +43,9 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             Amount = expense.Amount,
             ExpenseType = (int)expense.ExpenseType,
             IncurredDateUtc = expense.IncurredDate,
-            SourceOrderId = expense.SourceOrderId,
-            SourceCustomerReturnId = expense.SourceCustomerReturnId,
-            SourceVendorReturnId = expense.SourceVendorReturnId,
+            ReferenceId = expense.ReferenceId,
+            ReferenceCode = expense.ReferenceCode,
+            ReferenceType = (int) expense.ReferenceType,
             IsSystemGenerated = expense.IsSystemGenerated
         });
     }
@@ -50,7 +54,7 @@ public class ExpenseAppService(IExpenseManager expenseManager,
     {
         var expense = await expenseManager.GetExpenseByIdAsync(id).ConfigureAwait(false);
 
-        if (expense is null) 
+        if (expense is null)
             return null;
 
         return new()
@@ -63,14 +67,14 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             Amount = expense.Amount,
             ExpenseType = (int)expense.ExpenseType,
             IncurredDateUtc = expense.IncurredDate,
-            SourceOrderId = expense.SourceOrderId,
-            SourceCustomerReturnId = expense.SourceCustomerReturnId,
-            SourceVendorReturnId = expense.SourceVendorReturnId,
+            ReferenceId = expense.ReferenceId,
+            ReferenceCode = expense.ReferenceCode,
+            ReferenceType = (int) expense.ReferenceType,
             IsSystemGenerated = expense.IsSystemGenerated
         };
     }
 
-    public async Task<CreateExpenseResultAppDto> CreateExpenseAsync(CreateExpenseAppDto dto)
+    public async Task<CreateExpenseResultAppDto> CreateGeneralExpenseAsync(CreateExpenseAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
         if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
@@ -83,21 +87,121 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             TaxRate = dto.TaxRate,
             ExpenseType = (ExpenseType)dto.ExpenseType,
             IncurredDateUtc = dto.IncurredDateUtc,
+            RecordedByUserId = dto.RecordedByUserId
+        }).ConfigureAwait(false);
+
+        return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+    public async Task<CreateExpenseResultAppDto> CreateOrderExpenseAsync(Guid orderId, CreateExpenseAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        var order = await orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            return new CreateExpenseResultAppDto { Success = false, ErrorMessage = "Error.OrderIsNotFound" };
+
+        var result = await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDateUtc = dto.IncurredDateUtc,
             RecordedByUserId = dto.RecordedByUserId,
-            OrderId = dto.OrderId,
+            ReferenceId = orderId,
+            ReferenceCode = order.Code,
+            ReferenceType = ExpenseReferenceType.Order
+        }).ConfigureAwait(false);
+
+        return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+    public async Task<CreateExpenseResultAppDto> CreatePurchaseOrderExpenseAsync(Guid purchaseOrderId, CreateExpenseAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return new CreateExpenseResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderIsNotFound" };
+
+        var result = await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDateUtc = dto.IncurredDateUtc,
+            RecordedByUserId = dto.RecordedByUserId,
+            ReferenceId = purchaseOrderId,
+            ReferenceCode = purchaseOrder.Code,
+            ReferenceType = ExpenseReferenceType.PurchaseOrder
+        }).ConfigureAwait(false);
+
+        return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+    public async Task<CreateExpenseResultAppDto> CreateCustomerReturnExpenseAsync(Guid customerReturnId, CreateExpenseAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        var customerReturn = await customerReturnDataReader.GetByIdAsync(customerReturnId).ConfigureAwait(false);
+        if (customerReturn is null)
+            return new CreateExpenseResultAppDto { Success = false, ErrorMessage = "Error.CustomerReturnIsNotFound" };
+
+        var result = await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDateUtc = dto.IncurredDateUtc,
+            RecordedByUserId = dto.RecordedByUserId,
+            ReferenceId = customerReturnId,
+            ReferenceCode = customerReturn.Code,
+            ReferenceType = ExpenseReferenceType.CustomerReturn
+        }).ConfigureAwait(false);
+
+        return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+    public async Task<CreateExpenseResultAppDto> CreateVendorReturnExpenseAsync(Guid vendorReturnId, CreateExpenseAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid) return new CreateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(vendorReturnId).ConfigureAwait(false);
+        if (vendorReturn is null)
+            return new CreateExpenseResultAppDto { Success = false, ErrorMessage = "Error.VendorReturnIsNotFound" };
+
+        var result = await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDateUtc = dto.IncurredDateUtc,
+            RecordedByUserId = dto.RecordedByUserId,
+            ReferenceId = vendorReturnId,
+            ReferenceCode = vendorReturn.Code,
+            ReferenceType = ExpenseReferenceType.VendorReturn
         }).ConfigureAwait(false);
 
         return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
     }
 
+
     public async Task<UpdateExpenseResultAppDto> UpdateExpenseAsync(UpdateExpenseAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
-        if (!valid) 
+        if (!valid)
             return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
         var expense = await expenseDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
-        if (expense is null) 
+        if (expense is null)
             return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await expenseManager.UpdateExpenseAsync(new UpdateExpenseDto
@@ -108,7 +212,7 @@ public class ExpenseAppService(IExpenseManager expenseManager,
             AmountWithoutTax = dto.AmountWithoutTax,
             TaxRate = dto.TaxRate,
             IncurredDateUtc = dto.IncurredDateUtc,
-            ExpenseType = (ExpenseType) dto.ExpenseType
+            ExpenseType = (ExpenseType)dto.ExpenseType
         }).ConfigureAwait(false);
 
         return new UpdateExpenseResultAppDto { Success = true, UpdatedId = dto.Id };

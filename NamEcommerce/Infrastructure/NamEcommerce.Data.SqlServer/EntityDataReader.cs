@@ -60,14 +60,14 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
         => _dbContext.GetDataAsync<TEntity>();
 
     public Task<TEntity?> GetByIdAsync(Guid id)
-        => DataSource.FirstOrDefaultAsync(e => e.Id == id);
+        => TrackingDataSource.FirstOrDefaultAsync(e => e.Id == id);
 
     public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
     {
         if (!ids.Any())
             return [];
 
-        var query = from entity in DataSource
+        var query = from entity in TrackingDataSource
                     where ids.Contains(entity.Id)
                     select entity;
 

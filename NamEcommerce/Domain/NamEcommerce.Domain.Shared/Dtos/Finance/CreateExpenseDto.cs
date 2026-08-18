@@ -12,12 +12,12 @@ public sealed class CreateExpenseDto
     public DateTime IncurredDateUtc { get; set; }
     public Guid? RecordedByUserId { get; set; }
 
+    public Guid? ReferenceId { get; set; }
+    public string? ReferenceCode { get; set; }
+    public ExpenseReferenceType ReferenceType { get; set; }
+
     public decimal AmountWithoutTax { get; set; }
     public decimal? TaxRate { get; set; }
-
-    public Guid? SourceVendorReturnId { get; set; }
-    public Guid? SourceCustomerReturnId { get; set; }
-    public Guid? OrderId { get; set; }
 
     public void Verify()
     {

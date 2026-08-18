@@ -16,9 +16,9 @@ public sealed record ExpenseDto
     public required decimal Amount { get; init; }
     public decimal AmountWithoutTax { get; set; }
 
-    public Guid? SourceOrderId { get; set; }
-    public Guid? SourceCustomerReturnId { get; set; }
-    public Guid? SourceVendorReturnId { get; set; }
+    public Guid? ReferenceId { get; set; }
+    public string? ReferenceCode { get; set; }
+    public ExpenseReferenceType ReferenceType { get; set; }
 
     public bool IsSystemGenerated { get; set; }
 }

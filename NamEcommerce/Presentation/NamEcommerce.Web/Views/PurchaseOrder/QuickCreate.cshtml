@@ -193,7 +193,6 @@
                             </span>
                         </div>
                     </div>
-                    <div class="alert alert-info text-end mb-0 @(Model.ShippingAmount > 0 ? "" : "d-none")" id="orderShippingAmountHint">Phí vận chuyển đã trả sẽ được cộng vào chi phí và không được tính vào công nợ NCC</div>
                 </div>
                 <div class="content-card-body">
                     <div class="d-flex flex-column gap-3">
@@ -273,6 +272,7 @@
                                             </select>
                                             <span class="text-danger small" asp-validation-for="TaxRate"></span>
                                         </div>
+                                        <div class="alert alert-info text-center mb-0 @(Model.ShippingAmount > 0 ? "" : "d-none")" id="orderShippingAmountHint">Phí vận chuyển đã trả sẽ được cộng vào chi phí và không được tính vào công nợ NCC</div>
                                         <div class="col-12">
                                             @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
                                             {

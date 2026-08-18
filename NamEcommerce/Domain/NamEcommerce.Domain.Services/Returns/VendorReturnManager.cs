@@ -201,7 +201,7 @@ public sealed class VendorReturnManager(
                     .Sum(i => i.AcceptedQuantity),
                 note: $"Đảo ngược phiếu trả NCC {vendorReturn.Code}",
                 receivedByUserId: vendorReturn.CreatedByUserId,
-                referenceType: (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn,
+                referenceType: (int)StockReferenceType.VendorReturn,
                 referenceId: vendorReturn.Id).ConfigureAwait(false);
 
             await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
@@ -232,7 +232,7 @@ public sealed class VendorReturnManager(
                 reason).ConfigureAwait(false);
 
         var linkedExpense = await expenseDataReader.DataSource
-            .FirstOrDefaultAsync(e => e.SourceVendorReturnId == vendorReturn.Id).ConfigureAwait(false);
+            .FirstOrDefaultAsync(e => e.ReferenceId == vendorReturn.Id && e.ReferenceType == ExpenseReferenceType.VendorReturn).ConfigureAwait(false);
         if (linkedExpense is not null)
             await expenseManager.DeleteExpenseAsync(linkedExpense.Id).ConfigureAwait(false);
 
@@ -313,7 +313,9 @@ public sealed class VendorReturnManager(
                 AmountWithoutTax = vendorReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
                 IncurredDateUtc = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
-                SourceVendorReturnId = vendorReturn.Id
+                ReferenceId = vendorReturn.Id,
+                ReferenceCode = vendorReturn.Code,
+                ReferenceType = ExpenseReferenceType.VendorReturn
             }).ConfigureAwait(false);
         }
 

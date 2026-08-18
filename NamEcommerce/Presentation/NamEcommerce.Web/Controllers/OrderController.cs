@@ -399,7 +399,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         if (model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
             return this.JsonError(Localizer["Error.ExpenseTaxRateInvalid"]);
 
-        var result = await _mediator.Send(new CreateExpenseCommand
+        var result = await _mediator.Send(new CreateOrderExpenseCommand
         {
             Title = model.Title,
             AmountWithoutTax = model.AmountWithoutTax,

@@ -135,7 +135,7 @@ using NamEcommerce.Application.Services.Notifications;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
-ConfigureServices(builder.Services, builder.Configuration);
+ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
 //middlewares
 var app = builder.Build();
@@ -161,24 +161,24 @@ app.Run();
 
 #region Local Methods
 
-void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
+void ConfigureServices(IServiceCollection services, ConfigurationManager configuration, IWebHostEnvironment environment)
 {
     //options
     var appConfig = new AppConfig();
     configuration.GetSection(AppConstants.AppConfigSectionName).Bind(appConfig);
-    services.Configure<AppConfig>(options => builder.Configuration.Bind(AppConstants.AppConfigSectionName, options));
+    services.Configure<AppConfig>(options => configuration.Bind(AppConstants.AppConfigSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<AppConfig>>().Value);
 
-    services.Configure<InfoOptions>(options => builder.Configuration.Bind(AppConstants.InfoSectionName, options));
+    services.Configure<InfoOptions>(options => configuration.Bind(AppConstants.InfoSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<InfoOptions>>().Value);
 
-    services.Configure<CultureConfig>(options => builder.Configuration.Bind(AppConstants.CultureConfigSectionName, options));
+    services.Configure<CultureConfig>(options => configuration.Bind(AppConstants.CultureConfigSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<CultureConfig>>().Value);
 
-    services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
+    services.Configure<WarehouseSettings>(options => configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
 
-    services.Configure<PurchaseOrderSettings>(options => builder.Configuration.Bind(AppConstants.PurchaseOrderSettingSectionName, options));
+    services.Configure<PurchaseOrderSettings>(options => configuration.Bind(AppConstants.PurchaseOrderSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<PurchaseOrderSettings>>().Value);
 
     services.Configure<BankTransferPaymentSettings>(options => configuration.GetSection(BankTransferPaymentSettings.SectionName).Bind(options));
@@ -197,7 +197,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"));
         opts.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>());
 
-        if (builder.Environment.IsDevelopment())
+        if (environment.IsDevelopment())
             opts.EnableSensitiveDataLogging(true);
     });
     // Đảm bảo IDbContext và IUnitOfWork resolve cùng 1 scoped instance với NamEcommerceEfDbContext
@@ -327,7 +327,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IStockAdjustmentNoteAppService, StockAdjustmentNoteAppService>();
     services.AddScoped<IStockTransferNoteAppService, StockTransferNoteAppService>();
 
-    builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
+    services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
     {
         client.BaseAddress = new Uri(appConfig.N8nEndpoint);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -360,7 +360,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IUserManagementModelFactory, UserManagementModelFactory>();
     services.AddScoped<ISystemNotificationModelFactory, SystemNotificationModelFactory>();
 
-    if (builder.Environment.IsEnvironment("E2E"))
+    if (environment.IsEnvironment("E2E"))
     {
         services.AddScoped<IE2ETestDataService, E2ETestDataService>();
     }
@@ -421,7 +421,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
     });
     mvcBuilder.AddSessionStateTempDataProvider();
-    if (builder.Environment.IsDevelopment())
+    if (environment.IsDevelopment())
     {
         mvcBuilder.AddRazorRuntimeCompilation();
     }

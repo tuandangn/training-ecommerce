@@ -76,7 +76,7 @@ public class ExpenseController(IMediator mediator, AppConfig appConfig) : BaseAu
             return View(model);
         }
 
-        var result = await mediator.Send(new CreateExpenseCommand
+        var result = await mediator.Send(new CreateGeneralExpenseCommand
         {
             Title = model.Title!,
             Description = model.Description,

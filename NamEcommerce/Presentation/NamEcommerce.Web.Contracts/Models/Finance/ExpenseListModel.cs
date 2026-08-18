@@ -24,9 +24,11 @@ public sealed class ExpenseListModel
         public decimal Amount { get; init; }
         public int ExpenseType { get; init; }
         public DateTime IncurredDate { get; init; }
-        public Guid? SourceOrderId { get; init; }
-        public Guid? SourceCustomerReturnId { get; init; }
-        public Guid? SourceVendorReturnId { get; init; }
+
+        public Guid? ReferenceId { get; init; }
+        public string? ReferenceCode { get; init; }
+        public int ReferenceType { get; init; }
+
         public bool IsSystemGenerated { get; init; }
     }
 }
