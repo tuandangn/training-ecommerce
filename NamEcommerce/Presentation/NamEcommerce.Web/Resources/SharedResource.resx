@@ -534,6 +534,9 @@
   <data name="Error.ShippingAmountCannotBeNegative" xml:space="preserve">
     <value>Shipping amount cannot be negative.</value>
   </data>
+  <data name="Error.ShippingAmountIsInvalid" xml:space="preserve">
+    <value>Shipping amount is invalid</value>
+  </data>
   <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
     <value>Delivery note code is required.</value>
   </data>

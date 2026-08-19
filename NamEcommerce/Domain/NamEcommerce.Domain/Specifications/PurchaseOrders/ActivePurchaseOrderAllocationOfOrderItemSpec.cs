@@ -5,8 +5,14 @@ using NamEcommerce.Domain.Shared.Specifications;
 namespace NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 [Serializable]
-public sealed class ActivePurchaseOrderAllocationOfOrderItemSpec(Guid orderId, IList<Guid> orderItemIds)
-    : BaseSpecification<PurchaseOrderItemAllocation>(
-        new NotHaveStatusPurchaseOrderAllocationSpec([AllocationStatus.Cancelled]).Criteria
-        .And(new PurchaseOrderAllocationOfOrderItemsSpec(orderId, orderItemIds).Criteria)
-    );
+public sealed class ActivePurchaseOrderAllocationOfOrderItemSpec : BaseSpecification<PurchaseOrderItemAllocation>
+{
+    public ActivePurchaseOrderAllocationOfOrderItemSpec(Guid orderId, IList<Guid> orderItemIds)
+        : base(new NotHaveStatusPurchaseOrderAllocationSpec([AllocationStatus.Cancelled]).Criteria.And(new PurchaseOrderAllocationOfOrderItemsSpec(orderId, orderItemIds).Criteria))
+    {
+    }
+    public ActivePurchaseOrderAllocationOfOrderItemSpec(IList<Guid> orderItemIds)
+        : base(new NotHaveStatusPurchaseOrderAllocationSpec([AllocationStatus.Cancelled]).Criteria.And(new PurchaseOrderAllocationOfOrderItemsSpec(orderItemIds).Criteria))
+    {
+    }
+}

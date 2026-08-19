@@ -6,9 +6,7 @@ namespace NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 public interface IPurchaseOrderAllocationManager
 {
     Task<PurchaseOrderItemAllocationDto> AllocatePurchaseOrderItemForOrder(AllocatePurchaseOrderItemForOrder dto);
-    Task IncreaseReceivedAsync(Guid allocationId, decimal receivedQty);
     Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity);
-    Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForOrderItemAsync(Guid orderItemId);
     Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForPurchaseOrderItemAsync(Guid purchaseOrderItemId);
     Task ReleaseAllocationsOfPurchaseOrderItemAsync(SecondaryItemId purchaseOrderItemId);
     Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId);

@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
@@ -21,10 +22,16 @@ public sealed class BulkReceivePurchaseOrderHandler(IPurchaseOrderAppService pur
                 ActualUnitCost = item.ActualUnitCost,
                 ReceivedQuantity = item.Quantity,
                 WarehouseId = item.WarehouseId,
+                DirectShipOrderId = item.DirectShipOrderId,
+                DirectShipOrderItemId = item.DirectShipOrderItemId,
+                DirectShipAddress = item.DirectShipAddress,
+                DirectShipContactName = item.DirectShipContactName,
+                DirectShipContactPhone = item.DirectShipContactPhone,
+                DirectShipExistingAllocationId = item.DirectShipExistingAllocationId
             }).ToList(),
             PictureIds = request.PictureIds,
             ReceivedByUserId = currentUser?.Id,
-            ReceivedOnUtc = request.ReceivedOnUtc,
+            ReceivedOnUtc = DateTimeHelper.ToUniversalTime(request.ReceivedOn),
             ShippingAmount = request.ShippingAmount,
             TaxRate = request.TaxRate
         });

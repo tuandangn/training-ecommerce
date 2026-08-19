@@ -11,18 +11,12 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
-public sealed class DeliveryNoteDeliveredHandler(
-    ICustomerDebtManager debtManager,
-    ICustomerLedgerManager customerLedgerManager,
-    IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<DeliveryNoteDelivered>
+public sealed class DeliveryNoteDeliveredHandler(ICustomerDebtManager debtManager,
+    ICustomerLedgerManager customerLedgerManager, IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<DeliveryNoteDelivered>
 {
-    private readonly ICustomerDebtManager _debtManager = debtManager;
-    private readonly ICustomerLedgerManager _customerLedgerManager = customerLedgerManager;
-    private readonly IDeliveryNoteAppService _deliveryNoteAppService = deliveryNoteAppService;
-
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return;
 
@@ -35,7 +29,7 @@ public sealed class DeliveryNoteDeliveredHandler(
         if (debtAmount <= 0)
             return;
 
-        await _debtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
+        await debtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
@@ -48,7 +42,7 @@ public sealed class DeliveryNoteDeliveredHandler(
 
         if (chargeAmount > 0)
         {
-            await _customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+            await customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
             {
                 CustomerId = notification.CustomerId,
                 Amount = chargeAmount,
@@ -61,7 +55,7 @@ public sealed class DeliveryNoteDeliveredHandler(
 
         if (surcharge > 0)
         {
-            await _customerLedgerManager.RecordSurchargeAsync(new RecordCustomerLedgerChargeDto
+            await customerLedgerManager.RecordSurchargeAsync(new RecordCustomerLedgerChargeDto
             {
                 CustomerId = notification.CustomerId,
                 Amount = surcharge,
@@ -74,10 +68,8 @@ public sealed class DeliveryNoteDeliveredHandler(
     }
 }
 
-public sealed class DeliveryNoteDeliveredStockHandler(
-    IDeliveryNoteAppService deliveryNoteAppService,
-    IInventoryStockManager stockManager,
-    IInventoryCostingManager inventoryCostingManager) : INotificationHandler<DeliveryNoteDelivered>
+public sealed class DeliveryNoteDeliveredStockHandler(IDeliveryNoteAppService deliveryNoteAppService,
+    IInventoryStockManager stockManager, IInventoryCostingManager inventoryCostingManager) : INotificationHandler<DeliveryNoteDelivered>
 {
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
@@ -98,11 +90,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             : (int)Domain.Entities.Inventory.StockReferenceType.SalesOrder;
 
         var dispatchGroups = deliveryNote.Items
-            .GroupBy(item => new
-            {
-                item.ProductId,
-                WarehouseId = item.WarehouseId
-            })
+            .GroupBy(item => new { item.ProductId, item.WarehouseId })
             .Select(group => new
             {
                 group.Key.ProductId,

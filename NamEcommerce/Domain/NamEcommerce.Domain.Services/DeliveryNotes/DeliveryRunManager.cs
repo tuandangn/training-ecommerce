@@ -30,7 +30,7 @@ public sealed class DeliveryRunManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"CHG-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.NextAsync(prefix, () => runReader.TrackingDataSource.CountAsync(run => run.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => runReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(run => run.Code.StartsWith(prefix)));
     }
 
     public async Task<DeliveryRunDto> CreateAsync(CreateDeliveryRunDto dto)

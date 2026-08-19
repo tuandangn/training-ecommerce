@@ -24,6 +24,7 @@ public static class ExpenseTypeExtensions
             ExpenseType.General => "Khác",
             ExpenseType.ReturnCost => "Hoàn hàng",
             ExpenseType.AssetDisposal => "Khấu hao",
+            ExpenseType.Purchase => "Mua hàng",
             _ => throw new InvalidDataException(nameof(type)),
         };
 
@@ -38,6 +39,7 @@ public static class ExpenseTypeExtensions
             ExpenseType.General => "bg-light",
             ExpenseType.ReturnCost => "bg-danger text-light",
             ExpenseType.AssetDisposal => "bg-secondary text-light",
+            ExpenseType.Purchase => "bg-secondary text-light",
             _ => throw new InvalidDataException(nameof(type)),
         };
     }

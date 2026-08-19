@@ -534,6 +534,9 @@
   <data name="Error.ShippingAmountCannotBeNegative" xml:space="preserve">
     <value>Phí vận chuyển không được âm.</value>
   </data>
+  <data name="Error.ShippingAmountIsInvalid" xml:space="preserve">
+    <value>Phí vận chuyển không đúng.</value>
+  </data>
   <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
     <value>Mã phiếu giao hàng không được để trống.</value>
   </data>

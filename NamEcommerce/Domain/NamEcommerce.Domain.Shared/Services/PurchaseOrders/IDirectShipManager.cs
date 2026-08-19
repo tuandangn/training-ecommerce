@@ -6,9 +6,7 @@ namespace NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 public interface IDirectShipManager
 {
-    Task MarkAllocationAsDirectShipAsync(Guid allocationId,
-        string address, string? contactName,string? contactPhone,
-        int priority);
+    Task MarkAllocationAsDirectShipAsync(Guid allocationId, string address, string? contactName,string? contactPhone, int priority);
 
     Task<bool> HasReceivableDirectShipAllocationsAsync(Guid purchaseOrderItemId);
 

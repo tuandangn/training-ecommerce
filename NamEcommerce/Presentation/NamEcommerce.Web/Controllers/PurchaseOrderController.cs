@@ -12,45 +12,29 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class PurchaseOrderController : BaseAuthorizedController
+public sealed class PurchaseOrderController(IMediator mediator,
+    IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
+    PurchaseOrderSettings purchaseOrderSettings, AppConfig appConfig) : BaseAuthorizedController
 {
-    private readonly IMediator _mediator;
-    private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
-    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
-    private readonly IOrderAppService _orderAppService;
-    private readonly PurchaseOrderSettings _purchaseOrderSettings;
-    private readonly AppConfig _appConfig;
-
-    public PurchaseOrderController(IMediator mediator, IOrderAppService orderAppService,
-        IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
-        PurchaseOrderSettings purchaseOrderSettings, AppConfig appConfig)
-    {
-        _mediator = mediator;
-        _purchaseOrderModelFactory = purchaseOrderModelFactory;
-        _purchaseOrderAppService = purchaseOrderAppService;
-        _orderAppService = orderAppService;
-        _purchaseOrderSettings = purchaseOrderSettings;
-        _appConfig = appConfig;
-    }
-
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> List(PurchaseOrderListSearchModel searchModel)
     {
-        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderListModel(searchModel);
+        var model = await purchaseOrderModelFactory.PreparePurchaseOrderListModel(searchModel);
         return View(model);
     }
 
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Create()
     {
-        var model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel();
+        var model = await purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel();
         return View(model);
     }
 
@@ -60,12 +44,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+            model = await purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
 
         var productInfos = model.Items.Count == 0 ? []
-            : await _mediator.Send(new GetProductsByIdsForOrderQuery
+            : await mediator.Send(new GetProductsByIdsForOrderQuery
             {
                 Ids = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList()
             });
@@ -75,7 +59,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             if (model.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
             {
                 AddLocalizedModelError("Error.ProductIsNotFound");
-                model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+                model = await purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
                 return View(model);
             }
 
@@ -97,13 +81,13 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
                 if (isInvalid)
                 {
-                    model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+                    model = await purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
                     return View(model);
                 }
             }
         }
 
-        var result = await _mediator.Send(new CreatePurchaseOrderCommand
+        var result = await mediator.Send(new CreatePurchaseOrderCommand
         {
             PlacedOn = model.PlacedOn,
             VendorId = model.VendorId!.Value,
@@ -121,7 +105,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!result.Success)
         {
             AddLocalizedModelError(result.ErrorMessage);
-            model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+            model = await purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
 
@@ -132,19 +116,19 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
     {
-        var model = await _mediator.Send(query);
+        var model = await mediator.Send(query);
         return View(model);
     }
 
     public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         return Json(result);
     }
 
     public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         return Json(result);
     }
 
@@ -152,18 +136,18 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         if (!result.Success)
             return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        if (_purchaseOrderSettings.CreateFromShortageAutoApproved)
+        if (purchaseOrderSettings.CreateFromShortageAutoApproved)
         {
             foreach (var purchaseOrderInfo in result.Items)
             {
                 if (!purchaseOrderInfo.CreatedNew)
                     continue;
-                await _mediator.Send(new SubmitsPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
-                await _mediator.Send(new ApprovesPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+                await mediator.Send(new SubmitsPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
+                await mediator.Send(new ApprovesPurchaseOrderCommand { PurchaseOrderId = purchaseOrderInfo.PurchaseOrderId });
             }
         }
 
@@ -174,7 +158,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.QuickCreate)]
     public async Task<IActionResult> QuickCreate()
     {
-        var model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel();
+        var model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel();
         return View(model);
     }
 
@@ -184,24 +168,24 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+            model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
             return View(model);
         }
 
         if (model.VendorId.HasValue)
         {
-            var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId.Value });
+            var vendor = await mediator.Send(new GetVendorQuery { Id = model.VendorId.Value });
             if (vendor is null)
             {
                 AddLocalizedModelError("Error.VendorIsNotFound");
-                model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
                 return View(model);
             }
         }
 
         if (model.Items.Count > 0)
         {
-            var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+            var productInfos = await mediator.Send(new GetProductsByIdsForOrderQuery
             {
                 Ids = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList()
             });
@@ -209,7 +193,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             if (model.Items.Any(item => !productInfos.Any(p => p.Id == item.ProductId)))
             {
                 AddLocalizedModelError("Error.ProductIsNotFound");
-                model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
                 return View(model);
             }
 
@@ -231,7 +215,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
                 if (isInvalid)
                 {
-                    model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                    model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
                     return View(model);
                 }
             }
@@ -241,21 +225,21 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 if (model.Total < model.PaidAmount)
                 {
                     AddLocalizedModelError("Error.PaidAmountExceedsOrderTotal");
-                    model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+                    model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
                     return View(model);
                 }
             }
         }
 
-        if (model.IsReceived && model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
+        if (model.IsReceived && model.TaxRate.HasValue && !appConfig.TaxRates.Contains(model.TaxRate.Value))
         {
             AddLocalizedModelError("Error.TaxRateIsNotAllowed");
-            model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+            model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
             return View(model);
         }
 
 
-        var result = await _mediator.Send(prepareQuickCreateCommand());
+        var result = await mediator.Send(prepareQuickCreateCommand());
         if (result.Success)
         {
             NotifySuccess("Msg.SaveSuccess");
@@ -263,7 +247,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         }
 
         NotifyError(result.ErrorMessage!);
-        model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
+        model = await purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel(model);
         return View(model);
 
         //local method
@@ -323,7 +307,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
@@ -378,7 +362,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             }
         }
 
-        var updatePurchaseOrderResult = await _mediator.Send(new UpdatePurchaseOrderCommand
+        var updatePurchaseOrderResult = await mediator.Send(new UpdatePurchaseOrderCommand
         {
             PurchaseOrderId = model.Id,
             PlacedOn = model.PlacedOn,
@@ -402,7 +386,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> Details(Guid id)
     {
-        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);
+        var model = await purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);
         if (model == null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
@@ -417,7 +401,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
     public async Task<IActionResult> RecordSettlementPayment(RecordPurchaseOrderSettlementPaymentCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         if (result.Success)
             NotifySuccess("Msg.SaveSuccess");
         else
@@ -431,14 +415,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> Copy(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
+        var vendor = await mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
         if (vendor is null)
         {
             NotifyError("Error.VendorIsNotFound");
@@ -451,7 +435,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        var productInfos = await mediator.Send(new GetProductsByIdsForOrderQuery
         {
             Ids = purchaseOrder.Items.Select(i => i.ProductId).Distinct().ToList()
         });
@@ -471,7 +455,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var result = await _mediator.Send(new CopyPurchaseOrderCommand(id));
+        var result = await mediator.Send(new CopyPurchaseOrderCommand(id));
         if (result.Success && result.CreatedId.HasValue)
         {
             NotifySuccess("Msg.SaveSuccess");
@@ -485,7 +469,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> SplitsPurchaseOrder(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(id);
         if (purchaseOrder is null)
             return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
 
@@ -495,7 +479,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!purchaseOrder.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
             return this.JsonError(LocalizeError("Error.PurchaseOrder.NoItemsForSplit"));
 
-        var model = await _purchaseOrderModelFactory.PrepareSplitsPurchaseOrderModel(id);
+        var model = await purchaseOrderModelFactory.PrepareSplitsPurchaseOrderModel(id);
         if (model is null)
             return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
 
@@ -506,14 +490,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> SplitsPurchaseOrder(SplitsPurchaseOrderModel model)
     {
-        var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(model.PurchaseOrderId);
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(model.PurchaseOrderId);
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var vendor = await _mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
+        var vendor = await mediator.Send(new GetVendorQuery { Id = purchaseOrder.VendorId });
         if (vendor is null)
         {
             NotifyError("Error.VendorIsNotFound");
@@ -527,7 +511,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         }
 
         var selectedPurchaseOrderItems = purchaseOrder.Items.Where(item => model.Items.Any(selectedItem => selectedItem.ItemId == item.Id)).ToList();
-        var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        var productInfos = await mediator.Send(new GetProductsByIdsForOrderQuery
         {
             Ids = selectedPurchaseOrderItems.Select(i => i.ProductId).Distinct().ToList()
         });
@@ -547,7 +531,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var result = await _mediator.Send(new SplitPurchaseOrderCommand
+        var result = await mediator.Send(new SplitPurchaseOrderCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             Items = model.Items.Where(item => item.Quantity > 0).Select(item => new SplitPurchaseOrderCommand.SplitItemCommand
@@ -574,11 +558,11 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return Json(new { success = false, message = GetErrorMessage() });
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
             return Json(new { success = false, message = LocalizeError("Error.PurchaseOrderIsNotFound") });
 
-        var result = await _mediator.Send(new AddPurchaseOrderItemCommand
+        var result = await mediator.Send(new AddPurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             ProductId = model.ProductId ?? default,
@@ -603,30 +587,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
-        if (purchaseOrder is null)
-        {
-            NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(List));
-        }
-
-        if (model.DirectShipOrderId.HasValue)
-        {
-            var order = await _orderAppService.GetOrderByIdAsync(model.DirectShipOrderId.Value);
-            if (order == null)
-            {
-                NotifyError("Error.OrderIsNotFound");
-                return RedirectToAction(nameof(List));
-            }
-            var orderItem = order.Items.Where(item => item.Id == model.DirectShipOrderItemId).FirstOrDefault();
-            if (order == null)
-            {
-                NotifyError("Error.OrderItemIsNotFound");
-                return RedirectToAction(nameof(List));
-            }
-        }
-
-        var result = await _mediator.Send(new ReceivePurchaseOrderItemCommand
+        var result = await mediator.Send(new ReceivePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             PurchaseOrderItemId = model.PurchaseOrderItemId,
@@ -634,7 +595,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             TaxRate = model.TaxRate,
             WarehouseId = model.WarehouseId,
             SellingPrice = model.SellingPrice,
-            OversupplyAction = model.OversupplyAction,
             DirectShipOrderId = model.DirectShipOrderId,
             DirectShipOrderItemId = model.DirectShipOrderItemId,
             DirectShipAddress = model.DirectShipAddress,
@@ -656,7 +616,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> UpdatePurchaseOrderItem(Guid id, Guid itemId)
     {
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
             return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
         if (!purchaseOrder.CanAddItems)
@@ -690,7 +650,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
@@ -710,7 +670,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var result = await _mediator.Send(new UpdatePurchaseOrderItemCommand
+        var result = await mediator.Send(new UpdatePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             PurchaseOrderItemId = model.PurchaseOrderItemId,
@@ -736,14 +696,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return this.JsonError(Localizer["Error.InvalidRequest", GetErrorMessage()]);
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
             return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
 
         if (!purchaseOrder.CanReceiveGoods)
             return this.JsonError(Localizer["Error.PurchaseOrderCannotReceiveGoods"]);
 
-        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderBulkReceiveModel(id);
+        var model = await purchaseOrderModelFactory.PreparePurchaseOrderBulkReceiveModel(id);
         if (model is null)
             return this.JsonError(Localizer["Error.PurchaseOrderIsNotFound"]);
 
@@ -754,34 +714,40 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> BulkReceiveItems(PurchaseOrderBulkReceiveItemsModel model)
     {
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
-        if (purchaseOrder is null)
-        {
-            NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(List));
-        }
-
         if (!ModelState.IsValid)
         {
             NotifyError("Error.InvalidRequest", GetErrorMessage());
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        if (!purchaseOrder.CanReceiveGoods)
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(model.PurchaseOrderId);
+        if (purchaseOrder is null)
         {
-            NotifyError("Error.PurchaseOrderCannotReceiveGoods");
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        if (model.ReceivedOn.HasValue && DateTimeHelper.ToUniversalTime(model.ReceivedOn.Value) < purchaseOrder.PlacedOnUtc)
+        {
+            NotifyError("Error.ReceivedOnMustBeAfterPlacedOn");
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        if (model.TaxRate.HasValue && !_appConfig.TaxRates.Contains(model.TaxRate.Value))
+        var items = model.Items.Where(line => line.ItemId != Guid.Empty && line.Quantity > 0).ToList();
+        if (items.Count == 0)
         {
-            NotifyError("Error.TaxRateIsNotAllowed");
+            NotifyError("Error.BulkReceive.NoItemsProvided");
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
-        var lines = (model.Items ?? [])
-            .Where(line => line.ItemId != Guid.Empty && line.Quantity > 0)
-            .Select(line => new BulkReceiveLineCommand
+        var result = await mediator.Send(new BulkReceivePurchaseOrderCommand
+        {
+            PurchaseOrderId = model.PurchaseOrderId,
+            ShippingAmount = model.AdditionalShipping ?? 0,
+            TaxRate = model.TaxRate,
+            ReceivedOn = model.ReceivedOn,
+            PictureIds = model.PictureIds,
+            Items = items.Select(line => new BulkReceiveLineCommand
             {
                 ItemId = line.ItemId,
                 Quantity = line.Quantity,
@@ -793,33 +759,20 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 DirectShipContactName = line.DirectShipContactName,
                 DirectShipContactPhone = line.DirectShipContactPhone,
                 DirectShipExistingAllocationId = line.DirectShipExistingAllocationId
-            })
-            .ToList();
-
-        if (lines.Count == 0)
-        {
-            NotifyError("Error.BulkReceive.NoItemsProvided");
-            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
-        }
-
-        var result = await _mediator.Send(new BulkReceivePurchaseOrderCommand
-        {
-            PurchaseOrderId = model.PurchaseOrderId,
-            Items = lines,
-            ShippingAmount = model.AdditionalShipping ?? 0,
-            TaxRate = model.TaxRate
+            }).ToList()
         });
 
         if (!result.Success)
-            NotifyError(result.ErrorMessage!);
-        else
         {
-            var count = result.CreatedGoodsReceiptIds.Count;
-            if (count > 1)
-                NotifySuccess("Msg.BulkReceive.CreatedMultiple", count);
-            else
-                NotifySuccess("Msg.SaveSuccess");
+            NotifyError(result.ErrorMessage!);
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
+
+        var count = result.CreatedGoodsReceiptIds.Count;
+        if (count > 1)
+            NotifySuccess("Msg.BulkReceive.CreatedMultiple", count);
+        else
+            NotifySuccess("Msg.SaveSuccess");
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
@@ -831,7 +784,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
             return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderIsNotFound") });
 
@@ -842,7 +795,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!purchaseOrder.CanAddItems)
             return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems") });
 
-        var result = await _mediator.Send(new DeletePurchaseOrderItemCommand
+        var result = await mediator.Send(new DeletePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             ItemId = model.PurchaseOrderItemId
@@ -857,14 +810,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Create)]
     public async Task<IActionResult> SubmitsPurchaseOrder(Guid id)
     {
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var (success, errorMessage) = await _mediator.Send(new SubmitsPurchaseOrderCommand
+        var (success, errorMessage) = await mediator.Send(new SubmitsPurchaseOrderCommand
         {
             PurchaseOrderId = id
         });
@@ -880,14 +833,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Approve)]
     public async Task<IActionResult> ApprovesPurchaseOrder(Guid id)
     {
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var (success, errorMessage) = await _mediator.Send(new ApprovesPurchaseOrderCommand
+        var (success, errorMessage) = await mediator.Send(new ApprovesPurchaseOrderCommand
         {
             PurchaseOrderId = id
         });
@@ -903,14 +856,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Cancel)]
     public async Task<IActionResult> CancelPurchaseOrder(Guid id)
     {
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var (success, errorMessage) = await _mediator.Send(new CancelPurchaseOrderCommand
+        var (success, errorMessage) = await mediator.Send(new CancelPurchaseOrderCommand
         {
             PurchaseOrderId = id
         });
@@ -932,7 +885,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var (success, errorMessage) = await _mediator.Send(new ClosePartialPurchaseOrderCommand
+        var (success, errorMessage) = await mediator.Send(new ClosePartialPurchaseOrderCommand
         {
             PurchaseOrderId = id,
             Reason = reason
@@ -952,7 +905,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (productId == Guid.Empty)
             return Json(Array.Empty<object>());
 
-        var prices = await _mediator.Send(new GetRecentPurchasePricesQuery { ProductId = productId });
+        var prices = await mediator.Send(new GetRecentPurchasePricesQuery { ProductId = productId });
 
         var result = prices.Select(p => new
         {
@@ -976,14 +929,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var purchaseOrder = await mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
             NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var result = await _mediator.Send(new ChangePurchaseOrderStatusCommand
+        var result = await mediator.Send(new ChangePurchaseOrderStatusCommand
         {
             PurchaseOrderId = id,
             Status = status
@@ -1002,14 +955,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
-            return Json(Array.Empty<object>());
+            return this.JsonError(LocalizeError("Error.PurchaseOrderItemRequired"));
 
-        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
+        var items = await purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
         var productIds = items.Select(i => i.ProductId).Distinct().ToList();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
+        var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
-        return Json(items.Select(item => new
+        return this.JsonOk(items.Select(item => new
         {
             orderItemId = item.OrderItemId,
             orderId = item.OrderId,
@@ -1017,6 +970,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             customerName = item.CustomerName,
             customerPhone = item.CustomerPhone,
             shippingAddress = item.ShippingAddress,
+            shippingPhoneNumber = item.ShippingPhoneNumber,
             productName = item.ProductName,
             quantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(item.ProductId),
             totalQuantity = item.TotalQuantity,
@@ -1030,11 +984,11 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
         if (purchaseOrderItemId == Guid.Empty)
-            return Json(Array.Empty<object>());
+            return this.JsonError(LocalizeError("Error.PurchaseOrderItemRequired"));
 
-        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
+        var allocations = await purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
 
-        return Json(allocations.Select(a => new
+        return this.JsonOk(allocations.Select(a => new
         {
             allocationId = a.AllocationId,
             orderId = a.OrderId,
@@ -1043,6 +997,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             customerName = a.CustomerName,
             customerPhone = a.CustomerPhone,
             shippingAddress = a.ShippingAddress,
+            shippingPhoneNumber = a.ShippingPhoneNumber,
             allocatedQty = a.AllocatedQuantity,
             remainingQty = a.RemainingQuantity
         }));
@@ -1055,7 +1010,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
-        var result = await _mediator.Send(new AllocatePoItemForOrderItemCommand
+        var result = await mediator.Send(new AllocatePoItemForOrderItemCommand
         {
             PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,
@@ -1077,7 +1032,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> ReleaseAllocationsForPurchaseOrderItem([FromBody] ReleaseAllocationsOfPurchaseOrderItemCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
@@ -1096,7 +1051,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
         }
 
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 

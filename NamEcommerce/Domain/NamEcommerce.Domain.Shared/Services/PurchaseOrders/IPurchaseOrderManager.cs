@@ -27,6 +27,7 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
     Task<ReceivedGoodsResultDto> ReceivesItemAsync(ReceivedGoodsDto dto);
     Task<BulkReceiveGoodsResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsDto dto);
+    Task AddShippingExpenseAsync(Guid purchaseOrderId, decimal shippingAmount, DateTime? incurredOnUtc = null);
 
     Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
     Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);

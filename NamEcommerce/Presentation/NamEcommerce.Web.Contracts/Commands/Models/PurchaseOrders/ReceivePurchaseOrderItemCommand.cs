@@ -8,14 +8,16 @@ public sealed class ReceivePurchaseOrderItemCommand : ICommand<ReceivePurchaseOr
     public required Guid PurchaseOrderId { get; init; }
     public required Guid PurchaseOrderItemId { get; init; }
 
+    public DateTime? ReceivedOn { get; set; }
     public required Guid? WarehouseId { get; set; }
     public required decimal ReceivedQuantity { get; set; }
     public int QuantityDecimalPlaces { get; set; }
     public decimal? TaxRate { get; set; }
+    public decimal ShippingAmount { get; set; }
+    public IList<Guid> PictureIds { get; set; } = [];
 
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
-    public string? OversupplyAction { get; set; }
 
     public Guid? DirectShipOrderId { get; set; }
     public Guid? DirectShipOrderItemId { get; set; }

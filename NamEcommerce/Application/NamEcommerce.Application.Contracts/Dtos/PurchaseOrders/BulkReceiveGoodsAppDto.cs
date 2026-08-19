@@ -41,6 +41,13 @@ public sealed record BulkReceiveItemAppDto
     public required decimal ReceivedQuantity { get; set; }
     public decimal? ActualUnitCost { get; set; }
 
+    public Guid? DirectShipOrderId { get; init; }
+    public Guid? DirectShipOrderItemId { get; init; }
+    public string? DirectShipAddress { get; init; }
+    public string? DirectShipContactName { get; init; }
+    public string? DirectShipContactPhone { get; init; }
+    public Guid? DirectShipExistingAllocationId { get; init; }
+
     public (bool valid, string? errorMessage) Validate()
     {
         if (PurchaseOrderItemId == Guid.Empty)

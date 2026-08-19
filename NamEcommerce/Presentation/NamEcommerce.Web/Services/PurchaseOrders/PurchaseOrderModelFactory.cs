@@ -20,43 +20,23 @@ using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
 
-public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
+public sealed class PurchaseOrderModelFactory(
+    IMediator mediator, AppConfig appConfig,
+    IDirectShipAppService directShipAppService,
+    IPurchaseOrderAppService purchaseOrderAppService,
+    IPurchaseOrderAuditAppService purchaseOrderAuditAppService,
+    IVendorDebtAppService vendorDebtAppService,
+    IVendorLedgerManager vendorLedgerManager) : IPurchaseOrderModelFactory
 {
-    private readonly IMediator _mediator;
-    private readonly AppConfig _appConfig;
-    private readonly IDirectShipAppService _directShipAppService;
-    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
-    private readonly IPurchaseOrderAuditAppService _purchaseOrderAuditAppService;
-    private readonly IVendorDebtAppService _vendorDebtAppService;
-    private readonly IVendorLedgerManager _vendorLedgerManager;
-
-    public PurchaseOrderModelFactory(
-        IMediator mediator,
-        AppConfig appConfig,
-        IDirectShipAppService directShipAppService,
-        IPurchaseOrderAppService purchaseOrderAppService,
-        IPurchaseOrderAuditAppService purchaseOrderAuditAppService,
-        IVendorDebtAppService vendorDebtAppService,
-        IVendorLedgerManager vendorLedgerManager)
-    {
-        _mediator = mediator;
-        _appConfig = appConfig;
-        _directShipAppService = directShipAppService;
-        _purchaseOrderAppService = purchaseOrderAppService;
-        _purchaseOrderAuditAppService = purchaseOrderAuditAppService;
-        _vendorDebtAppService = vendorDebtAppService;
-        _vendorLedgerManager = vendorLedgerManager;
-    }
-
     public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
         var pageSize = searchModel?.PageSize ?? 0;
         if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+        if (pageSize <= 0) pageSize = appConfig.DefaultPageSize;
+        if (appConfig.PageSizeOptions.Contains(pageSize)) pageSize = appConfig.DefaultPageSize;
 
-        var model = await _mediator.Send(new GetPurchaseOrderListQuery
+        var model = await mediator.Send(new GetPurchaseOrderListQuery
         {
             Keywords = searchModel?.Keywords,
             Status = (int?)searchModel?.Status,
@@ -76,7 +56,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
         if (model.VendorId.HasValue)
         {
-            var vendor = await _mediator.Send(new GetVendorQuery
+            var vendor = await mediator.Send(new GetVendorQuery
             {
                 Id = model.VendorId.Value
             }).ConfigureAwait(false);
@@ -93,7 +73,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
-                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                var products = await mediator.Send(new GetProductsByIdsForOrderQuery
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
@@ -125,9 +105,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             PaymentMethod = PaymentMethod.Cash
         };
 
-        model.AvailableTaxRates = _appConfig.TaxRates;
+        model.AvailableTaxRates = appConfig.TaxRates;
 
-        var bankAccounts = await _mediator.Send(new GetBankAccountsQuery()).ConfigureAwait(false);
+        var bankAccounts = await mediator.Send(new GetBankAccountsQuery()).ConfigureAwait(false);
         model.AvailableBankAccounts = bankAccounts.Select(bankAccount => new PurchaseOrderQuickCreateModel.QuickCreateBankAccountModel
         {
             Id = bankAccount.Id,
@@ -135,12 +115,12 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             IsDefault = bankAccount.IsDefault
         });
 
-        var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         model.AvailableWarehouses = warehouses.Options;
 
         if (model.VendorId.HasValue)
         {
-            var vendor = await _mediator.Send(new GetVendorQuery
+            var vendor = await mediator.Send(new GetVendorQuery
             {
                 Id = model.VendorId.Value
             }).ConfigureAwait(false);
@@ -157,7 +137,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
-                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                var products = await mediator.Send(new GetProductsByIdsForOrderQuery
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
@@ -182,17 +162,17 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id)
     {
-        var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+        var purchaseOrderInfo = await mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-        var relatedReceipts = await _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
-        var relatedReturns = await _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
-        var itemChangeAudits = await _purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id).ConfigureAwait(false);
-        var vendorDebts = await _vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
-        var vendorPayments = await _vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, int.MaxValue).ConfigureAwait(false);
-        var vendorBalance = await _vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
+        var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var relatedReceipts = await mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var relatedReturns = await mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id }).ConfigureAwait(false);
+        var itemChangeAudits = await purchaseOrderAuditAppService.GetPurchaseOrderItemChangeAuditsAsync(id).ConfigureAwait(false);
+        var vendorDebts = await vendorDebtAppService.GetDebtsByVendorIdAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
+        var vendorPayments = await vendorDebtAppService.GetPaymentsAsync(purchaseOrderInfo.VendorId, 0, int.MaxValue).ConfigureAwait(false);
+        var vendorBalance = await vendorLedgerManager.GetBalanceAsync(purchaseOrderInfo.VendorId).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
         {
@@ -257,7 +237,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var poItemIds = purchaseOrderInfo.Items.Select(i => (purchaseOrderInfo.Id, i.Id)).ToList();
         if (poItemIds.Count > 0)
         {
-            var allocations = await _purchaseOrderAppService
+            var allocations = await purchaseOrderAppService
                 .GetAllocationsForPurchaseOrderItemsAsync(poItemIds)
                 .ConfigureAwait(false);
 
@@ -285,7 +265,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 });
             }
 
-            var dsAllocations = await _directShipAppService
+            var dsAllocations = await directShipAppService
                 .GetDirectShipAllocationsForPoItemsAsync(poItemIds)
                 .ConfigureAwait(false);
 
@@ -319,25 +299,27 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id)
     {
-        var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+        var purchaseOrderInfo = await mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
         if (purchaseOrderInfo == null)
             return null;
         if (!purchaseOrderInfo.CanReceiveGoods)
             return null;
 
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         var model = new PurchaseOrderBulkReceiveItemsModel
         {
             PurchaseOrderId = purchaseOrderInfo.Id,
+            ReceivedOn = DateTime.Now,
+            PurchaseOrderPlacedOn = purchaseOrderInfo.PlacedOn, 
             DefaultWarehouseId = purchaseOrderInfo.WarehouseId,
             AvailableWarehouses = availableWarehouses.Options.ToList(),
             RemainingReceivableItems = purchaseOrderInfo.Items.Where(item => item.RemainingQuantity > 0).ToList(),
-            AvailableTaxRates = _appConfig.TaxRates
+            AvailableTaxRates = appConfig.TaxRates
         };
 
         var poItemIds = model.RemainingReceivableItems.Select(item => (purchaseOrderInfo.Id, item.Id)).ToList();
-        var dsAllocations = await _directShipAppService.GetDirectShipAllocationsForPoItemsAsync(poItemIds).ConfigureAwait(false);
+        var dsAllocations = await directShipAppService.GetDirectShipAllocationsForPoItemsAsync(poItemIds).ConfigureAwait(false);
 
         foreach (var alloc in dsAllocations)
         {
@@ -366,7 +348,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<SplitsPurchaseOrderModel?> PrepareSplitsPurchaseOrderModel(Guid id)
     {
-        var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+        var purchaseOrderInfo = await mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
 
         if (purchaseOrderInfo == null)
             return null;
@@ -387,12 +369,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         return model;
     }
 
-    private static void PrepareWorkflow(
-        PurchaseOrderDetailsModel model,
-        IReadOnlyList<PurchaseOrderItemChangeAuditAppDto> itemChangeAudits,
-        VendorDebtsByVendorAppDto? vendorDebts,
-        IEnumerable<VendorPaymentAppDto> vendorPayments,
-        decimal vendorBalance)
+    private static void PrepareWorkflow(PurchaseOrderDetailsModel model, IReadOnlyList<PurchaseOrderItemChangeAuditAppDto> itemChangeAudits,
+        VendorDebtsByVendorAppDto? vendorDebts, IEnumerable<VendorPaymentAppDto> vendorPayments, decimal vendorBalance)
     {
         var status = (PurchaseOrderStatus)model.Info.Status;
         var activeStage = CalculateActiveStage(model, status);

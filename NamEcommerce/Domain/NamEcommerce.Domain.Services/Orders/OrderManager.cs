@@ -448,7 +448,7 @@ public sealed class OrderManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => orderDataReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => orderDataReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task<decimal> GetOutstandingAllocationQuantityAsync(SecondaryItemId orderItemId)

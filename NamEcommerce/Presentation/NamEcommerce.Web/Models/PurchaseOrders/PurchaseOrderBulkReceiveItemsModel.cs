@@ -10,11 +10,19 @@ public sealed class PurchaseOrderBulkReceiveItemsModel
 {
     public Guid PurchaseOrderId { get; set; }
 
+    [Display(Name = "Ngày nhận")]
+    public DateTime? ReceivedOn { get; set; }
+    [ValidateNever]
+    public DateTime PurchaseOrderPlacedOn { get; set; }
+
     [Display(Name = "Phí vận chuyển")]
     public decimal? AdditionalShipping { get; set; }
 
+    public IList<Guid> PictureIds { get; set; } = [];
+
     [Display(Name = "Thuế")]
     public decimal? TaxRate { get; set; }
+    [ValidateNever]
     public decimal[] AvailableTaxRates { get; set; } = [];
 
     [Display(Name = "Hàng hóa nhận")]

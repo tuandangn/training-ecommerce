@@ -5,6 +5,14 @@ using NamEcommerce.Domain.Shared.Specifications;
 namespace NamEcommerce.Domain.Specifications.DeliveryNotes;
 
 [Serializable]
-public sealed class ActiveDeliveryNotesOfOrderItemsSpec(Guid orderId, IList<Guid> orderItemIds) : BaseSpecification<DeliveryNote>(
-    new DeliveryNotesOfOrderItemsSpec(orderId, orderItemIds).Criteria
-    .AndNot(new HaveStatusDeliveryNoteSpec([DeliveryNoteStatus.Cancelled]).Criteria));
+public sealed class ActiveDeliveryNotesOfOrderItemsSpec : BaseSpecification<DeliveryNote>
+{
+    public ActiveDeliveryNotesOfOrderItemsSpec(Guid orderId, IList<Guid> orderItemIds) 
+        : base(new DeliveryNotesOfOrderItemsSpec(orderId, orderItemIds).Criteria.AndNot(new HaveStatusDeliveryNoteSpec([DeliveryNoteStatus.Cancelled]).Criteria))
+    {
+    }
+    internal ActiveDeliveryNotesOfOrderItemsSpec(IList<Guid> orderItemIds) 
+        : base(new DeliveryNotesOfOrderItemsSpec(orderItemIds).Criteria.AndNot(new HaveStatusDeliveryNoteSpec([DeliveryNoteStatus.Cancelled]).Criteria))
+    {
+    }
+}

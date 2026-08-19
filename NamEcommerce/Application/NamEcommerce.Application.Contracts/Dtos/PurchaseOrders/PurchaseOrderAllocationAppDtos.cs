@@ -7,6 +7,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
     public required Guid OrderId { get; init; }
     public required string OrderCode { get; init; }
     public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public int QuantityDecimalPlaces { get; init; }
@@ -14,7 +15,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
     public string? ShippingAddress { get; init; }
-    public string? CustomerPhone { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 }
 
 [Serializable]
@@ -47,6 +48,7 @@ public sealed record NonDirectShipAllocationForPoItemAppDto
     public required decimal RemainingQuantity { get; init; }
     public string? CustomerPhone { get; init; }
     public string? ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 }
 
 [Serializable]

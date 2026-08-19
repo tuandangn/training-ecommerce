@@ -9,11 +9,25 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
 
     public EntityDataReader(IDbContext db) => _dbContext = db;
 
+    public IQueryable<TEntity> GetDataSource(ReaderDataSourceOptions options)
+    {
+        if (_dbContext is not NamEcommerceEfDbContext efDbContext)
+            return DataSource;
+
+        IQueryable<TEntity> baseDataSource = efDbContext.Set<TEntity>();
+        if (!options.IncludeDeleted)
+            baseDataSource = baseDataSource.IgnoreQueryFilters();
+        if (!options.ReadWrite)
+            baseDataSource = baseDataSource.AsNoTracking();
+
+        return baseDataSource;
+    }
+
     public IQueryable<TEntity> DataSource => _dbContext.GetDataSource<TEntity>().AsNoTracking();
 
-    public IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec)
+    public IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec, ReaderDataSourceOptions opts = default)
     {
-        var query = DataSource.Where(spec.Criteria);
+        var query = GetDataSource(opts).Where(spec.Criteria);
 
         query = spec.Includes.Aggregate(query,
             (current, include) => current.Include(include));
@@ -26,51 +40,38 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
         return query;
     }
 
-    public async Task<IList<TEntity>> GetListAsync(ISpecification<TEntity> spec)
-        => await ApplySpecification(spec).ToListAsync().ConfigureAwait(false);
+    public async Task<IList<TEntity>> GetListAsync(ISpecification<TEntity> spec, ReaderDataSourceOptions opts = default)
+        => await ApplySpecification(spec, opts).ToListAsync().ConfigureAwait(false);
 
-    public async Task<IList<TEntity>> GetPagedListAsync(ISpecification<TEntity> spec, int pageIndex, int pageSize)
+    public async Task<IList<TEntity>> GetPagedListAsync(ISpecification<TEntity> spec, int pageIndex, int pageSize, ReaderDataSourceOptions opts = default)
     {
-        return await ApplySpecification(spec)
+        return await ApplySpecification(spec, opts)
                 .Skip(pageIndex * pageSize).Take(pageSize)
                 .ToListAsync().ConfigureAwait(false);
     }
 
-    public async Task<int> CountAsync(ISpecification<TEntity> spec)
-        => await ApplySpecification(spec).CountAsync().ConfigureAwait(false);
+    public async Task<int> CountAsync(ISpecification<TEntity> spec, ReaderDataSourceOptions opts = default)
+        => await ApplySpecification(spec, opts).CountAsync().ConfigureAwait(false);
 
-    public Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec)
-        => ApplySpecification(spec).FirstOrDefaultAsync();
+    public Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec, ReaderDataSourceOptions opts = default)
+        => ApplySpecification(spec, opts).FirstOrDefaultAsync();
 
-    public async Task<bool> AnyAsync(ISpecification<TEntity> spec)
-        => await DataSource.AnyAsync(spec.Criteria).ConfigureAwait(false);
+    public async Task<bool> AnyAsync(ISpecification<TEntity> spec, ReaderDataSourceOptions opts = default)
+        => await GetDataSource(opts).AnyAsync(spec.Criteria).ConfigureAwait(false);
 
-    public IQueryable<TEntity> TrackingDataSource
-    {
-        get
-        {
-            if (_dbContext is NamEcommerceEfDbContext efDbContext)
-                return efDbContext.Set<TEntity>().IgnoreQueryFilters();
-
-            return DataSource;
-        }
-    }
-
-    public Task<IEnumerable<TEntity>> GetAllAsync()
-        => _dbContext.GetDataAsync<TEntity>();
+    public async Task<IEnumerable<TEntity>> GetAllAsync(ReaderDataSourceOptions opts = default)
+        => await GetDataSource(opts).ToListAsync().ConfigureAwait(false);
 
     public Task<TEntity?> GetByIdAsync(Guid id)
-        => TrackingDataSource.FirstOrDefaultAsync(e => e.Id == id);
+        => GetDataSource(new() { ReadWrite = true }).FirstOrDefaultAsync(e => e.Id == id);
 
-    public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids, ReaderDataSourceOptions? opts = null)
     {
         if (!ids.Any())
             return [];
 
-        var query = from entity in TrackingDataSource
-                    where ids.Contains(entity.Id)
-                    select entity;
-
-        return await query.ToListAsync().ConfigureAwait(false);
+        return await GetDataSource(opts ?? new() { ReadWrite = true })
+                    .Where(entity => ids.Contains(entity.Id))
+                    .ToListAsync().ConfigureAwait(false);
     }
 }

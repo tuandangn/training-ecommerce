@@ -5,18 +5,24 @@ namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 [Serializable]
 public sealed record ReceiveGoodsAppDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required decimal ReceivedQuantity { get; init; }
     public decimal QuantityDecimalPlaces { get; set; }
-
     public required Guid? WarehouseId { get; init; }
-
-    public Guid? ReceivedByUserId { get; set; }
-
     public decimal? TaxRate { get; set; }
+    public decimal ShippingAmount { get; set; }
+    public decimal? ActualUnitCost { get; set; }
+    public IList<Guid> PictureIds { get; set; } = [];
 
     public decimal? SellingPrice { get; set; }
-    public decimal? ActualUnitCost { get; set; }
-    public string? OversupplyAction { get; set; }
+    public Guid? ReceivedByUserId { get; set; }
+
+    public Guid? DirectShipOrderId { get; set; }
+    public Guid? DirectShipOrderItemId { get; set; }
+    public string? DirectShipAddress { get; set; }
+    public string? DirectShipContactName { get; set; }
+    public string? DirectShipContactPhone { get; set; }
+    public Guid? DirectShipExistingAllocationId { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {

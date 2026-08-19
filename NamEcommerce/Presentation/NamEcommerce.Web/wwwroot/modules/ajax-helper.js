@@ -40,7 +40,8 @@ async function request(method, url, body, options) {
         method: method,
         headers: headers,
         body: method === 'GET' || method === 'HEAD' ? undefined : payload,
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: opts.signal
     });
 
     const contentType = response.headers.get('Content-Type') || '';

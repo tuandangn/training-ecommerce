@@ -55,7 +55,8 @@ public sealed class GoodsReceiptManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => goodsReceiptDataReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => goodsReceiptDataReader.GetDataSource(new() { IncludeDeleted = true })
+            .CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)

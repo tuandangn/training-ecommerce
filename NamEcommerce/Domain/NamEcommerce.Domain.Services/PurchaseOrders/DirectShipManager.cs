@@ -17,6 +17,8 @@ using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Services.PurchaseOrders;
 
@@ -44,13 +46,10 @@ public sealed class DirectShipManager(
         await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
     }
 
-    public async Task<bool> HasReceivableDirectShipAllocationsAsync(Guid purchaseOrderItemId)
+    public Task<bool> HasReceivableDirectShipAllocationsAsync(Guid purchaseOrderItemId)
     {
-        return await allocationReader.DataSource.AnyAsync(allocation =>
-            allocation.PurchaseOrderItemId.SecondaryId == purchaseOrderItemId
-           && allocation.IsDirectShip
-           && allocation.Status != AllocationStatus.Cancelled
-           && allocation.ReceivedQuantity < allocation.AllocatedQuantity).ConfigureAwait(false);
+        return allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec([purchaseOrderItemId]), new() { ReadWrite = true })
+            .AnyAsync(allocation => allocation.IsDirectShip && allocation.ReceivedQuantity < allocation.AllocatedQuantity);
     }
 
     public async Task<bool> HasReceivedDirectShipAllocationsAsync(Guid orderId)
@@ -207,7 +206,7 @@ public sealed class DirectShipManager(
 
     public async Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(IReadOnlyList<SecondaryItemId> orderItemIds)
     {
-        var deliveryNotesByOrderItems = await GetDirectShipDeliveryNotesByOrderItems(orderItemIds).ConfigureAwait(false);
+        var deliveryNotesByOrderItems = await GetDirectShipDeliveryNotesByOrderItemMap(orderItemIds).ConfigureAwait(false);
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
         var allocations = await allocationReader.DataSource
@@ -237,19 +236,16 @@ public sealed class DirectShipManager(
     public async Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(IReadOnlyList<SecondaryItemId> purchaseOrderItemIds)
     {
         var poItemIds = purchaseOrderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
-        var orderItemIds = await allocationReader.DataSource
-            .Where(allocation => allocation.IsDirectShip && poItemIds.Contains(allocation.PurchaseOrderItemId.SecondaryId))
-            .Select(allocation => allocation.OrderItemId)
-            .Distinct()
-            .ToListAsync().ConfigureAwait(false);
-        var deliveryNotesByOrderItems = await GetDirectShipDeliveryNotesByOrderItems(orderItemIds).ConfigureAwait(false);
+        var directShipAllocations = await allocationReader.ApplySpecification(new PurchaseOrderAllocationOfPurchaseOrderItemsSpec(poItemIds), new() { ReadWrite = true })
+            .Where(allocation => allocation.IsDirectShip)
+            .ToListAsync();
 
-        var allocations = await allocationReader.DataSource
-            .Where(a => a.IsDirectShip && poItemIds.Contains(a.PurchaseOrderItemId.SecondaryId))
-            .ToListAsync().ConfigureAwait(false);
-        var results = allocations.Select(allocation =>
+        var orderItemIds = directShipAllocations.Select(allocation => allocation.OrderItemId).Distinct().ToList();
+        var deliveryNotesByOrderItemMap = await GetDirectShipDeliveryNotesByOrderItemMap(orderItemIds).ConfigureAwait(false);
+
+        var results = directShipAllocations.Select(allocation =>
         {
-            deliveryNotesByOrderItems.TryGetValue(allocation.OrderItemId.SecondaryId, out var deliveryNote);
+            deliveryNotesByOrderItemMap.TryGetValue(allocation.OrderItemId.SecondaryId, out var deliveryNote);
             return new DirectShipAllocationForPoItemDto
             {
                 AllocationId = allocation.Id,
@@ -261,6 +257,7 @@ public sealed class DirectShipManager(
                 AllocatedQuantity = allocation.AllocatedQuantity,
                 ReceivedQuantity = allocation.ReceivedQuantity,
                 Status = (int)allocation.Status,
+
                 DeliveryStatus = deliveryNote is null ? null : (int)deliveryNote.Status,
                 DeliveryNoteId = deliveryNote?.Id,
                 DeliveryNoteCode = deliveryNote?.Code
@@ -388,15 +385,12 @@ public sealed class DirectShipManager(
         }).ConfigureAwait(false);
     }
 
-    private async Task<IDictionary<Guid, DeliveryNote>> GetDirectShipDeliveryNotesByOrderItems(IEnumerable<SecondaryItemId> orderItemIds)
+    private async Task<IDictionary<Guid, DeliveryNote>> GetDirectShipDeliveryNotesByOrderItemMap(IEnumerable<SecondaryItemId> orderItemIds)
     {
-        var orderIds = orderItemIds.Select(id => id.PrimaryId).Distinct().ToList();
         var itemIds = orderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
-        return await deliveryNoteReader.DataSource
-                .Where(deliveryNote => deliveryNote.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
-                    && orderIds.Contains(deliveryNote.OrderId))
+        return await deliveryNoteReader.ApplySpecification(new ActiveDeliveryNotesOfOrderItemsSpec(itemIds), new() { ReadWrite = true })
+                .Where(deliveryNote => deliveryNote.SourceType == DeliveryNoteSourceType.DirectShipToCustomer)
                 .SelectMany(deliveryNote => deliveryNote.Items.Select(item => new { item.OrderItemId, DeliveryNote = deliveryNote }))
-                .Where(x => itemIds.Contains(x.OrderItemId))
                 .GroupBy(x => x.OrderItemId)
                 .ToDictionaryAsync(
                     g => g.Key,

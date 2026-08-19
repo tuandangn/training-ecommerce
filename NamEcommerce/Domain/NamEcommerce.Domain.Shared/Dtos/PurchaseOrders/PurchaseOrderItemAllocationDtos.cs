@@ -66,6 +66,7 @@ public sealed record EligibleOrderItemForAllocationDto
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
     public string? ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
     public string? CustomerPhone { get; init; }
 }
 
@@ -81,6 +82,7 @@ public sealed record NonDirectShipAllocationDto
     public required decimal RemainingQuantity { get; init; }
     public string? CustomerPhone { get; init; }
     public string? ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 }
 
 [Serializable]

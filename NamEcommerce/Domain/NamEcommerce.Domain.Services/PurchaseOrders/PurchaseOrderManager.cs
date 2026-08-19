@@ -38,7 +38,7 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
     IRepository<GoodsReceipt> goodsReceiptRepository, IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<VendorReturn> vendorReturnReader, IEntityDataReader<VendorDebt> vendorDebtReader,
     IPurchaseOrderAllocationManager purchaseOrderAllocationManager, IDirectShipManager directShipManager,
-    IVendorDebtManager vendorDebtManager, ICurrentUserAccessor currentUserAccessor, 
+    IVendorDebtManager vendorDebtManager, ICurrentUserAccessor currentUserAccessor,
     EntityCodeGenerator codeGenerator, IExpenseManager expenseManager) : IPurchaseOrderManager
 {
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
@@ -685,20 +685,8 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
-        if (dto.ShippingAmount.HasValue)
-        {
-            await expenseManager.CreateExpenseAsync(new CreateExpenseDto
-            {
-                AmountWithoutTax = dto.ShippingAmount.Value,
-                Title = $"Phí vận chuyển đơn nhập {purchaseOrder.Code}",
-                ExpenseType = ExpenseType.Purchase,
-                IncurredDateUtc = dto.ReceivedOnUtc ?? DateTime.UtcNow,
-                RecordedByUserId = purchaseOrder.CreatedByUserId,
-                ReferenceId = purchaseOrder.Id,
-                ReferenceCode = purchaseOrder.Code,
-                ReferenceType = ExpenseReferenceType.PurchaseOrder
-            }).ConfigureAwait(false);
-        }
+        if (dto.ShippingAmount.HasValue && dto.ShippingAmount > 0)
+            await AddShippingExpenseAsync(purchaseOrder.Id, dto.ShippingAmount.Value, dto.ReceivedOnUtc).ConfigureAwait(false);
 
         foreach (var line in dto.Lines)
         {
@@ -718,6 +706,28 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
             PurchaseOrderId = purchaseOrder.Id,
             CreatedGoodsReceiptIds = [createGoodsReceiptResult.CreatedId]
         };
+    }
+
+    public async Task AddShippingExpenseAsync(Guid purchaseOrderId, decimal shippingAmount, DateTime? incurredOnUtc = null)
+    {
+        if (shippingAmount <= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ShippingAmountIsInvalid");
+
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            AmountWithoutTax = shippingAmount,
+            Title = $"Phí vận chuyển đơn nhập {purchaseOrder.Code}",
+            ExpenseType = ExpenseType.Purchase,
+            IncurredDateUtc = incurredOnUtc ?? DateTime.UtcNow,
+            RecordedByUserId = purchaseOrder.CreatedByUserId,
+            ReferenceId = purchaseOrder.Id,
+            ReferenceCode = purchaseOrder.Code,
+            ReferenceType = ExpenseReferenceType.PurchaseOrder
+        }).ConfigureAwait(false);
     }
 
     public async Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto)
@@ -1111,7 +1121,7 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return codeGenerator.NextAsync(prefix, () => purchaseOrderDataReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return codeGenerator.NextAsync(prefix, () => purchaseOrderDataReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task<PurchaseOrder> CreatePurchaseOrderAggregateAsync(

@@ -23,7 +23,7 @@ public sealed class PurchaseOrderQuickCreateModel
         .ToList();
 
     public string? Note { get; set; }
-    public DateTime PlacedOn { get; set; } = DateTime.Now;
+    public DateTime PlacedOn { get; set; }
     public DateTime? ReceivedOn { get; set; }
     public bool IsReceived { get; set; }
     public IList<Guid> PictureIds { get; set; } = [];

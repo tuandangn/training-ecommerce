@@ -285,7 +285,7 @@ public sealed class ShortageQueryService(
     private async Task<Dictionary<Guid, decimal>> GetCompensatedReturnedQuantities(Guid orderId, IList<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
-            return new Dictionary<Guid, decimal>();
+            return [];
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var validDeliveryNoteItems = deliveryNoteReader.ApplySpecification(new ActiveDeliveryNotesOfOrderItemsSpec(orderId, itemIds))

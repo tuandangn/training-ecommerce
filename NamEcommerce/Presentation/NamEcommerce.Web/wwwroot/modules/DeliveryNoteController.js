@@ -165,9 +165,8 @@ export default class DeliveryNoteController {
 
         const formData = DecimalFields.getFormData(this.#deliveredForm);
 
-        const btn = $('#btnSubmitDelivery');
-        const originalText = btn.html();
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
+        const btn = document.getElementById('btnSubmitDelivery');
+        btn.disabled = true;
 
         const result = await apiPost(this.#deliveredForm.action, formData);
         if (result.success) {
@@ -175,7 +174,7 @@ export default class DeliveryNoteController {
             return;
         }
         hidePageLoading();
-        btn.prop('disabled', false).html(originalText);
+        btn.disabled = false;
     }
 
     #buildAcceptancePayload() {

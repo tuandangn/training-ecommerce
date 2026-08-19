@@ -31,19 +31,19 @@ public sealed class VendorDebtManager(
     private Task<string> GenerateDebtCodeAsync()
     {
         var prefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => debtReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => debtReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private Task<string> GeneratePaymentCodeAsync()
     {
         var prefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => paymentReader.TrackingDataSource.CountAsync(p => p.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => paymentReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(p => p.Code.StartsWith(prefix)));
     }
 
     private Task<string> GenerateCreditNoteCodeAsync()
     {
         var prefix = $"DC-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.TrackingDataSource.CountAsync(c => c.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(c => c.Code.StartsWith(prefix)));
     }
 
     public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
@@ -126,7 +126,8 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var existing = await debtReader.TrackingDataSource.FirstOrDefaultAsync(d => d.GoodsReceiptId == dto.GoodsReceiptId).ConfigureAwait(false);
+        var existing = await debtReader.DataSource
+            .FirstOrDefaultAsync(d => d.GoodsReceiptId == dto.GoodsReceiptId).ConfigureAwait(false);
         if (existing != null)
             return existing.ToDto();
 
@@ -296,7 +297,7 @@ public sealed class VendorDebtManager(
         if (amount <= 0)
             throw new ArgumentException("Credit note amount must be positive", nameof(amount));
 
-        var existing = await creditNoteReader.TrackingDataSource
+        var existing = await creditNoteReader.GetDataSource(new() { ReadWrite = true })
             .FirstOrDefaultAsync(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled)
             .ConfigureAwait(false);
         if (existing is not null)

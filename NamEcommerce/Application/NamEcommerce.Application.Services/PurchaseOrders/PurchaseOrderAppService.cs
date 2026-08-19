@@ -1,10 +1,12 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Finance;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Data.Contracts;
@@ -26,10 +28,11 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
-using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -41,7 +44,9 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<Customer> customerDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
     ICurrentUserAccessor currentUserAccessor, IRepository<PurchaseOrder> purchaseOrderRepository,
-    IVendorDebtAppService vendorDebtAppService, IBankAccountAppService bankAccountAppService) : IPurchaseOrderAppService
+    IVendorDebtAppService vendorDebtAppService, IBankAccountAppService bankAccountAppService,
+    IUnitMeasurementAppService unitMeasurementAppService, IWarehouseAppService warehouseAppService,
+    IDirectShipAppService directShipAppService, IDbContext dbContext, IUnitOfWork unitOfWork) : IPurchaseOrderAppService
 {
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
     {
@@ -746,112 +751,30 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         if (!valid)
             return ReceiveGoodsResultAppDto.CreateError(errorMessage);
 
-        var purchaseOrder = await purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
-        if (purchaseOrder is null)
-            return ReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderIsNotFound");
-
-        if (!await purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
-            return ReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderCannotReceiveGoods");
-
-        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
-        if (purchaseOrderItem is null)
-            return ReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderItemIsNotFound");
-
-        var originalReceivedQuantity = dto.ReceivedQuantity;
-        var maxReceivable = purchaseOrderItem.QuantityOrdered - purchaseOrderItem.QuantityReceived;
-
-        if (originalReceivedQuantity > maxReceivable)
+        var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsAppDto(dto.PurchaseOrderId)
         {
-            if (dto.OversupplyAction == "RejectOversupply")
-            {
-                dto = dto with { ReceivedQuantity = maxReceivable };
-            }
-            else if (dto.OversupplyAction == "AcceptToMainWarehouse")
-            {
-                dto = dto with { ReceivedQuantity = maxReceivable };
-            }
-            else
-            {
-                return ReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
-            }
-        }
+            PictureIds = dto.PictureIds,
+            ReceivedByUserId = dto.ReceivedByUserId,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
+            ShippingAmount = dto.ShippingAmount,
+            TaxRate = dto.TaxRate,
+            Items = [new BulkReceiveItemAppDto {
+                PurchaseOrderItemId = dto.PurchaseOrderItemId,
+                ReceivedQuantity = dto.ReceivedQuantity,
+                WarehouseId = dto.WarehouseId,
+                ActualUnitCost = dto.ActualUnitCost,
+                DirectShipAddress = dto.DirectShipAddress,
+                DirectShipContactName = dto.DirectShipContactName,
+                DirectShipContactPhone = dto.DirectShipContactPhone,
+                DirectShipExistingAllocationId = dto.DirectShipExistingAllocationId,
+                DirectShipOrderId = dto.DirectShipOrderId,
+                DirectShipOrderItemId = dto.DirectShipOrderItemId
+            }]
+        }).ConfigureAwait(false);
+        if (receiveResult.Success)
+            return ReceiveGoodsResultAppDto.CreateSuccess(dto.ReceivedQuantity, receiveResult.CreatedGoodsReceiptIds[0]);
 
-        var product = await productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
-        if (product is null)
-            return ReceiveGoodsResultAppDto.CreateError("Error.ProductIsNotFound");
-
-        if (dto.ReceivedByUserId.HasValue)
-        {
-            var user = await userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-                return ReceiveGoodsResultAppDto.CreateError("Error.UserIsNotFound");
-        }
-
-        var directShipAllocations = await directShipManager.GetDirectShipAllocationsForPoItemsAsync([(purchaseOrder.Id, purchaseOrderItem.Id)]).ConfigureAwait(false);
-        var remainingAllocatedDirectShipQty = directShipAllocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
-        var physicalWarehouseRequired = dto.ReceivedQuantity > remainingAllocatedDirectShipQty;
-
-        var warehouseId = dto.WarehouseId ?? purchaseOrder.WarehouseId;
-        if (!warehouseId.HasValue && physicalWarehouseRequired)
-            return ReceiveGoodsResultAppDto.CreateError("Error.WarehouseRequired");
-        if (warehouseId.HasValue)
-        {
-            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
-            if (warehouse is null)
-                return ReceiveGoodsResultAppDto.CreateError("Error.WarehouseIsNotFound");
-            if (physicalWarehouseRequired && warehouse.WarehouseType != WarehouseType.Physical)
-                return ReceiveGoodsResultAppDto.CreateError("Error.PhysicalWarehouseRequired");
-        }
-
-        Guid? createdGoodsReceiptId = null;
-        var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, dto.ReceivedQuantity);
-        if (receiveDirectShipQty > 0)
-        {
-            var directTransitWarehouseId = await directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
-            var directShipReceiveResult = await purchaseOrderManager.ReceivesItemAsync(new ReceivedGoodsDto(purchaseOrder.Id, purchaseOrderItem.Id)
-            {
-                ReceivedByUserId = dto.ReceivedByUserId,
-                ReceivedQuantity = receiveDirectShipQty,
-                QuantityDecimalPlaces = dto.QuantityDecimalPlaces,
-                TaxRate = dto.TaxRate,
-                WarehouseId = directTransitWarehouseId,
-                SellingPrice = null,
-                ActualUnitCost = dto.ActualUnitCost
-            });
-
-            if (!physicalWarehouseRequired) createdGoodsReceiptId = directShipReceiveResult.CreatedGoodsReceiptId;
-        }
-
-        var receiveWarehouseQty = Math.Max(0, dto.ReceivedQuantity - receiveDirectShipQty);
-        if (receiveWarehouseQty > 0)
-        {
-            var warehouseReceiveResult = await purchaseOrderManager.ReceivesItemAsync(new ReceivedGoodsDto(purchaseOrder.Id, purchaseOrderItem.Id)
-            {
-                ReceivedByUserId = dto.ReceivedByUserId,
-                ReceivedQuantity = receiveWarehouseQty,
-                QuantityDecimalPlaces = dto.QuantityDecimalPlaces,
-                TaxRate = dto.TaxRate,
-                WarehouseId = warehouseId,
-                SellingPrice = dto.SellingPrice,
-                ActualUnitCost = dto.ActualUnitCost
-            });
-
-            createdGoodsReceiptId = warehouseReceiveResult.CreatedGoodsReceiptId;
-        }
-
-        if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
-        {
-            var oversupplyQty = originalReceivedQuantity - maxReceivable;
-            if (!physicalWarehouseRequired)
-                warehouseId = warehouseDataReader.DataSource.Where(warehouse => warehouse.WarehouseType == WarehouseType.Physical).FirstOrDefault()?.Id;
-            if (!warehouseId.HasValue)
-                throw new OversupplyQuantityCannotHandledException();
-            await purchaseOrderManager.AcceptOversupplyToMainWarehouseAsync(
-                dto.PurchaseOrderId, dto.PurchaseOrderItemId, oversupplyQty, warehouseId!.Value)
-                .ConfigureAwait(false);
-        }
-
-        return ReceiveGoodsResultAppDto.CreateSuccess(dto.ReceivedQuantity, createdGoodsReceiptId);
+        return ReceiveGoodsResultAppDto.CreateError(receiveResult.ErrorMessage);
     }
 
     public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderAppDto dto)
@@ -1014,6 +937,7 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             AllocatedOutstanding = d.AllocatedOutstanding,
             AvailableToAllocate = d.AvailableToAllocate,
             ShippingAddress = d.ShippingAddress,
+            ShippingPhoneNumber = d.ShippingPhoneNumber,
             CustomerPhone = d.CustomerPhone
         }).ToList();
     }
@@ -1030,18 +954,18 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             CustomerName = d.CustomerName,
             CustomerPhone = d.CustomerPhone,
             ShippingAddress = d.ShippingAddress,
+            ShippingPhoneNumber = d.ShippingPhoneNumber,
             AllocatedQuantity = d.AllocatedQuantity,
             RemainingQuantity = d.RemainingQuantity
         }).ToList();
     }
 
-    public Task<decimal> GetAllocationRemainingQuantityAsync(Guid allocationId)
+    public async Task<decimal> GetAllocationRemainingQuantityAsync(Guid allocationId)
     {
-        var allocation = purchaseOrderItemAllocationDataReader.DataSource
-            .FirstOrDefault(a => a.Id == allocationId);
+        var allocation = await purchaseOrderItemAllocationDataReader.GetByIdAsync(allocationId);
         if (allocation is null)
-            return Task.FromResult(0m);
-        return Task.FromResult(Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+            return 0;
+        return Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity);
     }
 
     public async Task<IList<PurchaseOrderItemAllocationForPoItemAppDto>> GetAllocationsForPurchaseOrderItemsAsync(IReadOnlyList<(Guid primaryItemId, Guid secondaryItemId)> purchaseOrderItemIds)
@@ -1108,7 +1032,7 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         if (hasDirectShipInfo && string.IsNullOrWhiteSpace(dto.DirectShipAddress))
             return CommonActionResultDto.CreateError("Error.DirectShipAddressRequired");
 
-        var allocation = await purchaseOrderAllocationManager
+        await purchaseOrderAllocationManager
             .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
             {
                 PurchaseOrderItemId = (dto.PurchaseOrderId, dto.PurchaseOrderItemId),
@@ -1142,14 +1066,12 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         if (orderItem is null)
             throw new OrderItemIsNotFoundException();
 
-        var allocatedOutstanding = purchaseOrderItemAllocationDataReader.DataSource
-            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId && allocation.Status != AllocationStatus.Cancelled)
-            .ToList()
+        var allocations = await purchaseOrderItemAllocationDataReader.GetListAsync(new ActivePurchaseOrderAllocationOfOrderItemSpec(order.Id, [orderItem.Id]), new() { ReadWrite = true }).ConfigureAwait(false);
+        var allocatedOutstanding = allocations
             .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
-        var activeDeliveryQuantity = deliveryNoteDataReader.DataSource
-            .Where(deliveryNote => deliveryNote.Status != DeliveryNoteStatus.Cancelled)
+        var deliveryNotes = await deliveryNoteDataReader.GetListAsync(new ActiveDeliveryNotesOfOrderItemsSpec(order.Id, [orderItemId]), new() { ReadWrite = true }).ConfigureAwait(false);
+        var activeDeliveryQuantity = deliveryNotes
             .SelectMany(deliveryNote => deliveryNote.Items)
-            .Where(item => item.OrderItemId == orderItemId)
             .Sum(item => item.Quantity);
 
         return Math.Max(0m, orderItem.Quantity - activeDeliveryQuantity - allocatedOutstanding);
@@ -1169,25 +1091,183 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             };
         }
 
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId);
+        if (purchaseOrder is null)
+        {
+            return new BulkReceiveGoodsResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.ProductIsNotFound"
+            };
+        }
+
+        if (!purchaseOrder.CanReceiveGoods())
+        {
+            return new BulkReceiveGoodsResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrderCannotReceiveGoods"
+            };
+        }
+
+        var purchaseOrderItemIds = dto.Items.Select(i => i.PurchaseOrderItemId).Distinct().ToList();
+        var purchaseOrderItems = purchaseOrder.Items.Where(item => dto.Items.Any(i => i.PurchaseOrderItemId == item.Id)).Distinct().ToList();
+        if (purchaseOrderItems.Count < purchaseOrderItemIds.Count)
+        {
+            return new BulkReceiveGoodsResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
+            };
+        }
+
+        var productIds = purchaseOrderItems.Select(item => item.ProductId).Distinct().ToList();
+        var products = await productDataReader.GetByIdsAsync(productIds).ConfigureAwait(false);
+        if (products.Count() < productIds.Count)
+        {
+            return new BulkReceiveGoodsResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+            };
+        }
+
+        var directShipItemMaxAllocationQtyMap = new Dictionary<BulkReceiveItemAppDto, decimal>();
+        var productQuantityDecimalPlacesMap = new Dictionary<Guid, decimal>();
+        var notPhysicalRequiredItems = new List<BulkReceiveItemAppDto>();
+
         foreach (var item in dto.Items)
         {
-            if (!item.WarehouseId.HasValue)
+            var purchaseOrderItem = purchaseOrder!.Items.First(i => i.Id == item.PurchaseOrderItemId);
+            var product = products.First(p => p.Id == purchaseOrderItem.ProductId);
+
+            if (product.UnitMeasurementId.HasValue)
             {
-                return new BulkReceiveGoodsResultAppDto
+                var unitMeasurement = await unitMeasurementAppService.GetUnitMeasurementByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
                 {
-                    Success = false,
-                    ErrorMessage = "Error.WarehouseRequired"
-                };
+                    if (!NumberHelper.IsValidDecimalPlace(item.ReceivedQuantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new BulkReceiveGoodsResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+
+                    if (!productQuantityDecimalPlacesMap.ContainsKey(product.Id))
+                        productQuantityDecimalPlacesMap.Add(product.Id, unitMeasurement.DecimalPlaces);
+                }
             }
-            var warehouse = await warehouseDataReader.GetByIdAsync(item.WarehouseId.Value).ConfigureAwait(false);
-            if (warehouse is null)
+
+            var upgradeExisting = item.DirectShipExistingAllocationId.HasValue;
+            var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
+            if (directShipRequested)
             {
-                return new BulkReceiveGoodsResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.WarehouseIsNotFound"
-                };
+                if (!item.DirectShipOrderId.HasValue)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.OrderRequired" };
+                if (!item.DirectShipOrderItemId.HasValue)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.OrderItemIsNotFound" };
+                if (string.IsNullOrWhiteSpace(item.DirectShipContactPhone))
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipContactPhoneRequired" };
+                if (string.IsNullOrWhiteSpace(item.DirectShipAddress))
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipAddressRequired" };
             }
+            if (upgradeExisting)
+            {
+                if (string.IsNullOrWhiteSpace(item.DirectShipContactPhone))
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipContactPhoneRequired" };
+                if (string.IsNullOrWhiteSpace(item.DirectShipAddress))
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipAddressRequired" };
+            }
+
+            Guid? warehouseId = item.WarehouseId;
+            var maxAllocationQuantity = 0m;
+            var hasDirectShip = directShipRequested || upgradeExisting;
+            if (hasDirectShip)
+            {
+                maxAllocationQuantity = upgradeExisting
+                    ? await GetAllocationRemainingQuantityAsync(item.DirectShipExistingAllocationId!.Value).ConfigureAwait(false)
+                    : await GetMaxAllocationQuantityForOrderItemAsync(item.DirectShipOrderId!.Value, item.DirectShipOrderItemId!.Value).ConfigureAwait(false);
+
+                if (maxAllocationQuantity <= 0)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderItemAllocationQuantityExceedsAvailable" };
+
+                var physicalWarehouseRequired = item.ReceivedQuantity > maxAllocationQuantity;
+
+                warehouseId ??= purchaseOrder?.WarehouseId;
+                if (!warehouseId.HasValue && physicalWarehouseRequired)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.WarehouseRequired" };
+
+                if (warehouseId.HasValue)
+                {
+                    var warehouse = await warehouseAppService.GetWarehouseByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                    if (warehouse is null)
+                        return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.WarehouseIsNotFound" };
+                    if (physicalWarehouseRequired && !warehouse.IsPhysical)
+                        return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PhysicalWarehouseRequired" };
+                }
+
+                directShipItemMaxAllocationQtyMap.Add(item, maxAllocationQuantity);
+            }
+        }
+
+        //prepare before receives
+        var directShipItems = dto.Items.Where(item =>
+        {
+            var upgradeExisting = item.DirectShipExistingAllocationId.HasValue;
+            var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
+            return upgradeExisting || directShipRequested;
+        }).Select(item => (item, maxAllocationQuantity: directShipItemMaxAllocationQtyMap.GetValueOrDefault(item))).ToList();
+        var prepareResult = await PrepareAllocationsBeforeReceivesAsync(dto.PurchaseOrderId, directShipItems, notPhysicalRequiredItems).ConfigureAwait(false);
+        if (!prepareResult.Success)
+            return prepareResult;
+
+        var createdGoodsReceiptIds = new List<Guid>();
+        foreach (var item in dto.Items)
+        {
+            var upgradeExisting = item.DirectShipExistingAllocationId.HasValue;
+            var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
+
+            var purchaseOrderItem = purchaseOrder!.Items.First(i => i.Id == item.PurchaseOrderItemId);
+            var directShipAllocations = await directShipManager.GetDirectShipAllocationsForPoItemsAsync([(dto.PurchaseOrderId, purchaseOrderItem.Id)]).ConfigureAwait(false);
+            var remainingAllocatedDirectShipQty = directShipAllocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+
+            var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, item.ReceivedQuantity);
+            if (receiveDirectShipQty > 0)
+            {
+                var directTransitWarehouseId = await directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
+                var quantityDecimalPlaces = productQuantityDecimalPlacesMap.GetValueOrDefault(purchaseOrderItem.ProductId);
+                var directShipReceiveResult = await purchaseOrderManager.ReceivesItemAsync(new ReceivedGoodsDto(purchaseOrder.Id, purchaseOrderItem.Id)
+                {
+                    ReceivedByUserId = dto.ReceivedByUserId,
+                    ReceivedQuantity = receiveDirectShipQty,
+                    QuantityDecimalPlaces = quantityDecimalPlaces,
+                    TaxRate = dto.TaxRate,
+                    WarehouseId = directTransitWarehouseId,
+                    SellingPrice = null,
+                    ActualUnitCost = item.ActualUnitCost,
+                    ReceivedOnUtc = dto.ReceivedOnUtc
+                });
+
+                if (notPhysicalRequiredItems.Contains(item))
+                    createdGoodsReceiptIds.Add(directShipReceiveResult.CreatedGoodsReceiptId!.Value);
+
+                item.ReceivedQuantity -= receiveDirectShipQty;
+            }
+        }
+
+        var remainingItems = dto.Items.Where(item => item.ReceivedQuantity > 0).ToList();
+        if (remainingItems.Count == 0)
+        {
+            if (dto.ShippingAmount > 0)
+                await purchaseOrderManager.AddShippingExpenseAsync(purchaseOrder!.Id, dto.ShippingAmount);
+
+            return new BulkReceiveGoodsResultAppDto
+            {
+                Success = true,
+                CreatedGoodsReceiptIds = createdGoodsReceiptIds
+            };
         }
 
         var bulkReceiveGoodsResult = await purchaseOrderManager.BulkReceiveItemsAsync(new BulkReceiveGoodsDto(dto.PurchaseOrderId)
@@ -1197,7 +1277,7 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             PictureIds = dto.PictureIds,
             ShippingAmount = dto.ShippingAmount,
             TaxRate = dto.TaxRate,
-            Lines = dto.Items.Select(item => new BulkReceiveGoodsLineDto
+            Lines = remainingItems.Select(item => new BulkReceiveGoodsLineDto
             {
                 PurchaseOrderItemId = item.PurchaseOrderItemId,
                 WarehouseId = item.WarehouseId!.Value,
@@ -1211,5 +1291,63 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             Success = true,
             CreatedGoodsReceiptIds = bulkReceiveGoodsResult.CreatedGoodsReceiptIds
         };
+    }
+
+    private async Task<BulkReceiveGoodsResultAppDto> PrepareAllocationsBeforeReceivesAsync(Guid purchaseOrderId,
+        IList<(BulkReceiveItemAppDto item, decimal maxAllocationQty)> directShipItems, IList<BulkReceiveItemAppDto> notPhysicalRequiredItems)
+    {
+        await using (var transaction = await dbContext.BeginTransactionAsync())
+        {
+            var needSaveToDbBeforeContinue = false;
+            foreach (var (item, maxAllocationQuantity) in directShipItems)
+            {
+                var upgradeExisting = item.DirectShipExistingAllocationId.HasValue;
+                var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
+                if (upgradeExisting)
+                {
+                    var markResult = await directShipAppService.MarkAllocationAsDirectShipAsync(new MarkAllocationAsDirectShipAppDto
+                    {
+                        AllocationId = item.DirectShipExistingAllocationId!.Value,
+                        Address = item.DirectShipAddress!,
+                        ContactName = item.DirectShipContactName,
+                        ContactPhone = item.DirectShipContactPhone
+                    }).ConfigureAwait(false);
+
+                    if (!markResult.Success)
+                        return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = markResult.ErrorMessage };
+
+                    needSaveToDbBeforeContinue = true;
+                }
+                else if (directShipRequested)
+                {
+                    var allocationResult = await AllocatePoItemForOrderItemAsync(new AllocatePoItemForOrderItemAppDto
+                    {
+                        PurchaseOrderId = purchaseOrderId,
+                        PurchaseOrderItemId = item.PurchaseOrderItemId,
+                        OrderId = item.DirectShipOrderId!.Value,
+                        OrderItemId = item.DirectShipOrderItemId!.Value,
+                        Quantity = Math.Min(item.ReceivedQuantity, maxAllocationQuantity),
+                        DirectShipAddress = item.DirectShipAddress,
+                        DirectShipContactName = item.DirectShipContactName,
+                        DirectShipContactPhone = item.DirectShipContactPhone
+                    }).ConfigureAwait(false);
+
+                    if (!allocationResult.Success)
+                        return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = allocationResult.ErrorMessage };
+
+                    if (item.ReceivedQuantity >= maxAllocationQuantity)
+                        notPhysicalRequiredItems.Add(item);
+
+                    needSaveToDbBeforeContinue = true;
+                }
+            }
+            if (needSaveToDbBeforeContinue)
+            {
+                await unitOfWork.CommitAsync().ConfigureAwait(false);
+                await transaction.CommitAsync().ConfigureAwait(false);
+            }
+        }
+
+        return new BulkReceiveGoodsResultAppDto { Success = true };
     }
 }

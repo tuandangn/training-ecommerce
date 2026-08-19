@@ -23,53 +23,34 @@ using System.Text.Json;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class DeliveryNoteController : BaseAuthorizedController
+public sealed class DeliveryNoteController(
+    IDeliveryNoteModelFactory deliveryNoteModelFactory,
+    IMediator mediator, IConfiguration configuration,
+    IDeliveryNoteAppService deliveryNoteAppService,
+    ICurrentUserAccessor currentUserAccessor,
+    ICachedValuesService cachedValuesService,
+    IOrderAppService orderAppService) : BaseAuthorizedController
 {
-    private readonly IDeliveryNoteModelFactory _deliveryNoteModelFactory;
-    private readonly IMediator _mediator;
-    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
-    private readonly ICurrentUserAccessor _currentUserAccessor;
-    private readonly ICachedValuesService _cachedValuesService;
-    private readonly IOrderAppService _orderAppService;
-    private readonly IConfiguration _configuration;
-
-    public DeliveryNoteController(
-        IDeliveryNoteModelFactory deliveryNoteModelFactory,
-        IMediator mediator, IConfiguration configuration,
-        IDeliveryNoteAppService deliveryNoteAppService,
-        ICurrentUserAccessor currentUserAccessor,
-        ICachedValuesService cachedValuesService,
-        IOrderAppService orderAppService)
-    {
-        _deliveryNoteModelFactory = deliveryNoteModelFactory;
-        _mediator = mediator;
-        _deliveryNoteAppService = deliveryNoteAppService;
-        _currentUserAccessor = currentUserAccessor;
-        _cachedValuesService = cachedValuesService;
-        _orderAppService = orderAppService;
-        _configuration = configuration;
-    }
-
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
     public async Task<IActionResult> List(DeliveryNoteListSearchModel searchModel)
     {
-        var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel);
+        var model = await deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel);
         return View(model);
     }
 
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Create(Guid orderId, string? selected = null)
     {
-        var order = await _orderAppService.GetOrderByIdAsync(orderId);
+        var order = await orderAppService.GetOrderByIdAsync(orderId);
         if (order is null)
         {
             NotifyError("Error.OrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
-        var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId);
+        var model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(orderId);
 
         if (!string.IsNullOrEmpty(selected))
         {
@@ -101,11 +82,11 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
 
-        var order = await _orderAppService.GetOrderByIdAsync(model.OrderId);
+        var order = await orderAppService.GetOrderByIdAsync(model.OrderId);
         if (order is null)
         {
             NotifyError("Error.OrderIsNotFound");
@@ -121,33 +102,33 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!deliveryNoteItems.Any())
         {
             AddLocalizedModelError("Error.DeliveryNoteItemRequired");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
 
 
         var orderDiscount = order.OrderDiscount ?? 0;
-        var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(order.Id);
+        var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(order.Id);
 
         var appliedOrderDiscount = deliveryNotes.Sum(d => d.AppliedOrderDiscount);
         if (appliedOrderDiscount + model.ApplyingOrderDiscount > orderDiscount)
         {
             AddLocalizedModelError("Error.AppliedOrderDiscountExceedOrderDiscount");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
 
         var appliedOrderPaidAmount = deliveryNotes.Sum(d => d.AppliedOrderPrepaid);
-        var orderPaidAmount = await _mediator.Send(new GetOrderPaidAmountQuery { OrderId = order.Id });
+        var orderPaidAmount = await mediator.Send(new GetOrderPaidAmountQuery { OrderId = order.Id });
         if (appliedOrderPaidAmount + model.ApplyingPrepaidAmount > orderPaidAmount)
         {
             AddLocalizedModelError("Error.AppliedOrderPrepaidExceedPrepaidAmount");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
         var amountAlreadyPaidForOrder = Math.Max(0, orderPaidAmount - appliedOrderPaidAmount);
 
-        if (order.CustomerId == _cachedValuesService.DefaultCustomerId)
+        if (order.CustomerId == cachedValuesService.DefaultCustomerId)
         {
             var productTotal = 0m;
             foreach (var deliveryNoteItem in deliveryNoteItems)
@@ -156,7 +137,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 if (orderItem is null)
                 {
                     AddLocalizedModelError("Error.OrderItemIsNotFound");
-                    model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+                    model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
                     return View(model);
                 }
                 productTotal += deliveryNoteItem.Quantity * orderItem.UnitPrice;
@@ -165,14 +146,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             if (calculatedAmountToCollect != model.AmountToCollect)
             {
                 AddLocalizedModelError("Error.AmountToCollectIsInvalid");
-                model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+                model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
                 return View(model);
             }
         }
 
         try
         {
-            var result = await _mediator.Send(new CreateDeliveryNoteCommand
+            var result = await mediator.Send(new CreateDeliveryNoteCommand
             {
                 OrderId = model.OrderId,
                 ShippingAddress = model.ShippingAddress,
@@ -194,13 +175,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             }
 
             AddLocalizedModelError(result.ErrorMessage ?? "Error.DeliveryNoteCreateFailed");
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
         catch (NamEcommerceDomainException ex)
         {
             AddLocalizedModelError(ex.ErrorCode, ex.Parameters);
-            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
+            model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model);
             return View(model);
         }
     }
@@ -216,7 +197,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             .Distinct()
             .ToList();
 
-        var warehouses = (await _mediator.Send(new GetWarehouseOptionListQuery()))
+        var warehouses = (await mediator.Send(new GetWarehouseOptionListQuery()))
             .Options
             .ToList();
 
@@ -226,7 +207,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             var warehouseItems = new List<object>(warehouses.Count);
             foreach (var warehouse in warehouses)
             {
-                var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouse.Id));
+                var stockInfo = await mediator.Send(new GetProductStockInfoQuery(productId, warehouse.Id));
                 warehouseItems.Add(new
                 {
                     warehouseId = warehouse.Id,
@@ -251,7 +232,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
+            var model = await deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
             return View(model);
         }
         catch
@@ -265,7 +246,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> AssignDeliveryUser(Guid id, Guid assignedDeliveryUserId)
     {
-        var result = await _mediator.Send(new AssignDeliveryUserCommand
+        var result = await mediator.Send(new AssignDeliveryUserCommand
         {
             DeliveryNoteId = id,
             AssignedDeliveryUserId = assignedDeliveryUserId
@@ -284,10 +265,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
-            var qrCode = await _mediator.Send(new CreateDeliveryQrCodeCommand(id)
+            var model = await deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id);
+            var qrCode = await mediator.Send(new CreateDeliveryQrCodeCommand(id)
             {
-                CustomerPortalUrl = _configuration.GetValue<string>("CustomerPortal:DeliveryNoteUrl") ?? string.Empty
+                CustomerPortalUrl = configuration.GetValue<string>("CustomerPortal:DeliveryNoteUrl") ?? string.Empty
             });
             if (qrCode is not null)
             {
@@ -308,17 +289,17 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Approve)]
     public async Task<IActionResult> Confirm(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
+        var order = await orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
         if (order is null)
             return this.JsonError(LocalizeError("Error.OrderItemIsNotFound"));
         if (!order.CanProcess)
             return this.JsonError(LocalizeError("Error.OrderCannotProcess"));
 
-        var result = await _mediator.Send(new ConfirmDeliveryNoteCommand
+        var result = await mediator.Send(new ConfirmDeliveryNoteCommand
         {
             DeliveryNoteId = id
         });
@@ -337,11 +318,11 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        var result = await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
+        var result = await mediator.Send(new MarkDeliveringDeliveryNoteCommand
         {
             DeliveryNoteId = id
         });
@@ -354,43 +335,39 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
     [HttpPost]
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
-    public async Task<IActionResult> MarkDelivered(
-        Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
-        string? agreedCustomerChargeReason, bool compensateInNextDelivery,
-        decimal? cashCollectedAmount, string? acceptanceItemsJson, [FromForm] IList<Guid>? pictureIds)
+    public async Task<IActionResult> MarkDelivered(MarkDeliveryNoteAsDeliveredModel model)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId);
+        if (!ModelState.IsValid)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(model.DeliveryNoteId);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        var effectivePictureIds = pictureIds?
-            .Where(pictureId => pictureId != Guid.Empty)
-            .ToList() ?? [];
+        var effectivePictureIds = model.PictureIds?.Where(pictureId => pictureId != Guid.Empty).ToList() ?? [];
         if (effectivePictureIds.Count == 0
             && deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
             && deliveryNote.DeliveryProofPictureId.HasValue)
         {
             effectivePictureIds.Add(deliveryNote.DeliveryProofPictureId.Value);
         }
-
         if (effectivePictureIds.Count == 0)
-            return this.JsonError(message: LocalizeError("Error.DeliveryProofRequired"));
+            return this.JsonError(LocalizeError("Error.DeliveryProofRequired"));
 
-        var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
-        var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
+        var acceptanceItems = ParseAcceptanceItems(model.AcceptanceItemsJson);
+        var result = await mediator.Send(new MarkDeliveryNoteDeliveredCommand
         {
-            DeliveryNoteId = deliveryNoteId,
-            ReceiverName = receiverName,
-            AgreedCustomerCharge = agreedCustomerCharge,
-            AgreedCustomerChargeReason = agreedCustomerChargeReason,
-            CompensateInNextDelivery = compensateInNextDelivery,
-            CashCollectedAmount = cashCollectedAmount,
+            DeliveryNoteId = model.DeliveryNoteId,
+            ReceiverName = model.ReceiverName,
+            AgreedCustomerCharge = model.AgreedCustomerCharge,
+            AgreedCustomerChargeReason = model.AgreedCustomerChargeReason,
+            CompensateInNextDelivery = model.CompensateInNextDelivery,
+            CashCollectedAmount = model.CashCollectedAmount,
             Items = acceptanceItems,
             PictureIds = effectivePictureIds
         });
-
         if (result.Success)
-            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
+            return this.JsonOk(Localizer["Msg.SaveSuccess"]);
 
         return this.JsonError(LocalizeError(result.ErrorMessage!));
 
@@ -416,17 +393,17 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
     public async Task<IActionResult> GetDeliveryNoteAcceptantItemsInfo(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        var returnedQuantities = await mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
         {
             DeliveryNoteId = id
         });
 
         var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct().ToList();
-        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
+        var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         Dictionary<Guid, DeliveryNoteSettlementItemAppDto> settlementItemsByDeliveryNoteItemId = deliveryNote.Status == (int)DeliveryNoteStatus.PendingConfirmation
@@ -452,7 +429,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             };
         }).ToList();
 
-        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect }, Localizer["Msg.SaveSuccess"]);
+        return this.JsonOk(new { acceptantItems, amountToCollect = deliveryNote.AmountToCollect });
     }
 
     [HttpPost]
@@ -464,8 +441,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!User.IsInRole(SystemUserRoleNames.Admin))
             return Forbid();
 
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
-        var result = await _mediator.Send(new ApproveDeliverySettlementCommand
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        var result = await mediator.Send(new ApproveDeliverySettlementCommand
         {
             DeliveryNoteId = deliveryNoteId,
             ApprovedAmountToCollect = approvedAmountToCollect,
@@ -490,8 +467,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!User.IsInRole(SystemUserRoleNames.Admin))
             return Forbid();
 
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
-        var result = await _mediator.Send(new RejectDeliverySettlementCommand
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        var result = await mediator.Send(new RejectDeliverySettlementCommand
         {
             DeliveryNoteId = deliveryNoteId,
             Reason = reason,
@@ -513,8 +490,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!User.IsInRole(SystemUserRoleNames.Admin))
             return Forbid();
 
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
-        var result = await _mediator.Send(new AdminUpdateAmountToCollectCommand
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+        var result = await mediator.Send(new AdminUpdateAmountToCollectCommand
         {
             DeliveryNoteId = deliveryNoteId,
             NewAmount = newAmount,
@@ -534,17 +511,17 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(id);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
+        var order = await orderAppService.GetOrderByIdAsync(deliveryNote.OrderId);
         if (order is null)
             return this.JsonError(LocalizeError("Error.OrderItemIsNotFound"));
         if (!order.CanProcess)
             return this.JsonError(LocalizeError("Error.OrderCannotProcess"));
 
-        await _mediator.Send(new CancelDeliveryNoteCommand
+        await mediator.Send(new CancelDeliveryNoteCommand
         {
             DeliveryNoteId = id
         });
@@ -561,7 +538,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.DeliveryNoteItemRequired") });
         }
 
-        var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId);
+        var model = await deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId);
 
         foreach (var selectedItem in request.SelectedItems)
         {
@@ -605,7 +582,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!string.IsNullOrEmpty(request.Note))
             model.Note = request.Note;
 
-        var createResult = await _mediator.Send(new CreateDeliveryNoteCommand
+        var createResult = await mediator.Send(new CreateDeliveryNoteCommand
         {
             OrderId = model.OrderId,
             Note = model.Note,
@@ -676,7 +653,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> UpdateShipping(Guid deliveryNoteId, string? shippingAddress, string? shippingPhoneNumber)
     {
-        var result = await _mediator.Send(new UpdateDeliveryNoteShippingCommand(
+        var result = await mediator.Send(new UpdateDeliveryNoteShippingCommand(
             deliveryNoteId,
             shippingAddress,
             shippingPhoneNumber));

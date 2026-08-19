@@ -244,13 +244,13 @@
                     <div class="order-summary-row">
                         <span class="label">
                             Thuế VAT
-                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
+                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0 && Model.Receiving.RemainingQuantity > 0)
                             {
                                 <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
                             }
-                            else if (Model.Info.AccumulatedTaxAmount > 0)
+                            else if (Model.Info.AccumulatedTaxAmount > 0 && Model.Receiving.RemainingQuantity > 0)
                             {
-                                <span class="small text-muted">(nhận hàng)</span>
+                                <span class="small text-muted">(tạm tính)</span>
                             }
                         </span>
                         <span class="value text-muted">@Model.Info.TotalTaxAmount.DisplayCurrencyWithSymbol()</span>

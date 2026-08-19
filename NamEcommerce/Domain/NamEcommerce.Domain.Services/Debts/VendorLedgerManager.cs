@@ -74,7 +74,7 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = await entryReader.TrackingDataSource
+            var existing = await entryReader.GetDataSource(new() { ReadWrite = true })
                 .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.ReturnCredit
                     && e.ReferenceId == dto.ReferenceId.Value)
@@ -96,7 +96,7 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = await entryReader.DataSource
+            var existing = await entryReader.GetDataSource(new() { ReadWrite = true })
                 .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.RefundReceipt
                     && e.ReferenceId == dto.ReferenceId.Value)
@@ -234,7 +234,7 @@ public sealed class VendorLedgerManager(
 
     private async Task UpsertBalanceAsync(Guid vendorId, decimal delta, DateTime occurredAtUtc)
     {
-        var existingId = await balanceReader.TrackingDataSource
+        var existingId = await balanceReader.GetDataSource(new() { ReadWrite = true })
             .Where(b => b.VendorId == vendorId)
             .Select(b => b.Id)
             .FirstOrDefaultAsync().ConfigureAwait(false);

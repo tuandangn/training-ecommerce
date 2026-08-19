@@ -485,6 +485,7 @@
             throw new Error('Form is required');
         const formData = new FormData(form);
         processFormData(form, formData);
+        return formData;
     }
     function processFormData(form, formData) {
         if (!formData || !(formData instanceof FormData))

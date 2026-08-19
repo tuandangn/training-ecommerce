@@ -340,7 +340,7 @@ public sealed class CustomerPortalManager(
     private Task<string> GenerateOrderRequestCode()
     {
         var prefix = $"YC-DH-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => orderRequestReader.TrackingDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => orderRequestReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private static CustomerDeliveryFeedbackDto MapToDto(CustomerDeliveryFeedback feedback)

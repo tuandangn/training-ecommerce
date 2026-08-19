@@ -1,13 +1,18 @@
+import { apiGet } from '/modules/ajax-helper.js';
+import { initImageUploaders } from '/modules/image-uploader.js';
+
 export default class BulkReceiveController {
     #purchaseOrderId;
 
     #modalEl;
     #form;
     #tbody;
+    #totalSummary;
     #addRowBtn;
     #submitBtn;
     #itemsError;
 
+    #receivedOnEl;
     #shippingInput;
     #taxRate;
     #taxHint;
@@ -47,6 +52,7 @@ export default class BulkReceiveController {
 
         this.#form = document.getElementById('bulkReceiveForm');
         this.#tbody = document.getElementById('bulkReceiveTableBody');
+        this.#totalSummary = this.#form.querySelector('.order-summary');
         this.#addRowBtn = document.getElementById('bulkReceiveAddRow');
         this.#submitBtn = document.getElementById('bulkReceiveSubmit');
         this.#itemsError = document.getElementById('bulkReceiveItemsError');
@@ -61,14 +67,25 @@ export default class BulkReceiveController {
         this.#subtotalEl = document.getElementById('bulkSubtotal');
         this.#grandTotalEl = document.getElementById('bulkGrandTotal');
 
+        this.#receivedOnEl = document.getElementById('bulkReceiveReceivedOn')
+
         this.#bindEvents();
 
-        // Khi modal mở: reset và prefill 1 dòng cho mỗi item còn lại
         DecimalFields.autoWrap(this.#modalEl);
-        this.#modalEl.addEventListener('show.bs.modal', () => this.#prefillRows());
+        initFlatPickrDateTime(this.#receivedOnEl);
+
+        // Khi modal mở: reset và prefill 1 dòng cho mỗi item còn lại
+        this.#modalEl.addEventListener('show.bs.modal', () => {
+            this.#prefillRows();
+            reparseForm(this.#form);
+        });
+
+        initImageUploaders(this.#form);
     }
 
     #bindEvents() {
+        const onTotalChanged = debounce(() => this.#calculateTotals(), 500);
+
         this.#addRowBtn.addEventListener('click', () => {
             this.#addRow(null, this.#items.length);
             this.#items.push({});
@@ -82,7 +99,13 @@ export default class BulkReceiveController {
                 const idx = tr.dataset.rowIndex;
                 if (idx) this.#tbody.querySelector(`[data-ds-row-for="${idx}"]`)?.remove();
                 tr.remove();
-                this.#reOrderRows();
+                if (this.#tbody.rows.length > 0) {
+                    this.#reOrderRows();
+                    onTotalChanged.flush();
+                } else {
+                    this.#totalSummary.classList.add('d-none');
+                    this.#showItemsError('Vui lòng thêm ít nhất một dòng nhận hàng hợp lệ.');
+                }
                 return;
             }
 
@@ -104,7 +127,7 @@ export default class BulkReceiveController {
             }
 
             const dsOrderItemBtn = e.target.closest('.bulk-ds-order-item-btn');
-            if (dsOrderItemBtn) {
+            if (dsOrderItemBtn && !dsOrderItemBtn.classList.contains('active')) {
                 const directShipTr = dsOrderItemBtn.closest('tr');
                 directShipTr.querySelectorAll('.bulk-ds-order-item-btn, .bulk-ds-existing-alloc-btn').forEach(b => b.classList.remove('active'));
                 dsOrderItemBtn.classList.add('active');
@@ -113,19 +136,12 @@ export default class BulkReceiveController {
                 directShipTr.querySelector('.bulk-ds-existing-allocation-id').value = '';
                 const label = directShipTr.querySelector('.bulk-ds-selected-label');
                 if (label) label.textContent = `Đơn: ${dsOrderItemBtn.dataset.orderCode} · Khách: ${dsOrderItemBtn.dataset.customerName} · Có thể nhận: ${dsOrderItemBtn.dataset.availableToAllocate}`;
-                const fields = directShipTr.querySelector('.bulk-ds-fields');
-                fields?.classList.remove('d-none');
-                const addrInput = directShipTr.querySelector('.bulk-ds-address-input');
-                if (addrInput && !addrInput.value) addrInput.value = dsOrderItemBtn.dataset.shippingAddress || '';
-                const phoneInput = directShipTr.querySelector('.bulk-ds-contact-phone');
-                if (phoneInput && !phoneInput.value) phoneInput.value = dsOrderItemBtn.dataset.customerPhone || '';
-                const nameInput = directShipTr.querySelector('.bulk-ds-contact-name');
-                if (nameInput && !nameInput.value) nameInput.value = dsOrderItemBtn.dataset.customerName || '';
+                setFields(directShipTr, dsOrderItemBtn);
                 return;
             }
 
             const directShipExistingAllocationBtn = e.target.closest('.bulk-ds-existing-alloc-btn');
-            if (directShipExistingAllocationBtn) {
+            if (directShipExistingAllocationBtn && !directShipExistingAllocationBtn.classList.contains('active')) {
                 const directShipTr = directShipExistingAllocationBtn.closest('tr');
                 directShipTr.querySelectorAll('.bulk-ds-order-item-btn, .bulk-ds-existing-alloc-btn').forEach(b => b.classList.remove('active'));
                 directShipExistingAllocationBtn.classList.add('active');
@@ -134,15 +150,19 @@ export default class BulkReceiveController {
                 directShipTr.querySelector('.bulk-ds-order-id').value = '';
                 const label = directShipTr.querySelector('.bulk-ds-selected-label');
                 if (label) label.textContent = `Nâng cấp: ${directShipExistingAllocationBtn.dataset.orderCode} · Khách: ${directShipExistingAllocationBtn.dataset.customerName} · Còn chờ: ${directShipExistingAllocationBtn.dataset.remainingQty}`;
-                const fields = directShipTr.querySelector('.bulk-ds-fields');
-                fields?.classList.remove('d-none');
-                const addrInput = directShipTr.querySelector('.bulk-ds-address-input');
-                if (addrInput && !addrInput.value) addrInput.value = directShipExistingAllocationBtn.dataset.shippingAddress || '';
-                const phoneInput = directShipTr.querySelector('.bulk-ds-contact-phone');
-                if (phoneInput && !phoneInput.value) phoneInput.value = directShipExistingAllocationBtn.dataset.customerPhone || '';
-                const nameInput = directShipTr.querySelector('.bulk-ds-contact-name');
-                if (nameInput && !nameInput.value) nameInput.value = directShipExistingAllocationBtn.dataset.customerName || '';
+                setFields(directShipTr, directShipExistingAllocationBtn);
                 return;
+            }
+
+            function setFields(tr, btn) {
+                const fields = tr.querySelector('.bulk-ds-fields');
+                fields?.classList.remove('d-none');
+                const addrInput = tr.querySelector('.bulk-ds-address-input');
+                if (addrInput) addrInput.value = btn.dataset.shippingAddress || '';
+                const phoneInput = tr.querySelector('.bulk-ds-contact-phone');
+                if (phoneInput) phoneInput.value = btn.dataset.shippingPhoneNumber || btn.dataset.customerPhone || '';
+                const nameInput = tr.querySelector('.bulk-ds-contact-name');
+                if (nameInput) nameInput.value = btn.dataset.customerName || '';
             }
         });
         this.#tbody.addEventListener('change', (e) => {
@@ -203,7 +223,6 @@ export default class BulkReceiveController {
             validateElement(inputUnitCost);
         });
 
-        const onTotalChanged = debounce(() => this.#calculateTotals(), 500);
         const onQtyAndCostChanged = debounce((e) => {
             if (e.target.matches('.bulk-row-qty') || e.target.matches('.bulk-row-cost'))
                 onTotalChanged.flush();
@@ -232,7 +251,7 @@ export default class BulkReceiveController {
         if (!this.#tbody) return;
         this.#tbody.innerHTML = '';
         if (!items) items = this.#items;
-        items.forEach((item, index) => this.#addRow(item, index));
+        items.forEach((item, index) => this.#addRow(item, index, true));
         this.#calculateTotals();
     }
     #reOrderRows() {
@@ -268,7 +287,7 @@ export default class BulkReceiveController {
             element[attrName] = element[attrName].replace(/\[\d+\]/, `[${index}]`);
         }
     }
-    #addRow(item, index) {
+    #addRow(item, index, initital) {
         if (!this.#tbody) return;
         const presetItemId = item?.id ?? '';
         const presetQty = item?.remaining ?? 0;
@@ -328,8 +347,7 @@ export default class BulkReceiveController {
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ActualUnitCost" data-valmsg-replace="true"></span>
             </td>
             <td class="ps-2">
-                <select name="Items[${index}].WarehouseId" ${item == null ? 'disabled' : ''}
-                    data-val="true" data-val-required="Vui lòng chọn kho hàng" class="form-select form-select-sm bulk-row-warehouse">
+                <select name="Items[${index}].WarehouseId" ${item == null ? 'disabled' : ''} data-val="true" data-val-required="Vui lòng chọn kho hàng" class="form-select form-select-sm bulk-row-warehouse">
                     ${warehouseOptions}
                 </select>
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].WarehouseId" data-valmsg-replace="true"></span>
@@ -342,6 +360,7 @@ export default class BulkReceiveController {
             </td>`;
 
         this.#tbody.appendChild(tr);
+        this.#totalSummary.classList.remove('d-none');
         DecimalFields.autoWrap(tr);
         this.#refreshRowHint(tr);
         this.#syncRowWarehouse(tr);
@@ -351,7 +370,7 @@ export default class BulkReceiveController {
         directShipTr.dataset.dsRowFor = String(index);
         directShipTr.innerHTML = `
             <td colspan="7" class="border-top-0 pt-0 pb-2 px-2">
-                <div class="p-2 bg-primary bg-opacity-10 rounded-2 border border-primary border-opacity-25">
+                <div class="mt-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small fw-semibold text-primary"><i class="bi bi-send me-1"></i>Giao thẳng cho đơn hàng</span>
                         <button type="button" class="btn-close btn-sm bulk-ds-row-close" title="Hủy giao thẳng"></button>
@@ -366,24 +385,29 @@ export default class BulkReceiveController {
                         <i class="bi bi-exclamation-circle me-1"></i> Không có đơn hàng phù hợp cho sản phẩm này.
                     </div>
                     <div class="bulk-ds-order-list d-none">
-                        <p class="small fw-semibold text-muted text-uppercase mb-1">Chọn đơn hàng bán hàng</p>
                         <div class="bulk-ds-order-items list-group list-group-flush border rounded mb-2" style="max-height:130px;overflow-y:auto"></div>
                     </div>
                     <div class="bulk-ds-fields d-none">
                         <p class="small fw-semibold mb-2 bulk-ds-selected-label text-primary"></p>
-                        <div class="mb-2">
-                            <label class="form-label form-label-sm text-muted mb-1">Địa chỉ giao hàng <span class="text-danger">*</span></label>
-                            <input type="text" name="Items[${index}].DirectShipAddress" class="form-control form-control-sm bulk-ds-address-input" placeholder="Nhập địa chỉ giao" />
-                        </div>
                         <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label form-label-sm text-muted mb-1">Tên người nhận</label>
-                                <input type="text" name="Items[${index}].DirectShipContactName" class="form-control form-control-sm bulk-ds-contact-name" placeholder="Tùy chọn" />
+                            <div class="col-xl-4 col-lg-12">
+                                <label class="form-label form-label-sm text-muted mb-1">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                                <input type="text" name="Items[${index}].DirectShipAddress" class="form-control form-control-sm bulk-ds-address-input" placeholder="Địa chỉ giao"
+                                    data-val="true" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500"  />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].DirectShipAddress" data-valmsg-replace="true"></span>
                             </div>
-                            <div class="col-6">
+                            <div class="col-xl-4 col-lg-6">
                                 <label class="form-label form-label-sm text-muted mb-1">Số điện thoại <span class="text-danger">*</span></label>
-                                <input type="text" name="Items[${index}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone"
-                                    placeholder="Bắt buộc" inputmode="tel"/>
+                                <input type="text" name="Items[${index}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại" inputmode="tel"
+                                       data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\\d{9,10}"
+                                       data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].DirectShipContactPhone" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="col-xl-4 col-lg-6">
+                                <label class="form-label form-label-sm text-muted mb-1">Tên người nhận</label>
+                                <input type="text" name="Items[${index}].DirectShipContactName" class="form-control form-control-sm bulk-ds-contact-name" placeholder="Người nhận" 
+                                    data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200"/>
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].DirectShipContactName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
                     </div>
@@ -391,7 +415,9 @@ export default class BulkReceiveController {
                 </div>
             </td>`;
         this.#tbody.appendChild(directShipTr);
-        reparseForm(this.#form);
+
+        this.#itemsError.classList.add('d-none');
+        if (!initital) reparseForm(this.#form);
     }
 
     #toggleDirectShipRow(tr) {
@@ -447,11 +473,12 @@ export default class BulkReceiveController {
 
         try {
             const [eligibleResp, nonDsResp] = await Promise.all([
-                fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal }),
-                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal })
+                apiGet(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal }),
+                apiGet(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=${this.#purchaseOrderId}&purchaseOrderItemId=${itemId}`, { signal: controller.signal })
             ]);
-            if (!eligibleResp.ok || !nonDsResp.ok) throw new Error('Lỗi tải dữ liệu');
-            const [eligibleData, nonDsData] = await Promise.all([eligibleResp.json(), nonDsResp.json()]);
+            if (!eligibleResp.success || !nonDsResp.success)
+                return;
+            const [eligibleData, nonDsData] = [eligibleResp.data, nonDsResp.data];
             loading.classList.add('d-none');
             directShipTr.dataset.dsLoadedFor = itemId;
 
@@ -465,19 +492,14 @@ export default class BulkReceiveController {
             if (eligibleData?.length) {
                 const header = document.createElement('div');
                 header.className = 'px-3 py-1 text-muted small fw-semibold bg-light border-bottom';
-                header.textContent = 'Tạo liên kết & giao thẳng';
+                header.textContent = 'Chọn đơn bán';
                 orderItems.appendChild(header);
                 eligibleData.forEach(order => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-order-item-btn';
                     btn.dataset.orderItemId = order.orderItemId;
-                    btn.dataset.orderId = order.orderId;
-                    btn.dataset.orderCode = order.orderCode;
-                    btn.dataset.customerName = order.customerName;
-                    btn.dataset.availableToAllocate = order.availableToAllocate;
-                    btn.dataset.shippingAddress = order.shippingAddress || '';
-                    btn.dataset.customerPhone = order.customerPhone || '';
+                    setDataSet(btn, order);
                     btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
                         <span><strong>${escapeHtml(order.orderCode)}</strong> <span class="text-muted small">${escapeHtml(order.customerName)}</span></span>
                         <span class="badge bg-success ms-2">Còn ${order.availableToAllocate}</span>
@@ -489,24 +511,30 @@ export default class BulkReceiveController {
             if (nonDsData?.length) {
                 const header = document.createElement('div');
                 header.className = 'px-3 py-1 text-muted small fw-semibold bg-light border-bottom' + (eligibleData?.length ? ' border-top mt-1' : '');
-                header.textContent = 'Nâng cấp phân bổ hiện có lên giao thẳng';
+                header.textContent = 'Chọn đơn chuyển lên giao thẳng';
                 orderItems.appendChild(header);
                 nonDsData.forEach(alloc => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-existing-alloc-btn';
                     btn.dataset.allocationId = alloc.allocationId;
-                    btn.dataset.orderCode = alloc.orderCode;
-                    btn.dataset.customerName = alloc.customerName;
-                    btn.dataset.remainingQty = alloc.remainingQty;
-                    btn.dataset.shippingAddress = alloc.shippingAddress || '';
-                    btn.dataset.customerPhone = alloc.customerPhone || '';
+                    setDataSet(btn, order);
                     btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
                         <span><strong>${escapeHtml(alloc.orderCode)}</strong> <span class="text-muted small">${escapeHtml(alloc.customerName)}</span></span>
                         <span class="badge bg-warning text-dark ms-2">Còn ${alloc.remainingQty}</span>
                     </div>`;
                     orderItems.appendChild(btn);
                 });
+            }
+
+            function setDataSet(btn, data) {
+                btn.dataset.orderId = data.orderId;
+                btn.dataset.orderCode = data.orderCode;
+                btn.dataset.customerName = data.customerName;
+                btn.dataset.availableToAllocate = data.availableToAllocate;
+                btn.dataset.shippingAddress = data.shippingAddress || '';
+                btn.dataset.shippingPhoneNumber = data.shippingPhoneNumber || '';
+                btn.dataset.customerPhone = data.customerPhone || '';
             }
 
             orderList.classList.remove('d-none');
@@ -643,8 +671,7 @@ export default class BulkReceiveController {
             const item = this.#itemsById.get(itemId);
             if (!item) continue;
             if (total > item.remaining + 1e-9) {
-                this.#itemsError.textContent = `Tổng số lượng nhận của "${item.name}" (${this.#formatQty(total, item.decimalPlaces)}) vượt số còn lại (${this.#formatQty(item.remaining, item.decimalPlaces)}).`;
-                this.#itemsError.classList.remove('d-none');
+                this.#showItemsError(`Tổng số lượng nhận của "${item.name}" (${this.#formatQty(total, item.decimalPlaces)}) vượt số còn lại (${this.#formatQty(item.remaining, item.decimalPlaces)}).`);
                 validLines.filter(l => l.itemId === itemId).forEach(l => l.tr.classList.add('table-danger'));
 
                 hidePageLoading();
@@ -654,8 +681,7 @@ export default class BulkReceiveController {
         }
 
         if (validLines.length === 0) {
-            this.#itemsError.textContent = 'Vui lòng thêm ít nhất một dòng nhận hàng hợp lệ.';
-            this.#itemsError.classList.remove('d-none');
+            this.#showItemsError('Vui lòng thêm ít nhất một dòng nhận hàng hợp lệ.');
             if (firstInvalidRow) firstInvalidRow.classList.add('table-danger');
             hidePageLoading();
             this.#submitBtn.disabled = false;
@@ -667,19 +693,9 @@ export default class BulkReceiveController {
         this.#tbody?.querySelectorAll('.bulk-ds-row:not(.d-none)').forEach(dsTr => {
             const orderItemId = dsTr.querySelector('.bulk-ds-order-item-id')?.value;
             const existingAllocationId = dsTr.querySelector('.bulk-ds-existing-allocation-id')?.value;
-            const phone = dsTr.querySelector('.bulk-ds-contact-phone')?.value?.trim();
-            const address = dsTr.querySelector('.bulk-ds-address-input')?.value?.trim();
             const errorBox = dsTr.querySelector('.bulk-ds-error');
             if (!orderItemId && !existingAllocationId) {
                 errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
-                errorBox.classList.remove('d-none');
-                dsValid = false;
-            } else if (!phone) {
-                errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
-                errorBox.classList.remove('d-none');
-                dsValid = false;
-            } else if (!address) {
-                errorBox.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                 errorBox.classList.remove('d-none');
                 dsValid = false;
             } else {
@@ -692,9 +708,18 @@ export default class BulkReceiveController {
             return;
         }
 
-        this.#itemsError.classList.add('d-none');
+        this.#showItemsError()
         this.#form.submit();
         fieldset.disabled = true;
+    }
+
+    #showItemsError(errorMessage) {
+        if (!errorMessage){
+            this.#itemsError.classList.add('d-none');
+            return;
+        }
+        this.#itemsError.textContent = errorMessage;
+        this.#itemsError.classList.remove('d-none');
     }
 }
 

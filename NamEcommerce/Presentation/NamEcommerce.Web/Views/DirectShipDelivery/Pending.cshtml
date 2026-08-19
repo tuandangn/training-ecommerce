@@ -20,7 +20,7 @@
             <div class="col-12 col-md-4">
                 <label class="form-label small">Tìm kiếm</label>
                 <input type="text" name="Keywords" value="@Model.Filter.Keywords" class="form-control"
-                       placeholder="Mã phiếu, tên khách, địa chỉ..." inputmode="search"/>
+                       placeholder="Mã phiếu, tên khách, địa chỉ..." inputmode="search" />
             </div>
             <div class="col-6 col-md-3">
                 <label class="form-label small">Từ ngày</label>
@@ -72,17 +72,15 @@
                         @foreach (var item in Model.Items)
                         {
                             <tr data-id="@item.Id" data-code="@item.Code">
-                                <td class="ps-4 fw-semibold">
-                                    <span class="badge bg-success-subtle text-success me-1">
-                                        <i class="bi bi-truck-fast"></i>
-                                    </span>
+                                <td class="ps-4 fw-medium text-nowrap">
                                     @item.Code
                                 </td>
                                 <td>
                                     @if (item.OrderCode != null)
                                     {
-                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId"
-                                           class="text-decoration-none">@item.OrderCode</a>
+                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId" class="text-decoration-none fw-medium text-nowrap">
+                                            @item.OrderCode
+                                        </a>
                                     }
                                     else
                                     {
@@ -90,7 +88,7 @@
                                     }
                                 </td>
                                 <td>
-                                    <div class="fw-medium">@item.CustomerName</div>
+                                    <div class="fw-medium text-nowrap">@item.CustomerName</div>
                                     @if (!string.IsNullOrWhiteSpace(item.CustomerPhone))
                                     {
                                         <small class="text-muted">@item.CustomerPhone</small>
@@ -150,17 +148,22 @@
             const deliveryNoteController = new DeliverNoteController({ hidePageLoadOnRequestEnd: false });
 
             document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const id = btn.dataset.id;
                     if (!id) return;
-                    deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
+                    btn.disabled = true;
+                    await deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
+                    btn.disabled = false;
                 });
             });
 
             document.querySelectorAll('.btn-reject-delivery').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const {id, code, warehouse } = btn.dataset;
-                    deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code, warehouse);
+                btn.addEventListener('click', async () => {
+                    const { id, code, warehouse } = btn.dataset;
+                    if (!id) return;
+                    btn.disabled = true;
+                    await deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code, warehouse);
+                    btn.disabled = false;
                 });
             });
         })();

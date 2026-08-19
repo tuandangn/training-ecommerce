@@ -5,7 +5,7 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 [Serializable]
 public sealed class BulkReceivePurchaseOrderCommand : ICommand<BulkReceivePurchaseOrderResultModel>
 {
-    public DateTime? ReceivedOnUtc { get; set; }
+    public DateTime? ReceivedOn { get; set; }
     public required Guid PurchaseOrderId { get; init; }
     public IList<BulkReceiveLineCommand> Items { get; init; } = [];
     public decimal ShippingAmount { get; set; }
