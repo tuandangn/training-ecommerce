@@ -16,13 +16,10 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Debts;
-using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
@@ -39,7 +36,7 @@ namespace NamEcommerce.Application.Services.PurchaseOrders;
 public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
     IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
     IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader,
-    IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
+    IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<Customer> customerDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
@@ -936,6 +933,7 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             TotalQuantity = d.TotalQuantity,
             AllocatedOutstanding = d.AllocatedOutstanding,
             AvailableToAllocate = d.AvailableToAllocate,
+            ShippingContactName = d.ShippingContactName,
             ShippingAddress = d.ShippingAddress,
             ShippingPhoneNumber = d.ShippingPhoneNumber,
             CustomerPhone = d.CustomerPhone
@@ -953,6 +951,7 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             OrderCode = d.OrderCode,
             CustomerName = d.CustomerName,
             CustomerPhone = d.CustomerPhone,
+            ShippingContactName = d.ShippingContactName,
             ShippingAddress = d.ShippingAddress,
             ShippingPhoneNumber = d.ShippingPhoneNumber,
             AllocatedQuantity = d.AllocatedQuantity,
@@ -1193,7 +1192,26 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
                 if (maxAllocationQuantity <= 0)
                     return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderItemAllocationQuantityExceedsAvailable" };
 
-                var physicalWarehouseRequired = item.ReceivedQuantity > maxAllocationQuantity;
+                var physicalWarehouseRequired = false;
+                if (item.ReceivedQuantity <= maxAllocationQuantity)
+                {
+                    var checkingOrderItemId = upgradeExisting 
+                        ? (await purchaseOrderItemAllocationDataReader.GetByIdAsync(item.DirectShipExistingAllocationId!.Value).ConfigureAwait(false))!.PurchaseOrderItemId.SecondaryId 
+                        : item.DirectShipOrderItemId!.Value;
+                    var totalReceivingQty = dto.Items.Where(i =>
+                    {
+                        if (upgradeExisting && i.DirectShipExistingAllocationId.HasValue && i.DirectShipExistingAllocationId == item.DirectShipExistingAllocationId)
+                            return true;
+
+                        return i.DirectShipOrderItemId.HasValue && i.DirectShipOrderItemId == checkingOrderItemId;
+                    }).Sum(i => i.ReceivedQuantity);
+                    if (totalReceivingQty > maxAllocationQuantity)
+                        return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderItemAllocationQuantityExceedsAvailable" };
+                }
+                else
+                {
+                    physicalWarehouseRequired = true;
+                }
 
                 warehouseId ??= purchaseOrder?.WarehouseId;
                 if (!warehouseId.HasValue && physicalWarehouseRequired)
@@ -1208,7 +1226,8 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
                         return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PhysicalWarehouseRequired" };
                 }
 
-                directShipItemMaxAllocationQtyMap.Add(item, maxAllocationQuantity);
+                if (!directShipItemMaxAllocationQtyMap.ContainsKey(item))
+                    directShipItemMaxAllocationQtyMap.Add(item, maxAllocationQuantity);
             }
         }
 

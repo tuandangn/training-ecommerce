@@ -73,7 +73,9 @@
                         {
                             <tr data-id="@item.Id" data-code="@item.Code">
                                 <td class="ps-4 fw-medium text-nowrap">
-                                    @item.Code
+                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none fw-medium text-nowrap">
+                                        @item.Code
+                                    </a>
                                 </td>
                                 <td>
                                     @if (item.OrderCode != null)
@@ -144,7 +146,7 @@
     <script type="module">
         import DeliverNoteController from '/modules/DeliveryNoteController.js';
 
-        (function () {
+        (function() {
             const deliveryNoteController = new DeliverNoteController({ hidePageLoadOnRequestEnd: false });
 
             document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {

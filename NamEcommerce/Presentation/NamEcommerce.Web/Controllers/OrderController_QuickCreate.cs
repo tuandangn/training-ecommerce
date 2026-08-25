@@ -225,7 +225,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         });
 
         if (result.Success)
-            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
+            return this.JsonOk();
         return this.JsonError(result.ErrorMessage!);
     }
 

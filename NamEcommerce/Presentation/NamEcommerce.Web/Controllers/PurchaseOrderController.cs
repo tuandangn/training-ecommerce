@@ -954,8 +954,13 @@ public sealed class PurchaseOrderController(IMediator mediator,
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
-        if (purchaseOrderItemId == Guid.Empty)
-            return this.JsonError(LocalizeError("Error.PurchaseOrderItemRequired"));
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(purchaseOrderId);
+        if (purchaseOrder is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == purchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderItemIsNotFound"));
 
         var items = await purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
         var productIds = items.Select(i => i.ProductId).Distinct().ToList();
@@ -969,6 +974,7 @@ public sealed class PurchaseOrderController(IMediator mediator,
             orderCode = item.OrderCode,
             customerName = item.CustomerName,
             customerPhone = item.CustomerPhone,
+            shippingContactName = item.ShippingContactName,
             shippingAddress = item.ShippingAddress,
             shippingPhoneNumber = item.ShippingPhoneNumber,
             productName = item.ProductName,
@@ -983,8 +989,13 @@ public sealed class PurchaseOrderController(IMediator mediator,
     [Authorize(Policy = SystemPermissions.PurchaseOrders.View)]
     public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderId, Guid purchaseOrderItemId)
     {
-        if (purchaseOrderItemId == Guid.Empty)
-            return this.JsonError(LocalizeError("Error.PurchaseOrderItemRequired"));
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(purchaseOrderId);
+        if (purchaseOrder is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderIsNotFound"));
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == purchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return this.JsonError(LocalizeError("Error.PurchaseOrderItemIsNotFound"));
 
         var allocations = await purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
 
@@ -996,6 +1007,7 @@ public sealed class PurchaseOrderController(IMediator mediator,
             orderCode = a.OrderCode,
             customerName = a.CustomerName,
             customerPhone = a.CustomerPhone,
+            shippingContactName = a.ShippingContactName,
             shippingAddress = a.ShippingAddress,
             shippingPhoneNumber = a.ShippingPhoneNumber,
             allocatedQty = a.AllocatedQuantity,

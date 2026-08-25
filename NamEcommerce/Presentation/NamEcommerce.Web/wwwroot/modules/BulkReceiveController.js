@@ -162,7 +162,7 @@ export default class BulkReceiveController {
                 const phoneInput = tr.querySelector('.bulk-ds-contact-phone');
                 if (phoneInput) phoneInput.value = btn.dataset.shippingPhoneNumber || btn.dataset.customerPhone || '';
                 const nameInput = tr.querySelector('.bulk-ds-contact-name');
-                if (nameInput) nameInput.value = btn.dataset.customerName || '';
+                if (nameInput) nameInput.value = btn.dataset.shippingContactName || '';
             }
         });
         this.#tbody.addEventListener('change', (e) => {
@@ -499,6 +499,7 @@ export default class BulkReceiveController {
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-order-item-btn';
                     btn.dataset.orderItemId = order.orderItemId;
+                    btn.dataset.availableToAllocate = order.availableToAllocate;
                     setDataSet(btn, order);
                     btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
                         <span><strong>${escapeHtml(order.orderCode)}</strong> <span class="text-muted small">${escapeHtml(order.customerName)}</span></span>
@@ -511,17 +512,18 @@ export default class BulkReceiveController {
             if (nonDsData?.length) {
                 const header = document.createElement('div');
                 header.className = 'px-3 py-1 text-muted small fw-semibold bg-light border-bottom' + (eligibleData?.length ? ' border-top mt-1' : '');
-                header.textContent = 'Chọn đơn chuyển lên giao thẳng';
+                header.textContent = 'Chuyển lên giao thẳng';
                 orderItems.appendChild(header);
                 nonDsData.forEach(alloc => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-existing-alloc-btn';
                     btn.dataset.allocationId = alloc.allocationId;
-                    setDataSet(btn, order);
+                    btn.dataset.remainingQty = alloc.remainingQty;
+                    setDataSet(btn, alloc);
                     btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
                         <span><strong>${escapeHtml(alloc.orderCode)}</strong> <span class="text-muted small">${escapeHtml(alloc.customerName)}</span></span>
-                        <span class="badge bg-warning text-dark ms-2">Còn ${alloc.remainingQty}</span>
+                        <span class="badge bg-warning text-light ms-2">Còn ${alloc.remainingQty}</span>
                     </div>`;
                     orderItems.appendChild(btn);
                 });
@@ -531,7 +533,7 @@ export default class BulkReceiveController {
                 btn.dataset.orderId = data.orderId;
                 btn.dataset.orderCode = data.orderCode;
                 btn.dataset.customerName = data.customerName;
-                btn.dataset.availableToAllocate = data.availableToAllocate;
+                btn.dataset.shippingContactName = data.shippingContactName || data.customerName;
                 btn.dataset.shippingAddress = data.shippingAddress || '';
                 btn.dataset.shippingPhoneNumber = data.shippingPhoneNumber || '';
                 btn.dataset.customerPhone = data.customerPhone || '';
@@ -563,7 +565,7 @@ export default class BulkReceiveController {
         let hintQtyHtml = `${remainingQty}`;
         const directRemainingQty = item.dsRemaining ?? 0;
         if (directRemainingQty > 0) {
-            hintQtHtml += ` · <span class="text-info"><i class="bi bi-send me-1"></i>${this.#formatQty(String(directRemainingQty, decimalPlaces))} giao thẳng</span>`;
+            hintQtyHtml += ` · <span class="text-info"><i class="bi bi-send me-1"></i>${this.#formatQty(String(directRemainingQty, item.decimalPlaces))} giao thẳng</span>`;
         }
         displayHintRemaining.innerHTML = hintQtyHtml;
     }

@@ -327,6 +327,7 @@ public sealed class PurchaseOrderAllocationManager(
                     TotalQuantity = ctx.Item.Quantity,
                     AllocatedOutstanding = outstanding,
                     AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - activeDeliveryQuantity - outstanding),
+                    ShippingContactName = ctx.Order.CustomerInfo.FullName,
                     ShippingAddress = ctx.Order.ShippingAddress,
                     ShippingPhoneNumber = ctx.Order.ShippingPhoneNumber
                 };
@@ -367,10 +368,11 @@ public sealed class PurchaseOrderAllocationManager(
                     OrderCode = ctx.Order.Code,
                     CustomerName = ctx.Order.CustomerInfo.FullName,
                     CustomerPhone = ctx.Order.CustomerInfo.PhoneNumber,
-                    ShippingAddress = ctx.Order.ShippingAddress,
-                    ShippingPhoneNumber = ctx.Order.ShippingPhoneNumber,
                     AllocatedQuantity = allocation.AllocatedQuantity,
-                    RemainingQuantity = Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)
+                    RemainingQuantity = Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity),
+                    ShippingContactName = ctx.Order.CustomerInfo.FullName,
+                    ShippingAddress = ctx.Order.ShippingAddress,
+                    ShippingPhoneNumber = ctx.Order.ShippingPhoneNumber
                 };
             })
             .ToList();

@@ -1,7 +1,7 @@
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model PurchaseOrderDetailsModel
 @{
-    var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0) 
+    var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0)
         || Model.DirectShipAllocationsPerItem.Values.Any(a => a.Count > 0);
 
     var allocationCount = 0;
@@ -96,12 +96,18 @@
                                 {
                                     var status = (AllocationStatus)allocation.Status;
                                     <div class="po-allocation-row">
-                                        <div class="po-allocation-icon"><i class="bi bi-diagram-3"></i></div>
+                                        @if (allocation.IsDirectShip)
+                                        {
+                                            <div class="po-allocation-icon direct"><i class="bi bi-send"></i></div>
+                                        }
+                                        else
+                                        {
+                                            <div class="po-allocation-icon"><i class="bi bi-diagram-3"></i></div>
+                                        }
                                         <div class="po-allocation-body">
                                             <div class="po-allocation-title">
                                                 <span>Đơn bán</span>
-                                                <a asp-controller="Order" asp-action="Details" asp-route-id="@allocation.OrderId"
-                                                   class="text-decoration-none fw-semibold">@allocation.OrderCode</a>
+                                                <a asp-controller="Order" asp-action="Details" asp-route-id="@allocation.OrderId" class="text-decoration-none fw-semibold">@allocation.OrderCode</a>
                                                 @if (allocation.IsDirectShip)
                                                 {
                                                     <span class="badge bg-info text-white">Giao thẳng</span>
@@ -121,78 +127,36 @@
                                                     }
                                                 </div>
                                             }
+                                            @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && status != AllocationStatus.FullyReceived && status != AllocationStatus.Cancelled)
+                                            {
+                                                <div class="mt-2">
+                                                    @if (allocation.IsDirectShip)
+                                                    {
+                                                        var dsAlloc = itemDirectShip.First(a => a.AllocationId == allocation.AllocationId);
+                                                        <button type="button" class="btn-outline-info btn-sm text-decoration-none btn btnEditDirectShipAddress"
+                                                                data-bs-toggle="modal" data-bs-target="#editDirectShipAddressModal"
+                                                                data-allocation-id="@dsAlloc.AllocationId"
+                                                                data-address="@dsAlloc.DirectShipAddress"
+                                                                data-contact-name="@dsAlloc.DirectShipContactName"
+                                                                data-contact-phone="@dsAlloc.DirectShipContactPhone">
+                                                            <i class="bi bi-pencil-square me-1"></i>Sửa địa chỉ
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button" class="btn-outline-secondary btn-sm text-decoration-none btn"
+                                                                data-bs-toggle="modal" data-bs-target="#markDsModal"
+                                                                data-allocation-id="@allocation.AllocationId" data-order-code="@allocation.OrderCode"
+                                                                data-address="@allocation.ShippingAddress" data-phone="@allocation.CustomerPhone" data-customer="@allocation.CustomerName">
+                                                            <i class="bi bi-send me-1"></i>Giao thẳng
+                                                        </button>
+                                                    }
+                                                </div>
+                                            }
                                         </div>
                                         <div class="po-allocation-meta">
                                             <span>@allocation.ReceivedQuantity.DisplayQuantity() / @allocation.AllocatedQuantity.DisplayQuantity()</span>
                                             <span class="status-badge @status.GetDisplayColor()">@status.GetDisplayText()</span>
-                                        </div>
-                                        <div class="po-allocation-actions">
-                                            @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && status != AllocationStatus.FullyReceived && status != AllocationStatus.Cancelled)
-                                            {
-                                                <button type="button" class="btn btn-outline-primary btn-sm"
-                                                        data-bs-toggle="modal" data-bs-target="#markDsModal"
-                                                        data-allocation-id="@allocation.AllocationId" data-order-code="@allocation.OrderCode"
-                                                        data-address="@allocation.ShippingAddress" data-phone="@allocation.CustomerPhone" data-customer="@allocation.CustomerName">
-                                                    <i class="bi bi-send me-1"></i>Giao thẳng
-                                                </button>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                                @foreach (var dsAlloc in itemDirectShip)
-                                {
-                                    DeliveryNoteStatus? deliveryStatus = dsAlloc.DeliveryStatus.HasValue ? (DeliveryNoteStatus)dsAlloc.DeliveryStatus.Value : null;
-                                    var allocationStatus = (AllocationStatus)dsAlloc.Status;
-                                    <div class="po-allocation-row">
-                                        <div class="po-allocation-icon direct"><i class="bi bi-send"></i></div>
-                                        <div class="po-allocation-body">
-                                            <div class="po-allocation-title">
-                                                <span>Giao thẳng</span>
-                                                @if (dsAlloc.DeliveryNoteId.HasValue)
-                                                {
-                                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@dsAlloc.DeliveryNoteId"
-                                                       class="text-decoration-none fw-semibold">@dsAlloc.DeliveryNoteCode</a>
-                                                }
-                                            </div>
-                                            <div class="small text-muted">
-                                                @dsAlloc.DirectShipAddress
-                                                @if (!string.IsNullOrWhiteSpace(dsAlloc.DirectShipContactName))
-                                                {
-                                                    <span class="ms-1">· @dsAlloc.DirectShipContactName</span>
-                                                }
-                                                @if (!string.IsNullOrWhiteSpace(dsAlloc.DirectShipContactPhone))
-                                                {
-                                                    <span class="ms-1">(@dsAlloc.DirectShipContactPhone)</span>
-                                                }
-                                            </div>
-                                        </div>
-                                        <div class="po-allocation-meta">
-                                            <span>@dsAlloc.ReceivedQuantity.DisplayQuantity() / @dsAlloc.AllocatedQuantity.DisplayQuantity()</span>
-                                            @if (deliveryStatus.HasValue)
-                                            {
-                                                <span class="status-badge @deliveryStatus.Value.GetDisplayColor()">
-                                                    @deliveryStatus.Value.GetDisplayText()
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="status-badge @allocationStatus.GetDisplayColor()">
-                                                    @allocationStatus.GetDisplayText()
-                                                </span>
-                                            }
-                                        </div>
-                                        <div class="po-allocation-actions">
-                                            @if (Model.Info.CanReceiveGoods && allocationStatus != AllocationStatus.FullyReceived)
-                                            {
-                                                <button type="button" class="btn btn-outline-secondary btn-sm btnEditDirectShipAddress"
-                                                        data-bs-toggle="modal" data-bs-target="#editDirectShipAddressModal"
-                                                        data-allocation-id="@dsAlloc.AllocationId"
-                                                        data-address="@dsAlloc.DirectShipAddress"
-                                                        data-contact-name="@dsAlloc.DirectShipContactName"
-                                                        data-contact-phone="@dsAlloc.DirectShipContactPhone">
-                                                    <i class="bi bi-pencil-square me-1"></i>Sửa địa chỉ
-                                                </button>
-                                            }
                                         </div>
                                     </div>
                                 }

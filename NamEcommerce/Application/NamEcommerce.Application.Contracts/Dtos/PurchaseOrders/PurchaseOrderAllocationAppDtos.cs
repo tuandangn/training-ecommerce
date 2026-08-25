@@ -14,6 +14,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
+    public string? ShippingContactName { get; init; }
     public string? ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
 }
@@ -47,6 +48,7 @@ public sealed record NonDirectShipAllocationForPoItemAppDto
     public required decimal AllocatedQuantity { get; init; }
     public required decimal RemainingQuantity { get; init; }
     public string? CustomerPhone { get; init; }
+    public string? ShippingContactName { get; init; }
     public string? ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
 }

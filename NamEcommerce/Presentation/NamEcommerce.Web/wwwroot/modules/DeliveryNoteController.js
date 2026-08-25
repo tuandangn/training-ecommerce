@@ -231,7 +231,7 @@ export default class DeliveryNoteController {
         });
 
         // Form Submit for Delivery Proof
-        $(this.#deliveredForm).submit(e => {
+        this.#deliveredForm.addEventListener('submit', e => {
             e.preventDefault();
 
             if (!$(this.#deliveredForm).valid()) {

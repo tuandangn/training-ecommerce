@@ -4,7 +4,7 @@ $(function () {
     
     const disabledSubmitForms = [];
 
-    $('form').on('submit', function (e) {
+    $(document).on('submit', 'form', function (e) {
         if (e.isDefaultPrevented())
             return;
 

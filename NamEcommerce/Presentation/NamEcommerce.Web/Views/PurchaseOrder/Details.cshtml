@@ -520,24 +520,22 @@
                             <tbody id="allocateOrderItemsBody"></tbody>
                         </table>
                     </div>
-
                     <hr class="my-3" />
-
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold">Giao thẳng (tùy chọn)</label>
+                        <label class="form-label small fw-semibold">Giao thẳng</label>
                         <div class="form-check form-switch mb-2">
                             <input class="form-check-input" type="checkbox" id="allocateIsDirectShip" data-testid="po-allocate-direct-ship" />
                             <label class="form-check-label small" for="allocateIsDirectShip">Đánh dấu là giao thẳng</label>
                         </div>
                         <div id="allocateDirectShipFields" class="d-none">
-                            <div class="mb-2">
-                                <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao" />
-                            </div>
                             <div class="row g-2">
-                                <div class="col-6">
+                                <div class="col-xl-4 col-lg-12">
+                                    <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao" />
+                                </div>
+                                <div class="col-xl-4 col-6">
                                     <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
                                 </div>
-                                <div class="col-6">
+                                <div class="col-xl-4 col-6">
                                     <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" inputmode="tel" />
                                 </div>
                             </div>
@@ -699,7 +697,7 @@
             form.addEventListener('submit', async e => {
                 e.preventDefault();
 
-                if(!isFormValid(form))
+                if (!isFormValid(form))
                     return;
 
                 const btnSubmit = form.querySelector('[type=submit]');
@@ -707,7 +705,7 @@
                 showPageLoading();
 
                 const response = await apiPost('@Url.Action("UpdateAddress", "DirectShipDelivery")', new FormData(form));
-                if (response.success){
+                if (response.success) {
                     location.reload();
                     return;
                 }
@@ -725,7 +723,7 @@
             submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
             orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
             customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
-                                                                                                                                };
+                                                                                                                                        };
 
         document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -1006,12 +1004,14 @@
                 fields.classList.add('d-none');
                 errorBox.classList.add('d-none');
                 try {
-                    const [resp1, resp2] = await Promise.all([
-                        fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal }),
-                        fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal })
+                    const [eligibleResponse, nonDirectShipResponse] = await Promise.all([
+                        apiGet(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal }),
+                        apiGet(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal })
                     ]);
-                    if (!resp1.ok || !resp2.ok) throw new Error('Lỗi tải dữ liệu');
-                    const [eligible, nonDs] = await Promise.all([resp1.json(), resp2.json()]);
+                    if (!eligibleResponse.success || !nonDirectShipResponse.success)
+                        throw new Error('Lỗi tải dữ liệu');
+
+                    const [eligible, nonDs] = [eligibleResponse.data, nonDirectShipResponse.data];
                     loading.classList.add('d-none');
                     if ((!eligible || !eligible.length) && (!nonDs || !nonDs.length)) {
                         empty.classList.remove('d-none');
@@ -1043,9 +1043,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                                                                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
-                                                                                                                                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                                                                                                                                                </div>`;
+                                                                                                                                                            <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                                                                                                                                            <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
+                                                                                                                                                        </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsOrderId').value = order.orderId;
@@ -1069,9 +1069,9 @@
                             btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action py-2 px-3';
                             btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                                                                                                                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
-                                                                                                                                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
-                                                                                                                                                </div>`;
+                                                                                                                                                            <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                                                                                                                                            <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
+                                                                                                                                                        </div>`;
                             btn.addEventListener('click', function() {
                                 btn.classList.add('active');
                                 document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
@@ -1349,15 +1349,15 @@
                 tr.style.cursor = 'pointer';
                 tr.title = `Đơn: ${p.purchaseOrderCode}`;
                 tr.innerHTML = `
-                                                                                                                                    <td class="ps-0 py-1 text-nowrap">
-                                                                                                                                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
-                                                                                                                                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
-                                                                                                                                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
-                                                                                                                                    </td>
-                                                                                                                                    <td class="text-end py-1 fw-semibold text-nowrap">
-                                                                                                                                        ${DecimalFields.formatCurrency(String(p.unitCost))}
-                                                                                                                                    </td>
-                                                                                                                                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
+                                                                                                                                            <td class="ps-0 py-1 text-nowrap">
+                                                                                                                                                ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                                                                                                                                                <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
+                                                                                                                                                <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
+                                                                                                                                            </td>
+                                                                                                                                            <td class="text-end py-1 fw-semibold text-nowrap">
+                                                                                                                                                ${DecimalFields.formatCurrency(String(p.unitCost))}
+                                                                                                                                            </td>
+                                                                                                                                            <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
 
                 tr.addEventListener('click', () => {
                     const priceInput = document.getElementById('itemUnitPrice');
@@ -1581,7 +1581,9 @@
 
     @if (Model.CanAllocateItems)
     {
-        <script>
+        <script type="module">
+            import { apiGet } from '/modules/ajax-helper.js';
+
             (function() {
                 const modal = document.getElementById('allocateToOrderModal');
                 if (!modal) return;
@@ -1637,9 +1639,12 @@
                 });
 
                 function loadEligibleItems(poItemId) {
-                    fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${currentPoId}&purchaseOrderItemId=${poItemId}`)
-                        .then(r => r.json())
-                        .then(items => {
+                    apiGet(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${currentPoId}&purchaseOrderItemId=${poItemId}`)
+                        .then(response => {
+                            if (!response.success)
+                                throw new Error('Lỗi tải danh sách đơn hàng.');
+
+                            const items = response.data;
                             document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
                             if (!items || items.length === 0) {
                                 document.getElementById('allocateOrderItemsEmpty').classList.remove('d-none');
@@ -1657,16 +1662,16 @@
                                 tr.dataset.customerPhone = item.customerPhone || '';
                                 tr.dataset.customerName = item.customerName || '';
                                 tr.innerHTML = `
-                                                                                                                                                                                                    <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                                                                                                                                                                                    <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
-                                                                                                                                                                                                    <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
-                                                                                                                                                                                                    <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
-                                                                                                                                                                                                    <td class="pe-2">
-                                                                                                                                                                                                        <div class="d-flex align-items-center justify-content-end">
-                                                                                                                                                                                                            <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
-                                                                                                                                                                                                                   data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
-                                                                                                                                                                                                       </div>
-                                                                                                                                                                                                    </td>`;
+                                                                                                                                                                                                                <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                                                                                                                                                                                                <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                                                                                                                                                                                                <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                                                                                                                                                                                                <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                                                                                                                                                                                                <td class="pe-2">
+                                                                                                                                                                                                                    <div class="d-flex align-items-center justify-content-end">
+                                                                                                                                                                                                                        <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
+                                                                                                                                                                                                                               data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
+                                                                                                                                                                                                                   </div>
+                                                                                                                                                                                                                </td>`;
                                 tbody.appendChild(tr);
                                 window.DecimalFields?.autoWrap?.(tr);
                                 tr.addEventListener('click', e => {

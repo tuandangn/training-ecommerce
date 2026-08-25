@@ -35,11 +35,19 @@ public sealed class BulkReceivePurchaseOrderHandler(IPurchaseOrderAppService pur
             ShippingAmount = request.ShippingAmount,
             TaxRate = request.TaxRate
         });
+        if (bulkReceivedResult.Success)
+        {
+            return new BulkReceivePurchaseOrderResultModel
+            {
+                Success = true,
+                CreatedGoodsReceiptIds = bulkReceivedResult.CreatedGoodsReceiptIds
+            };
+        }
 
         return new BulkReceivePurchaseOrderResultModel
         {
-            Success = true,
-            CreatedGoodsReceiptIds = bulkReceivedResult.CreatedGoodsReceiptIds
+            Success = false,
+            ErrorMessage = bulkReceivedResult.ErrorMessage
         };
     }
 }
