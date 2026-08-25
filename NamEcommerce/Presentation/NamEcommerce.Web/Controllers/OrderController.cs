@@ -192,18 +192,15 @@ public sealed partial class OrderController : BaseAuthorizedController
     {
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+            return this.JsonError(LocalizeError("Error.OrderIsNotFound"));
 
         var orderItemIds = order.Items.Select(i => i.Id).ToList();
-        var result = await _mediator.Send(new CancelOrderCommand(
-            model.OrderId,
-            orderItemIds,
-            model.ReturnWarehouseId));
+        var result = await _mediator.Send(new CancelOrderCommand(model.OrderId, orderItemIds, model.ReturnWarehouseId));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return this.JsonError(result.ErrorMessage!);
 
-        return Json(new { success = true, redirectUrl = Url.Action(nameof(List), "Order") });
+        return this.JsonOk(message: LocalizeError("Error.OrderCancelled"));
     }
 
     [HttpPost]
@@ -390,7 +387,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         var order = await _orderAppService.GetOrderByIdAsync(model.OrderId);
         if (order is null)
             return this.JsonError(Localizer["Error.OrderIsNotFound"]);
-        else if(model.IncurredDate < DateTimeHelper.ToLocalTime(order.CreatedOnUtc))
+        else if (model.IncurredDate < DateTimeHelper.ToLocalTime(order.CreatedOnUtc))
             return this.JsonError(Localizer["Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate"]);
 
         if (model.ExpenseType == ExpenseType.AssetDisposal)

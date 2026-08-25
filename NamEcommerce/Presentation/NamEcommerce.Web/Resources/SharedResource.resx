@@ -432,6 +432,9 @@
   <data name="Error.OrderCannotDelete" xml:space="preserve">
     <value>Order cannot be deleted.</value>
   </data>
+  <data name="Order.GoodsReturningByCancelling" xml:space="preserve">
+    <value>Returning goods by order cancelling</value>
+  </data>
   <data name="Error.OrderCannotDelete_Processing" xml:space="preserve">
     <value>Order cannot be deleted because it is being processed.</value>
   </data>
@@ -1091,6 +1094,15 @@
   </data>
   <data name="Error.OrderIdIsRequired" xml:space="preserve">
     <value>Order ID is required</value>
+  </data>
+  <data name="Error.OrderCancelled" xml:space="preserve">
+    <value>Order cancelled</value>
+  </data>
+  <data name="Error.OrderCancelling.WarehouseRequired" xml:space="preserve">
+    <value>Goods is returned to warehouse</value>
+  </data>
+  <data name="Error.OrderCancelling.GoodsReturned" xml:space="preserve">
+    <value>Return warehouse is required</value>
   </data>
   <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
     <value>Expense incurred date cannot be less than order creation date</value>

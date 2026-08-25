@@ -432,6 +432,9 @@
   <data name="Error.OrderCannotDelete" xml:space="preserve">
     <value>Không thể xóa đơn hàng.</value>
   </data>
+  <data name="Order.GoodsReturningByCancelling" xml:space="preserve">
+    <value>Trả hàng về kho do hủy đơn bán</value>
+  </data>
   <data name="Error.OrderCannotDelete_Processing" xml:space="preserve">
     <value>Không thể xóa đơn hàng đang trong quá trình xử lý.</value>
   </data>
@@ -1091,6 +1094,15 @@
   </data>
   <data name="Error.OrderIdIsRequired" xml:space="preserve">
     <value>Không có ID đơn bán</value>
+  </data>
+  <data name="Error.OrderCancelled" xml:space="preserve">
+    <value>Đã hủy đơn bán</value>
+  </data>
+  <data name="Error.OrderCancelling.WarehouseRequired" xml:space="preserve">
+    <value>Đơn bán đã bị hủy, hàng hóa được chuyển về kho đã chọn</value>
+  </data>
+  <data name="Error.OrderCancelling.GoodsReturned" xml:space="preserve">
+    <value>Vui lòng chọn kho hàng trả về</value>
   </data>
   <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
     <value>Ngày phát sinh chi phí không nhỏ hơn ngày tạo đơn</value>

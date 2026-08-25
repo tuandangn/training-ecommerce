@@ -195,7 +195,6 @@ public sealed record MarkOrderItemDeliveredResultAppDto
 public sealed record CancelOrderAppDto
 {
     public required Guid OrderId { get; init; }
-    public IReadOnlyList<Guid> OrderItemIds { get; init; } = [];
     public Guid? ReturnWarehouseId { get; init; }
 }
 

@@ -24,7 +24,7 @@
                 <div class="text-muted small">Chi phí phát sinh, công nợ, giá vốn, trả hàng và lãi lỗ</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                @if (!Model.IsRetailWalkInCustomer || remainAmount > 0)
+                @if (Model.CanCompleteOrder && (!Model.IsRetailWalkInCustomer || remainAmount > 0))
                 {
                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#orderSettlementPaymentModal">
                         <i class="bi bi-cash-coin me-1"></i>Thu tiền

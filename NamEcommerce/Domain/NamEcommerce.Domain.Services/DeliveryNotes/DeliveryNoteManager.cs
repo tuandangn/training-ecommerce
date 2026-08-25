@@ -468,7 +468,7 @@ public sealed class DeliveryNoteManager(
             await MarkRelatedOrderItemsReceivedByCustomerAsync(deliveryNote).ConfigureAwait(false);
     }
 
-    public async Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
+    public async Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note)
     {
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -483,7 +483,7 @@ public sealed class DeliveryNoteManager(
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
-    public async Task RejectDirectShipDeliveryAsync(Guid id, string reason, CancellationToken ct = default)
+    public async Task RejectDirectShipDeliveryAsync(Guid id, string reason)
     {
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -493,7 +493,8 @@ public sealed class DeliveryNoteManager(
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
         foreach (var item in deliveryNote.Items)
         {
-            await productReservationManager.ReserveAsync(item.ProductId, item.Quantity, deliveryNote.OrderId, ProductReservationReason.DeliveryNoteCancelled, deliveryNote.Id).ConfigureAwait(false);
+            await productReservationManager.ReserveAsync(item.ProductId, item.Quantity, deliveryNote.OrderId, 
+                ProductReservationReason.DeliveryNoteCancelled, deliveryNote.Id).ConfigureAwait(false);
         }
     }
 

@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -279,12 +278,6 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        var hasDeliveryNotes = await (from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote).AnyAsync().ConfigureAwait(false);
-        if (hasDeliveryNotes)
-            throw new OrderCannotChangeStatusException();
-
         order.Cancel();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
@@ -293,7 +286,6 @@ public sealed class OrderManager(
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
-
 
     public async Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto)
     {

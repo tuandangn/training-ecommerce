@@ -21,8 +21,8 @@ public interface IDeliveryNoteManager
     Task AdminUpdateAmountToCollectAsync(Guid deliveryNoteId, decimal newAmount, string? note, Guid? adminUserId);
     Task ConfirmAsync(Guid id);
     Task CancelAsync(Guid id);
-    Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default);
-    Task RejectDirectShipDeliveryAsync(Guid id, string reason, CancellationToken ct = default);
+    Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note);
+    Task RejectDirectShipDeliveryAsync(Guid id, string reason);
     
     Task MarkDeliveringAsync(Guid id);
     Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto);
