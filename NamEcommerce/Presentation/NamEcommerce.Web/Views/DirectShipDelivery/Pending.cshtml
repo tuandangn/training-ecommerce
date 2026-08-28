@@ -115,7 +115,7 @@
                                 </td>
                                 <td class="text-end pe-4">
                                     <button type="button" class="btn btn-sm btn-success btn-confirm-delivery" data-testid="directship-confirm-open"
-                                            data-id="@item.Id" data-code="@item.Code">
+                                            data-id="@item.Id" data-code="@item.Code" data-customer="@item.CustomerName" data-retail-customer="@(item.IsRetailWalkInCustomer.ToString().ToLowerInvariant())">
                                         <i class="bi bi-check2 me-1"></i>Đã giao
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger btn-reject-delivery"
@@ -153,8 +153,11 @@
                 btn.addEventListener('click', async () => {
                     const id = btn.dataset.id;
                     if (!id) return;
+                    showPageLoading();
                     btn.disabled = true;
-                    await deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
+                    await deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal', { isDirectShip: true, isRetailWalkInCustomer: btn.dataset.retailCustomer == 'true' })
+                        .setId(id, { receiverName: btn.dataset.customer });
+                    hidePageLoading();
                     btn.disabled = false;
                 });
             });

@@ -411,6 +411,9 @@
   <data name="Error.OrderItemQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng sản phẩm phải lớn hơn 0.</value>
   </data>
+  <data name="Error.AgreedCustomerChargeMustBePositive" xml:space="preserve">
+    <value>Số tiền phải thu phải lớn hơn 0.</value>
+  </data>
   <data name="Error.OrderItemUnitPriceCannotBeNegative" xml:space="preserve">
     <value>Đơn giá không được âm.</value>
   </data>

@@ -251,14 +251,14 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (SettlementApproval == DeliverySettlementApprovalStatus.PendingApproval)
             throw new NamEcommerceDomainException("Error.DeliverySettlement.NotPending");
 
-        if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
+        if (!IsDirectShip && (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty))
             throw new DeliveryProofRequiredException();
 
         var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
 
         Status = DeliveryNoteStatus.Delivered;
         DeliveredOnUtc = DateTime.UtcNow;
-        DeliveryProofPictureId = pictureIds[0];
+        DeliveryProofPictureId = pictureIds.FirstOrDefault();
         DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
         DeliveryReceiverName = receiverName;
         SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey, cashCollectedAmount);

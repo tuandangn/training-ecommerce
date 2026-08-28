@@ -36,6 +36,7 @@ public sealed class DirectShipDeliveryController(IMediator mediator, IDirectShip
                 Code = deliveryNote.Code,
                 OrderId = deliveryNote.OrderId,
                 OrderCode = deliveryNote.OrderCode,
+                IsRetailWalkInCustomer = deliveryNote.IsRetailWalkInCustomer,
                 CustomerName = deliveryNote.CustomerName,
                 CustomerPhone = string.IsNullOrWhiteSpace(deliveryNote.ShippingPhoneNumber)
                     ? deliveryNote.CustomerPhone

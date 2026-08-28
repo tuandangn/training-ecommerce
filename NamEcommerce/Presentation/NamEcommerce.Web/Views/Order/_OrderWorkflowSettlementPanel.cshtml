@@ -66,7 +66,7 @@
             <div class="alert alert-warning mb-0 p-2" style="text-transform:none;">Vui lòng thanh toán để đơn hàng được xử lý</div>
         }
         <div class="content-card-body">
-            <div class="workflow-metric-grid mb-3">
+            @*             <div class="workflow-metric-grid mb-3">
                 <div class="workflow-metric">
                     <span>Doanh thu</span>
                     <strong>@Model.Settlement.Revenue.DisplayCurrencyWithSymbol()</strong>
@@ -84,18 +84,7 @@
                     <strong>@Model.Settlement.Profit.DisplayCurrencyWithSymbol()</strong>
                 </div>
             </div>
-
-            @if (!Model.Settlement.IsProfitFinal && Model.DeliveryNotes.Count > 0)
-            {
-                <div class="alert alert-warning small mb-3">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Lợi nhuận có thể chưa chốt vì còn dòng xuất hàng chưa có giá vốn.
-                </div>
-            }
-
-            <div class="workflow-section-title">
-                Thanh toán
-            </div>
+ *@
             <div class="workflow-metric-grid mb-3">
                 <div class="workflow-metric">
                     <span>Tình trạng</span>
@@ -123,6 +112,7 @@
             }
             else
             {
+                <div class="workflow-section-title">Thu tiền</div>
                 <div class="table-responsive mb-3">
                     <table class="table data-table mb-0">
                         <thead>
@@ -145,60 +135,6 @@
                                     <td>@(payment.Note ?? "-")</td>
                                     <td class="text-end text-success fw-bold">@payment.Amount.DisplayCurrencyWithSymbol()</td>
                                     <td class="text-end">@payment.PaidOn.ToString($"{ViewConstants.DefaultDateFormat} HH:mm")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-
-            @if (Model.Settlement.Returns.Count > 0)
-            {
-                <div class="workflow-section-title">Trả hàng</div>
-                <div class="workflow-metric-grid mb-3">
-                    <div class="workflow-metric">
-                        <span>Giá trị hàng trả</span>
-                        <strong>@Model.Settlement.ReturnGrossAmount.DisplayCurrencyWithSymbol()</strong>
-                    </div>
-                    <div class="workflow-metric">
-                        <span>Phụ phí trả hàng</span>
-                        <strong>@Model.Settlement.ReturnAdditionalCost.DisplayCurrencyWithSymbol()</strong>
-                    </div>
-                    <div class="workflow-metric">
-                        <span>Hoàn khách ròng</span>
-                        <strong>@Model.Settlement.ReturnNetRefundAmount.DisplayCurrencyWithSymbol()</strong>
-                    </div>
-                    <div class="workflow-metric">
-                        <span>SL bù giao sau</span>
-                        <strong>@Model.Settlement.ReturnCompensatedQuantity.DisplayQuantity()</strong>
-                    </div>
-                </div>
-                <div class="table-responsive mb-3">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>Phiếu trả</th>
-                                <th>Phiếu giao</th>
-                                <th>Trạng thái</th>
-                                <th class="text-end">Giá trị trả</th>
-                                <th class="text-end">Phụ phí</th>
-                                <th class="text-end">Hoàn khách</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var customerReturn in Model.Settlement.Returns)
-                            {
-                                <tr>
-                                    <td>
-                                        <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@customerReturn.Id" class="fw-600 text-decoration-none">
-                                            @customerReturn.Code
-                                        </a>
-                                    </td>
-                                    <td>@customerReturn.DeliveryNoteCode</td>
-                                    <td><span class="status-badge @customerReturn.StatusClass">@customerReturn.StatusText</span></td>
-                                    <td class="text-end">@customerReturn.GrossRefundAmount.DisplayCurrencyWithSymbol()</td>
-                                    <td class="text-end">@customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()</td>
-                                    <td class="text-end fw-bold">@customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()</td>
                                 </tr>
                             }
                         </tbody>
@@ -263,41 +199,6 @@
                                     <td>@(expense.Description ?? "-")</td>
                                     <td class="text-end text-danger fw-bold">@expense.Amount.DisplayCurrencyWithSymbol()</td>
                                     <td class="text-end">@expense.IncurredDate.ToString(ViewConstants.DefaultDateFormat)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            @if (Model.Settlement.Costs.Count > 0)
-            {
-                <div class="workflow-section-title">Giá vốn</div>
-                <div class="table-responsive">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>Phiếu giao</th>
-                                <th>Hàng hóa</th>
-                                <th>Nguồn</th>
-                                <th class="text-end">SL</th>
-                                <th class="text-end">Giá vốn</th>
-                                <th class="text-end">Tổng vốn</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var cost in Model.Settlement.Costs)
-                            {
-                                <tr>
-                                    <td>
-                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@cost.DeliveryNoteId" class="text-decoration-none fw-600">
-                                            @cost.DeliveryNoteCode
-                                        </a>
-                                    </td>
-                                    <td>@cost.ProductName</td>
-                                    <td>@(cost.IsDirectShip ? "Giao thẳng" : "Xuất kho")</td>
-                                    <td class="text-end">@cost.Quantity.DisplayQuantity()</td>
-                                    <td class="text-end">@(cost.UnitCost?.DisplayCurrencyWithSymbol() ?? "-")</td>
-                                    <td class="text-end fw-600">@(cost.TotalCost?.DisplayCurrencyWithSymbol() ?? "-")</td>
                                 </tr>
                             }
                         </tbody>

@@ -411,6 +411,9 @@
   <data name="Error.OrderItemQuantityMustBePositive" xml:space="preserve">
     <value>Order item quantity must be greater than 0.</value>
   </data>
+  <data name="Error.AgreedCustomerChargeMustBePositive" xml:space="preserve">
+    <value>Agreed customer charge must be greater than 0</value>
+  </data>
   <data name="Error.OrderItemUnitPriceCannotBeNegative" xml:space="preserve">
     <value>Order item unit price cannot be negative.</value>
   </data>

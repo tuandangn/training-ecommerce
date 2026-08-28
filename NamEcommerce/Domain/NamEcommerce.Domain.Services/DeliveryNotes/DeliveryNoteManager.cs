@@ -1097,7 +1097,7 @@ public sealed class DeliveryNoteManager(
     {
         // Phiếu đang xử lý mới chuyển Delivered ở trạng thái staged (DB vẫn còn status cũ),
         // query DB sẽ không thấy nó — loại khỏi query và cộng từ instance in-memory.
-        var deliveredByOrderItems = await deliveryNoteReader.DataSource
+        var deliveredByOrderItems = await deliveryNoteReader.GetDataSource(new() { ReadWrite = true })
             .Where(note => note.OrderId == orderId && note.Status == DeliveryNoteStatus.Delivered
                 && note.Id != currentDeliveryNote.Id)
             .SelectMany(note => note.Items)
@@ -1134,7 +1134,7 @@ public sealed class DeliveryNoteManager(
 
         var orderId = orderItemIds.First().PrimaryId;
         var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
-        var validDeliveryNoteItems = await deliveryNoteReader.ApplySpecification(new DeliveryNotesOfOrderItemsSpec(orderId, itemIds))
+        var validDeliveryNoteItems = await deliveryNoteReader.ApplySpecification(new DeliveryNotesOfOrderItemsSpec(orderId, itemIds), new() { ReadWrite = true })
             .SelectMany(note => note.Items)
             .Select(item => new { item.Id, item.OrderItemId })
             .ToListAsync().ConfigureAwait(false);

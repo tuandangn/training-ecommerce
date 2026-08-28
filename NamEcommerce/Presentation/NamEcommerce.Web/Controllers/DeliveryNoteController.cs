@@ -351,7 +351,7 @@ public sealed class DeliveryNoteController(
         {
             effectivePictureIds.Add(deliveryNote.DeliveryProofPictureId.Value);
         }
-        if (effectivePictureIds.Count == 0)
+        if (!deliveryNote.IsDirectShip && effectivePictureIds.Count == 0)
             return this.JsonError(LocalizeError("Error.DeliveryProofRequired"));
 
         var acceptanceItems = ParseAcceptanceItems(model.AcceptanceItemsJson);
@@ -361,8 +361,8 @@ public sealed class DeliveryNoteController(
             ReceiverName = model.ReceiverName,
             AgreedCustomerCharge = model.AgreedCustomerCharge,
             AgreedCustomerChargeReason = model.AgreedCustomerChargeReason,
-            CompensateInNextDelivery = model.CompensateInNextDelivery,
-            CashCollectedAmount = model.CashCollectedAmount,
+            CompensateInNextDelivery = !deliveryNote.IsRetailWalkInCustomer && model.CompensateInNextDelivery,
+            CashCollectedAmount = deliveryNote.IsDirectShip ? 0 : model.CashCollectedAmount,
             Items = acceptanceItems,
             PictureIds = effectivePictureIds
         });

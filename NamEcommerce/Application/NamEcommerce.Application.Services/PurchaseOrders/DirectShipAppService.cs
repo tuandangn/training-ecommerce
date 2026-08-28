@@ -82,6 +82,7 @@ public sealed class DirectShipAppService(IDirectShipManager directShipManager, I
             OrderCode = d.OrderCode,
             CustomerName = d.CustomerName,
             CustomerPhone = d.CustomerPhone,
+            IsRetailWalkInCustomer = d.IsRetailWalkInCustomer,
             ShippingAddress = d.ShippingAddress,
             ShippingPhoneNumber = d.ShippingPhoneNumber,
             CreatedOnUtc = d.CreatedOnUtc,

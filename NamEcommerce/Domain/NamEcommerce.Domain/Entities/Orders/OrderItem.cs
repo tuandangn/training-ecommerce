@@ -45,9 +45,6 @@ public sealed record OrderItem : AppEntity
         if (IsDelivered)
             throw new OrderItemDataIsInvalidException("Order item is already delivered.");
             
-        if (pictureId == Guid.Empty)
-            throw new OrderItemDataIsInvalidException("Delivery proof picture is required.");
-
         IsDelivered = true;
         DeliveredOnUtc = DateTime.UtcNow;
         DeliveryProofPictureId = pictureId;

@@ -18,6 +18,7 @@ public sealed record DeliveryNoteAppDto
     public DateTime? AssignedDeliveryOnUtc { get; init; }
 
     public required Guid CustomerId { get; init; }
+    public bool IsRetailWalkInCustomer { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }

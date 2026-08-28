@@ -14,6 +14,7 @@ public static class DeliveryNoteExtensions
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode,
             CustomerId = deliveryNote.CustomerId,
+            IsRetailWalkInCustomer = deliveryNote.IsRetailWalkInCustomer,
             AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
             AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
             AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
