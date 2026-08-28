@@ -1244,6 +1244,8 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
             return upgradeExisting || directShipRequested;
         }).Select(item => (item, maxAllocationQuantity: directShipItemMaxAllocationQtyMap.GetValueOrDefault(item))).ToList();
+
+        //*TODO* side effects - allocations convert to direct ship (saved to database)
         var prepareResult = await PrepareAllocationsBeforeReceivesAsync(dto.PurchaseOrderId, directShipItems, notPhysicalRequiredItems).ConfigureAwait(false);
         if (!prepareResult.Success)
             return prepareResult;

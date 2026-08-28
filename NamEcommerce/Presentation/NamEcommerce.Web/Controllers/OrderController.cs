@@ -17,7 +17,6 @@ using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.Orders;
-using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Web.Services.Orders;
 
 namespace NamEcommerce.Web.Controllers;
@@ -28,21 +27,18 @@ public sealed partial class OrderController : BaseAuthorizedController
     private readonly IOrderAppService _orderAppService;
     private readonly IOrderModelFactory _orderModelFactory;
     private readonly IProductAppService _productAppService;
-    private readonly ICachedValuesService _cachedValuesService;
     private readonly IBankTransferPaymentIntentAppService _paymentIntentAppService;
     private readonly BankTransferPaymentSettings _bankTransferPaymentSettings;
     private readonly AppConfig _appConfig;
 
     public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory,
-        IProductAppService productAppService, ICachedValuesService cachedValuesService,
+        IProductAppService productAppService, AppConfig appConfig,
         IBankTransferPaymentIntentAppService paymentIntentAppService,
-        BankTransferPaymentSettings bankTransferPaymentSettings, IOrderAppService orderAppService,
-        AppConfig appConfig)
+        BankTransferPaymentSettings bankTransferPaymentSettings, IOrderAppService orderAppService)
     {
         _mediator = mediator;
         _orderModelFactory = orderModelFactory;
         _productAppService = productAppService;
-        _cachedValuesService = cachedValuesService;
         _paymentIntentAppService = paymentIntentAppService;
         _bankTransferPaymentSettings = bankTransferPaymentSettings;
         _orderAppService = orderAppService;

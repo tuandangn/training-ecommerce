@@ -17,7 +17,9 @@ $(function () {
         getOrCreateDisabledFieldset(form);
     });
 
-    $(window).on('beforeunload', function () {
+    $(window).on('beforeunload', function (e) {
+        if (e.isDefaultPrevented())
+            return;
         showPageLoading();
     });
 

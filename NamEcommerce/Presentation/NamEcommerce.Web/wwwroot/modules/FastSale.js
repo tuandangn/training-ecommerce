@@ -12,6 +12,7 @@ class FastSale {
     #payNow = Symbol('payNow');
     #unpaid = Symbol('unpaid');
 
+    #uncompletedOrderId;
     #paymentProcess;
 
     #shippingAddressRequiredMsg;
@@ -622,13 +623,15 @@ class FastSale {
         this.showAlert('success', 'Đơn hàng đã được tạo thành công');
 
         const orderInfo = createOrderResult.data;
+        const unmarkDeleteOrderFn = this.#markDeleteOrderIfFailed(orderInfo.orderId);
 
         if (orderInfo.subTotal != subTotal || orderInfo.total != total || orderInfo.discount != discount) {
             this.showAlert('warning', 'Thông tin đơn hàng không trùng khớp');
-            location = `/Order/Details/${orderInfo.orderId}`;
+            this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
 
+        this.#markTryPreventUserNavigate();
         hidePageLoading();
         const paymentResult = await this.#paymentProcess.startPayment({
             orderId: orderInfo.orderId,
@@ -644,6 +647,7 @@ class FastSale {
         if (!paymentResult.success) {
             // modal is closed by user
             showPageLoading();
+            this.#unmarkTryPreventUserNavigate();
             this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán')
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
@@ -658,6 +662,7 @@ class FastSale {
         const completeResult = await this.postJson('/Order/CompleteQuickCreateOrderPayment', completePaymentPayload);
         if (!completeResult.success) {
             this.showAlert('warning', 'Phát sinh lỗi khi hoàn thành đơn');
+            this.#unmarkTryPreventUserNavigate();
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
@@ -666,10 +671,79 @@ class FastSale {
         } else {
             this.showAlert('success', `Đơn hàng đã được tạm ứng ${this.formatMoneyWithSymbol(paymentResult.amount)}`);
         }
+        this.#unmarkTryPreventUserNavigate();;
+        unmarkDeleteOrderFn();
         this.#redirectToOrderPage(orderInfo.orderId);
     }
     #redirectToOrderPage(orderId) {
         location = `/Order/Details/${orderId}`
+    }
+    #markDeleteOrderIfFailed(orderId) {
+        const self = this;
+        this.#uncompletedOrderId = orderId;
+        document.addEventListener('visibilitychange', deleteUncompletedOrder);
+        window.addEventListener('pagehide', deleteUncompletedOrder);
+
+        let deleteTimeout;
+        let needToReload;
+        const deleteInterval = 1000 * 3;
+        function deleteUncompletedOrder(e) {
+            if (!self.isRetailWalkInCustomer())
+                return;
+            if (deleteTimeout) {
+                clearTimeout(deleteTimeout);
+                deleteTimeout = null;
+            }
+            if (e.type != 'visibilitychange') {
+                self.#unmarkTryPreventUserNavigate();
+                const sent = handleDeleteOrder();
+                if (sent) showPageLoading();
+                return;
+            }
+            if (document.visibilityState === "hidden") {
+                deleteTimeout = setTimeout(() => {
+                    self.#unmarkTryPreventUserNavigate();
+                    needToReload = handleDeleteOrder();
+                }, deleteInterval);
+            } else {
+                if (!needToReload) {
+                    clearTimeout(deleteTimeout);
+                    return;
+                }
+                needToReload = false;
+                showPageLoading();
+                setTimeout(() => {
+                    alert('Đơn hàng đã bị hủy. Nhấn "OK" để tạo đơn mới');
+                    location.reload();
+                }, 200);
+            }
+        }
+        function handleDeleteOrder() {
+            if (!self.#uncompletedOrderId)
+                return;
+            const orderId = self.#uncompletedOrderId;
+            self.#uncompletedOrderId = null;
+            return navigator.sendBeacon(`/Order/Delete/${orderId}`);
+        }
+
+        return function unmark() {
+            self.#uncompletedOrderId = null;
+            if (deleteTimeout)
+                clearTimeout(deleteTimeout);
+            document.removeEventListener('visibilitychange', self.deleteUncompletedOrder);
+            window.removeEventListener('pagehide', self.deleteUncompletedOrder);
+        };
+    }
+    #markTryPreventUserNavigate() {
+        window.addEventListener('beforeunload', this.#preventUserNavigateIfUncompleted);
+    }
+    #unmarkTryPreventUserNavigate() {
+        window.removeEventListener('beforeunload', this.#preventUserNavigateIfUncompleted);
+    }
+    #preventUserNavigateIfUncompleted(event) {
+        event.preventDefault();
+        event.returnValue = '';
+        hidePageLoading();
     }
 
     validateQuickCreateOrder() {
