@@ -648,7 +648,8 @@ class FastSale {
             // modal is closed by user
             showPageLoading();
             this.#unmarkTryPreventUserNavigate();
-            this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán')
+            unmarkDeleteOrderFn();
+            this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán');
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
