@@ -686,7 +686,7 @@ class FastSale {
 
         let deleteTimeout;
         let needToReload;
-        const deleteInterval = 1000 * 3;
+        const deleteInterval = 1000 * 60 * 3;
         function deleteUncompletedOrder(e) {
             if (!self.isRetailWalkInCustomer())
                 return;
