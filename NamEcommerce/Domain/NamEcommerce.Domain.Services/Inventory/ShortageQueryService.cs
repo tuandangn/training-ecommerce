@@ -27,8 +27,7 @@ public sealed class ShortageQueryService(
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
-    IRepository<Order> orderRepository,
-    IRepository<DeliveryNote> deliveryNoteRepository) : IShortageQueryService
+    IRepository<Order> orderRepository, IRepository<DeliveryNote> deliveryNoteRepository) : IShortageQueryService
 {
     private static readonly DeliveryNoteStatus[] ShippedStatuses =
     [
@@ -313,11 +312,9 @@ public sealed class ShortageQueryService(
         if (itemIds.Count == 0)
             return [];
 
-        var activeAllocationSpec = new CompositeSpecification<PurchaseOrderItemAllocation>(
-            new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemIds.First().PrimaryId, itemIds));
-        activeAllocationSpec.ApplyOrderBy(allocation => allocation.CreatedOnUtc);
-
-        var allocations = await allocationReader.GetListAsync(activeAllocationSpec).ConfigureAwait(false);
+        var allocations = await allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemIds.First().PrimaryId, itemIds))
+            .OrderBy(allocation => allocation.CreatedOnUtc)
+            .ToListAsync().ConfigureAwait(false);
         if (allocations.Count == 0)
             return [];
 

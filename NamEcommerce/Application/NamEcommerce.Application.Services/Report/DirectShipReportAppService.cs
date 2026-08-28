@@ -5,31 +5,17 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Report;
 
-public sealed class DirectShipReportAppService : IDirectShipReportAppService
+public sealed class DirectShipReportAppService(
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
+    IEntityDataReader<PurchaseOrder> poReader,
+    IEntityDataReader<Vendor> vendorReader,
+    IEntityDataReader<Product> productReader,
+    IEntityDataReader<DeliveryNote> deliveryNoteReader) : IDirectShipReportAppService
 {
-    private readonly IEntityDataReader<PurchaseOrderItemAllocation> _allocationReader;
-    private readonly IEntityDataReader<PurchaseOrder> _poReader;
-    private readonly IEntityDataReader<Vendor> _vendorReader;
-    private readonly IEntityDataReader<Product> _productReader;
-    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
-
-    public DirectShipReportAppService(
-        IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
-        IEntityDataReader<PurchaseOrder> poReader,
-        IEntityDataReader<Vendor> vendorReader,
-        IEntityDataReader<Product> productReader,
-        IEntityDataReader<DeliveryNote> deliveryNoteReader)
-    {
-        _allocationReader = allocationReader;
-        _poReader = poReader;
-        _vendorReader = vendorReader;
-        _productReader = productReader;
-        _deliveryNoteReader = deliveryNoteReader;
-    }
-
     public async Task<DirectShipReportAppDto> GetReportAsync(DateTime? fromDate, DateTime? toDate)
     {
         var fromUtc = fromDate?.ToUniversalTime();
@@ -37,7 +23,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             ? toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
             : (DateTime?)null;
 
-        var allocQuery = _allocationReader.DataSource.Where(a => a.IsDirectShip);
+        var allocQuery = allocationReader.DataSource.Where(a => a.IsDirectShip && a.Status != AllocationStatus.Cancelled);
         if (fromUtc.HasValue) allocQuery = allocQuery.Where(a => a.CreatedOnUtc >= fromUtc.Value);
         if (toUtc.HasValue) allocQuery = allocQuery.Where(a => a.CreatedOnUtc <= toUtc.Value);
         var allocations = allocQuery
@@ -48,7 +34,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
 
         var posWithItems = poItemIds.Count == 0
             ? []
-            : _poReader.DataSource
+            : poReader.DataSource
                 .Where(po => po.Items.Any(item => poItemIds.Any(itemId => itemId.SecondaryId == item.Id)))
                 .Select(po => new
                 {
@@ -68,20 +54,20 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .ToDictionary(x => x.Id);
 
         var vendorIds = itemMap.Values.Select(x => x.VendorId).Distinct().ToList();
-        var vendorDict = _vendorReader.DataSource
+        var vendorDict = vendorReader.DataSource
             .Where(v => vendorIds.Contains(v.Id))
             .Select(v => new { v.Id, v.Name })
             .ToList()
             .ToDictionary(v => v.Id, v => v.Name);
 
         var productIds = itemMap.Values.Select(x => x.ProductId).Distinct().ToList();
-        var productDict = _productReader.DataSource
+        var productDict = productReader.DataSource
             .Where(p => productIds.Contains(p.Id))
             .Select(p => new { p.Id, p.Name })
             .ToList()
             .ToDictionary(p => p.Id, p => p.Name);
 
-        var dnQuery = _deliveryNoteReader.DataSource
+        var dnQuery = deliveryNoteReader.DataSource
             .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer);
         if (fromUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.CreatedOnUtc >= fromUtc.Value);
         if (toUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.CreatedOnUtc <= toUtc.Value);
@@ -134,7 +120,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .ToList();
 
         var cutoff = DateTime.UtcNow.AddDays(-7);
-        var pendingAlerts = _deliveryNoteReader.DataSource
+        var pendingAlerts = deliveryNoteReader.DataSource
             .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
                       && dn.Status == DeliveryNoteStatus.Confirmed
                       && dn.CreatedOnUtc < cutoff)

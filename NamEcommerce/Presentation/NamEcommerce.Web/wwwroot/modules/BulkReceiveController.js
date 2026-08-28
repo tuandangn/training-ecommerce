@@ -299,7 +299,7 @@ export default class BulkReceiveController {
         tr.dataset.unitMeasurement = item?.unitMeasurement ?? '';
 
         const itemOptions = Array.from(this.#itemsById.values()).map(item =>
-            `<option value="${escapeHtml(item.id)}" ${item.id === presetItemId ? 'selected' : ''}>${escapeHtml(item.name)}</option>`
+            `<option value="${escapeHtml(item.id)}" ${item.id === presetItemId ? 'selected' : ''}>${escapeHtml(item.name)}${item == null ? '' : ` (đặt ${this.#formatQty(item.remaining, item.decimalPlaces)} ${item.unitMeasurement || ''})`}</option>`
         ).join('');
 
         const warehouseOptions = this.#warehouses.map(w => {
@@ -326,13 +326,14 @@ export default class BulkReceiveController {
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ItemId" data-valmsg-replace="true"></span>
             </td>
             <td class="text-end pe-2 d-none d-xl-table-cell">
-                <span class="fw-medium text-muted bulk-row-remaining">${item == null ? '' : this.#formatQty(item.remaining, item.decimalPlaces)}</span>
+                <span class="fw-medium text-muted bulk-row-remaining">${item == null ? '' : `${this.#formatQty(item.remaining, item.decimalPlaces)} ${item.unitMeasurement || ''}`}</span>
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${index}].Quantity" inputmode="decimal" placeholder="Số lượng" 
                        class="form-control form-control-sm text-end bulk-row-qty" ${item == null ? 'disabled' : ''}
                        data-val="true" data-val-required="Vui lòng nhập số lượng" data-val-number="Số lượng phải là số"
-                       data-val-range="Số lượng phải lớn hơn 0 và nhỏ hơn ${item == null ? '' : this.#formatQty(item.remaining, item.decimalPlaces)}" data-val-range-min="0.001" data-val-range-max="${item?.remaining}"
+                       data-val-range="Số lượng phải lớn hơn 0 và nhỏ hơn ${item == null ? '' : this.#formatQty(item.remaining, item.decimalPlaces)}" 
+                       data-val-range-min="0.001" data-val-range-max="${item?.remaining}"
                        data-decimal="quantity" data-decimals="${item?.decimalPlaces ?? 0}" value="${escapeHtml(qtyValue)}" />
                 <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${item?.decimalPlaces ?? 0}" />
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].Quantity" data-valmsg-replace="true"></span>
@@ -562,7 +563,7 @@ export default class BulkReceiveController {
         }
 
         const remainingQty = this.#formatQty(item.remaining, item.decimalPlaces);
-        let hintQtyHtml = `${remainingQty}`;
+        let hintQtyHtml = `${remainingQty} ${item.unitMeasurement || ''}`;
         const directRemainingQty = item.dsRemaining ?? 0;
         if (directRemainingQty > 0) {
             hintQtyHtml += ` · <span class="text-info"><i class="bi bi-send me-1"></i>${this.#formatQty(String(directRemainingQty, item.decimalPlaces))} giao thẳng</span>`;

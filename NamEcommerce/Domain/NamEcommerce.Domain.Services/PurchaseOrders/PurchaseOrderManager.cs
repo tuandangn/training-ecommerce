@@ -690,8 +690,9 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
 
         foreach (var line in dto.Lines)
         {
+            var purchaseOrderItem = purchaseOrder.Items.First(i => i.Id == line.PurchaseOrderItemId);
             var distributeResult = await purchaseOrderAllocationManager
-                .SyncReceivedForPurchaseOrderItemAsync(line.PurchaseOrderItemId, line.ReceivedQuantity)
+                .SyncReceivedForPurchaseOrderItemAsync(purchaseOrderItem.Id, purchaseOrderItem.QuantityReceived)
                 .ConfigureAwait(false);
             await ProcessDirectShipReceiptsAsync(
                 distributeResult.DirectShipReceipts,
@@ -781,7 +782,7 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
 
             foreach (var receipt in distributeResult.DirectShipReceipts)
             {
-                await directShipManager.OnAllocationReceivedAsync(
+                await directShipManager.DirectShipAllocationReceivesGoodsAsync(
                     receipt.AllocationId,
                     receipt.Quantity,
                     goodsReceipt.Id,
@@ -882,7 +883,7 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
     {
         foreach (var receipt in receipts.Where(receipt => receipt.IsDirectShip))
         {
-            await directShipManager.OnAllocationReceivedAsync(
+            await directShipManager.DirectShipAllocationReceivesGoodsAsync(
                 receipt.AllocationId,
                 receipt.Quantity,
                 sourceGoodsReceiptId,

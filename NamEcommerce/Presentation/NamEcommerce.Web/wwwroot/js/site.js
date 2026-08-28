@@ -2,25 +2,38 @@
 
 $(function () {
     
-    const disabledSubmitForms = [];
-
     $(document).on('submit', 'form', function (e) {
         if (e.isDefaultPrevented())
             return;
 
+        e.preventDefault();
         var form = this;
-        if (!isFormValid(form))
-            return;
-
         enableSubmitButtons(form, false);
-        disabledSubmitForms.push(form);
+        if (!isFormValid(form)) {
+            enableSubmitButtons(form, true);
+            return;
+        }
+        form.submit();
+        getOrCreateDisabledFieldset(form);
+    });
 
+    $(window).on('beforeunload', function () {
         showPageLoading();
     });
 
-    $(document).ajaxComplete(function () {
-        disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
-    });
+    function getOrCreateDisabledFieldset(form) {
+        let fieldset = form.querySelector('fieldset');
+        if (!fieldset) {
+            fieldset = document.createElement('fieldset');
+            while (form.firstChild) {
+                fieldset.appendChild(form.firstChild);
+            }
+            form.appendChild(fieldset);
+        }
+        fieldset.className = form.className;
+        form.className = '';
+        fieldset.disabled = true;
+    }
 
     $('.alert-dismissible').each(function () {
         let time = 3000;

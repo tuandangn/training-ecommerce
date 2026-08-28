@@ -65,29 +65,23 @@ public sealed class PurchaseOrderAllocationManager(
         return inserted.ToDto();
     }
 
-    public async Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity)
+    public async Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal receivedQuantity)
     {
         if (purchaseOrderItemId == Guid.Empty)
             throw new PurchaseOrderItemIsNotFoundException();
-        if (purchaseOrderItemReceivedQuantity < 0)
-            throw new ArgumentOutOfRangeException(nameof(purchaseOrderItemReceivedQuantity));
+        if (receivedQuantity < 0)
+            throw new ArgumentOutOfRangeException(nameof(receivedQuantity));
 
         var allocations = await allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec([purchaseOrderItemId]), new() { ReadWrite = true })
-            .OrderByDescending(allocation => allocation.IsDirectShip)
-            .ThenByDescending(allocation => allocation.DirectShipPriority)
-            .ThenBy(allocation => allocation.CreatedOnUtc)
+            .OrderBy(allocation => allocation.CreatedOnUtc)
             .ToListAsync()
             .ConfigureAwait(false);
         if (allocations.Count == 0)
             return EmptyDistributeResult();
 
         var totalAllocated = allocations.Sum(allocation => allocation.AllocatedQuantity);
-
-        if (purchaseOrderItemReceivedQuantity > totalAllocated)
-            throw new PurchaseOrderReceiveQuantityExceedsOrderedQuantityException();
-
         var currentReceived = allocations.Sum(allocation => allocation.ReceivedQuantity);
-        var targetReceived = Math.Min(purchaseOrderItemReceivedQuantity, totalAllocated);
+        var targetReceived = Math.Min(receivedQuantity, totalAllocated);
         var quantityToDistribute = targetReceived - currentReceived;
         if (quantityToDistribute == 0)
             return EmptyDistributeResult();
@@ -147,8 +141,9 @@ public sealed class PurchaseOrderAllocationManager(
 
     public async Task ReleaseAllocationsOfPurchaseOrderItemAsync(SecondaryItemId purchaseOrderItemId)
     {
-        var allocations = await allocationReader.GetListAsync(new PurchaseOrderAllocationOfPurchaseOrderItemsSpec([purchaseOrderItemId.SecondaryId]), new() { ReadWrite = true })
-            .ConfigureAwait(false);
+        var allocations = await allocationReader.ApplySpecification(new PurchaseOrderAllocationOfPurchaseOrderItemsSpec([purchaseOrderItemId.SecondaryId]), new() { ReadWrite = true })
+            .Where(allocation => allocation.Status != AllocationStatus.Cancelled)
+            .ToListAsync().ConfigureAwait(false);
 
         await ReleaseAllocations(allocations).ConfigureAwait(false);
     }
@@ -174,7 +169,7 @@ public sealed class PurchaseOrderAllocationManager(
             return;
 
         var allocations = await allocationReader.GetDataSource(new() { ReadWrite = true })
-            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId)
+            .Where(allocation => allocation.OrderItemId.SecondaryId == orderItemId && allocation.Status != AllocationStatus.Cancelled)
             .ToListAsync()
             .ConfigureAwait(false);
 

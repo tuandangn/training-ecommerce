@@ -9,11 +9,11 @@ public interface IDirectShipManager
     Task MarkAllocationAsDirectShipAsync(Guid allocationId, string address, string? contactName,string? contactPhone, int priority);
 
     Task<bool> HasReceivableDirectShipAllocationsAsync(Guid purchaseOrderItemId);
+    Task<decimal> GetReceivableDirectShipAllocationQtyAsync(Guid purchaseOrderItemId);
 
     Task<bool> HasReceivedDirectShipAllocationsAsync(Guid orderId);
 
-    Task OnAllocationReceivedAsync(Guid allocationId,
-        decimal receivedDelta, Guid sourceGoodsReceiptId,Guid receivedWarehouseId);
+    Task DirectShipAllocationReceivesGoodsAsync(Guid allocationId, decimal receivedDelta, Guid sourceGoodsReceiptId,Guid receivedWarehouseId);
 
     Task ConfirmDeliveryAsync(Guid deliveryNoteId, DateTime confirmedAtUtc,string? note);
 

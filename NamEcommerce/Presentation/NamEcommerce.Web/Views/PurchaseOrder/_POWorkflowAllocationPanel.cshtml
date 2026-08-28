@@ -1,4 +1,3 @@
-@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model PurchaseOrderDetailsModel
 @{
     var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0)
@@ -13,7 +12,7 @@
     }
 }
 
-<section id="po-stage-returning" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Returning ? "active" : "")">
+<section id="po-stage-returning" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Allocating ? "active" : "")">
     <div class="content-card">
         <div class="content-card-header">
             <div>

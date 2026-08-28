@@ -15,7 +15,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
             return DataSource;
 
         IQueryable<TEntity> baseDataSource = efDbContext.Set<TEntity>();
-        if (!options.IncludeDeleted)
+        if (options.IncludeDeleted)
             baseDataSource = baseDataSource.IgnoreQueryFilters();
         if (!options.ReadWrite)
             baseDataSource = baseDataSource.AsNoTracking();

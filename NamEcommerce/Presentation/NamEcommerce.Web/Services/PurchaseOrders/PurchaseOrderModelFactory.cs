@@ -527,10 +527,10 @@ public sealed class PurchaseOrderModelFactory(
             [
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus",
                     $"{model.Info.Items.Count} mặt hàng", activeStage, model.Info.Items.Count > 0),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Allocating, "Phân bổ", "bi-diagram-3",
+                    allocationText, activeStage, false),
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down",
                     receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3",
-                    allocationText, activeStage, false),
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check",
                     GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
             ]
@@ -632,7 +632,7 @@ public sealed class PurchaseOrderModelFactory(
                 Description = $"{vendorReturn.Code} - {vendorReturn.TotalQuantity.DisplayQuantity()} hàng hóa",
                 Icon = "bi-arrow-counterclockwise",
                 Tone = vendorReturn.Status == (int)VendorReturnStatus.Confirmed ? "success" : "warning",
-                Stage = PurchaseOrderDetailsModel.WorkflowStage.Returning
+                Stage = PurchaseOrderDetailsModel.WorkflowStage.Allocating
             });
         }
 

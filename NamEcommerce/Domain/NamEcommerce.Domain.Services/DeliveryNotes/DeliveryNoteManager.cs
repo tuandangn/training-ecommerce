@@ -491,6 +491,7 @@ public sealed class DeliveryNoteManager(
 
         deliveryNote.RejectDirectShipDelivery(reason);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
         foreach (var item in deliveryNote.Items)
         {
             await productReservationManager.ReserveAsync(item.ProductId, item.Quantity, deliveryNote.OrderId, 

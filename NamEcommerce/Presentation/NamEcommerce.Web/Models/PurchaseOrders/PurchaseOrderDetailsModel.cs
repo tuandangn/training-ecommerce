@@ -11,7 +11,7 @@ public sealed class PurchaseOrderDetailsModel
     {
         Ordering = 1,
         Receiving = 2,
-        Returning = 3,
+        Allocating = 3,
         Settlement = 4
     }
 

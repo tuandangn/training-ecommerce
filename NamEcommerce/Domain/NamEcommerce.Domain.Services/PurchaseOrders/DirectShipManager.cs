@@ -51,6 +51,15 @@ public sealed class DirectShipManager(
         return allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec([purchaseOrderItemId]), new() { ReadWrite = true })
             .AnyAsync(allocation => allocation.IsDirectShip && allocation.ReceivedQuantity < allocation.AllocatedQuantity);
     }
+    public async Task<decimal> GetReceivableDirectShipAllocationQtyAsync(Guid purchaseOrderItemId)
+    {
+        var allocations = await allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec([purchaseOrderItemId]), new() { ReadWrite = true })
+            .Where(allocation => allocation.IsDirectShip && allocation.ReceivedQuantity < allocation.AllocatedQuantity)
+            .ToListAsync().ConfigureAwait(false);
+
+        return allocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+    }
+
 
     public async Task<bool> HasReceivedDirectShipAllocationsAsync(Guid orderId)
     {
@@ -69,7 +78,7 @@ public sealed class DirectShipManager(
             .AnyAsync(allocation => allocation.IsDirectShip && allocation.ReceivedQuantity > 0).ConfigureAwait(false);
     }
 
-    public async Task OnAllocationReceivedAsync(Guid allocationId, decimal receivedDelta, Guid sourceGoodsReceiptId, Guid receivedWarehouseId)
+    public async Task DirectShipAllocationReceivesGoodsAsync(Guid allocationId, decimal receivedDelta, Guid sourceGoodsReceiptId, Guid receivedWarehouseId)
     {
         if (receivedDelta <= 0)
             return;
@@ -81,7 +90,6 @@ public sealed class DirectShipManager(
 
         var purchaseOrderItem = await ResolvePurchaseOrderItem(allocation.PurchaseOrderItemId).ConfigureAwait(false);
         var transitWarehouse = await GetTransitWarehouse().ConfigureAwait(false);
-
         if (transitWarehouse.Id != receivedWarehouseId)
         {
             await TransferStockWithCostAsync(
@@ -198,7 +206,7 @@ public sealed class DirectShipManager(
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
         var allocations = await allocationReader.DataSource
-            .Where(a => a.IsDirectShip && itemIds.Contains(a.OrderItemId.SecondaryId))
+            .Where(a => a.IsDirectShip && a.Status != AllocationStatus.Cancelled && itemIds.Contains(a.OrderItemId.SecondaryId))
             .ToListAsync().ConfigureAwait(false);
 
         var results = allocations.Select(allocation =>
@@ -225,7 +233,7 @@ public sealed class DirectShipManager(
     {
         var poItemIds = purchaseOrderItemIds.Select(id => id.SecondaryId).Distinct().ToList();
         var directShipAllocations = await allocationReader.ApplySpecification(new PurchaseOrderAllocationOfPurchaseOrderItemsSpec(poItemIds), new() { ReadWrite = true })
-            .Where(allocation => allocation.IsDirectShip)
+            .Where(allocation => allocation.IsDirectShip && allocation.Status != AllocationStatus.Cancelled)
             .ToListAsync();
 
         var orderItemIds = directShipAllocations.Select(allocation => allocation.OrderItemId).Distinct().ToList();

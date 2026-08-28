@@ -11,8 +11,8 @@ public interface IDeliveryNoteManager
         string? keywords = null, Guid? orderId = null, IEnumerable<DeliveryNoteStatus>? status = null);
     Task<IDictionary<Guid, decimal>> GetDeliveredQuantitiesAsync(IEnumerable<Guid> orderItemIds);
     Task<Guid?> GetWaitingPaymentDeliveryNoteIdAsync(Guid orderId);
-
     Task<IDictionary<Guid, List<DeliveryNoteLinkDto>>> GetDeliveryNoteLinksAsync(IEnumerable<Guid> orderItemIds);
+
     Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto);
     Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto);
     Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default);

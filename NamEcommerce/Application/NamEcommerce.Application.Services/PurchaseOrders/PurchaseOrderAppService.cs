@@ -29,6 +29,7 @@ using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Specifications.Orders;
 using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
@@ -964,6 +965,8 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         var allocation = await purchaseOrderItemAllocationDataReader.GetByIdAsync(allocationId);
         if (allocation is null)
             return 0;
+        if (allocation.Status is AllocationStatus.Cancelled)
+            return 0;
         return Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity);
     }
 
@@ -972,25 +975,22 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         if (purchaseOrderItemIds.Count == 0)
             return [];
 
-        var poItemIds = purchaseOrderItemIds.Select(id => id.secondaryItemId).Distinct().ToList();
-        var allocations = purchaseOrderItemAllocationDataReader.DataSource
-            .Where(allocation => poItemIds.Any(poItemId => poItemId == allocation.PurchaseOrderItemId.SecondaryId)
-                && allocation.Status != AllocationStatus.Cancelled)
-            .OrderBy(allocation => allocation.CreatedOnUtc)
-            .ToList();
+        var allocations = await purchaseOrderItemAllocationDataReader.GetListAsync(
+            new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec(
+                purchaseOrderItemIds.Select(id => id.secondaryItemId).Distinct().ToList()
+        )).ConfigureAwait(false);
         if (allocations.Count == 0)
             return [];
 
         var orderItemIds = allocations.Select(allocation => allocation.OrderItemId.SecondaryId).Distinct().ToList();
-        var orderItems = orderDataReader.DataSource
+        var orderItems = (await orderDataReader.GetListAsync(new OrdersOfOrderItemsSpec(orderItemIds)).ConfigureAwait(false))
             .SelectMany(order => order.OrderItems
                 .Where(item => orderItemIds.Contains(item.Id))
                 .Select(item => new { Order = order, Item = item }))
             .ToDictionary(x => x.Item.Id);
 
         var customerIds = orderItems.Values.Select(x => x.Order.CustomerId).Distinct().ToList();
-        var customers = customerDataReader.DataSource
-            .Where(customer => customerIds.Contains(customer.Id))
+        var customers = (await customerDataReader.GetByIdsAsync(customerIds).ConfigureAwait(false))
             .ToDictionary(customer => customer.Id);
 
         var result = allocations
@@ -1178,6 +1178,12 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
                     return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipContactPhoneRequired" };
                 if (string.IsNullOrWhiteSpace(item.DirectShipAddress))
                     return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.DirectShipAddressRequired" };
+
+                var upgradingAllocation = await purchaseOrderItemAllocationDataReader.GetByIdAsync(item.DirectShipExistingAllocationId!.Value).ConfigureAwait(false);
+                if (upgradingAllocation is null)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderAllocationIsNotFound" };
+                if (upgradingAllocation.Status is AllocationStatus.Cancelled)
+                    return new BulkReceiveGoodsResultAppDto { Success = false, ErrorMessage = "Error.PurchaseOrderAllocationIsNotFound" };
             }
 
             Guid? warehouseId = item.WarehouseId;
@@ -1195,8 +1201,8 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
                 var physicalWarehouseRequired = false;
                 if (item.ReceivedQuantity <= maxAllocationQuantity)
                 {
-                    var checkingOrderItemId = upgradeExisting 
-                        ? (await purchaseOrderItemAllocationDataReader.GetByIdAsync(item.DirectShipExistingAllocationId!.Value).ConfigureAwait(false))!.PurchaseOrderItemId.SecondaryId 
+                    var checkingOrderItemId = upgradeExisting
+                        ? (await purchaseOrderItemAllocationDataReader.GetByIdAsync(item.DirectShipExistingAllocationId!.Value).ConfigureAwait(false))!.PurchaseOrderItemId.SecondaryId
                         : item.DirectShipOrderItemId!.Value;
                     var totalReceivingQty = dto.Items.Where(i =>
                     {
@@ -1245,35 +1251,41 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
         var createdGoodsReceiptIds = new List<Guid>();
         foreach (var item in dto.Items)
         {
-            var upgradeExisting = item.DirectShipExistingAllocationId.HasValue;
-            var directShipRequested = !upgradeExisting && (item.DirectShipOrderId.HasValue || item.DirectShipOrderItemId.HasValue);
-
+            if (directShipItems.Any(info => info.item == item))
+                continue;
+            var directShipQty = await directShipManager.GetReceivableDirectShipAllocationQtyAsync(item.PurchaseOrderItemId).ConfigureAwait(false);
+            if (directShipQty > 0)
+                directShipItems.Add((item, maxAllocationQuantity: 0));
+        }
+        foreach (var (item, _) in directShipItems)
+        {
             var purchaseOrderItem = purchaseOrder!.Items.First(i => i.Id == item.PurchaseOrderItemId);
+
             var directShipAllocations = await directShipManager.GetDirectShipAllocationsForPoItemsAsync([(dto.PurchaseOrderId, purchaseOrderItem.Id)]).ConfigureAwait(false);
             var remainingAllocatedDirectShipQty = directShipAllocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
 
             var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, item.ReceivedQuantity);
-            if (receiveDirectShipQty > 0)
+            if (receiveDirectShipQty <= 0)
+                continue;
+
+            var directTransitWarehouseId = await directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
+            var quantityDecimalPlaces = productQuantityDecimalPlacesMap.GetValueOrDefault(purchaseOrderItem.ProductId);
+            var directShipReceiveResult = await purchaseOrderManager.ReceivesItemAsync(new ReceivedGoodsDto(purchaseOrder.Id, purchaseOrderItem.Id)
             {
-                var directTransitWarehouseId = await directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
-                var quantityDecimalPlaces = productQuantityDecimalPlacesMap.GetValueOrDefault(purchaseOrderItem.ProductId);
-                var directShipReceiveResult = await purchaseOrderManager.ReceivesItemAsync(new ReceivedGoodsDto(purchaseOrder.Id, purchaseOrderItem.Id)
-                {
-                    ReceivedByUserId = dto.ReceivedByUserId,
-                    ReceivedQuantity = receiveDirectShipQty,
-                    QuantityDecimalPlaces = quantityDecimalPlaces,
-                    TaxRate = dto.TaxRate,
-                    WarehouseId = directTransitWarehouseId,
-                    SellingPrice = null,
-                    ActualUnitCost = item.ActualUnitCost,
-                    ReceivedOnUtc = dto.ReceivedOnUtc
-                });
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = receiveDirectShipQty,
+                QuantityDecimalPlaces = quantityDecimalPlaces,
+                TaxRate = dto.TaxRate,
+                WarehouseId = directTransitWarehouseId,
+                SellingPrice = null,
+                ActualUnitCost = item.ActualUnitCost,
+                ReceivedOnUtc = dto.ReceivedOnUtc
+            });
 
-                if (notPhysicalRequiredItems.Contains(item))
-                    createdGoodsReceiptIds.Add(directShipReceiveResult.CreatedGoodsReceiptId!.Value);
+            if (notPhysicalRequiredItems.Contains(item))
+                createdGoodsReceiptIds.Add(directShipReceiveResult.CreatedGoodsReceiptId!.Value);
 
-                item.ReceivedQuantity -= receiveDirectShipQty;
-            }
+            item.ReceivedQuantity -= receiveDirectShipQty;
         }
 
         var remainingItems = dto.Items.Where(item => item.ReceivedQuantity > 0).ToList();

@@ -1125,4 +1125,10 @@
   <data name="Error.VendorReturnIsNotFound" xml:space="preserve">
     <value>Vendor return is not found</value>
   </data>
+  <data name="Error.OrderCannotCancel_Processing" xml:space="preserve">
+    <value>Order cannot cancelled because it is processing</value>
+  </data>
+  <data name="Error.PurchaseOrderAllocationIsNotFound" xml:space="preserve">
+    <value>Purchase order allocation is not found</value>
+  </data>
 </root>

@@ -1831,9 +1831,9 @@
                     const btn = e.relatedTarget;
                     markDsModal.querySelector('#markDsAllocationId').value = btn.dataset.allocationId;
                     markDsModal.querySelector('#markDsOrderCode').textContent = btn.dataset.orderCode;
-                    markDsModal.querySelector('#markDsAddress').value = '';
-                    markDsModal.querySelector('#markDsPhone').value = '';
-                    markDsModal.querySelector('#markDsContactName').value = '';
+                    markDsModal.querySelector('#markDsAddress').value = btn.dataset.address;
+                    markDsModal.querySelector('#markDsPhone').value = btn.dataset.phone;
+                    markDsModal.querySelector('#markDsContactName').value = btn.dataset.customer;
                 });
 
                 markDsModal.querySelector('form')?.addEventListener('submit', async function(e) {

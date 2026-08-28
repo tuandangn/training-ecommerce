@@ -1125,4 +1125,10 @@
   <data name="Error.VendorReturnIsNotFound" xml:space="preserve">
     <value>Không tìm thấy phiếu trả hàng NCC</value>
   </data>
+  <data name="Error.OrderCannotCancel_Processing" xml:space="preserve">
+    <value>Không thể hủy do đơn bán đang trong quá trình xử lý</value>
+  </data>
+  <data name="Error.PurchaseOrderAllocationIsNotFound" xml:space="preserve">
+    <value>Không tìm thấy phân bổ</value>
+  </data>
 </root>
