@@ -17,11 +17,11 @@ $(function () {
         getOrCreateDisabledFieldset(form);
     });
 
-    $(window).on('beforeunload', function (e) {
-        if (e.isDefaultPrevented())
-            return;
-        showPageLoading();
-    });
+    // $(window).on('beforeunload', function (e) {
+    //     if (e.isDefaultPrevented())
+    //         return;
+    //     showPageLoading();
+    // });
 
     function getOrCreateDisabledFieldset(form) {
         let fieldset = form.querySelector('fieldset');
@@ -80,7 +80,7 @@ function isFormValid(form) {
     try {
         return $(form).valid();
     } catch {
-        return false;
+        return true;
     }
 }
 function validateElement(element) {
