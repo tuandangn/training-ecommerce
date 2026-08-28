@@ -1662,16 +1662,16 @@
                                 tr.dataset.customerPhone = item.customerPhone || '';
                                 tr.dataset.customerName = item.customerName || '';
                                 tr.innerHTML = `
-                                                                                                                                                                                                                <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                                                                                                                                                                                                <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
-                                                                                                                                                                                                                <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
-                                                                                                                                                                                                                <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
-                                                                                                                                                                                                                <td class="pe-2">
-                                                                                                                                                                                                                    <div class="d-flex align-items-center justify-content-end">
-                                                                                                                                                                                                                        <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
-                                                                                                                                                                                                                               data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
-                                                                                                                                                                                                                   </div>
-                                                                                                                                                                                                                </td>`;
+                                    <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                    <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                    <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                    <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                    <td class="pe-2">
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
+                                                   data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
+                                       </div>
+                                    </td>`;
                                 tbody.appendChild(tr);
                                 window.DecimalFields?.autoWrap?.(tr);
                                 tr.addEventListener('click', e => {

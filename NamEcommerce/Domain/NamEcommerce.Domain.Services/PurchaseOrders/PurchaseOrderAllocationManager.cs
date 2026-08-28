@@ -16,6 +16,7 @@ using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Specifications.Orders;
 using NamEcommerce.Domain.Specifications.PurchaseOrders;
 using NamEcommerce.Domain.Specifications.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Specifications;
 
 namespace NamEcommerce.Domain.Services.PurchaseOrders;
 
@@ -289,7 +290,8 @@ public sealed class PurchaseOrderAllocationManager(
             return [];
 
         var productId = purchaseOrderItem.ProductId;
-        var eligibleItems = await orderReader.ApplySpecification(new NotHaveStatusOrderSpec([OrderStatus.Cancelled]))
+        var orderSpecification = new CompositeSpecification<Order>(new NotHaveStatusOrderSpec([OrderStatus.Cancelled])).AndNot(new IsPaymentRequiredOrderSpec());
+        var eligibleItems = await orderReader.ApplySpecification(orderSpecification)
             .SelectMany(order => order.OrderItems
                 .Where(item => item.ProductId == productId)
                 .Select(item => new { Order = order, Item = item }))

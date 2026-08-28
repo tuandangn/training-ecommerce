@@ -166,7 +166,6 @@ public sealed class ShortageQueryService(
         var orderSpecification = new CompositeSpecification<Order>(new NotHaveStatusOrderSpec([OrderStatus.Completed, OrderStatus.Cancelled]))
             .AndNot(new IsPaymentRequiredOrderSpec());
         orderSpecification.ApplyOrderBy(order => order.CreatedOnUtc);
-
         var orders = await orderReader.GetPagedListAsync(orderSpecification, 0, int.MaxValue).ConfigureAwait(false);
 
         var result = new List<OrderItemShortageDto>();

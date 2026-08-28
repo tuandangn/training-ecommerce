@@ -962,12 +962,12 @@ public sealed class PurchaseOrderController(IMediator mediator,
         if (purchaseOrderItem is null)
             return this.JsonError(LocalizeError("Error.PurchaseOrderItemIsNotFound"));
 
-        var items = await purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
-        var productIds = items.Select(i => i.ProductId).Distinct().ToList();
+        var orderItems = await purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
+        var productIds = orderItems.Select(i => i.ProductId).Distinct().ToList();
         var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
         var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
-        return this.JsonOk(items.Select(item => new
+        return this.JsonOk(orderItems.Select(item => new
         {
             orderItemId = item.OrderItemId,
             orderId = item.OrderId,

@@ -922,8 +922,8 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
 
     public async Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync((Guid purchaseOrderId, Guid purchaseOrderItemId) purchaseOrderItemId)
     {
-        var domainDtos = await purchaseOrderAllocationManager.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
-        return domainDtos.Select(d => new EligibleOrderItemForAllocationAppDto
+        var orderItems = await purchaseOrderAllocationManager.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        return orderItems.Select(d => new EligibleOrderItemForAllocationAppDto
         {
             OrderItemId = d.OrderItemId,
             OrderId = d.OrderId,

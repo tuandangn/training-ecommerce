@@ -272,12 +272,8 @@ public sealed class ShortageAggregationAppService(
         public decimal RemainingQuantity { get; set; }
     }
 
-    private async Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageViaAppServiceAsync(
-        Guid vendorId,
-        Guid? warehouseId,
-        DateTime? expectedDeliveryDateUtc,
-        string? note,
-        IList<CreatePoFromShortageItemDto> items)
+    private async Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageAsync(Guid vendorId, Guid? warehouseId,
+        DateTime? expectedDeliveryDateUtc, string? note, IList<CreatePoFromShortageItemDto> items)
     {
         var createResult = await purchaseOrderAppService.CreatePurchaseOrderAsync(new CreatePurchaseOrderAppDto
         {
@@ -362,156 +358,148 @@ public sealed class ShortageAggregationAppService(
 
     public async Task<CreatePosFromShortageResultAppDto> CreatePurchaseOrdersFromShortageAsync(CreatePosFromShortageAppDto dto)
     {
-        try
+        foreach (var group in dto.Groups.Where(group => group.Items.Count > 0))
         {
-            var results = new Dictionary<Guid, CreatedPurchaseOrderResultAppDto>();
-            foreach (var group in dto.Groups.Where(group => group.Items.Count > 0))
+            if (!group.VendorId.HasValue)
             {
-                if (!group.VendorId.HasValue)
+                return new CreatePosFromShortageResultAppDto
                 {
-                    return new CreatePosFromShortageResultAppDto
-                    {
-                        Success = false,
-                        ErrorMessage = "Error.VendorIsNotFound"
-                    };
+                    Success = false,
+                    ErrorMessage = "Error.VendorIsNotFound"
+                };
+            }
+        }
+
+        var results = new Dictionary<Guid, CreatedPurchaseOrderResultAppDto>();
+        foreach (var group in dto.Groups.Where(group => group.Items.Count > 0))
+        {
+            var legacyItems = group.Items.Where(item => item.Actions.Count == 0).ToList();
+            if (legacyItems.Count > 0)
+            {
+                var items = legacyItems.Select(item => ToDomainShortageItem(item)).ToList();
+                CreatePoFromShortageResultDto result;
+                if (group.MergeIntoExistingPoId.HasValue)
+                {
+                    result = await purchaseOrderManager.AddItemsToExistingDraftAsync(group.MergeIntoExistingPoId.Value, items).ConfigureAwait(false);
                 }
-
-                var legacyItems = group.Items.Where(item => item.Actions.Count == 0).ToList();
-                if (legacyItems.Count > 0)
+                else
                 {
-                    var items = legacyItems.Select(item => ToDomainShortageItem(item)).ToList();
-                    CreatePoFromShortageResultDto result;
-                    if (group.MergeIntoExistingPoId.HasValue)
-                    {
-                        result = await purchaseOrderManager.AddItemsToExistingDraftAsync(group.MergeIntoExistingPoId.Value, items).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        result = await CreatePurchaseOrderFromShortageViaAppServiceAsync(
-                            group.VendorId.Value,
-                            group.WarehouseId,
-                            group.ExpectedDeliveryDateUtc,
-                            group.Note,
-                            items).ConfigureAwait(false);
-                    }
-
-                    AddResult(results, new CreatedPurchaseOrderResultAppDto
-                    {
-                        PurchaseOrderId = result.PurchaseOrderId,
-                        PurchaseOrderCode = result.PurchaseOrderCode,
-                        CreatedNew = result.CreatedNew,
-                        VendorId = group.VendorId.Value
-                    });
-                }
-
-                var mergeItemsByPurchaseOrder = new Dictionary<Guid, List<CreatePoFromShortageItemDto>>();
-                var newItems = new List<CreatePoFromShortageItemDto>();
-                foreach (var item in group.Items.Where(item => item.Actions.Count > 0))
-                {
-                    ValidateActionQuantity(item);
-                    var remainingAllocationQuantity = item.AllocationQuantity ?? item.Quantity;
-                    foreach (var action in item.Actions.Where(action => action.Quantity > 0))
-                    {
-                        var actionAllocationQuantity = Math.Min(remainingAllocationQuantity, action.Quantity);
-                        remainingAllocationQuantity -= actionAllocationQuantity;
-                        var actionType = NormalizeActionType(action.ActionType);
-                        if (actionType == "allocate")
-                        {
-                            if (!action.PurchaseOrderItemId.HasValue || !action.PurchaseOrderId.HasValue)
-                                throw new InvalidOperationException("Error.PurchaseOrderItemIsNotFound");
-
-                            if (actionAllocationQuantity > 0)
-                            {
-                                var allocationDto = await purchaseOrderAllocationManager
-                                    .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
-                                    {
-                                        PurchaseOrderItemId = (action.PurchaseOrderId.Value, action.PurchaseOrderItemId.Value),
-                                        OrderItemId = (item.OrderId, item.OrderItemId),
-                                        AllocationQuantity = actionAllocationQuantity,
-                                        DirectShipInfo = item.DirectShipInfo is not null
-                                            ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
-                                            {
-                                                Priority = item.DirectShipInfo.Priority
-                                            } : null
-                                    })
-                                    .ConfigureAwait(false);
-                            }
-
-                            await AddExistingPurchaseOrderResultAsync(results, action.PurchaseOrderId.Value, false).ConfigureAwait(false);
-                            continue;
-                        }
-
-                        var domainItem = ToDomainShortageItem(item, action.Quantity, action.UnitCost, actionAllocationQuantity);
-                        if (actionType == "merge")
-                        {
-                            if (!action.PurchaseOrderId.HasValue)
-                                throw new InvalidOperationException("Error.PurchaseOrderIsNotFound");
-
-                            if (!mergeItemsByPurchaseOrder.TryGetValue(action.PurchaseOrderId.Value, out var mergeItems))
-                            {
-                                mergeItems = [];
-                                mergeItemsByPurchaseOrder[action.PurchaseOrderId.Value] = mergeItems;
-                            }
-
-                            mergeItems.Add(domainItem);
-                            continue;
-                        }
-
-                        if (actionType == "new")
-                        {
-                            newItems.Add(domainItem);
-                            continue;
-                        }
-
-                        throw new InvalidOperationException("Error.PurchaseOrderShortageActionInvalid");
-                    }
-                }
-                foreach (var mergeGroup in mergeItemsByPurchaseOrder)
-                {
-                    var result = await purchaseOrderManager
-                        .AddItemsToExistingDraftAsync(mergeGroup.Key, mergeGroup.Value)
-                        .ConfigureAwait(false);
-                    AddResult(results, new CreatedPurchaseOrderResultAppDto
-                    {
-                        PurchaseOrderId = result.PurchaseOrderId,
-                        PurchaseOrderCode = result.PurchaseOrderCode,
-                        CreatedNew = result.CreatedNew,
-                        VendorId = group.VendorId.Value
-                    });
-                }
-
-                if (newItems.Count > 0)
-                {
-                    var result = await CreatePurchaseOrderFromShortageViaAppServiceAsync(
-                        group.VendorId.Value,
+                    result = await CreatePurchaseOrderFromShortageAsync(
+                        group.VendorId!.Value,
                         group.WarehouseId,
                         group.ExpectedDeliveryDateUtc,
                         group.Note,
-                        newItems).ConfigureAwait(false);
-                    AddResult(results, new CreatedPurchaseOrderResultAppDto
-                    {
-                        PurchaseOrderId = result.PurchaseOrderId,
-                        PurchaseOrderCode = result.PurchaseOrderCode,
-                        CreatedNew = result.CreatedNew,
-                        VendorId = group.VendorId.Value
-                    });
+                        items).ConfigureAwait(false);
                 }
+
+                AddResult(results, new CreatedPurchaseOrderResultAppDto
+                {
+                    PurchaseOrderId = result.PurchaseOrderId,
+                    PurchaseOrderCode = result.PurchaseOrderCode,
+                    CreatedNew = result.CreatedNew,
+                    VendorId = group.VendorId!.Value
+                });
             }
 
-            return new CreatePosFromShortageResultAppDto
+            var mergeItemsByPurchaseOrder = new Dictionary<Guid, List<CreatePoFromShortageItemDto>>();
+            var newItems = new List<CreatePoFromShortageItemDto>();
+            foreach (var item in group.Items.Where(item => item.Actions.Count > 0))
             {
-                Success = true,
-                Items = results.Values.ToList()
-            };
+                ValidateActionQuantity(item);
+                var remainingAllocationQuantity = item.AllocationQuantity ?? item.Quantity;
+                foreach (var action in item.Actions.Where(action => action.Quantity > 0))
+                {
+                    var actionAllocationQuantity = Math.Min(remainingAllocationQuantity, action.Quantity);
+                    remainingAllocationQuantity -= actionAllocationQuantity;
+                    var actionType = NormalizeActionType(action.ActionType);
+                    if (actionType == "allocate")
+                    {
+                        if (!action.PurchaseOrderItemId.HasValue || !action.PurchaseOrderId.HasValue)
+                            throw new InvalidOperationException("Error.PurchaseOrderItemIsNotFound");
+
+                        if (actionAllocationQuantity > 0)
+                        {
+                            var allocationDto = await purchaseOrderAllocationManager
+                                .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
+                                {
+                                    PurchaseOrderItemId = (action.PurchaseOrderId.Value, action.PurchaseOrderItemId.Value),
+                                    OrderItemId = (item.OrderId, item.OrderItemId),
+                                    AllocationQuantity = actionAllocationQuantity,
+                                    DirectShipInfo = item.DirectShipInfo is not null
+                                        ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
+                                        {
+                                            Priority = item.DirectShipInfo.Priority
+                                        } : null
+                                })
+                                .ConfigureAwait(false);
+                        }
+
+                        await AddExistingPurchaseOrderResultAsync(results, action.PurchaseOrderId.Value, false).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    var domainItem = ToDomainShortageItem(item, action.Quantity, action.UnitCost, actionAllocationQuantity);
+                    if (actionType == "merge")
+                    {
+                        if (!action.PurchaseOrderId.HasValue)
+                            throw new InvalidOperationException("Error.PurchaseOrderIsNotFound");
+
+                        if (!mergeItemsByPurchaseOrder.TryGetValue(action.PurchaseOrderId.Value, out var mergeItems))
+                        {
+                            mergeItems = [];
+                            mergeItemsByPurchaseOrder[action.PurchaseOrderId.Value] = mergeItems;
+                        }
+
+                        mergeItems.Add(domainItem);
+                        continue;
+                    }
+
+                    if (actionType == "new")
+                    {
+                        newItems.Add(domainItem);
+                        continue;
+                    }
+
+                    throw new InvalidOperationException("Error.PurchaseOrderShortageActionInvalid");
+                }
+            }
+            foreach (var mergeGroup in mergeItemsByPurchaseOrder)
+            {
+                var result = await purchaseOrderManager
+                    .AddItemsToExistingDraftAsync(mergeGroup.Key, mergeGroup.Value)
+                    .ConfigureAwait(false);
+                AddResult(results, new CreatedPurchaseOrderResultAppDto
+                {
+                    PurchaseOrderId = result.PurchaseOrderId,
+                    PurchaseOrderCode = result.PurchaseOrderCode,
+                    CreatedNew = result.CreatedNew,
+                    VendorId = group.VendorId!.Value
+                });
+            }
+
+            if (newItems.Count > 0)
+            {
+                var result = await CreatePurchaseOrderFromShortageAsync(
+                    group.VendorId!.Value,
+                    group.WarehouseId,
+                    group.ExpectedDeliveryDateUtc,
+                    group.Note,
+                    newItems).ConfigureAwait(false);
+                AddResult(results, new CreatedPurchaseOrderResultAppDto
+                {
+                    PurchaseOrderId = result.PurchaseOrderId,
+                    PurchaseOrderCode = result.PurchaseOrderCode,
+                    CreatedNew = result.CreatedNew,
+                    VendorId = group.VendorId.Value
+                });
+            }
         }
-        catch (Exception ex)
+
+        return new CreatePosFromShortageResultAppDto
         {
-            return new CreatePosFromShortageResultAppDto
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true,
+            Items = results.Values.ToList()
+        };
     }
 
     private static CreatePoFromShortageItemDto ToDomainShortageItem(
