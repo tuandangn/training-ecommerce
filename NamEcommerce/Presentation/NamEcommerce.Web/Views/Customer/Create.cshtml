@@ -31,7 +31,7 @@
                 </div>
                 <div class="col-md-4">
                     <label asp-for="Kind" class="form-label"></label>
-                    <select asp-for="Kind" class="form-select">
+                    <select asp-for="Kind" class="form-select" disabled="@(!Model.CanChangeCustomerKind)">
                         @foreach (var kind in CustomerKind.GetOptions())
                         {
                             <option value="@kind.value" selected="@(kind.value == (int)Model.Kind)">@kind.text</option>

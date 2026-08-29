@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using System.ComponentModel.DataAnnotations;
 
@@ -21,6 +22,8 @@ public sealed class CreateCustomerModel
 
     [Display(Name = "Loại")]
     public CustomerKind Kind { get; set; }
+    [ValidateNever]
+    public bool CanChangeCustomerKind { get; set; }
 
     [Display(Name = "Email")]
     public string? Email { get; set; }
@@ -47,6 +50,8 @@ public sealed class EditCustomerModel
 
     [Display(Name = "Loại")]
     public CustomerKind Kind { get; set; }
+    [ValidateNever]
+    public bool CanChangeCustomerKind { get; set; }
 
     [Display(Name = "Email")]
     public string? Email { get; set; }

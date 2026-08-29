@@ -6,13 +6,15 @@ using NamEcommerce.Domain.Shared.Dtos.Customers;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Shared.Enums.Customers;
+using NamEcommerce.Application.Contracts.Users;
 
 namespace NamEcommerce.Application.Services.Customers;
 
-public sealed class CustomerAppService(ICustomerManager customerManager, IEntityDataReader<Customer> customerDataReader) : ICustomerAppService
+public sealed class CustomerAppService(ICustomerManager customerManager, IEntityDataReader<Customer> customerDataReader, ICurrentUserService currentUserService) : ICustomerAppService
 {
     public async Task<CreateCustomerResultAppDto> CreateCustomerAsync(CreateCustomerAppDto dto)
     {
+        var isAdmin = await currentUserService.IsAdminAsync().ConfigureAwait(false);
         var result = await customerManager.CreateCustomerAsync(new CreateCustomerDto
         {
             FullName = dto.FullName,
@@ -20,7 +22,7 @@ public sealed class CustomerAppService(ICustomerManager customerManager, IEntity
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
-            Kind = (CustomerKind) dto.Kind
+            Kind = isAdmin ? (CustomerKind) dto.Kind : CustomerKind.RetailWalkIn
         }).ConfigureAwait(false);
 
         return new CreateCustomerResultAppDto
@@ -32,11 +34,16 @@ public sealed class CustomerAppService(ICustomerManager customerManager, IEntity
 
     public async Task<UpdateCustomerResultAppDto> UpdateCustomerAsync(UpdateCustomerAppDto dto)
     {
+        var customer = await customerDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (customer is null)
+            return new UpdateCustomerResultAppDto { Success = false, ErrorMessage = "Error.CustomerIsNotFound" };
+
+        var isAdmin = await currentUserService.IsAdminAsync().ConfigureAwait(false);
         var result = await customerManager.UpdateCustomerAsync(new UpdateCustomerDto(dto.Id)
         {
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
-            Kind = (CustomerKind) dto.Kind,
+            Kind = isAdmin ? (CustomerKind) dto.Kind : customer.Kind,
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note
@@ -83,7 +90,6 @@ public sealed class CustomerAppService(ICustomerManager customerManager, IEntity
         var dto = await customerManager.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
         return MapToAppDto(dto);
     }
-
 
     public async Task<IEnumerable<CustomerAppDto>> GetCustomersByIdsAsync(IEnumerable<Guid> ids)
     {
