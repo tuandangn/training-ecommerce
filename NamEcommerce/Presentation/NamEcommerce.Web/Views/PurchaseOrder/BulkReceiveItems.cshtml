@@ -121,13 +121,13 @@
                                     <span class="value text-muted" id="bulkShippingDisplay">0</span>
                                 </div>
                             </div>
-                            <div class="">
+                            <div>
                                 @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
                                 {
                                     FieldName = "PictureIds",
                                     Label = "Bằng chứng nhận",
                                     MaxFiles = 3,
-                                    Required = false,
+                                    Required = true,
                                     ExistingPictureIds = Model.PictureIds
                                 })
                             </div>

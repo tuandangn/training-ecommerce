@@ -341,7 +341,7 @@ export default class BulkReceiveController {
             <td class="text-end pe-2">
                 <input name="Items[${index}].ActualUnitCost" inputmode="numeric"
                        class="form-control form-control-sm text-end bulk-row-cost"
-                       data-val="true" lòng nhập số lượng" data-val-number="Giá vốn phải là số"
+                       data-val="true" data-val-required="Vui lòng nhập số lượng" data-val-number="Giá vốn phải là số"
                        data-val-range="Giá vốn phải lớn hơn 0" data-val-range-min="0.001"
                        data-decimal="currency" value="${this.#formatCurrency(item?.unitCost ?? 0)}" 
                        placeholder="Giá vốn" ${item == null ? 'disabled' : ''}/>

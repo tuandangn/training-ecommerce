@@ -344,19 +344,18 @@ public sealed class PurchaseOrderAllocationManager(
 
         var orderItemIds = allocations.Select(a => a.OrderItemId).ToHashSet();
         var orderIds = orderItemIds.Select(id => id.PrimaryId).Distinct().ToList();
-
         var orders = await orderReader.GetByIdsAsync(orderIds).ConfigureAwait(false);
-        var orderItems = orders
+        var orderItemInfoDict = orders
             .SelectMany(order => order.OrderItems
                 .Where(item => orderItemIds.Any(itemId => itemId.SecondaryId == item.Id))
                 .Select(item => new { Order = order, Item = item }))
             .ToDictionary(x => (SecondaryItemId)(x.Order.Id, x.Item.Id));
 
         var result = allocations
-            .Where(allocation => orderItems.ContainsKey(allocation.OrderItemId))
+            .Where(allocation => orderItemInfoDict.ContainsKey(allocation.OrderItemId))
             .Select(allocation =>
             {
-                var ctx = orderItems[allocation.OrderItemId];
+                var ctx = orderItemInfoDict[allocation.OrderItemId];
                 return new NonDirectShipAllocationDto
                 {
                     AllocationId = allocation.Id,

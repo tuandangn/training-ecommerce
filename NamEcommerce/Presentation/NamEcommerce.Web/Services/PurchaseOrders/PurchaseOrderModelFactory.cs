@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
@@ -10,6 +11,7 @@ using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Finance;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -179,7 +181,7 @@ public sealed class PurchaseOrderModelFactory(
             Info = purchaseOrderInfo,
             AvailableWarehouses = availableWarehouses,
             RelatedGoodsReceipts = relatedReceipts,
-            RelatedVendorReturns = relatedReturns.Where(r => r.Status != (int) VendorReturnStatus.Cancelled).ToList(),
+            RelatedVendorReturns = relatedReturns.Where(r => r.Status != (int)VendorReturnStatus.Cancelled).ToList(),
             CanModifyInfo = purchaseOrderInfo.CanModifyInfo,
             CanAllocateItems = purchaseOrderInfo.CanAllocation
         };
@@ -212,26 +214,6 @@ public sealed class PurchaseOrderModelFactory(
             {
                 PurchaseOrderId = purchaseOrderInfo.Id
             };
-        }
-        if (model.Info.CanReceiveGoods)
-        {
-            foreach (var item in model.Info.Items)
-            {
-                if (item.RemainingQuantity <= 0)
-                    continue;
-
-                model.ReceiveItemModels.Add(new ReceivePurchaseOrderItemModel
-                {
-                    PurchaseOrderItemId = item.Id,
-                    PurchaseOrderId = purchaseOrderInfo.Id,
-                    RemainingQuantity = item.RemainingQuantity,
-                    WarehouseRequired = item.TrackInventory,
-                    WarehouseId = purchaseOrderInfo.WarehouseId,
-                    CurrentUnitPrice = item.CurrentUnitPrice,
-                    UnitCost = item.UnitCost,
-                    SellingPrice = item.CurrentUnitPrice
-                });
-            }
         }
 
         var poItemIds = purchaseOrderInfo.Items.Select(i => (purchaseOrderInfo.Id, i.Id)).ToList();
@@ -306,12 +288,11 @@ public sealed class PurchaseOrderModelFactory(
             return null;
 
         var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-
         var model = new PurchaseOrderBulkReceiveItemsModel
         {
             PurchaseOrderId = purchaseOrderInfo.Id,
             ReceivedOn = DateTime.Now,
-            PurchaseOrderPlacedOn = purchaseOrderInfo.PlacedOn, 
+            PurchaseOrderPlacedOn = purchaseOrderInfo.PlacedOn,
             DefaultWarehouseId = purchaseOrderInfo.WarehouseId,
             AvailableWarehouses = availableWarehouses.Options.ToList(),
             RemainingReceivableItems = purchaseOrderInfo.Items.Where(item => item.RemainingQuantity > 0).ToList(),
@@ -320,7 +301,6 @@ public sealed class PurchaseOrderModelFactory(
 
         var poItemIds = model.RemainingReceivableItems.Select(item => (purchaseOrderInfo.Id, item.Id)).ToList();
         var dsAllocations = await directShipAppService.GetDirectShipAllocationsForPoItemsAsync(poItemIds).ConfigureAwait(false);
-
         foreach (var alloc in dsAllocations)
         {
             if (!model.DirectShipAllocationsPerItem.TryGetValue(alloc.PurchaseOrderItemId, out var list))
@@ -342,6 +322,49 @@ public sealed class PurchaseOrderModelFactory(
                 DeliveryNoteCode = alloc.DeliveryNoteCode
             });
         }
+
+        return model;
+    }
+
+    public async Task<PurchaseOrderSingleReceiveItemsModel?> PreparePurchaseOrderSingleReceiveModel(Guid id, Guid itemId)
+    {
+        var purchaseOrderInfo = await mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
+        if (purchaseOrderInfo == null)
+            return null;
+        if (!purchaseOrderInfo.CanReceiveGoods)
+            return null;
+
+        var purchaseOrderItem = purchaseOrderInfo.Items.FirstOrDefault(item => item.Id == itemId);
+        if (purchaseOrderItem is null)
+            return null;
+
+        var product = await mediator.Send(new GetProductByIdQuery { Id = purchaseOrderItem.ProductId }).ConfigureAwait(false);
+        if (product is null)
+            return null;
+
+        var unitMeasurement = product.UnitMeasurementId.HasValue
+            ? await mediator.Send(new GetUnitMeasurementQuery { Id = product.UnitMeasurementId.Value }).ConfigureAwait(false)
+            : null;
+        
+        var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var model = new PurchaseOrderSingleReceiveItemsModel
+        {
+            PurchaseOrderId = purchaseOrderInfo.Id,
+            PurchaseOrderItemId = itemId,
+            ReceivedOn = DateTime.Now,
+            PurchaseOrderPlacedOn = purchaseOrderInfo.PlacedOn,
+            AvailableWarehouses = availableWarehouses.Options.ToList(),
+            AvailableTaxRates = appConfig.TaxRates,
+            ProductName = product.Name,
+            Quantity = purchaseOrderItem.RemainingQuantity,
+            QuantityDecimalPlaces = purchaseOrderItem.QuantityDecimalPlaces,
+            ActualUnitCost = purchaseOrderItem.UnitCost,
+            SellingPrice = product.UnitPrice,
+            UnitMeasurement = unitMeasurement?.Name
+        };
+
+        var dsAllocations = await directShipAppService.GetDirectShipAllocationsForPoItemsAsync([(purchaseOrderInfo.Id, purchaseOrderItem.Id)]).ConfigureAwait(false);
+        model.RemainingDirectShipQuantity = dsAllocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
 
         return model;
     }
@@ -455,7 +478,7 @@ public sealed class PurchaseOrderModelFactory(
             NetPayable = model.Info.TotalAmount - returnTotal,
             DebtTotal = debts.Sum(debt => debt.TotalAmount),
             PaidTotal = payments.Sum(payment => payment.Amount),
-            RemainingDebt = Math.Max(0, debts.Sum(debt => debt.TotalAmount) 
+            RemainingDebt = Math.Max(0, debts.Sum(debt => debt.TotalAmount)
                 - returnCredits.Sum(credit => credit.Amount)
                 - payments.Sum(payment => payment.Amount)),
             DebtCount = debts.Count,

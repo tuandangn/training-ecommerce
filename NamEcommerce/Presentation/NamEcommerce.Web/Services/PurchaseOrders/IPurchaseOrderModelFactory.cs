@@ -10,6 +10,8 @@ public interface IPurchaseOrderModelFactory
     Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id);
     Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null);
     Task<PurchaseOrderQuickCreateModel> PrepareQuickCreatePurchaseOrderModel(PurchaseOrderQuickCreateModel? oldModel = null);
-    Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id);
     Task<SplitsPurchaseOrderModel?> PrepareSplitsPurchaseOrderModel(Guid id);
+
+    Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id);
+    Task<PurchaseOrderSingleReceiveItemsModel?> PreparePurchaseOrderSingleReceiveModel(Guid id, Guid itemId);
 }

@@ -51,7 +51,7 @@
             <div class="d-flex gap-2 flex-wrap align-items-center">
                 @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
                 {
-                    <button type="button" class="btn btn-sm btn-success" id="btnReceiveItems">
+                    <button type="button" class="btn btn-sm btn-success" id="btnBulkReceiveItems">
                         <i class="bi bi-box-arrow-in-down me-1"></i>Nhận hàng
                     </button>
                 }
@@ -127,16 +127,9 @@
                                     <td class="text-center">
                                         @if (item.RemainingQuantity > 0)
                                         {
-                                            <button class="btn btn-sm btn-outline-primary"
-                                                    data-bs-toggle="modal" data-bs-target="#receiveItemModal"
-                                                    data-testid="po-receive-item-open"
-                                                    data-item-id="@item.Id"
-                                                    data-item-name="@item.ProductName"
-                                                    data-item-remaining="@item.RemainingQuantity"
-                                                    data-item-unit-cost="@item.UnitCost"
-                                                    data-item-unit-price="@item.CurrentUnitPrice"
-                                                    data-unit="@item.UnitMeasurement"
-                                                    data-decimalplaces="@item.QuantityDecimalPlaces">
+                                            <button class="btn btn-sm btn-outline-primary receives-item-btn"
+                                                    data-item-id="@item.Id" data-unit="@item.UnitMeasurement"
+                                                    data-decimal-places="@item.QuantityDecimalPlaces">
                                                 <i class="bi bi-truck me-1"></i>Nhận
                                             </button>
                                         }

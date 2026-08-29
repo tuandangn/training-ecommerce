@@ -770,7 +770,13 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
             }]
         }).ConfigureAwait(false);
         if (receiveResult.Success)
-            return ReceiveGoodsResultAppDto.CreateSuccess(dto.ReceivedQuantity, receiveResult.CreatedGoodsReceiptIds[0]);
+        {
+            if (dto.SellingPrice.HasValue)
+            {
+
+            }
+            return ReceiveGoodsResultAppDto.CreateSuccess(dto.ReceivedQuantity, receiveResult.CreatedGoodsReceiptIds.FirstOrDefault());
+        }
 
         return ReceiveGoodsResultAppDto.CreateError(receiveResult.ErrorMessage);
     }
@@ -923,21 +929,24 @@ public sealed class PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderM
     public async Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync((Guid purchaseOrderId, Guid purchaseOrderItemId) purchaseOrderItemId)
     {
         var orderItems = await purchaseOrderAllocationManager.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
-        return orderItems.Select(d => new EligibleOrderItemForAllocationAppDto
+        return orderItems.Select(d =>
         {
-            OrderItemId = d.OrderItemId,
-            OrderId = d.OrderId,
-            OrderCode = d.OrderCode,
-            CustomerName = d.CustomerName,
-            ProductId = d.ProductId,
-            ProductName = d.ProductName,
-            TotalQuantity = d.TotalQuantity,
-            AllocatedOutstanding = d.AllocatedOutstanding,
-            AvailableToAllocate = d.AvailableToAllocate,
-            ShippingContactName = d.ShippingContactName,
-            ShippingAddress = d.ShippingAddress,
-            ShippingPhoneNumber = d.ShippingPhoneNumber,
-            CustomerPhone = d.CustomerPhone
+            return new EligibleOrderItemForAllocationAppDto
+            {
+                OrderItemId = d.OrderItemId,
+                OrderId = d.OrderId,
+                OrderCode = d.OrderCode,
+                CustomerName = d.CustomerName,
+                ProductId = d.ProductId,
+                ProductName = d.ProductName,
+                TotalQuantity = d.TotalQuantity,
+                AllocatedOutstanding = d.AllocatedOutstanding,
+                AvailableToAllocate = d.AvailableToAllocate,
+                ShippingContactName = d.ShippingContactName,
+                ShippingAddress = d.ShippingAddress,
+                ShippingPhoneNumber = d.ShippingPhoneNumber,
+                CustomerPhone = d.CustomerPhone
+            };
         }).ToList();
     }
 

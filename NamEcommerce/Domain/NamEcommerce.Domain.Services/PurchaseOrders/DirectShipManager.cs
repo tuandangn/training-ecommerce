@@ -239,7 +239,7 @@ public sealed class DirectShipManager(
         var orderItemIds = directShipAllocations.Select(allocation => allocation.OrderItemId).Distinct().ToList();
         var deliveryNotesByOrderItemMap = await GetDirectShipDeliveryNotesByOrderItemMap(orderItemIds).ConfigureAwait(false);
 
-        var results = directShipAllocations.Select(allocation =>
+        return directShipAllocations.Select(allocation =>
         {
             deliveryNotesByOrderItemMap.TryGetValue(allocation.OrderItemId.SecondaryId, out var deliveryNote);
             return new DirectShipAllocationForPoItemDto
@@ -259,8 +259,6 @@ public sealed class DirectShipManager(
                 DeliveryNoteCode = deliveryNote?.Code
             };
         }).ToList();
-
-        return results;
     }
 
     private async Task<PurchaseOrderItem> ResolvePurchaseOrderItem(SecondaryItemId purchaseOrderItemId)

@@ -577,9 +577,22 @@ public sealed class PurchaseOrderController(IMediator mediator,
         return Json(new { success = true, message = string.Empty });
     }
 
+    [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
+    public async Task<IActionResult> ReceivesItem(Guid id, Guid itemId)
+    {
+        var model = await purchaseOrderModelFactory.PreparePurchaseOrderSingleReceiveModel(id, itemId);
+        if (model is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        return PartialView(model);
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
-    public async Task<IActionResult> Receive(ReceivePurchaseOrderItemModel model)
+    public async Task<IActionResult> ReceivesItem(PurchaseOrderSingleReceiveItemsModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -587,20 +600,38 @@ public sealed class PurchaseOrderController(IMediator mediator,
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(model.PurchaseOrderId);
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        if (model.ReceivedOn.HasValue && DateTimeHelper.ToUniversalTime(model.ReceivedOn.Value) < purchaseOrder.PlacedOnUtc)
+        {
+            NotifyError("Error.ReceivedOnMustBeAfterPlacedOn");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
         var result = await mediator.Send(new ReceivePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
-            PurchaseOrderItemId = model.PurchaseOrderItemId,
-            ReceivedQuantity = model.ReceivedQuantity,
+            ShippingAmount = model.AdditionalShipping ?? 0,
             TaxRate = model.TaxRate,
+            ReceivedOn = model.ReceivedOn,
+            PictureIds = model.PictureIds,
+            PurchaseOrderItemId = model.PurchaseOrderItemId,
+            ReceivedQuantity = model.Quantity,
             WarehouseId = model.WarehouseId,
-            SellingPrice = model.SellingPrice,
+            ActualUnitCost = model.ActualUnitCost,
             DirectShipOrderId = model.DirectShipOrderId,
             DirectShipOrderItemId = model.DirectShipOrderItemId,
             DirectShipAddress = model.DirectShipAddress,
             DirectShipContactName = model.DirectShipContactName,
             DirectShipContactPhone = model.DirectShipContactPhone,
-            DirectShipExistingAllocationId = model.DirectShipExistingAllocationId
+            DirectShipExistingAllocationId = model.DirectShipExistingAllocationId,
+            QuantityDecimalPlaces = model.QuantityDecimalPlaces,
+            SellingPrice = model.SellingPrice.HasValue && model.SellingPrice > 0 ? model.SellingPrice : null
         });
 
         if (!result.Success)
@@ -689,7 +720,6 @@ public sealed class PurchaseOrderController(IMediator mediator,
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
 
-    [HttpGet]
     [Authorize(Policy = SystemPermissions.PurchaseOrders.Edit)]
     public async Task<IActionResult> BulkReceiveItems(Guid id)
     {
@@ -963,10 +993,6 @@ public sealed class PurchaseOrderController(IMediator mediator,
             return this.JsonError(LocalizeError("Error.PurchaseOrderItemIsNotFound"));
 
         var orderItems = await purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
-        var productIds = orderItems.Select(i => i.ProductId).Distinct().ToList();
-        var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds });
-        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
-
         return this.JsonOk(orderItems.Select(item => new
         {
             orderItemId = item.OrderItemId,
@@ -978,7 +1004,6 @@ public sealed class PurchaseOrderController(IMediator mediator,
             shippingAddress = item.ShippingAddress,
             shippingPhoneNumber = item.ShippingPhoneNumber,
             productName = item.ProductName,
-            quantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(item.ProductId),
             totalQuantity = item.TotalQuantity,
             allocatedOutstanding = item.AllocatedOutstanding,
             availableToAllocate = item.AvailableToAllocate
@@ -998,7 +1023,6 @@ public sealed class PurchaseOrderController(IMediator mediator,
             return this.JsonError(LocalizeError("Error.PurchaseOrderItemIsNotFound"));
 
         var allocations = await purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync((purchaseOrderId, purchaseOrderItemId));
-
         return this.JsonOk(allocations.Select(a => new
         {
             allocationId = a.AllocationId,

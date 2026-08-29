@@ -10,6 +10,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
     public string? CustomerPhone { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
+    public string UnitMeasurement { get; set; }
     public int QuantityDecimalPlaces { get; init; }
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }

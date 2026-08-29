@@ -61,7 +61,6 @@ public sealed record EligibleOrderItemForAllocationDto
     public required string CustomerName { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
-    public int QuantityDecimalPlaces { get; init; }
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }

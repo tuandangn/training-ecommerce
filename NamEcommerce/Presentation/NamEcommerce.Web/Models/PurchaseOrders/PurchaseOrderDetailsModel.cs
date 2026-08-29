@@ -25,9 +25,6 @@ public sealed class PurchaseOrderDetailsModel
     public AddPurchaseOrderItemModel? AddItemModel { get; set; }
 
     [ValidateNever]
-    public IList<ReceivePurchaseOrderItemModel> ReceiveItemModels { get; set; } = [];
-
-    [ValidateNever]
     public required EntityOptionListModel AvailableWarehouses { get; set; }
 
     [ValidateNever]
