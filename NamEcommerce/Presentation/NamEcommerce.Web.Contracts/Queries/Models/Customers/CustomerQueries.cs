@@ -1,4 +1,3 @@
-using MediatR;
 using NamEcommerce.Web.Contracts.Models.Customers;
 
 namespace NamEcommerce.Web.Contracts.Queries.Models.Customers;

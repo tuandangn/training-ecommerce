@@ -16,6 +16,7 @@ using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Web.Models.E2E;
 
@@ -248,7 +249,8 @@ public sealed class E2ETestDataService(
         {
             FullName = name,
             PhoneNumber = phone,
-            Address = address
+            Address = address,
+            Kind = (int) CustomerKind.RetailWalkIn
         }).ConfigureAwait(false);
 
         if (!result.Success || !result.CreatedId.HasValue)

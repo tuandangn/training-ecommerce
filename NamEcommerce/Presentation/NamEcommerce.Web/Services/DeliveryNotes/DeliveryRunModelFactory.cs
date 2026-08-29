@@ -189,6 +189,7 @@ public sealed class DeliveryRunModelFactory(
                 CustomerPhone = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
                     ? item.ShippingPhoneNumber
                     : note?.ShippingPhoneNumber,
+                IsRetailWalkInCustomer = note?.IsRetailWalkInCustomer ?? true,
                 ShippingPhoneNumber = string.IsNullOrWhiteSpace(note?.ShippingPhoneNumber)
                     ? item.ShippingPhoneNumber
                     : note?.ShippingPhoneNumber,

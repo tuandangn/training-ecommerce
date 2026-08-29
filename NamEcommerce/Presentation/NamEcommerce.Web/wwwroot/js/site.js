@@ -13,6 +13,7 @@ $(function () {
             enableSubmitButtons(form, true);
             return;
         }
+        showPageLoading();
         form.submit();
         getOrCreateDisabledFieldset(form);
     });
@@ -145,4 +146,11 @@ function getEl(id) {
     const el = document.getElementById(id);
     if (!el) throw new Error(`Element #${id} không tồn tại`);
     return el;
+}
+
+function appendToPage(htmlString) {
+    const range = document.createRange();
+    range.selectNode(document.body);
+    const fragment = range.createContextualFragment(htmlString);
+    document.body.appendChild(fragment);
 }

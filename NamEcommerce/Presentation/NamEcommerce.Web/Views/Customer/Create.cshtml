@@ -1,3 +1,4 @@
+@using NamEcommerce.Domain.Shared.Enums.Customers
 @using NamEcommerce.Web.Models.Customers
 @model CreateCustomerModel
 @{
@@ -23,34 +24,41 @@
         <div class="content-card-body">
             <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <label asp-for="FullName" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-person text-muted"></i></span>
-                        <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
-                    </div>
+                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
                     <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Kind" class="form-label"></label>
+                    <select asp-for="Kind" class="form-select">
+                        @foreach (var kind in CustomerKind.GetOptions())
+                        {
+                            <option value="@kind.value" selected="@(kind.value == (int)Model.Kind)">@kind.text</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Kind" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" inputmode="tel"/>
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" inputmode="tel" />
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                </div>
-                <div class="col-12">
-                    <label asp-for="Address" class="form-label"></label>
-                    <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú" />
-                    <span asp-validation-for="Address" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="InitialDebt" class="form-label"></label>
-                    <input asp-for="InitialDebt" class="form-control text-start" placeholder="Nhập số công nợ cũ" data-decimal="currency" inputmode="numeric"/>
-                    <span asp-validation-for="InitialDebt" class="text-danger small"></span>
-                    <div class="form-text text-muted">Nhập số công nợ ban đầu của khách hàng.</div>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Email" class="form-label"></label>
                     <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email" />
                     <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="col-md-12">
+                    <label asp-for="Address" class="form-label"></label>
+                    <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú" />
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="InitialDebt" class="form-label"></label>
+                    <input asp-for="InitialDebt" class="form-control include-suffix" placeholder="Nhập số công nợ cũ" data-decimal="currency" inputmode="numeric" />
+                    <span asp-validation-for="InitialDebt" class="text-danger small"></span>
+                    <div class="form-text text-muted">Số công nợ ban đầu của khách hàng.</div>
                 </div>
                 <div class="col-12">
                     <label asp-for="Note" class="form-label"></label>

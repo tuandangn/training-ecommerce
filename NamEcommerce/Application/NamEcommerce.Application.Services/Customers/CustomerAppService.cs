@@ -5,29 +5,22 @@ using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 
 namespace NamEcommerce.Application.Services.Customers;
 
-public sealed class CustomerAppService : ICustomerAppService
+public sealed class CustomerAppService(ICustomerManager customerManager, IEntityDataReader<Customer> customerDataReader) : ICustomerAppService
 {
-    private readonly ICustomerManager _customerManager;
-    private readonly IEntityDataReader<Customer> _customerDataReader;
-
-    public CustomerAppService(ICustomerManager customerManager, IEntityDataReader<Customer> customerDataReader)
-    {
-        _customerManager = customerManager;
-        _customerDataReader = customerDataReader;
-    }
-
     public async Task<CreateCustomerResultAppDto> CreateCustomerAsync(CreateCustomerAppDto dto)
     {
-        var result = await _customerManager.CreateCustomerAsync(new CreateCustomerDto
+        var result = await customerManager.CreateCustomerAsync(new CreateCustomerDto
         {
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
             Email = dto.Email,
             Address = dto.Address,
-            Note = dto.Note
+            Note = dto.Note,
+            Kind = (CustomerKind) dto.Kind
         }).ConfigureAwait(false);
 
         return new CreateCustomerResultAppDto
@@ -39,10 +32,11 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<UpdateCustomerResultAppDto> UpdateCustomerAsync(UpdateCustomerAppDto dto)
     {
-        var result = await _customerManager.UpdateCustomerAsync(new UpdateCustomerDto(dto.Id)
+        var result = await customerManager.UpdateCustomerAsync(new UpdateCustomerDto(dto.Id)
         {
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
+            Kind = (CustomerKind) dto.Kind,
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note
@@ -57,7 +51,7 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<DeleteCustomerResultAppDto> DeleteCustomerAsync(Guid id)
     {
-        await _customerManager.DeleteCustomerAsync(id).ConfigureAwait(false);
+        await customerManager.DeleteCustomerAsync(id).ConfigureAwait(false);
 
         return new DeleteCustomerResultAppDto
         {
@@ -68,7 +62,7 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<CustomerAppDto?> GetCustomerByIdAsync(Guid id)
     {
-        var dto = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var dto = await customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (dto == null) return null;
 
         return new CustomerAppDto(dto.Id)
@@ -86,14 +80,14 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<CustomerAppDto> GetOrCreateRetailWalkInCustomerAsync()
     {
-        var dto = await _customerManager.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
+        var dto = await customerManager.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
         return MapToAppDto(dto);
     }
 
 
     public async Task<IEnumerable<CustomerAppDto>> GetCustomersByIdsAsync(IEnumerable<Guid> ids)
     {
-        var customers = await _customerDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        var customers = await customerDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
 
         return customers.Select(cust => new CustomerAppDto(cust.Id)
         {
@@ -110,7 +104,7 @@ public sealed class CustomerAppService : ICustomerAppService
 
     public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false)
     {
-        var paged = await _customerManager.GetCustomersAsync(pageIndex, pageSize, keywords, includeSystem).ConfigureAwait(false);
+        var paged = await customerManager.GetCustomersAsync(pageIndex, pageSize, keywords, includeSystem).ConfigureAwait(false);
         var items = paged.Items.Where(c => !c.IsSystem).Select(MapToAppDto).ToList();
 
         foreach(var systemCustomer in paged.Items.Where(c => c.IsSystem).OrderByDescending(c => c.FullName))
@@ -128,7 +122,7 @@ public sealed class CustomerAppService : ICustomerAppService
                 Email = dto.Email,
                 Address = dto.Address,
                 Note = dto.Note,
-                Kind = dto.Kind,
+                Kind = (int) dto.Kind,
                 IsSystem = dto.IsSystem,
                 CreatedOnUtc = dto.CreatedOnUtc
             };
@@ -142,7 +136,7 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
-            Kind = dto.Kind,
+            Kind = (int) dto.Kind,
             IsSystem = dto.IsSystem,
             CreatedOnUtc = dto.CreatedOnUtc
         };

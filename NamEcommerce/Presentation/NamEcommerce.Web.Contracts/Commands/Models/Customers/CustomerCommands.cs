@@ -8,6 +8,7 @@ public sealed class CreateCustomerCommand : ICommand<CreateCustomerResultModel>
     public required string FullName { get; init; }
     public required string PhoneNumber { get; init; }
     public required string Address { get; init; }
+    public required int Kind { get; init; }
     public string? Email { get; set; }
     public string? Note { get; set; }
     public decimal? InitialDebt { get; set; }
@@ -20,6 +21,7 @@ public sealed class UpdateCustomerCommand : ICommand<UpdateCustomerResultModel>
     public required string FullName { get; init; }
     public required string PhoneNumber { get; init; }
     public required string Address { get; init; }
+    public required int Kind { get; init; }
     public string? Email { get; set; }
     public string? Note { get; set; }
 }

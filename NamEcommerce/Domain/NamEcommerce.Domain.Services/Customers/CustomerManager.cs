@@ -7,7 +7,6 @@ using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Services.Customers;
-using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Domain.Shared.Specifications;
@@ -15,22 +14,11 @@ using NamEcommerce.Domain.Specifications.Customers;
 
 namespace NamEcommerce.Domain.Services.Customers;
 
-public sealed class CustomerManager : ICustomerManager
+public sealed class CustomerManager(
+    IRepository<Customer> customerRepository,
+    IEntityDataReader<Customer> customerDataReader,
+    IEntityDataReader<Order> orderDataReader) : ICustomerManager
 {
-    private readonly IRepository<Customer> _customerRepository;
-    private readonly IEntityDataReader<Customer> _customerDataReader;
-    private readonly IEntityDataReader<Order> _orderDataReader;
-
-    public CustomerManager(
-        IRepository<Customer> customerRepository,
-        IEntityDataReader<Customer> customerDataReader,
-        IEntityDataReader<Order> orderDataReader)
-    {
-        _customerRepository = customerRepository;
-        _customerDataReader = customerDataReader;
-        _orderDataReader = orderDataReader;
-    }
-
     public async Task<CreateCustomerResultDto> CreateCustomerAsync(CreateCustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -39,15 +27,17 @@ public sealed class CustomerManager : ICustomerManager
             Email = dto.Email,
             Note = dto.Note
         };
+        customer.SetCustomerKind(dto.Kind);
+        customer.ClearDomainEvents();
         customer.MarkCreated();
-        var inserted = await _customerRepository.InsertAsync(customer).ConfigureAwait(false);
+        var inserted = await customerRepository.InsertAsync(customer).ConfigureAwait(false);
         return new CreateCustomerResultDto { CreatedId = inserted.Id };
     }
 
     public async Task<UpdateCustomerResultDto> UpdateCustomerAsync(UpdateCustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        var customer = await _customerRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.Id);
         if (customer.IsSystem)
             throw new NamEcommerceDomainException("Error.SystemCustomerCannotBeUpdated");
@@ -57,31 +47,51 @@ public sealed class CustomerManager : ICustomerManager
         customer.Email = dto.Email;
         customer.Address = dto.Address;
         customer.Note = dto.Note;
+        customer.SetCustomerKind(dto.Kind);
         customer.MarkUpdated();
 
-        await _customerRepository.UpdateAsync(customer).ConfigureAwait(false);
+        await customerRepository.UpdateAsync(customer).ConfigureAwait(false);
         return new UpdateCustomerResultDto { UpdatedId = customer.Id };
     }
 
     public async Task DeleteCustomerAsync(Guid id)
     {
-        var customer = await _customerRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)
         {
             if (customer.IsSystem)
                 throw new CustomerCannotBeDeletedException(id);
 
-            var hasOrders = await _orderDataReader.DataSource.AnyAsync(o => o.CustomerId == id).ConfigureAwait(false);
+            var hasOrders = await orderDataReader.DataSource.AnyAsync(o => o.CustomerId == id).ConfigureAwait(false);
             if (hasOrders) throw new CustomerCannotBeDeletedException(id);
 
             customer.MarkDeleted();
-            await _customerRepository.DeleteAsync(customer).ConfigureAwait(false);
+            await customerRepository.DeleteAsync(customer).ConfigureAwait(false);
         }
+    }
+
+    public async Task<bool> IsRetailWalkInCustomerAsync(Guid customerId)
+    {
+        var customer = await customerRepository.GetByIdAsync(customerId).ConfigureAwait(false);
+
+        return customer is { Kind: CustomerKind.RetailWalkIn };
+    }
+
+    public async Task ChangeCustomerKindAsync(ChangeCustomerKindDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer is null)
+            throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        customer.SetCustomerKind(dto.Kind);
+        await customerRepository.UpdateAsync(customer).ConfigureAwait(false);
     }
 
     public async Task<CustomerDto?> GetCustomerByIdAsync(Guid id)
     {
-        var customer = await _customerRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var customer = await customerRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (customer == null) return null;
 
         return new CustomerDto(customer.Id)
@@ -91,7 +101,7 @@ public sealed class CustomerManager : ICustomerManager
             Email = customer.Email,
             Address = customer.Address,
             Note = customer.Note,
-            Kind = (int)customer.Kind,
+            Kind = customer.Kind,
             IsSystem = customer.IsSystem,
             CreatedOnUtc = customer.CreatedOnUtc
         };
@@ -99,7 +109,7 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync()
     {
-        var existing = await _customerDataReader.DataSource
+        var existing = await customerDataReader.DataSource
             .FirstOrDefaultAsync(c => c.Kind == CustomerKind.RetailWalkIn && c.IsSystem)
             .ConfigureAwait(false);
         if (existing is not null)
@@ -107,12 +117,12 @@ public sealed class CustomerManager : ICustomerManager
 
         var customer = new Customer(Guid.NewGuid(), CustomerConsts.RETAIL_WALKIN_CUSTOMER_NAME, CustomerConsts.RETAIL_WALKIN_CUSTOMER_PHONE, CustomerConsts.RETAIL_WALKIN_CUSTOMER_ADDRESS)
         {
-            Kind = CustomerKind.RetailWalkIn,
             IsSystem = true
         };
+        customer.SetCustomerKind(CustomerKind.RetailWalkIn);
         customer.MarkCreated();
 
-        var inserted = await _customerRepository.InsertAsync(customer).ConfigureAwait(false);
+        var inserted = await customerRepository.InsertAsync(customer).ConfigureAwait(false);
         return MapToDto(inserted);
     }
 
@@ -127,13 +137,13 @@ public sealed class CustomerManager : ICustomerManager
             customerSpec.And(new CustomerKeywordSearchSpec(keywords));
 
         int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
-            ? null : await _customerDataReader.CountAsync(customerSpec).ConfigureAwait(false);
+            ? null : await customerDataReader.CountAsync(customerSpec).ConfigureAwait(false);
 
         if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(new List<CustomerDto>(), pageIndex, pageSize, 0);
 
         customerSpec.ApplyOrderBy(c => c.FullName.Value);
-        var pagedData = await _customerDataReader.GetPagedListAsync(customerSpec, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await customerDataReader.GetPagedListAsync(customerSpec, pageIndex, pageSize).ConfigureAwait(false);
 
         return PagedDataDto.Create(pagedData.Select(c => new CustomerDto(c.Id)
         {
@@ -142,7 +152,7 @@ public sealed class CustomerManager : ICustomerManager
             Email = c.Email,
             Address = c.Address,
             Note = c.Note,
-            Kind = (int)c.Kind,
+            Kind = c.Kind,
             IsSystem = c.IsSystem,
             CreatedOnUtc = c.CreatedOnUtc
         }), pageIndex, pageSize, totalCount);
@@ -156,15 +166,8 @@ public sealed class CustomerManager : ICustomerManager
             Email = customer.Email,
             Address = customer.Address,
             Note = customer.Note,
-            Kind = (int)customer.Kind,
+            Kind = customer.Kind,
             IsSystem = customer.IsSystem,
             CreatedOnUtc = customer.CreatedOnUtc
         };
-
-    public async Task<bool> IsRetailWalkInCustomerAsync(Guid customerId)
-    {
-        var customer = await _customerRepository.GetByIdAsync(customerId).ConfigureAwait(false);
-
-        return customer is { Kind: CustomerKind.RetailWalkIn };
-    }
 }

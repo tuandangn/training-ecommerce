@@ -1,0 +1,61 @@
+﻿@using NamEcommerce.Domain.Shared.Enums.Customers
+@using NamEcommerce.Web.Models.Customers
+@model CreateCustomerModel
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ui-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thêm khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="QuickCreate" asp-controller="Customer" method="post" id="quickCreateCustomerForm" asp-antiforgery="true">
+                <div class="modal-body py-3">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Kind" class="form-label"></label>
+                            <select asp-for="Kind" class="form-select">
+                                @foreach (var kind in CustomerKind.GetOptions())
+                                {
+                                    <option value="@kind.value" selected="@(kind.value == (int)Model.Kind)">@kind.text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Kind" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" inputmode="tel" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-12">
+                            <label asp-for="Address" class="form-label"></label>
+                            <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú" />
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Note" class="form-label"></label>
+                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Nhập ghi chú"></textarea>
+                            <span asp-validation-for="Note" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm khách hàng
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

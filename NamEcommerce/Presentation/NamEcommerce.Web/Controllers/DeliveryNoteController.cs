@@ -106,7 +106,6 @@ public sealed class DeliveryNoteController(
             return View(model);
         }
 
-
         var orderDiscount = order.OrderDiscount ?? 0;
         var deliveryNotes = await deliveryNoteAppService.GetByOrderIdAsync(order.Id);
 
@@ -128,7 +127,7 @@ public sealed class DeliveryNoteController(
         }
         var amountAlreadyPaidForOrder = Math.Max(0, orderPaidAmount - appliedOrderPaidAmount);
 
-        if (order.CustomerId == cachedValuesService.DefaultCustomerId)
+        if (order.IsRetailWalkInCustomer)
         {
             var productTotal = 0m;
             foreach (var deliveryNoteItem in deliveryNoteItems)

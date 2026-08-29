@@ -1,3 +1,5 @@
+using NamEcommerce.Domain.Shared.Enums.Customers;
+
 namespace NamEcommerce.Domain.Shared.Events.Customers;
 
 /// <summary>
@@ -14,3 +16,5 @@ public sealed record CustomerUpdated(Guid CustomerId) : DomainEvent;
 /// Khách hàng bị xoá (soft delete).
 /// </summary>
 public sealed record CustomerDeleted(Guid CustomerId, string FullName) : DomainEvent;
+
+public sealed record CustomerKindChanged(Guid CustomerId, CustomerKind newKind, CustomerKind oldKind) : DomainEvent;

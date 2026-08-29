@@ -1,3 +1,4 @@
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using System.ComponentModel.DataAnnotations;
 
 namespace NamEcommerce.Web.Models.Customers;
@@ -16,6 +17,9 @@ public sealed class CreateCustomerModel
 
     [Display(Name = "Số điện thoại")]
     public string? PhoneNumber { get; set; }
+
+    [Display(Name = "Loại")]
+    public CustomerKind Kind { get; set; }
 
     [Display(Name = "Email")]
     public string? Email { get; set; }
@@ -39,6 +43,9 @@ public sealed class EditCustomerModel
 
     [Display(Name = "Số điện thoại")]
     public string? PhoneNumber { get; set; }
+
+    [Display(Name = "Loại")]
+    public CustomerKind Kind { get; set; }
 
     [Display(Name = "Email")]
     public string? Email { get; set; }

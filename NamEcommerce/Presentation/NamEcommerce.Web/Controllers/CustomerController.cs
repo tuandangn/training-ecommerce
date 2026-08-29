@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.CustomerPortal;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -92,7 +93,8 @@ public sealed class CustomerController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public IActionResult Create()
     {
-        return View(new CreateCustomerModel());
+        var model = new CreateCustomerModel { Kind = CustomerKind.RetailWalkIn };
+        return View(model);
     }
 
     [HttpPost]
@@ -106,6 +108,7 @@ public sealed class CustomerController : BaseAuthorizedController
         {
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
+            Kind = (int) model.Kind,
             Email = model.Email,
             Address = model.Address ?? string.Empty,
             Note = model.Note,
@@ -122,6 +125,12 @@ public sealed class CustomerController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    public IActionResult QuickCreate()
+    {
+        var model = new CreateCustomerModel { Kind = CustomerKind.RetailWalkIn };
+        return PartialView(model);
+    }
+
     [HttpPost]
     [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> QuickCreate(CreateCustomerModel model)
@@ -134,6 +143,7 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
+            Kind = (int) model.Kind,
             Address = model.Address ?? string.Empty,
             Note = model.Note,
             InitialDebt = model.InitialDebt
@@ -177,6 +187,7 @@ public sealed class CustomerController : BaseAuthorizedController
             Id = customer.Id,
             FullName = customer.FullName,
             PhoneNumber = customer.PhoneNumber,
+            Kind = (CustomerKind) customer.Kind,
             Email = customer.Email,
             Address = customer.Address,
             Note = customer.Note
@@ -201,6 +212,7 @@ public sealed class CustomerController : BaseAuthorizedController
             Id = model.Id,
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
+            Kind = (int) model.Kind,
             Email = model.Email,
             Address = model.Address ?? string.Empty,
             Note = model.Note

@@ -1,10 +1,11 @@
-import { apiPost } from "/modules/ajax-helper.js";
+import { apiPost, apiGet } from "/modules/ajax-helper.js";
 import { confirm } from "/modules/modals.js";
 import { customerInfo } from "/modules/CustomerInfo.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 import DecimalFields from "/modules/DecimalFields.js";
+import CustomerQuickCreateController from '/modules/CustomerController.js';
 
 class FastSale {
     #deliveryNow = Symbol('deliveryNow');
@@ -166,42 +167,17 @@ class FastSale {
         }
     }
     bindQuickCustomerForm() {
-        const quickCustomerModalEl = document.getElementById('quickCustomerModal');
-        const quickCustomerModal = quickCustomerModalEl
-            ? bootstrap.Modal.getOrCreateInstance(quickCustomerModalEl)
-            : null;
-
         document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
-            button.addEventListener('click', () => quickCustomerModal?.show());
-        });
-
-        const form = document.getElementById('quickCreateCustomerForm');
-        form?.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            if (window.$ && typeof $(form).valid === 'function' && !$(form).valid()) {
-                return;
-            }
-
-            const submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-
-            try {
-                const result = await apiPost(form.action, new FormData(form));
-                if (!result.success) {
-                    this.showAlert('error', result.message || 'Không thể tạo khách hàng.');
-                    return;
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                try {
+                    const createdCustomer = await new CustomerQuickCreateController().getCreatedCustomer();
+                    this.customerPicker.selectCustomer(createdCustomer);
+                } catch (error) {
+                    if (error) this.showAlert('error', error);
                 }
-
-                this.customerPicker?.selectCustomer(result.customer);
-                form.reset();
-                quickCustomerModal?.hide();
-                this.showAlert('success', result.message || 'Đã tạo khách hàng.');
-            } catch {
-                this.showAlert('error', 'Có lỗi xảy ra khi tạo khách hàng.');
-            } finally {
-                submitButton.disabled = false;
-            }
+                button.disabled = false;
+            });
         });
     }
     bindEvents() {
@@ -1040,7 +1016,7 @@ class PaymentProcess {
             if (this.#amount != DecimalFields.getValue(this.paidAmountInput)) {
                 onAmountChanged.flush();
             }
-                
+
             if (this.isBank()) {
                 if (!this.#paymentIntent || this.#paymentIntent.amount != this.#amount) {
                     this.#createPaymentQrCode();

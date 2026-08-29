@@ -10,6 +10,7 @@ public interface ICustomerManager
 
     Task<CreateCustomerResultDto> CreateCustomerAsync(CreateCustomerDto dto);
     Task<UpdateCustomerResultDto> UpdateCustomerAsync(UpdateCustomerDto dto);
+    Task ChangeCustomerKindAsync(ChangeCustomerKindDto dto);
     Task DeleteCustomerAsync(Guid id);
 
     Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync();
