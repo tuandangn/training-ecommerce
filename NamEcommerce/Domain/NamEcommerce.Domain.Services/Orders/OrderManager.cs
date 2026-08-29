@@ -135,8 +135,7 @@ public sealed class OrderManager(
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
-        if (customer.Kind == CustomerKind.RetailWalkIn && order.OrderTotal > 0)
-            order.RequiresPayment(dto.RequiresPayOff);
+        order.RequiresPayment(customer.Kind == CustomerKind.RetailWalkIn && order.OrderTotal > 0, dto.RequiresPayOff);
 
         order.ClearDomainEvents();
         order.Place();
@@ -199,7 +198,6 @@ public sealed class OrderManager(
 
         await orderRepository.DeleteAsync(order).ConfigureAwait(false);
     }
-
 
     public async Task UpdateShippingAsync(UpdateShippingDto dto)
     {
@@ -377,6 +375,22 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
+    public async Task UpdateOrderCustomerKindAsync(UpdateOrderCustomerKindDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer is null)
+            throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        await order.SetCustomerAsync(dto.CustomerId, customerDataReader).ConfigureAwait(false);
+        order.RequiresPayment(customer.Kind == CustomerKind.RetailWalkIn && order.OrderTotal > 0, order.PayOffRequired);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
 
     public async Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto)
     {
@@ -470,6 +484,7 @@ public sealed class OrderManager(
             .AnyAsync(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled
                 && allocation.ReceivedQuantity > 0);
+
 
     #endregion
 }

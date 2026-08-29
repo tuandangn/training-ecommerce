@@ -134,10 +134,7 @@ public sealed class CustomerManager(
             customerSpec.And(new IsSystemCustomerSpec(false));
 
         if (kind.HasValue)
-        {
-            var custKind = (CustomerKind)kind;
-            customerSpec.And(cust => cust.Kind == custKind);
-        }
+            customerSpec.And(new HaveKindCustomerSpec((CustomerKind)kind));
 
         if (!string.IsNullOrWhiteSpace(keywords))
             customerSpec.And(new CustomerKeywordSearchSpec(keywords));

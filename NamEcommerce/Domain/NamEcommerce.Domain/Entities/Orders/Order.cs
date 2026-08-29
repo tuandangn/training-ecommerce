@@ -47,7 +47,7 @@ public sealed record Order : AppAggregateEntity
     public string? Note { get; internal set; }
 
     public bool ProcessRequiresPayment { get; private set; }
-    public bool PayOffRequired { get; set; }
+    public bool PayOffRequired { get; private set; }
     public decimal? PaidAmount { get; private set; }
     public Guid? PaymentIntentId { get; private set; }
 
@@ -107,9 +107,6 @@ public sealed record Order : AppAggregateEntity
     internal async Task SetCustomerAsync(Guid customerId, IGetByIdService<Customer> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
-
-        if (!CanProcess())
-            throw new OrderCannotProcessException();
 
         var customer = await byIdGetter.GetByIdAsync(customerId).ConfigureAwait(false);
         if (customer is null)
@@ -221,8 +218,8 @@ public sealed record Order : AppAggregateEntity
         RecalculateTotal();
     }
 
-    internal void RequiresPayment(bool payOffRequired)
-        => (ProcessRequiresPayment, PayOffRequired) = (true, payOffRequired);
+    internal void RequiresPayment(bool processRequiresPayment, bool payOffRequired)
+        => (ProcessRequiresPayment, PayOffRequired) = (processRequiresPayment, payOffRequired);
     internal void OrderHasPayment(decimal paidAmount, Guid? paymentIntentId)
     {
         PaidAmount = (PaidAmount ?? 0) + paidAmount;

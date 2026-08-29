@@ -2,7 +2,6 @@
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.Orders;
-using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Orders;
 

@@ -17,4 +17,4 @@ public sealed record CustomerUpdated(Guid CustomerId) : DomainEvent;
 /// </summary>
 public sealed record CustomerDeleted(Guid CustomerId, string FullName) : DomainEvent;
 
-public sealed record CustomerKindChanged(Guid CustomerId, CustomerKind newKind, CustomerKind oldKind) : DomainEvent;
+public sealed record CustomerKindChanged(Guid CustomerId, CustomerKind NewKind, CustomerKind OldKind) : DomainEvent;

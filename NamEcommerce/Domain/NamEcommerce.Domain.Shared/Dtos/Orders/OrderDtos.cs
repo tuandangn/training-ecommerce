@@ -124,3 +124,11 @@ public sealed record CompleteOrderDto
 {
     public required Guid OrderId { get; init; }
 }
+
+
+[Serializable]
+public sealed record UpdateOrderCustomerKindDto
+{
+    public required Guid OrderId { get; set; }
+    public required Guid CustomerId { get; set; }
+}

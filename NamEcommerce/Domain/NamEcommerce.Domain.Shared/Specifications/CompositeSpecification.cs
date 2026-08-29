@@ -39,15 +39,6 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
 
         return this;
     }
-    public CompositeSpecification<T> And(Expression<Func<T, bool>> rightCriteria)
-    {
-        if (currentCriteria == _emptyCriteria)
-            currentCriteria = rightCriteria;
-        else
-            currentCriteria = currentCriteria.And(rightCriteria);
-
-        return this;
-    }
     public CompositeSpecification<T> AndNot(ISpecification<T> right)
     {
         if (currentCriteria == _emptyCriteria)
@@ -57,30 +48,12 @@ public sealed class CompositeSpecification<T> : ISpecification<T>
 
         return this;
     }
-    public CompositeSpecification<T> AndNot(Expression<Func<T, bool>> rightCriteria)
-    {
-        if (currentCriteria == _emptyCriteria)
-            currentCriteria = rightCriteria;
-        else
-            currentCriteria = currentCriteria.AndNot(rightCriteria);
-
-        return this;
-    }
     public CompositeSpecification<T> Or(ISpecification<T> right)
     {
         if (currentCriteria == _emptyCriteria)
             currentCriteria = right.Criteria;
         else
             currentCriteria = currentCriteria.Or(right.Criteria);
-
-        return this;
-    }
-    public CompositeSpecification<T> Or(Expression<Func<T, bool>> rightCriteria)
-    {
-        if (currentCriteria == _emptyCriteria)
-            currentCriteria = rightCriteria;
-        else
-            currentCriteria = currentCriteria.Or(rightCriteria);
 
         return this;
     }

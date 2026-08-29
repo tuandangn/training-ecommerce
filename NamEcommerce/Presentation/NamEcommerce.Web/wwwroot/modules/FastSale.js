@@ -6,6 +6,7 @@ import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 import DecimalFields from "/modules/DecimalFields.js";
 import CustomerQuickCreateController from '/modules/CustomerController.js';
+import { customerSettings } from '/modules/Settings.js'
 
 class FastSale {
     #deliveryNow = Symbol('deliveryNow');
@@ -155,7 +156,7 @@ class FastSale {
         return initialValues;
     }
     applyCustomerShippingDefaults() {
-        if (this.selectedCustomer && !this.isRetailWalkInCustomer()) {
+        if (this.selectedCustomer && this.selectedCustomer.id != customerSettings.defaultCustomerId) {
             this.shippingAddress.value = this.selectedCustomer.address ?? '';
             this.shippingPhoneNumber.value = this.selectedCustomer.phone ?? '';
             return;
