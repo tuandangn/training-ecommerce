@@ -126,12 +126,18 @@ public sealed class CustomerManager(
         return MapToDto(inserted);
     }
 
-    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false)
+    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(int pageIndex, int pageSize, string? keywords = null, bool includeSystem = false, int? kind = null)
     {
         var customerSpec = new CompositeSpecification<Customer>();
 
         if (!includeSystem)
             customerSpec.And(new IsSystemCustomerSpec(false));
+
+        if (kind.HasValue)
+        {
+            var custKind = (CustomerKind)kind;
+            customerSpec.And(cust => cust.Kind == custKind);
+        }
 
         if (!string.IsNullOrWhiteSpace(keywords))
             customerSpec.And(new CustomerKeywordSearchSpec(keywords));

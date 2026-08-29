@@ -19,7 +19,7 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
     public async Task<CustomerListModel> Handle(GetCustomerListQuery request, CancellationToken cancellationToken)
     {
         var paged = await _customerAppService
-            .GetCustomersAsync(request.PageIndex, request.PageSize, request.Keywords, request.IncludeSystem)
+            .GetCustomersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Kind, request.IncludeSystem)
             .ConfigureAwait(false);
         var items = paged.Items.Select(c => new CustomerListModel.CustomerItemModel(c.Id)
         {
@@ -33,6 +33,7 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
         return new CustomerListModel
         {
             Keywords = request.Keywords,
+            Kind = request.Kind,
             Data = PagedDataModel.Create(items, paged.Pagination.PageIndex, paged.Pagination.PageSize, paged.Pagination.TotalCount)
         };
     }

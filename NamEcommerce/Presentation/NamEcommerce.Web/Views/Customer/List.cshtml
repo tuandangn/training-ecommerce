@@ -27,122 +27,136 @@
         </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
-
-    <div class="responsive-list-panel" data-list-view-panel="list">
-        <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th class="ps-4">Họ tên</th>
-                        <th>Điện thoại</th>
-                        <th class="ui-w-150">Loại</th>
-                        <th class="ui-w-100"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Data.Pagination.TotalCount > 0)
-                    {
-                        @foreach (var item in Model.Data)
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-kind=""
+               class="nav-link @(Model.Kind.HasValue ? "" : "active")">Tất cả</a>
+        </li>
+        @foreach (var kind in CustomerKind.GetOptions())
+        {
+            <li class="nav-item">
+                <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-kind="@kind.value"
+                   class="nav-link @(Model.Kind.HasValue && Model.Kind == kind.value ? "active" : "")" aria-current="page">@kind.text</a>
+            </li>
+        }
+    </ul>
+    <div class="content-card-body-flush">
+        <div class="responsive-list-panel" data-list-view-panel="list">
+            <div class="table-responsive">
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Họ tên</th>
+                            <th>Điện thoại</th>
+                            <th class="ui-w-150">Loại</th>
+                            <th class="ui-w-100"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Data.Pagination.TotalCount > 0)
                         {
-                            var kind = (CustomerKind)item.Kind;
+                            @foreach (var item in Model.Data)
+                            {
+                                var kind = (CustomerKind)item.Kind;
+                                <tr>
+                                    <td class="ps-4 fw-medium">@item.FullName</td>
+                                    <td>
+                                        <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
+                                            @item.PhoneNumber
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge @kind.GetDisplayColor()">
+                                            @kind.GetDisplayText()
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn-table-action danger btnDelete"
+                                                data-id="@item.Id" data-name="@item.FullName" title="Xóa">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        <form class="d-none" id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
+                                              method="post"></form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
                             <tr>
-                                <td class="ps-4 fw-medium">@item.FullName</td>
-                                <td>
-                                    <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
-                                        @item.PhoneNumber
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="badge @kind.GetDisplayColor()">
-                                        @kind.GetDisplayText()
-                                    </span>
-                                </td>
-                                <td class="text-end pe-3">
-                                    <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <button type="button" class="btn-table-action danger btnDelete"
-                                            data-id="@item.Id" data-name="@item.FullName" title="Xóa">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                    <form class="d-none" id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
-                                          method="post"></form>
+                                <td colspan="3">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="bi bi-people"></i></div>
+                                        <h5>Chưa có khách hàng nào</h5>
+                                        <p>Thêm khách hàng để bắt đầu quản lý.</p>
+                                    </div>
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="3">
-                                <div class="empty-state">
-                                    <div class="empty-icon"><i class="bi bi-people"></i></div>
-                                    <h5>Chưa có khách hàng nào</h5>
-                                    <p>Thêm khách hàng để bắt đầu quản lý.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
-        @if (Model.Data.Pagination.TotalCount > 0)
-        {
-            @foreach (var item in Model.Data)
+        <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+            @if (Model.Data.Pagination.TotalCount > 0)
             {
-                var kind = (CustomerKind)item.Kind;
-                <article class="list-card">
-                    <div class="list-card-header">
-                        <div class="list-card-title-group">
-                            <div class="list-card-title">
-                                @item.FullName
-                            </div>
-                            <a href="tel:@item.PhoneNumber" class="list-card-meta text-decoration-none">
-                                <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
-                            </a>
-                            <div>
-                                <span class="badge @kind.GetDisplayColor()">
-                                    @kind.GetDisplayText()
-                                </span>
+                @foreach (var item in Model.Data)
+                {
+                    var kind = (CustomerKind)item.Kind;
+                    <article class="list-card">
+                        <div class="list-card-header">
+                            <div class="list-card-title-group">
+                                <div class="list-card-title">
+                                    @item.FullName
+                                </div>
+                                <a href="tel:@item.PhoneNumber" class="list-card-meta text-decoration-none">
+                                    <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
+                                </a>
+                                <div>
+                                    <span class="badge @kind.GetDisplayColor()">
+                                        @kind.GetDisplayText()
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="list-card-actions">
-                        <a class="btn-table-action" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <button type="button" class="btn-table-action danger btnDelete"
-                                data-id="@item.Id" data-name="@item.FullName" title="Xóa">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </article>
+                        <div class="list-card-actions">
+                            <a class="btn-table-action" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn-table-action danger btnDelete"
+                                    data-id="@item.Id" data-name="@item.FullName" title="Xóa">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </article>
+                }
             }
-        }
-        else
+            else
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-people"></i></div>
+                    <h5>Chưa có khách hàng nào</h5>
+                    <p>Thêm khách hàng để bắt đầu quản lý.</p>
+                </div>
+            }
+        </div>
+
+        @if (Model.Data.Pagination.TotalCount > 0)
         {
-            <div class="empty-state">
-                <div class="empty-icon"><i class="bi bi-people"></i></div>
-                <h5>Chưa có khách hàng nào</h5>
-                <p>Thêm khách hàng để bắt đầu quản lý.</p>
-            </div>
+            <partial name="_Pager" model="Model.Data.Pagination" />
         }
     </div>
-
-    @if (Model.Data.Pagination.TotalCount > 0)
-    {
-        <partial name="_Pager" model="Model.Data.Pagination" />
-    }
 </div>
 
 @section Scripts {
     <script type="module">
         import { confirm } from "/modules/modals.js";
-        (function() {
-            $('.btnDelete').on('click', async function(e) {
+        (function () {
+            $('.btnDelete').on('click', async function (e) {
                 const name = $(this).data('name');
                 const id = $(this).data('id');
                 const confirmed = await confirm('Xác nhận xóa', `Bạn có chắc chắn muốn xóa khách hàng <strong>${name}</strong>?`);

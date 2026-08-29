@@ -6,6 +6,7 @@ namespace NamEcommerce.Web.Models.Customers;
 public sealed class CustomerListSearchModel
 {
     public string? Keywords { get; set; }
+    public int? Kind { get; set; }
     public int? PageNumber { get; set; }
     public int? PageSize { get; set; }
 }

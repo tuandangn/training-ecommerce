@@ -39,11 +39,11 @@ public sealed class CustomerController : BaseAuthorizedController
         var model = await _mediator.Send(new GetCustomerListQuery
         {
             Keywords = searchModel?.Keywords,
+            Kind = searchModel?.Kind,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
 
-        ViewBag.Keywords = searchModel?.Keywords;
         return View(model);
     }
 

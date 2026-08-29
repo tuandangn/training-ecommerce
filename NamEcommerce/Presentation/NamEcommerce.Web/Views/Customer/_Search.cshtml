@@ -1,6 +1,7 @@
 @model NamEcommerce.Web.Models.Customers.CustomerListSearchModel
 
 <form asp-action="List" method="get" class="d-flex flex-wrap align-items-center gap-2">
+    <input type="hidden" asp-for="Kind" />
     <div class="search-input-group flex-grow-1 ui-min-w-200 ui-max-w-320">
         <div class="input-group">
             <span class="input-group-text bg-white border-end-0">

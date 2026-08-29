@@ -6,6 +6,7 @@ namespace NamEcommerce.Web.Contracts.Queries.Models.Customers;
 public sealed class GetCustomerListQuery : IRequest<CustomerListModel>
 {
     public string? Keywords { get; init; }
+    public int? Kind { get; set; }
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
     public bool IncludeSystem { get; init; }
