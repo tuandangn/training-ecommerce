@@ -20,37 +20,42 @@
     <div class="app-layout">
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
         <aside class="sidebar" id="appSidebar" aria-label="Điều hướng chính">
-            <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
-                <div class="sidebar-brand-icon">
-                    <i class="bi bi-bag-heart-fill"></i>
-                </div>
+            <div class="sidebar-brand">
+                <a class="text-decoration-none text-dark" asp-controller="Home" asp-action="Index">
+                    <div class="sidebar-brand-icon">
+                        <i class="bi bi-bag-heart-fill"></i>
+                    </div>
+                </a>
                 <div>
-                    <div class="sidebar-brand-text">@Information.Name</div>
-                    <div class="sidebar-brand-sub">Quản lý bán hàng</div>
+                    <a class="text-decoration-none text-dark" asp-controller="Home" asp-action="Index">
+                        <div class="sidebar-brand-text">@Information.Name</div>
+                        <div class="sidebar-brand-sub">Quản lý bán hàng</div>
+                    </a>
                     @if (currentUser is not null)
                     {
-                        <div class="sidebar-user-info">
-                            <span class="sidebar-user-name small">
-                                <i class="bi bi-person"></i>
-                                @currentUser.FullName
-                            </span>
+                        <div class="dropdown">
+                            <a class="btn btn-link ps-0 dropdown-toggle text-decoration-none text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="sidebar-user-name small">
+                                    <i class="bi bi-person"></i>
+                                    @currentUser.FullName
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                @await Component.InvokeAsync("AdminResetDataComponent")
+                                <li>
+                                    <a asp-controller="User" asp-action="Logout" class="dropdown-item">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                        Đăng xuất
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                     }
                 </div>
-            </a>
+            </div>
             <nav class="sidebar-nav" aria-label="Menu chính">
                 @await Component.InvokeAsync("MenuNavigationComponent")
             </nav>
-
-            @if (currentUser is not null)
-            {
-                @await Component.InvokeAsync("AdminResetDataComponent")
-                <div class="d-grid p-3 pb-3">
-                    <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary btn-sm">
-                        Đăng xuất
-                    </a>
-                </div>
-            }
         </aside>
         <div class="main-area">
             <header class="topbar">

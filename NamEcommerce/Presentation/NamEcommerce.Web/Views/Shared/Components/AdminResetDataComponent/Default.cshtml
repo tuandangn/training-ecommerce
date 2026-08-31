@@ -1,25 +1,26 @@
-<form asp-action="ResetData" asp-controller="Administration" method="post" asp-antiforgery="true" id="resetDataForm">
-
-    <div class="d-grid px-3">
-        <button type="submit" class="btn btn-danger btn-sm" disabled>
+<li>
+    <form asp-action="ResetData" asp-controller="Administration" method="post" asp-antiforgery="true" id="resetDataForm">
+        <button type="submit" class="dropdown-item text-danger fw-medium" disabled>
+            <i class="bi bi-arrow-repeat"></i>
             Reset dữ liệu
         </button>
-    </div>
-</form>
-<script type="module" defer>
-    import { confirm } from '/modules/modals.js';
+    </form>
+    <script type="module" defer>
+            import { confirm } from '/modules/modals.js';
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const resetDataForm = document.getElementById('resetDataForm');
-        if (resetDataForm) {
-            resetDataForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (await confirm('Phôi phục dữ liệu', 'Toàn bộ dữ liệu sẽ bị xóa. Bạn có muốn tiếp tục?')) {
-                    showPageLoading();
-                    resetDataForm.submit();
+            document.addEventListener('DOMContentLoaded', function() {
+                const resetDataForm = document.getElementById('resetDataForm');
+                if (resetDataForm) {
+                    resetDataForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        if (await confirm('Phôi phục dữ liệu', 'Toàn bộ dữ liệu sẽ bị xóa. Bạn có muốn tiếp tục?')) {
+                            showPageLoading();
+                            resetDataForm.submit();
+                        }
+                    });
+                    resetDataForm.querySelector('[type=submit]').disabled = false;
                 }
             });
-            resetDataForm.querySelector('[type=submit]').disabled = false;
-        }
-    });
-</script>
+    </script>
+</li>
+<li><hr class="dropdown-divider"></li>
