@@ -1,4 +1,5 @@
 ﻿import { customerSettings } from '/modules/Settings.js';
+import { customerInfo } from '/modules/CustomerInfo.js';
 
 class Customer {
     constructor({ id, name, phone, address, kind, isSystem }) {
@@ -11,6 +12,9 @@ class Customer {
     }
     get isDefaultCustomer() {
         return this.id == customerSettings.defaultCustomerId;
+    }
+    get isRetailWalkInCustomer() {
+        return customerInfo.isRetailWalkInCustomer(this.kind);
     }
 }
 
@@ -55,8 +59,9 @@ export default class CustomerPicker {
     }
 
     #bindEvents() {
-        this.input.addEventListener('input', (e) => this.#onInput(e));
-        this.input.addEventListener('focus', (e) => this.#onInput(e));
+        const onInput = debounce(e => this.#onInput(e), 300);
+        this.input.addEventListener('input', onInput);
+        this.input.addEventListener('focus', onInput);
         this.input.addEventListener('keydown', (e) => this.#onKeydown(e));
         this.clearBtn.addEventListener('click', () => this.removeCustomer());
 
@@ -146,13 +151,21 @@ export default class CustomerPicker {
             const customer = new Customer(data);
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'list-group-item list-group-item-action py-2';
+            btn.className = 'list-group-item list-group-item-action';
+            if (customer.id == customerSettings.defaultCustomerId) {
+                btn.classList.add('py-3');
+                btn.classList.add('bg-light');
+            } else {
+                btn.classList.add('py-2');
+            }
             btn.dataset.index = index;
             btn.innerHTML = `
-                <div><span class="fw-bold">${this.#highlight(customer.name, query)}</span> ${customer.phone ? `<span class="text-muted">- ${customer.phone}</span>` : ''}</div>
+                <div><span class="fw-bold ${customer.isRetailWalkInCustomer ? 'text-muted' : ''}">${this.#highlight(customer.name, query)}</span> ${customer.phone && customer.id != customerSettings.defaultCustomerId ? `<span class="text-muted">- ${customer.phone}</span>` : ''}</div>
                 <div class="text-muted">
-                    ${customer.address ? `<div>${customer.address}</div>` : ''}
-                </div>`;
+                    ${customer.address && customer.id != customerSettings.defaultCustomerId ? `<div>${customer.address}</div>` : ''}
+                </div>
+                ${customer.isRetailWalkInCustomer && customer.id != customerSettings.defaultCustomerId ? `<div class="fw-normal text-muted text-italic small">Khách lẻ</div>` : ''}
+`;
 
             btn.addEventListener('click', () => this.selectCustomer(customer));
 
@@ -195,8 +208,22 @@ export default class CustomerPicker {
 
     displayCustomer(customer) {
         this.displayInfo.querySelector('.name-field').textContent = customer.name;
-        this.displayInfo.querySelector('.phone-field').textContent = customer.phone;
-        this.displayInfo.querySelector('.address-field').textContent = customer.address;
+        if (customer.id != customerSettings.defaultCustomerId) {
+            this.displayInfo.querySelector('.phone-field').textContent = customer.phone;
+            this.displayInfo.querySelector('.address-field').textContent = customer.address;
+        } else {
+            this.displayInfo.querySelector('.phone-field').textContent = '';
+            this.displayInfo.querySelector('.address-field').textContent = '';
+        }
+
+        const kindField = this.displayInfo.querySelector('.kind-field');
+        if (customer.isRetailWalkInCustomer && customer.id != customerSettings.defaultCustomerId) {
+            kindField.textContent = 'Khách lẻ';
+            kindField.classList.remove('d-none');
+        } else {
+            kindField.textContent = '';
+            kindField.classList.add('d-none');
+        }
 
         this.inputGroup.classList.add('d-none');
         this.displayInfo.classList.remove('d-none');
@@ -242,7 +269,10 @@ export default class CustomerPicker {
         <div class="list-group list-group-flush position-absolute w-100 shadow-lg mt-1 customerSuggestion" style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;" role="listbox"></div>
         <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedCustomerInfo" role="status">
             <div class="flex-grow-1 overflow-hidden">
-                <div class="fw-bold text-truncate name-field"></div>
+                <div class="fw-bold text-truncate d-flex align-items-center gap-1">
+                    <span class="name-field"></span>
+                    <span class="kind-field fw-normal text-muted text-italic small"></span>
+                </div>
                 <div class="small text-muted phone-field"></div>
                 <div class="small text-muted text-truncate address-field"></div>
             </div>
