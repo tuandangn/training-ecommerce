@@ -94,8 +94,8 @@ public sealed class CustomerRefundManager(
     }
 
     public async Task<IPagedDataDto<CustomerRefundDto>> GetListAsync(
-        Guid? customerId = null, int? status = null, string? keywords = null,
-        int pageIndex = 0, int pageSize = 15)
+        int pageIndex, int pageSize, Guid? customerId = null,
+        int? status = null, string? keywords = null)
     {
         var query = refundReader.DataSource;
 

@@ -36,9 +36,6 @@ public sealed class CustomerRefundController : BaseAuthorizedController
         return View(model);
     }
 
-    /// <summary>
-    /// Xác nhận đã hoàn tiền cho khách (Pending → Completed). POST → JSON response.
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Complete(Guid id, [FromBody] CompleteRefundModel form)
     {
@@ -55,9 +52,6 @@ public sealed class CustomerRefundController : BaseAuthorizedController
         return Json(new { success = true });
     }
 
-    /// <summary>
-    /// Huỷ phiếu hoàn tiền (Pending → Cancelled). POST → redirect.
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Cancel(Guid id)
     {

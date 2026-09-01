@@ -1,3 +1,5 @@
+using NamEcommerce.Web.Contracts.Models.Common;
+
 namespace NamEcommerce.Web.Contracts.Models.Debts;
 
 [Serializable]
@@ -22,10 +24,7 @@ public sealed class CustomerRefundModel
 [Serializable]
 public sealed class CustomerRefundListModel
 {
-    public IList<CustomerRefundModel> Items { get; set; } = [];
-    public int TotalCount { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
+    public required IPagedDataModel<CustomerRefundModel> Items { get; set; }
 
     public Guid? FilterCustomerId { get; set; }
     public int? FilterStatus { get; set; }

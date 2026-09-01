@@ -15,7 +15,7 @@ $(function () {
         }
         showPageLoading();
         form.submit();
-        getOrCreateDisabledFieldset(form);
+        disableForm(form);
     });
 
     // $(window).on('beforeunload', function (e) {
@@ -23,20 +23,6 @@ $(function () {
     //         return;
     //     showPageLoading();
     // });
-
-    function getOrCreateDisabledFieldset(form) {
-        let fieldset = form.querySelector('fieldset');
-        if (!fieldset) {
-            fieldset = document.createElement('fieldset');
-            while (form.firstChild) {
-                fieldset.appendChild(form.firstChild);
-            }
-            form.appendChild(fieldset);
-        }
-        fieldset.className = form.className;
-        form.className = '';
-        fieldset.disabled = true;
-    }
 
     $('.alert-dismissible').each(function () {
         let time = 3000;
@@ -57,6 +43,20 @@ $(function () {
         el.style.width = width.endsWith('%') ? width : `${width}%`;
     });
 })
+
+function disableForm(form) {
+    let fieldset = form.querySelector('fieldset');
+    if (!fieldset) {
+        fieldset = document.createElement('fieldset');
+        while (form.firstChild) {
+            fieldset.appendChild(form.firstChild);
+        }
+        form.appendChild(fieldset);
+    }
+    fieldset.className = form.className;
+    form.className = '';
+    fieldset.disabled = true;
+}
 
 function showPageLoading() {
     const mask = document.getElementById('loading-mask');

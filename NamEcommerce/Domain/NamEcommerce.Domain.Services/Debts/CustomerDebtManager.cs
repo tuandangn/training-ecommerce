@@ -264,9 +264,9 @@ public sealed class CustomerDebtManager(
             .Select(g => new
             {
                 CustomerId = g.Key,
-                CustomerName = g.First().CustomerName,
-                CustomerPhone = g.First().CustomerPhone,
-                CustomerAddress = g.First().CustomerAddress,
+                g.First().CustomerName,
+                g.First().CustomerPhone,
+                g.First().CustomerAddress,
                 TotalDebtAmount = g.Sum(d => d.TotalAmount),
                 TotalPaidAmount = g.Sum(d => d.PaidAmount),
                 TotalRemainingAmount = g.Sum(d => d.RemainingAmount),
