@@ -110,7 +110,12 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         query = query.OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Name);
 
-        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<UnitMeasurementDto>(), pageIndex, pageSize, 0);
+
         var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)

@@ -491,10 +491,15 @@ public sealed class VendorDebtManager(
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorDebtDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(d => d.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(d => d.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<VendorPaymentDto>> GetPaymentsAsync(
@@ -506,10 +511,15 @@ public sealed class VendorDebtManager(
 
         query = query.OrderByDescending(p => p.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorPaymentDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(p => p.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(p => p.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 
     private async Task<IList<VendorCreditNoteAllocationDto>> GetCreditNoteAllocationsByDebtIdAsync(Guid debtId)

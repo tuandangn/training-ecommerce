@@ -141,10 +141,10 @@ public sealed class VendorLedgerManager(
         if (from.HasValue) query = query.Where(e => e.OccurredAtUtc >= from.Value);
         if (to.HasValue) query = query.Where(e => e.OccurredAtUtc <= to.Value);
 
-        int? total = pageIndex == 0 && pageSize == int.MaxValue
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
             ? null : await query.CountAsync().ConfigureAwait(false);
 
-        if (total.HasValue && total == 0)
+        if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(Enumerable.Empty<VendorLedgerStatementEntryDto>(), 0, pageSize, 0);
 
         query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
@@ -172,7 +172,7 @@ public sealed class VendorLedgerManager(
             });
         }
 
-        return PagedDataDto.Create(result, pageIndex, pageSize, total);
+        return PagedDataDto.Create(result, pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<VendorAccountBalanceDto>> GetBalancesAsync(

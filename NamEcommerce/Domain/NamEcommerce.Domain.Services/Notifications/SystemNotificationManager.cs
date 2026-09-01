@@ -59,7 +59,12 @@ public sealed class SystemNotificationManager(
                 : query.Where(notification => !readByNotificationId.Keys.Contains(notification.Id));
         }
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = dto.PageIndex == 0 && dto.PageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<SystemNotificationDto>(), dto.PageIndex, dto.PageSize, 0);
+
         var items = (await query
             .OrderByDescending(notification => notification.CreatedOnUtc)
             .Skip(dto.PageIndex * dto.PageSize)
@@ -68,7 +73,7 @@ public sealed class SystemNotificationManager(
             .Select(notification => ToDto(notification, readByNotificationId.GetValueOrDefault(notification.Id)))
             .ToList();
 
-        return PagedDataDto.Create(items, dto.PageIndex, dto.PageSize, total);
+        return PagedDataDto.Create(items, dto.PageIndex, dto.PageSize, totalCount);
     }
 
     public async Task<int> CountUnreadAsync(Guid userId, IReadOnlyCollection<string> userPermissions)

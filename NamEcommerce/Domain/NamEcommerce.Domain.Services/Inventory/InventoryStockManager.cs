@@ -220,7 +220,11 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
                 || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
         }
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return (0, new List<InventoryStockDto>());
 
         var items = await query
             .OrderBy(x => x.p.Name)
@@ -241,7 +245,7 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
             })
             .ToListAsync().ConfigureAwait(false);
 
-        return (total, items);
+        return (totalCount ?? items.Count, items);
     }
 
     public async Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId)
@@ -562,7 +566,11 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
                     join p in productQuery on l.ProductId equals p.Id
                     select new { l, p };
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return (0, new List<StockMovementLogDto>());
 
         var items = await query
             .OrderByDescending(x => x.l.CreatedOnUtc)
@@ -581,7 +589,7 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
             })
             .ToListAsync().ConfigureAwait(false);
 
-        return (total, items);
+        return (totalCount ?? items.Count, items);
     }
 
     public async Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockUpToAsync(

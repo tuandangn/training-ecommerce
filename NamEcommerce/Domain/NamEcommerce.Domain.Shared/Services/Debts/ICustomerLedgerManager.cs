@@ -21,10 +21,10 @@ public interface ICustomerLedgerManager
 
     Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(
         Guid customerId,
-        DateTime? from = null,
-        DateTime? to = null,
         int pageIndex = 0,
-        int pageSize = 30);
+        int pageSize = 30,
+        DateTime? from = null,
+        DateTime? to = null);
 
     Task<IPagedDataDto<CustomerAccountBalanceDto>> GetBalancesAsync(
         string? keywords = null,

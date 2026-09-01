@@ -1,7 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
-using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
@@ -9,10 +13,7 @@ using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
-using NamEcommerce.Domain.Shared.Common;
-using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -382,10 +383,15 @@ public sealed class CustomerDebtManager(
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerDebtDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<CustomerPaymentDto>> GetPaymentsAsync(int pageIndex = 0, int pageSize = 15, Guid? customerId = null, Guid? orderId = null)
@@ -398,11 +404,16 @@ public sealed class CustomerDebtManager(
 
         query = query.OrderByDescending(p => p.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerPaymentDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)

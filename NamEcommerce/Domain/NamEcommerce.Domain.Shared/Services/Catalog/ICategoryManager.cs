@@ -8,7 +8,7 @@ public interface ICategoryManager : INameExistCheckingService
 {
     Task<CategoryDto?> GetCategoryByIdAsync(Guid id);
 
-    Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(string? keywords, int pageIndex, int pageSize);
+    Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(int pageIndex, int pageSize, string? keywords);
 
     Task<CreateCategoryResultDto> CreateCategoryAsync(CreateCategoryDto dto);
 

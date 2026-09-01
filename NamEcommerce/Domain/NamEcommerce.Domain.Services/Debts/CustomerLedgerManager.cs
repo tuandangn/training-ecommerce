@@ -3,6 +3,7 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
@@ -201,12 +202,7 @@ public sealed class CustomerLedgerManager(
         return balance;
     }
 
-    public async Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(
-        Guid customerId,
-        DateTime? from = null,
-        DateTime? to = null,
-        int pageIndex = 0,
-        int pageSize = 30)
+    public async Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(Guid customerId, int pageIndex = 0, int pageSize = 30, DateTime? from = null, DateTime? to = null)
     {
         var query = entryReader.DataSource.Where(e => e.CustomerId == customerId);
 
@@ -215,7 +211,12 @@ public sealed class CustomerLedgerManager(
 
         query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerLedgerStatementEntryDto>(), pageIndex, pageSize, 0); 
+        
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
@@ -247,7 +248,7 @@ public sealed class CustomerLedgerManager(
             });
         }
 
-        return PagedDataDto.Create(result, pageIndex, pageSize, total);
+        return PagedDataDto.Create(result, pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<CustomerAccountBalanceDto>> GetBalancesAsync(

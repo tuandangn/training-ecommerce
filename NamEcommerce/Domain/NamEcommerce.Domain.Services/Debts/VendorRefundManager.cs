@@ -109,13 +109,18 @@ public sealed class VendorRefundManager(
 
         query = query.OrderByDescending(r => r.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorRefundDto>(), pageIndex, pageSize, 0);
+
         var items = (await query.Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false))
             .Select(MapToDto)
             .ToList();
 
-        return PagedDataDto.Create(items, pageIndex, pageSize, total);
+        return PagedDataDto.Create(items, pageIndex, pageSize, totalCount);
     }
 
     private static VendorRefundDto MapToDto(VendorRefund r) => new()

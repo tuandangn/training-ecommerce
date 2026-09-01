@@ -191,13 +191,18 @@ public sealed class GoodsReceiptManager(
         if (toDateUtc.HasValue)
             query = query.Where(goodsReceipt => goodsReceipt.ReceivedOnUtc <= toDateUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<GoodsReceiptDto>(), pageIndex, pageSize, 0);
+
         var data = await query
             .OrderByDescending(o => o.CreatedOnUtc)
             .Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        var pagedData = PagedDataDto.Create(data.Select(goodsReceipt => goodsReceipt.ToDto()), pageIndex, pageSize, total);
+        var pagedData = PagedDataDto.Create(data.Select(goodsReceipt => goodsReceipt.ToDto()), pageIndex, pageSize, totalCount);
         return pagedData;
     }
 

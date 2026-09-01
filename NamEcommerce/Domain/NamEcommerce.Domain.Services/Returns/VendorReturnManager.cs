@@ -9,6 +9,8 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
+using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
@@ -260,7 +262,12 @@ public sealed class VendorReturnManager(
         if (status.HasValue)
             query = query.Where(r => (int)r.Status == status.Value);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return (0, new List<VendorReturnDto>()); 
+        
         var items = (await query
             .OrderByDescending(r => r.CreatedOnUtc)
             .Skip(pageIndex * pageSize)
@@ -269,7 +276,7 @@ public sealed class VendorReturnManager(
             .Select(r => r.ToDto())
             .ToList();
 
-        return (total, items);
+        return (totalCount ?? items.Count, items);
     }
 
     public async Task<decimal> GetTotalConfirmedReturnQuantityAsync(

@@ -136,7 +136,12 @@ public sealed class ProductManager : IProductManager
 
         query = query.OrderBy(c => c.Name);
 
-        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<ProductDto>(), pageIndex, pageSize, 0);
+
         var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
