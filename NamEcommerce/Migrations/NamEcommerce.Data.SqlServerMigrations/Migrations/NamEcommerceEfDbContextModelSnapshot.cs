@@ -1715,6 +1715,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime>("PaidOnUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("PaymentIntentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
 
@@ -4365,6 +4368,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 

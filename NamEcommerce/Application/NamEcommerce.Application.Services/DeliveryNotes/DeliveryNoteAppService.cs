@@ -553,9 +553,6 @@ public sealed class DeliveryNoteAppService(
 
     public async Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId, bool includeCancelled = false)
     {
-        // For simplicity, we use GetListAsync and filter it down.
-        // In a real app we might add a specific domain query.
-        // Assuming page 0 to MAX gets enough for a single order's notes.
         var paged = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
         return paged.Where(d => d.OrderId == orderId)
             .Where(d => includeCancelled || d.Status != DeliveryNoteStatus.Cancelled)

@@ -42,6 +42,8 @@ public sealed class OrderQuickCreateModel
     public string? BankAccountLabel { get; set; }
     [ValidateNever]
     public bool ManualBankTransferConfirmEnabled { get; set; }
+    [ValidateNever]
+    public bool CanAllowRetailWalkInCustomerUnpaid { get; set; }
 }
 
 [Serializable]

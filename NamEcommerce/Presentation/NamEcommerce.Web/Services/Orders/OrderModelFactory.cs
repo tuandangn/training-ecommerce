@@ -1,7 +1,4 @@
-﻿using Azure.Core;
-using DocumentFormat.OpenXml.Spreadsheet;
-using MediatR;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using MediatR;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
@@ -16,6 +13,7 @@ using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -26,7 +24,6 @@ using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -38,6 +35,7 @@ using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Web.Services.Common;
 
 namespace NamEcommerce.Web.Services.Orders;
 
@@ -55,7 +53,9 @@ public sealed class OrderModelFactory(
     IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
     BankTransferPaymentSettings bankTransferPaymentSettings,
     ICustomerLedgerManager customerLedgerManager,
-    IBankTransferReceivingAccountResolver receivingAccountResolver) : IOrderModelFactory
+    ICurrentUserService currentUserService,
+    IBankTransferReceivingAccountResolver receivingAccountResolver,
+    ICachedValuesService cachedValuesService) : IOrderModelFactory
 {
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
@@ -144,7 +144,8 @@ public sealed class OrderModelFactory(
             PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
             CreatedOn = order.CreatedOn,
-            PlacedOn = order.CreatedOn
+            PlacedOn = order.CreatedOn,
+            CanAllowUnpaid = order.CustomerId != cachedValuesService.DefaultCustomerId && await currentUserService.IsAdminAsync().ConfigureAwait(false)
         };
         var orderProductIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
         var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
@@ -320,6 +321,7 @@ public sealed class OrderModelFactory(
             ? string.Empty
             : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
         model.ManualBankTransferConfirmEnabled = bankTransferPaymentSettings.Verification.AllowManualConfirm;
+        model.CanAllowRetailWalkInCustomerUnpaid = await currentUserService.IsAdminAsync().ConfigureAwait(false);
 
         if (model.CustomerId.HasValue)
         {

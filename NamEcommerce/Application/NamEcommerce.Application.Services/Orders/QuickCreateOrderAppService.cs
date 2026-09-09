@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Inventory;
@@ -11,7 +12,9 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -31,13 +34,15 @@ public sealed class QuickCreateOrderAppService(
     IEntityDataReader<Product> productReader,
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<Warehouse> warehouseReader,
-    ICurrentUserAccessor currentUserAccessor) : IQuickCreateOrderAppService
+    IOrderFulfillmentScheduleAppService orderFulfillmentScheduleAppService,
+    ICurrentUserAccessor currentUserAccessor,
+    ICurrentUserService currentUserService) : IQuickCreateOrderAppService
 {
     public async Task<QuickCreateOrderResultAppDto> QuickCreateOrderAsync(QuickCreateOrderAppDto dto)
     {
-        var validateResult = await ValidateAsync(dto).ConfigureAwait(false);
-        if (!validateResult.success)
-            return QuickCreateOrderResultAppDto.CreateError(validateResult.errorMessage);
+        var (success, errorMessage) = await ValidateAsync(dto).ConfigureAwait(false);
+        if (!success)
+            return QuickCreateOrderResultAppDto.CreateError(errorMessage);
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
@@ -60,7 +65,8 @@ public sealed class QuickCreateOrderAppService(
             {
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice
+                UnitPrice = item.UnitPrice,
+                WarehouseId = item.WarehouseId
             });
         }
         var orderResult = await orderAppService.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
@@ -71,12 +77,10 @@ public sealed class QuickCreateOrderAppService(
         if (createdOrder is null)
             return QuickCreateOrderResultAppDto.CreateError("Error.OrderIsNotFound");
 
-        DeliveryNoteDto? deliveryNote = null;
-        if (dto.DeliveryNow)
+        if (dto.DeliveryNow && createdOrder.CanProcess)
         {
-            deliveryNote = await CreateDeliveryNoteAsync(dto, createdOrder.Id, createdOrder.CanProcess).ConfigureAwait(false);
-            if (createdOrder.CanProcess)
-                await orderManager.RequestDeliveryAsync(createdOrder.Id, deliveryNote.Id, DateTime.UtcNow).ConfigureAwait(false);
+            var deliveryNote = await CreateDeliveryNoteAsync(createdOrder.Id, true).ConfigureAwait(false);
+            await orderManager.RequestDeliveryAsync(createdOrder.Id, deliveryNote.Id, DateTime.UtcNow).ConfigureAwait(false);
         }
         return new QuickCreateOrderResultAppDto
         {
@@ -136,6 +140,7 @@ public sealed class QuickCreateOrderAppService(
             Amount = dto.PaidAmount,
             PaymentMethod = dto.PaymentIntentId.HasValue ? (int)PaymentMethod.BankTransfer : (int)PaymentMethod.Cash,
             PaymentType = deliveryNoteId.HasValue ? (int)PaymentType.DebtPayment : (int)PaymentType.Deposit,
+            PaymentIntentId = dto.PaymentIntentId,
             PaidOnUtc = DateTime.UtcNow,
             RecordedByUserId = currentUser!.Id,
             Note = $"Payment for order {order.Code}"
@@ -150,6 +155,56 @@ public sealed class QuickCreateOrderAppService(
         }
 
         return CommonActionResultDto.CreateSuccess();
+    }
+
+    public async Task<CommonActionResultDto> ProcessOrderWithoutPaymentAsync(Guid orderId)
+    {
+        if (!await currentUserService.IsAdminAsync())
+            return CommonActionResultDto.CreateError("Error.Unauthorized");
+
+        var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        await orderManager.ProcessOrderWithoutPayment(order.Id).ConfigureAwait(false);
+
+        await ProcessOrderAsync(order.Id).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
+    }
+
+    public async Task ProcessOrderAsync(Guid orderId)
+    {
+        var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        if (!order.CanProcess)
+            throw new OrderCannotProcessException();
+
+        var deliveryNow = order.PayOffRequired;
+
+        if (!deliveryNow && order.IsRetailWalkInCustomer)
+        {
+            await orderFulfillmentScheduleAppService.CreateDefaultSchedulesForOrderAsync(order.Id, null).ConfigureAwait(false);
+            return;
+        }
+
+        if (!deliveryNow)
+            return;
+
+        if (order.Items.Any(item => item.IsDelivered))
+            throw new OrderCannotProcessException();
+
+        if (order.Items.Any(item => !item.WarehouseId.HasValue))
+            throw new OrderCannotProcessException();
+
+        var deliveryNote = await CreateDeliveryNoteAsync(orderId, false).ConfigureAwait(false);
+
+        await deliveryNoteManager.MarkAsOrderIsPaid(deliveryNote.Id).ConfigureAwait(false);
+        await deliveryNoteManager.ConfirmAsync(deliveryNote.Id).ConfigureAwait(false);
+
+        await orderManager.RequestDeliveryAsync(order.Id, deliveryNote.Id, DateTime.UtcNow).ConfigureAwait(false);
     }
 
     private async Task<(bool success, string? errorMessage)> ValidateAsync(QuickCreateOrderAppDto dto)
@@ -194,14 +249,11 @@ public sealed class QuickCreateOrderAppService(
         return (true, string.Empty);
     }
 
-    private async Task<DeliveryNoteDto> CreateDeliveryNoteAsync(QuickCreateOrderAppDto dto, Guid orderId, bool confirmDeliveryNote)
+    private async Task<DeliveryNoteDto> CreateDeliveryNoteAsync(Guid orderId, bool confirmDeliveryNote)
     {
         var order = await orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
             throw new InvalidOperationException("Error.Order.QuickCreateFailed");
-
-        if (order.Items.Count != dto.Items.Count)
-            throw new InvalidOperationException("Error.OrderItemMismatch");
 
         var deliveryNote = await deliveryNoteManager.CreateFromOrderAsync(new CreateDeliveryNoteDto
         {
@@ -210,11 +262,11 @@ public sealed class QuickCreateOrderAppService(
             ShippingPhoneNumber = order.ShippingPhoneNumber,
             ShowPrice = true,
             Surcharge = 0,
-            AmountToCollect = order.TotalAmount,
+            AmountToCollect = Math.Max(0, order.TotalAmount - order.PaidAmount),
             Items = order.Items.Select((item, index) => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = item.Id,
-                WarehouseId = dto.Items[index].WarehouseId!.Value,
+                WarehouseId = item.WarehouseId!.Value,
                 Quantity = item.Quantity
             }).ToList(),
             Note = order.Note

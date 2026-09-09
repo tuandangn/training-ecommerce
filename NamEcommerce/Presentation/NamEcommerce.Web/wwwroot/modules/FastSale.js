@@ -205,8 +205,8 @@ class FastSale {
     #prepareSubmitFormData(formData) {
         if (this.fulfillmentMode == this.#deliveryNow) {
             formData.set('deliveryNow', true);
-            formData.set(this.shippingAddress.name, this.shippingAddress.value || this.selectedCustomer.address);
-            formData.set(this.shippingPhoneNumber.name, this.shippingPhoneNumber.value || this.selectedCustomer.phone);
+            // formData.set(this.shippingAddress.name, this.shippingAddress.value || this.selectedCustomer.address);
+            // formData.set(this.shippingPhoneNumber.name, this.shippingPhoneNumber.value || this.selectedCustomer.phone);
         }
     }
 
@@ -335,6 +335,7 @@ class FastSale {
         }
 
         this.discountInput.disabled = subTotal == 0;
+        this.discountInput.closest('.order-summary-row').querySelector('i')?.classList.toggle('d-none', subTotal == 0);
 
         this.payNowBtn.disabled = subTotal == 0 && total == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
@@ -358,13 +359,13 @@ class FastSale {
 
         const showShippingInfo = this.selectedCustomer != null && this.cart.length;
         this.shippingAddress.closest('.ship-info')?.classList.toggle('d-none', !showShippingInfo);
-        if (this.fulfillmentMode == this.#deliveryNow) {
-            this.shippingAddress.removeAttribute('data-val-required');
-            this.shippingPhoneNumber.removeAttribute('data-val-required');
-        } else {
-            this.shippingAddress.setAttribute('data-val-required', this.#shippingAddressRequiredMsg);
-            this.shippingPhoneNumber.setAttribute('data-val-required', this.#shippingPhoneNumberRequiredMsg);
-        }
+        // if (this.fulfillmentMode == this.#deliveryNow) {
+        //     this.shippingAddress.removeAttribute('data-val-required');
+        //     this.shippingPhoneNumber.removeAttribute('data-val-required');
+        // } else {
+        //     this.shippingAddress.setAttribute('data-val-required', this.#shippingAddressRequiredMsg);
+        //     this.shippingPhoneNumber.setAttribute('data-val-required', this.#shippingPhoneNumberRequiredMsg);
+        // }
 
         reparseForm(this.root);
         document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning =>
@@ -616,17 +617,32 @@ class FastSale {
             subTotal: orderInfo.subTotal,
             discount: orderInfo.discount,
             canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
+            allowSkipPayment: this.selectedCustomer.id != customerSettings.defaultCustomerId
+                || this.fulfillmentMode != this.#deliveryNow,
             customer: {
                 id: this.selectedCustomer.id,
                 isRetailWalkIn: this.isRetailWalkInCustomer()
             }
+        }).then(result => {
+            this.#unmarkTryPreventUserNavigate();
+            unmarkDeleteOrderFn();
+            return result;
         });
+        if (paymentResult.skipped) {
+            showPageLoading();
+            const skipPaymentResult = await this.postJson(`/Order/ProcessOrderWithoutPayment/${orderInfo.orderId}`);
+            if (!skipPaymentResult.success) {
+                this.showAlert('warning', 'Phát sinh lỗi khi bỏ qua thanh toán');
+            }
+            this.#redirectToOrderPage(orderInfo.orderId);
+            return;
+        }
+
         if (!paymentResult.success) {
             // modal is closed by user
             showPageLoading();
-            this.#unmarkTryPreventUserNavigate();
-            unmarkDeleteOrderFn();
-            this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán');
+            if (this.isRetailWalkInCustomer())
+                this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán');
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
@@ -640,7 +656,6 @@ class FastSale {
         const completeResult = await this.postJson('/Order/CompleteQuickCreateOrderPayment', completePaymentPayload);
         if (!completeResult.success) {
             this.showAlert('warning', 'Phát sinh lỗi khi hoàn thành đơn');
-            this.#unmarkTryPreventUserNavigate();
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
@@ -649,8 +664,6 @@ class FastSale {
         } else {
             this.showAlert('success', `Đơn hàng đã được tạm ứng ${this.formatMoneyWithSymbol(paymentResult.amount)}`);
         }
-        this.#unmarkTryPreventUserNavigate();;
-        unmarkDeleteOrderFn();
         this.#redirectToOrderPage(orderInfo.orderId);
     }
     #redirectToOrderPage(orderId) {
@@ -831,8 +844,8 @@ class FastSale {
         return DecimalFields.formatQuantity(value, decimals);
     }
 
-    showAlert(type, message) {
-        window.NotificationCenter[type](message, 'warning');
+    showAlert(type, message, title) {
+        window.NotificationCenter[type](message, { title });
     }
 
     escape(value) {
@@ -850,6 +863,7 @@ class PaymentProcess {
     #discount;
     #amount;
     #canChangePaidAmount;
+    #allowSkipPayment;
 
     #orderId;
     #orderCode;
@@ -892,7 +906,8 @@ class PaymentProcess {
         this.paymentDiscount = this.form.querySelector('#paymentDiscount');
         this.paymentTotal = this.form.querySelector('#paymentTotal');
         this.paymentTotalHint = this.form.querySelector('#paymentTotalHint');
-        this.skipPaymentBtn = this.form.querySelector('#paymentSkip');
+        this.cancelPaymentBtn = this.form.querySelector('#paymentSkip');
+        this.continueWithoutPaymentBtn = this.form.querySelector('#continueWithoutPayment');
         this.paidAmountInput = this.form.querySelector('#paidAmount');
         this.debtAmount = this.form.querySelector('#debtAmount');
         this.paymentProcessContainer = this.form.querySelector('#paymentProcessContainer');
@@ -935,9 +950,8 @@ class PaymentProcess {
     }
 
     async startPayment({ orderId, orderCode,
-        subTotal, discount, total,
-        canChangePaidAmount, customer,
-        deliveryWaiting
+        subTotal, discount, total, customer,
+        deliveryWaiting, canChangePaidAmount, allowSkipPayment
     }) {
         if (subTotal <= 0)
             throw new Error('Số tiền thanh toán không đúng');
@@ -950,6 +964,7 @@ class PaymentProcess {
         this.#discount = discount || 0;
 
         this.#canChangePaidAmount = canChangePaidAmount;
+        this.#allowSkipPayment = allowSkipPayment;
 
         this.#resetPaymentIntent();
         this.#saleInputVersion = 0;
@@ -1038,16 +1053,29 @@ class PaymentProcess {
         const onCloseModal = async () => {
             this.root.classList.add('d-none');
             let confirmed;
-            if (this.#reference.isRetailWalkInCustomer()) {
+            if (this.#customer.isRetailWalkIn) {
                 confirmed = await confirm('Bỏ qua thanh toán', 'Đơn hàng chưa thể hoàn thành nếu bạn chưa thanh toán, bạn có muốn tiếp tục?');
             } else {
-                confirmed = await confirm('Bỏ qua thanh toán', 'Xác nhận sẽ thanh toán đơn hàng sau?');
+                confirmed = await confirm('Bỏ qua thanh toán', 'Sẽ thanh toán đơn hàng sau?');
             }
             if (!confirmed) {
                 this.root.classList.remove('d-none');
                 return;
             }
             this.modal.hide();
+        };
+
+        const onSkipPayment = async () => {
+            if (!this.#allowSkipPayment)
+                return;
+
+            this.root.classList.add('d-none');
+            const confirmed = await confirm('Cho phép xử lý đơn', 'Tiếp tục xử lý đơn hàng, khách hàng sẽ thanh toán sau');
+            if (!confirmed) {
+                this.root.classList.remove('d-none');
+                return;
+            }
+            this.#skipPayment();
         };
 
         const setCashPayment = () => this.#setPaymentMethod(this.#cashMethod);
@@ -1064,15 +1092,16 @@ class PaymentProcess {
             this.form.addEventListener('submit', onPaymentSubmit);
             this.cashMethod.addEventListener('click', setCashPayment);
             this.bankMethod.addEventListener('click', setBankPayment);
-            this.skipPaymentBtn.addEventListener('click', onCloseModal);
+            this.cancelPaymentBtn.addEventListener('click', onCloseModal);
+            if (this.continueWithoutPaymentBtn) {
+                this.continueWithoutPaymentBtn.addEventListener('click', onSkipPayment);
+            }
 
             this.root.addEventListener('show.bs.modal', function onShow() {
-                self.root.removeEventListener('show.bs.modal', onShow);
                 self.render();
-            });
+            }, { once: true });
 
             this.root.addEventListener('hidden.bs.modal', function onHidden(e) {
-                self.root.removeEventListener('hidden.bs.modal', onHidden);
                 self.paidAmountInput.removeEventListener('input', onAmountChanged);
                 self.paidAmountInput.removeEventListener('change', onAmountChanged.flush);
                 self.createQr.removeEventListener('click', createQr);
@@ -1080,7 +1109,10 @@ class PaymentProcess {
                 self.form.removeEventListener('submit', this.onPaymentSubmit);
                 self.cashMethod.removeEventListener('click', setCashPayment);
                 self.bankMethod.removeEventListener('click', setBankPayment);
-                self.skipPaymentBtn.removeEventListener('click', onCloseModal);
+                self.cancelPaymentBtn.removeEventListener('click', onCloseModal);
+                if (this.continueWithoutPaymentBtn) {
+                    this.continueWithoutPaymentBtn.removeEventListener('click', onSkipPayment);
+                }
                 self.root.classList.remove('d-none');
                 self.debtAmount.classList.add('d-none');
 
@@ -1090,7 +1122,10 @@ class PaymentProcess {
 
                 self.#_promiseResolve = null;
                 self.#_promiseReject = null;
-            });
+            }, { once: true });
+        }).then(result => {
+            this.modal.hide();
+            return result;
         });
 
         this.modal.show();
@@ -1113,8 +1148,15 @@ class PaymentProcess {
                 success: false
             });
         }
+    }
+    #skipPayment() {
+        if (!this.#_promiseResolve) {
+            throw new Error('Thao tác không hợp lệ');
+        }
 
-        this.modal.hide();
+        this.#_promiseResolve({
+            skipped: true
+        });
     }
 
     async render() {
@@ -1168,6 +1210,9 @@ class PaymentProcess {
         this.moneyReceivedBtn.classList.toggle('d-none', total == 0);
         this.moneyReceivedBtn.disabled = this.isBank() && (!this.#paymentIntent || this.#paymentIntentConfirmed
             || !this.#config.manualConfirmEnabled || !this.#isIntentPending(this.#paymentIntent));
+
+        if (this.continueWithoutPaymentBtn)
+            this.continueWithoutPaymentBtn.classList.toggle('d-none', !this.#customer.isRetailWalkIn || total == 0 || !this.#allowSkipPayment);
     }
 
     #calculateTotal() {

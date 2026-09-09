@@ -712,7 +712,7 @@ public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository
         if (shippingAmount <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.ShippingAmountIsInvalid");
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 

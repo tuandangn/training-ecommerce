@@ -102,6 +102,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public Guid? WarehouseId { get; set; }
 
         public (bool valid, string? errorMessage) Validate()
         {

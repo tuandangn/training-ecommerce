@@ -5,7 +5,6 @@ using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
@@ -14,7 +13,6 @@ using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
-using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -28,8 +26,7 @@ public sealed class CustomerDebtManager(
     IRepository<Customer> customerRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     ICustomerLedgerManager customerLedgerManager,
-    EntityCodeGenerator entityCodeGenerator,
-    IOrderManager orderManager) : ICustomerDebtManager
+    EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
@@ -54,6 +51,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
@@ -88,6 +86,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto> CreateDebtFromDeliveryNoteAsync(CreateCustomerDebtDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var existing = await debtReader.DataSource.FirstOrDefaultAsync(d => d.DeliveryNoteId == dto.DeliveryNoteId).ConfigureAwait(false);
@@ -134,6 +133,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerPaymentDto> RecordPaymentAsync(CreateCustomerPaymentDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
@@ -156,14 +156,12 @@ public sealed class CustomerDebtManager(
             OrderId = dto.OrderId,
             DeliveryNoteId = dto.DeliveryNoteId,
             CustomerDebtId = dto.CustomerDebtId,
-            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null,
+            PaymentIntentId = dto.PaymentIntentId
         };
         payment.MarkCreated();
 
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-
-        if (dto.OrderId.HasValue)
-            await orderManager.MarkOrderHasPayment(dto.OrderId.Value, dto.Amount, null).ConfigureAwait(false);
 
         await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
         {

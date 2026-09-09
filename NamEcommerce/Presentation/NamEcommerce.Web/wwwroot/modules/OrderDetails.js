@@ -370,6 +370,8 @@ function parseDecimalInput(input) {
             isPaidOnValid();
         });
         settlementModal.element?.addEventListener('shown.bs.modal', () => {
+            if (amountInput.readOnly)
+                return;
             amountInput.focus();
             amountInput.select();
         });
@@ -817,6 +819,27 @@ function parseDecimalInput(input) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = false;
             }
+        });
+    }
+
+    const continueWithoutPayment = document.getElementById('continueWithoutPayment');
+    if (continueWithoutPayment) {
+        continueWithoutPayment.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = continueWithoutPayment.dataset.id;
+            if (!id) return;
+
+            const confirmed = await confirm('Cho phép xử lý đơn', 'Tiếp tục xử lý đơn hàng, khách hàng sẽ thanh toán sau');
+            if (!confirmed)
+                return;
+
+            showPageLoading();
+            const skipPaymentResult = await apiPost(`/Order/ProcessOrderWithoutPayment/${id}`);
+            if (!skipPaymentResult.success) {
+                hidePageLoading();
+                return;
+            }
+            location.reload();
         });
     }
 })();

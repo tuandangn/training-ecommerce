@@ -4,7 +4,6 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Shared.Enums.Customers;
-using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
@@ -40,7 +39,7 @@ public sealed class CustomerManager(
         var customer = await customerRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.Id);
         if (customer.IsSystem)
-            throw new NamEcommerceDomainException("Error.SystemCustomerCannotBeUpdated");
+            throw new CustomerCannotBeUpdatedException();
 
         customer.FullName = dto.FullName;
         customer.PhoneNumber = dto.PhoneNumber;
@@ -84,6 +83,8 @@ public sealed class CustomerManager(
         var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
             throw new CustomerIsNotFoundException(dto.CustomerId);
+        if (customer.IsSystem)
+            throw new CustomerCannotChangeKindException();
 
         customer.SetCustomerKind(dto.Kind);
         await customerRepository.UpdateAsync(customer).ConfigureAwait(false);

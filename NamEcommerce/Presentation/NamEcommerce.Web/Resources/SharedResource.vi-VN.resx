@@ -1134,4 +1134,10 @@
   <data name="Error.PurchaseOrderAllocationIsNotFound" xml:space="preserve">
     <value>Không tìm thấy phân bổ</value>
   </data>
+  <data name="Error.Unauthorized" xml:space="preserve">
+    <value>Không có quyền để thực thi</value>
+  </data>
+  <data name="Error.OrderPayoffRequired" xml:space="preserve">
+    <value>Đơn bán yêu cầu phải được thanh toán đầy đủ</value>
+  </data>
 </root>

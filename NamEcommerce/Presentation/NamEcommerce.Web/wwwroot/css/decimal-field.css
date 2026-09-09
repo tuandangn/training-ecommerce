@@ -24,6 +24,11 @@
         .decimal-field .decimal-input::placeholder {
         }
 
+        .decimal-field .decimal-input[readonly] {
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
 /* ----- Currency (prefix ₫) ----- */
 .currency-field {
     flex-direction: row-reverse; /* prefix hiện bên trái */

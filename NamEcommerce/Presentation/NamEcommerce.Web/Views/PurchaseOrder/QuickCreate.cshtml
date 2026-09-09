@@ -250,16 +250,6 @@
                                             <span asp-validation-for="DefaultWarehouseId" class="small text-danger"></span>
                                         </div>
                                         <div class="col-xl-3 col-lg-6">
-                                            <label class="form-label small fw-bold text-muted text-uppercase" asp-for="ShippingAmount">
-                                                Vận chuyển
-                                            </label>
-                                            <input type="text" asp-for="ShippingAmount" class="form-control include-suffix"
-                                                   data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
-                                                   data-val="true" data-val-number="Số tiền phải là số"
-                                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.1" />
-                                            <span class="text-danger small" asp-validation-for="ShippingAmount"></span>
-                                        </div>
-                                        <div class="col-xl-3 col-lg-6">
                                             <label class="form-label small fw-bold text-muted text-uppercase" asp-for="TaxRate">
                                                 Thuế
                                             </label>
@@ -271,6 +261,16 @@
                                                 }
                                             </select>
                                             <span class="text-danger small" asp-validation-for="TaxRate"></span>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-6">
+                                            <label class="form-label small fw-bold text-muted text-uppercase" asp-for="ShippingAmount">
+                                                Vận chuyển
+                                            </label>
+                                            <input type="text" asp-for="ShippingAmount" class="form-control include-suffix"
+                                                   data-decimal="currency" placeholder="Nhập số tiền" inputmode="numeric"
+                                                   data-val="true" data-val-number="Số tiền phải là số"
+                                                   data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.1" />
+                                            <span class="text-danger small" asp-validation-for="ShippingAmount"></span>
                                         </div>
                                         <div class="alert alert-info text-center mb-0 @(Model.ShippingAmount > 0 ? "" : "d-none")" id="orderShippingAmountHint">Phí vận chuyển đã trả sẽ được cộng vào chi phí và không được tính vào công nợ NCC</div>
                                         <div class="col-12">

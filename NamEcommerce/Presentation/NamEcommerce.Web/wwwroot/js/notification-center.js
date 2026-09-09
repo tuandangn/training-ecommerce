@@ -67,6 +67,10 @@
 
         var resolvedType = normalizeType(type);
         var opts = options || {};
+        if (!opts.title) {
+            if (type == 'success') opts.title = 'Thành công';
+            if (type == 'error') opts.title = 'Lỗi';
+        }
         var payload = {
             type: resolvedType,
             message: opts.title
@@ -92,9 +96,9 @@
 
     var api = {
         success: function (message, options) { return open('success', message, options); },
-        error:   function (message, options) { return open('error',   message, options); },
+        error: function (message, options) { return open('error', message, options); },
         warning: function (message, options) { return open('warning', message, options); },
-        info:    function (message, options) { return open('info',    message, options); },
+        info: function (message, options) { return open('info', message, options); },
 
         /**
          * Show a notification from a server-side payload (NotificationModel-shaped).
@@ -122,7 +126,7 @@
     global.NotificationCenter = api;
 
     function createNoopCenter() {
-        var noop = function () {};
+        var noop = function () { };
         return { success: noop, error: noop, warning: noop, info: noop, show: noop, showAll: noop, dismissAll: noop };
     }
 })(window);

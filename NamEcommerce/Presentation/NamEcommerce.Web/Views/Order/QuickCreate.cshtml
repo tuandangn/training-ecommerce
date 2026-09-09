@@ -1,8 +1,10 @@
 @using System.Globalization
+@using NamEcommerce.Domain.Shared.Enums.Customers
 @model OrderQuickCreateModel
 @{
     ViewData[ViewConstants.PageTitle] = "Bán nhanh";
 }
+@inject ICachedValuesService CachedValuesService
 
 @section TitleSection {
     <h1 class="topbar-page-title">
@@ -34,9 +36,9 @@
 }
 
 <form asp-action="QuickCreate" method="post" asp-antiforgery="true" id="fastSaleApp"
-      data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
-      data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
-      data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
+      data-create-intent-url="@Url.Action("CreatePaymentIntent", "Payment")"
+      data-status-url="@Url.Action("GetPaymentIntentStatus", "Payment")"
+      data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Payment")"
       data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
       data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
@@ -181,7 +183,10 @@
                                     <span class="value" id="fastSaleSubtotal">@subTotal.DisplayCurrencyWithSymbol()</span>
                                 </div>
                                 <div class="order-summary-row">
-                                    <label for="orderDiscount" class="label">Giảm giá <i class="bi bi-pencil small text-muted fw-normal"></i></label>
+                                    <label for="orderDiscount" class="label">
+                                        Giảm giá
+                                        <i class="bi bi-pencil small text-muted fw-normal @(Model.Items.Sum(item => item.ItemSubTotal) == 0 ? "d-none" : "")"></i>
+                                    </label>
                                     <span class="value">
                                         <input asp-for="OrderDiscount" class="form-control border-0 ui-w-120 include-suffix pe-3" placeholder="Nhập giảm giá"
                                                data-decimal="currency" autocomplete="off" id="orderDiscount" inputmode="numeric" disabled="@(Model.Items.Sum(item => item.ItemSubTotal) == 0)" />
@@ -236,9 +241,9 @@
                                         <div class="tab-content col-lg-4 col-md-6" id="navShippingContent">
                                             <div class="tab-pane fade" id="navNotDelivered" role="tabpanel" aria-labelledby="navNotDelivered-tab" tabindex="0">
                                                 <label asp-for="ExpectedShippingDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                                <input type="date" asp-for="ExpectedShippingDate" class="form-control" placeholder="Ngày giao dự kiến" 
-                                                    data-val="true" data-val-range="Ngày dự kiến không hợp lệ." 
-                                                    data-val-range-min="@DateTime.Today.ToString("s")" />
+                                                <input type="date" asp-for="ExpectedShippingDate" class="form-control" placeholder="Ngày giao dự kiến"
+                                                       data-val="true" data-val-range="Ngày dự kiến không hợp lệ."
+                                                       data-val-range-min="@DateTime.Today.ToString("s")" />
                                                 <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
                                             </div>
                                             <div class="tab-pane fade" id="navDelivered" role="tabpanel" aria-labelledby="navDelivered-tab" tabindex="0">
@@ -414,14 +419,24 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0 pb-3">
-                    <button type="button" class="btn btn-outline-secondary" id="paymentSkip">Bỏ qua</button>
-                    <button type="submit" class="btn btn-primary d-none">
-                        <i class="bi bi-floppy me-1"></i>Xác nhận
-                    </button>
-                    <button type="button" class="btn btn-primary" id="moneyReceived">
-                        <i class="bi bi-check-circle me-1"></i>Đã nhận tiền
-                    </button>
+                <div class="modal-footer border-0 pt-0 pb-3 justify-content-between">
+                    <div>
+                        @if (Model.CanAllowRetailWalkInCustomerUnpaid)
+                        {
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted @(Model.CustomerId == CachedValuesService.DefaultCustomerId ? "d-none" : "")" id="continueWithoutPayment">
+                                Cho phép xử lý đơn <i class="bi bi-arrow-right ms-1"></i>
+                            </button>
+                        }
+                    </div>
+                    <div class="flex-grow-1 d-flex flex-wrap align-items-center justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary" id="paymentSkip">Bỏ qua</button>
+                        <button type="submit" class="btn btn-primary d-none">
+                            <i class="bi bi-floppy me-1"></i>Xác nhận
+                        </button>
+                        <button type="button" class="btn btn-primary" id="moneyReceived">
+                            <i class="bi bi-check-circle me-1"></i>Đã nhận tiền
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

@@ -12,7 +12,16 @@ using NamEcommerce.Domain.Shared.Enums.Inventory;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
-public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, IEntityDataReader<InventoryStock> inventoryStockDataReader, IStockAuditLogger stockAuditLogger, IRepository<StockMovementLog> stockMovementRepository, IRepository<StockReservationEntry> stockReservationRepository, IEntityDataReader<Product> productDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<StockMovementLog> stockMovementDataReader, IEntityDataReader<ProductReservationLedger> productReservationDataReader, IEntityDataReader<StockReservationEntry> stockReservationDataReader) : IInventoryStockManager
+public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, 
+    IEntityDataReader<InventoryStock> inventoryStockDataReader,
+    IRepository<StockMovementLog> stockMovementRepository,
+    IRepository<StockReservationEntry> stockReservationRepository,
+    IEntityDataReader<Product> productDataReader,
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+    IEntityDataReader<Warehouse> warehouseDataReader,
+    IEntityDataReader<StockMovementLog> stockMovementDataReader,
+    IEntityDataReader<ProductReservationLedger> productReservationDataReader,
+    IEntityDataReader<StockReservationEntry> stockReservationDataReader) : IInventoryStockManager
 {
     public async Task InitializeStockAsync(Guid productId, Guid warehouseId, Guid? unitMeasurementId = null)
         => await EnsureInitializeStockAsync(productId, warehouseId, unitMeasurementId).ConfigureAwait(false);
@@ -206,11 +215,13 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
 
         var productQuery = productDataReader.DataSource;
         var warehouseQuery = warehouseDataReader.DataSource;
+        var unitMeasurementQuery = unitMeasurementDataReader.DataSource;
 
         var query = from s in inventoryStockQuery
                     join p in productQuery on s.ProductId equals p.Id
                     join w in warehouseQuery on s.WarehouseId equals w.Id
-                    select new { s, p, w };
+                    join u in unitMeasurementQuery on p.UnitMeasurementId equals u.Id
+                    select new { s, p, w, u };
 
         if (!string.IsNullOrWhiteSpace(keywords))
         {
@@ -226,10 +237,11 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
         if (totalCount.HasValue && totalCount == 0)
             return (0, new List<InventoryStockDto>());
 
-        var items = await query
+        var items = (await query
             .OrderBy(x => x.p.Name)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
+            .ToListAsync().ConfigureAwait(false))
             .Select(x => new InventoryStockDto(x.s.Id)
             {
                 ProductId = x.s.ProductId,
@@ -241,9 +253,9 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
                 QuantityAvailable = x.s.QuantityOnHand - x.s.QuantityReserved,
                 UpdatedOnUtc = x.s.UpdatedOnUtc,
                 ReorderLevel = x.s.ReorderLevel,
-                MaxStockLevel = x.s.MaxStockLevel
-            })
-            .ToListAsync().ConfigureAwait(false);
+                MaxStockLevel = x.s.MaxStockLevel,
+                QuantityDecimalPlaces = x.u?.DecimalPlaces ?? 0
+            }).ToList();
 
         return (totalCount ?? items.Count, items);
     }

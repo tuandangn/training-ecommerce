@@ -6,7 +6,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class CompleteQuickCreateOrderPaymentHandler(IQuickCreateOrderAppService fastSaleAppService, IOrderAppService orderAppService)
+public sealed class CompleteQuickCreateOrderPaymentHandler(IQuickCreateOrderAppService fastSaleAppService)
     : IRequestHandler<CompleteQuickCreateOrderPaymentCommand, CommonActionResultModel>
 {
     public async Task<CommonActionResultModel> Handle(CompleteQuickCreateOrderPaymentCommand request, CancellationToken cancellationToken)

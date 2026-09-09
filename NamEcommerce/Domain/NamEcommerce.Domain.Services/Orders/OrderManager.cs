@@ -133,7 +133,11 @@ public sealed class OrderManager(
         };
         await order.SetCustomerAsync(dto.CustomerId, customerDataReader).ConfigureAwait(false);
         foreach (var item in dto.Items)
-            await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
+        {
+            var orderItem = await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
+            if (item.WarehouseId.HasValue)
+                orderItem.WarehouseId = item.WarehouseId.Value;
+        }
         order.SetOrderDiscount(dto.OrderDiscount);
         order.RequiresPayment(customer.Kind == CustomerKind.RetailWalkIn && order.OrderTotal > 0, dto.RequiresPayOff);
 
@@ -228,6 +232,7 @@ public sealed class OrderManager(
         order.RequestDelivered(deliveryNoteId, requestedAtUtc);
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
+
     public async Task MarkOrderHasPayment(Guid orderId, decimal paidAmount, Guid? paymentIntentId)
     {
         var order = await orderRepository.GetByIdAsync(orderId).ConfigureAwait(false);
@@ -251,6 +256,21 @@ public sealed class OrderManager(
         }
 
         order.OrderHasPayment(paidAmount, paymentIntentId);
+    }
+
+    public async Task ProcessOrderWithoutPayment(Guid id)
+    {
+        var order = await orderRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(id);
+
+        if (!order.ProcessRequiresPayment)
+            return;
+
+        order.RequiresPayment(false, order.PayOffRequired);
+        order.MarkInfoUpdated();
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task CompleteOrderAsync(CompleteOrderDto dto)
@@ -420,7 +440,6 @@ public sealed class OrderManager(
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
-
 
     public async Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
     {

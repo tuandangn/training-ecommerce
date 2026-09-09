@@ -15,6 +15,7 @@ public sealed record InventoryStockDto(Guid Id)
     public required DateTime UpdatedOnUtc { get; init; }
     public decimal ReorderLevel { get; init; }
     public decimal MaxStockLevel { get; init; }
+    public int QuantityDecimalPlaces { get; set; }
 }
 
 [Serializable]

@@ -23,6 +23,7 @@ public sealed class InventoryStockListModel
         public required decimal QuantityReserved { get; init; }
         public required decimal TotalReservedByOrder { get; init; }
         public required decimal QuantityAvailable { get; init; }
+        public int QuantityDecimalPlaces { get; set; }
         public required decimal CurrentUnitCost { get; init; }
         public required DateTime UpdatedOn { get; init; }
         public decimal ReorderLevel { get; init; }
@@ -38,6 +39,7 @@ public sealed class InventoryStockListModel
         public required decimal QuantityReserved { get; init; }
         public required decimal TotalReservedByOrder { get; init; }
         public required decimal QuantityAvailable { get; init; }
+        public int QuantityDecimalPlaces { get; set; }
         public required decimal CurrentUnitCost { get; init; }
         public required DateTime UpdatedOn { get; init; }
         public required IReadOnlyList<ItemModel> Warehouses { get; init; }

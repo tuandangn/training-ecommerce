@@ -1327,7 +1327,7 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
-        if (!deliveryNote.RequiresPaymentToConfirm || deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.PaidOnUtc.HasValue)
+        if (deliveryNote.Status != DeliveryNoteStatus.Draft || deliveryNote.PaidOnUtc.HasValue)
             throw new DeliveryNoteCannotMarkedAsPaidException();
 
         deliveryNote.MarkIsPaid();

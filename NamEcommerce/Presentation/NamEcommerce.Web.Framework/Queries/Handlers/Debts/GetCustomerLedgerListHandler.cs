@@ -12,9 +12,9 @@ public sealed class GetCustomerLedgerListHandler(ICustomerLedgerManager ledgerMa
     public async Task<CustomerLedgerListModel> Handle(GetCustomerLedgerListQuery request, CancellationToken cancellationToken)
     {
         var pagedData = await ledgerManager.GetBalancesAsync(
-            request.Keywords,
             request.PageIndex - 1,
-            request.PageSize).ConfigureAwait(false);
+            request.PageSize,
+            request.Keywords).ConfigureAwait(false);
 
         var items = pagedData.Items.Select(b => new CustomerDebtBalanceSummaryModel
         {

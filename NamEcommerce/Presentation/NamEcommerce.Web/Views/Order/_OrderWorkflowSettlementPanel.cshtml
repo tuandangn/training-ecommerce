@@ -10,7 +10,7 @@
         : (customerBalance > 0 ? "text-danger" : customerBalance < 0 ? "text-primary" : "text-success");
     var paymentDefaultAmount = customerBalance > 0 ? customerBalance : 0m;
     var remainAmount = Math.Max(0, Model.TotalAmount - Model.PaidAmount);
-    if (Model.IsRetailWalkInCustomer && Model.DeliveryNotes.Count != 0)
+    if (Model.IsRetailWalkInCustomer && Model.PayOffRequired)
     {
         paymentDefaultAmount = remainAmount;
     }
@@ -26,7 +26,7 @@
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.PaymentRequired || (Model.CanCompleteOrder && (!Model.IsRetailWalkInCustomer || remainAmount > 0)))
                 {
-                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#orderSettlementPaymentModal">
+                    <button type="button" class="btn btn-sm btn-success collect-money-btn" data-bs-toggle="modal" data-bs-target="#orderSettlementPaymentModal">
                         <i class="bi bi-cash-coin me-1"></i>Thu tiền
                     </button>
                 }
@@ -63,7 +63,17 @@
         </div>
         @if (Model.PaymentRequired)
         {
-            <div class="alert alert-warning mb-0 p-2" style="text-transform:none;">Vui lòng thanh toán để đơn hàng được xử lý</div>
+            <div class="alert alert-warning mb-0 p-3" style="text-transform:none;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>Vui lòng thanh toán để đơn hàng được xử lý</span>
+                    @if (Model.CanAllowUnpaid)
+                    {
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted" id="continueWithoutPayment" data-id="@Model.Id">
+                            Cho phép xử lý đơn
+                        </button>
+                    }
+                </div>
+            </div>
         }
         <div class="content-card-body">
             @*             <div class="workflow-metric-grid mb-3">
@@ -216,13 +226,12 @@
                 <h5 class="modal-title fw-bold">Thu tiền khách hàng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="orderSettlementPaymentForm"
-                  method="post"
-                  data-cash-url="@Url.Action("RecordSettlementPayment", "Order")"
-                  data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
-                  data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
-                  data-confirm-url="@Url.Action("ConfirmPaymentIntent", "Order")"
-                  data-qr-record-url="@Url.Action("RecordSettlementQrPayment", "Order")">
+            <form id="orderSettlementPaymentForm" method="post"
+                  data-cash-url="@Url.Action("RecordSettlementPayment", "Payment")"
+                  data-create-intent-url="@Url.Action("CreatePaymentIntent", "Payment")"
+                  data-status-url="@Url.Action("GetPaymentIntentStatus", "Payment")"
+                  data-confirm-url="@Url.Action("ConfirmPaymentIntent", "Payment")"
+                  data-qr-record-url="@Url.Action("RecordSettlementQrPayment", "Payment")">
                 <div class="modal-body py-3">
                     <input type="hidden" name="OrderId" value="@Model.Id" />
                     <input type="hidden" name="CustomerId" value="@Model.CustomerId" />

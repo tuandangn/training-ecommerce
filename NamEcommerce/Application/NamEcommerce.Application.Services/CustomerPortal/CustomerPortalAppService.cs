@@ -801,7 +801,7 @@ public sealed class CustomerPortalAppService(
     public async Task<CustomerLedgerSummaryPortalAppDto> GetLedgerSummaryAsync(Guid customerId)
     {
         var summary = await customerLedgerManager.GetCustomerSummaryAsync(customerId).ConfigureAwait(false);
-        var statement = await customerLedgerManager.GetStatementAsync(customerId, pageSize: 30).ConfigureAwait(false);
+        var statement = await customerLedgerManager.GetStatementAsync(0, int.MaxValue, customerId).ConfigureAwait(false);
         return new CustomerLedgerSummaryPortalAppDto
         {
             Balance = summary?.Balance ?? 0,

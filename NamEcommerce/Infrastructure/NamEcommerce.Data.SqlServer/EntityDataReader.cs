@@ -63,7 +63,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
         => await GetDataSource(opts).ToListAsync().ConfigureAwait(false);
 
     public Task<TEntity?> GetByIdAsync(Guid id)
-        => GetDataSource(new() { ReadWrite = true }).FirstOrDefaultAsync(e => e.Id == id);
+        => _dbContext.FindAsync<TEntity>(id);
 
     public async Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids, ReaderDataSourceOptions? opts = null)
     {

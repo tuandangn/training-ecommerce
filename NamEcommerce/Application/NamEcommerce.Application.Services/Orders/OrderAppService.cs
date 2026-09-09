@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -479,26 +478,15 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        try
+        await orderManager.CompleteOrderAsync(new CompleteOrderDto
         {
-            await orderManager.CompleteOrderAsync(new CompleteOrderDto
-            {
-                OrderId = dto.OrderId
-            }).ConfigureAwait(false);
+            OrderId = dto.OrderId
+        }).ConfigureAwait(false);
 
-            return new CompleteOrderResultAppDto
-            {
-                Success = true
-            };
-        }
-        catch (NamEcommerceDomainException ex)
+        return new CompleteOrderResultAppDto
         {
-            return new CompleteOrderResultAppDto
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true
+        };
     }
 
     public async Task<OrderAppDto?> GetOrderByIdAsync(Guid id)
@@ -619,7 +607,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
             {
                 ProductId = orderItem.ProductId,
                 Quantity = orderItem.Quantity,
-                UnitPrice = orderItem.UnitPrice
+                UnitPrice = orderItem.UnitPrice,
+                WarehouseId = orderItem.WarehouseId
             });
         }
 
@@ -803,4 +792,5 @@ public sealed class OrderAppService(IOrderManager orderManager,
         var newRemainingQuantity = Math.Max(0, orderItem.Quantity - shippedQuantity);
         return newRemainingQuantity;
     }
+
 }

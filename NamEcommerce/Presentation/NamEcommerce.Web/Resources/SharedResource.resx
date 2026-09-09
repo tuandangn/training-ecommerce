@@ -1134,4 +1134,10 @@
   <data name="Error.PurchaseOrderAllocationIsNotFound" xml:space="preserve">
     <value>Purchase order allocation is not found</value>
   </data>
+  <data name="Error.Unauthorized" xml:space="preserve">
+    <value>Unauthorized process</value>
+  </data>
+  <data name="Error.OrderPayoffRequired" xml:space="preserve">
+    <value>Order payoff is required</value>
+  </data>
 </root>
