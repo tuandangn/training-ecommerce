@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
@@ -183,8 +184,12 @@ public sealed class VendorLedgerManager(
                      select new { b, v };
 
         if (!string.IsNullOrWhiteSpace(keywords))
+        {
+            var normalizedKeywords = TextHelper.Normalize(keywords);
             joined = joined.Where(x => x.v.Name.Contains(keywords)
+                || x.v.NormalizedName.Contains(normalizedKeywords)
                 || x.v.PhoneNumber.Contains(keywords));
+        }
 
         joined = joined.OrderBy(x => x.v.Name);
 

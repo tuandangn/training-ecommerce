@@ -1002,7 +1002,8 @@ public sealed class DeliveryNoteManager(
         var agreedCustomerCharge = acceptance?.AgreedCustomerCharge ?? 0m;
         // Dùng AmountToCollect gốc làm cơ sở để bảo toàn OrderDiscount.
         // acceptedGoodsAmount (qty × unitPrice) không trừ discount nên không thể dùng trực tiếp.
-        var amountToCollect = deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
+        var amountToCollect = 
+            deliveryNote.AmountToCollect - rejectedGoodsAmount + agreedCustomerCharge;
         // debtAmount = toàn bộ nghĩa vụ khách phải trả (phần reject sẽ được bù bởi credit note).
         var debtAmount = deliveryNote.TotalAmount + deliveryNote.Surcharge + agreedCustomerCharge;
         return new DeliveryAcceptanceResolution(

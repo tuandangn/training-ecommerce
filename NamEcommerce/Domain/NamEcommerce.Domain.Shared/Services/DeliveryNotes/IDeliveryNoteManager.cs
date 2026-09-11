@@ -35,6 +35,5 @@ public interface IDeliveryNoteManager
     Task RequestSettlementApprovalAsync(RequestDeliverySettlementDto dto);
     Task ApproveSettlementAsync(ApproveDeliverySettlementDto dto);
     Task RejectSettlementAsync(Guid id, string reason, Guid? approvedByUserId);
-    Task CompleteApprovedSettlementAsync(Guid id,
-        IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataDto? completionMetadata);
+    Task CompleteApprovedSettlementAsync(Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataDto? completionMetadata);
 }

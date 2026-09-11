@@ -481,26 +481,19 @@ public sealed class DeliveryNoteAppService(
     public async Task<CommonActionResultDto> CompleteApprovedSettlementAsync(
         Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataAppDto? completionMetadata)
     {
-        try
-        {
-            await deliveryNoteManager.CompleteApprovedSettlementAsync(id, pictureIds, completionMetadata is null
-                ? null
-                : new DeliveryCompletionMetadataDto
-                {
-                    Latitude = completionMetadata.Latitude,
-                    Longitude = completionMetadata.Longitude,
-                    LocationAddress = completionMetadata.LocationAddress,
-                    Note = completionMetadata.Note,
-                    Source = completionMetadata.Source,
-                    IdempotencyKey = completionMetadata.IdempotencyKey
-                }).ConfigureAwait(false);
+        await deliveryNoteManager.CompleteApprovedSettlementAsync(id, pictureIds, completionMetadata is null
+            ? null
+            : new DeliveryCompletionMetadataDto
+            {
+                Latitude = completionMetadata.Latitude,
+                Longitude = completionMetadata.Longitude,
+                LocationAddress = completionMetadata.LocationAddress,
+                Note = completionMetadata.Note,
+                Source = completionMetadata.Source,
+                IdempotencyKey = completionMetadata.IdempotencyKey
+            }).ConfigureAwait(false);
 
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
+        return CommonActionResultDto.CreateSuccess();
     }
 
     private static DeliveryAcceptanceDto? MapAcceptance(DeliveryAcceptanceAppDto? acceptance)
