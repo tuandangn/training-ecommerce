@@ -48,6 +48,10 @@ public sealed class DeliveryNoteConfirmedIntegrationHandler
         if (notification is null)
             return;
 
-        await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.DeliveryNoteId).ConfigureAwait(false);
+        try
+        {
+            await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.DeliveryNoteId).ConfigureAwait(false);
+        }
+        catch { }
     }
 }

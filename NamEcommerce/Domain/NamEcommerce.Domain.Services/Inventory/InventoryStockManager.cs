@@ -12,7 +12,7 @@ using NamEcommerce.Domain.Shared.Enums.Inventory;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
-public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, 
+public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository,
     IEntityDataReader<InventoryStock> inventoryStockDataReader,
     IRepository<StockMovementLog> stockMovementRepository,
     IRepository<StockReservationEntry> stockReservationRepository,
@@ -293,39 +293,27 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
         return items;
     }
 
-    public Task<decimal> GetGlobalOnHandQuantityForProductAsync(Guid productId)
+    public async Task<(decimal available, decimal reserved)> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
     {
-        var stockQuery = from s in inventoryStockDataReader.DataSource
-                         join w in warehouseDataReader.DataSource on s.WarehouseId equals w.Id
-                         where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
-                         select s;
-        return stockQuery.SumAsync(x => x.QuantityOnHand);
-    }
-
-    public async Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
-    {
-        var stockQuery = from s in inventoryStockDataReader.DataSource
-                         join w in warehouseDataReader.DataSource on s.WarehouseId equals w.Id
-                         where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
-                         select s;
-        var quantityOnHand = await stockQuery.SumAsync(x => x.QuantityOnHand).ConfigureAwait(false);
-        var quantityReservedByWarehouse = await stockQuery.SumAsync(x => x.QuantityReserved).ConfigureAwait(false);
+        var stockItems = await (from s in inventoryStockDataReader.DataSource
+                                join w in warehouseDataReader.DataSource on s.WarehouseId equals w.Id
+                                where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
+                                select s).ToListAsync().ConfigureAwait(false);
+        var quantityOnHand = stockItems.Sum(x => x.QuantityOnHand);
+        var quantityReservedByWarehouse = stockItems.Sum(x => x.QuantityReserved);
         var quantityReservedByOrder = await productReservationDataReader.DataSource
             .Where(x => x.ProductId == productId && (excludeOrderId == null || x.OrderId != excludeOrderId))
             .SumAsync(x => x.QuantityDelta)
             .ConfigureAwait(false);
 
-        return quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder;
+        var totalReserved = quantityReservedByWarehouse + quantityReservedByOrder;
+        return (quantityOnHand - totalReserved, totalReserved);
     }
 
     public async Task<decimal> ComputeAvailableQuantityForOrderAsync(Guid productId, Guid orderId)
     {
-        var globalAvailable = await GetGlobalAvailableQuantityForProductAsync(productId).ConfigureAwait(false);
-        var reservedForOrder = await productReservationDataReader.DataSource
-            .Where(x => x.ProductId == productId && x.OrderId == orderId)
-            .SumAsync(x => x.QuantityDelta).ConfigureAwait(false);
-
-        return Math.Max(0, globalAvailable + reservedForOrder);
+        var (available, _) = await GetGlobalAvailableQuantityForProductAsync(productId, orderId).ConfigureAwait(false);
+        return available;
     }
 
     public Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null)

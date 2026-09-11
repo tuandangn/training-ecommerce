@@ -62,6 +62,7 @@ public sealed class QuickCreateOrderItemModel
     public Guid? WarehouseId { get; set; }
     public IEnumerable<ProductWarehouseStockModel> AvailableWarehouseStocks { get; set; } = [];
     public decimal QuantityAvailable { get; set; }
+    public decimal QuantityOnHand { get; set; }
 
     [ValidateNever]
     public string? UnitMeasurement { get; set; }

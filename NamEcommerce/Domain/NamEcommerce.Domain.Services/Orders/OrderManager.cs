@@ -492,7 +492,7 @@ public sealed class OrderManager(
                 continue;
 
             var requestedQuantity = itemGroup.Sum(item => item.Quantity);
-            var availableQuantity = await stockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            var (availableQuantity, _) = await stockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
             if (availableQuantity < requestedQuantity)
                 throw new InsufficientStockException(itemGroup.Key, Guid.Empty, requestedQuantity, availableQuantity);
         }
@@ -503,7 +503,6 @@ public sealed class OrderManager(
             .AnyAsync(allocation => allocation.OrderItemId.SecondaryId == orderItemId
                 && allocation.Status != AllocationStatus.Cancelled
                 && allocation.ReceivedQuantity > 0);
-
 
     #endregion
 }

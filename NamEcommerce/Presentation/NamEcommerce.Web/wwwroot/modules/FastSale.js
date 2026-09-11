@@ -248,6 +248,8 @@ class FastSale {
             availableWarehouses: product.availableWarehouses || [],
             quantity: 1,
             quantityAvailable: product.quantityAvailable,
+            quantityOnHand: product.quantityOnHand,
+            quantityReserved: product.quantityReserved,
             unitPrice: Number(product.unitPrice || 0),
             quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
             pictureUrl: product.pictureUrl
@@ -295,6 +297,8 @@ class FastSale {
             unitPrice: Number(product.unitPrice || 0),
             pictureUrl: product.pictureUrl || product.picture || '',
             quantityAvailable: Number(product.quantityAvailable ?? product.availableQty ?? 0),
+            quantityOnHand: Number(product.onHandQty ?? 0),
+            quantityReserved: Number(product.reservedQty ?? 0),
             quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
             unitMeasurement: product.unitMeasurement || '',
             availableWarehouses: (product.availableWarehouses || []).map(warehouse => ({
@@ -329,7 +333,7 @@ class FastSale {
             this.setPaymentTiming(this.#payNow);
             return;
         }
-        if (this.cart.some(item => item.quantity > item.quantityAvailable) && this.fulfillmentMode == this.#deliveryNow) {
+        if (this.cart.some(item => item.quantity > item.quantityOnHand) && this.fulfillmentMode == this.#deliveryNow) {
             this.setFulfillmentMode(this.#notDelivered);
             return;
         }
@@ -342,7 +346,7 @@ class FastSale {
         this.#togglePaymentTabs();
 
         this.notDelivered.disabled = this.cart.length === 0;
-        this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
+        this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityOnHand);
         this.#toggleDeliveryTabs();
 
         this.renderCart();
@@ -417,6 +421,7 @@ class FastSale {
             const row = document.createElement('tr');
             row.setAttribute('data-unit-measurement', item.unitMeasurement);
             row.setAttribute('data-qty-available', item.quantityAvailable);
+            row.setAttribute('data-qty-on-hand', item.quantityOnHand);
 
             const isQtyExceeded = this.#isItemQtyExceeded(item);
 
@@ -511,7 +516,7 @@ class FastSale {
             return false;
         const sameProductItems = this.cart.filter(ci => ci.productId == item.productId);
         const totalQty = sameProductItems.reduce((total, ci) => total + ci.quantity, 0);
-        return totalQty > item.quantityAvailable;
+        return totalQty > item.quantityOnHand;
     }
     renderWarehouseSelect(item, index) {
         if (this.fulfillmentMode !== this.#deliveryNow) {
@@ -523,8 +528,8 @@ class FastSale {
             const selected = warehouse.id === item.warehouseId ? 'selected' : '';
             const quantity = this.formatQuantity(warehouse.quantityOnHand, item.quantityDecimalPlaces);
             options.push(`<option value="${this.escape(warehouse.id)}" ${selected} 
-                data-name="${warehouse.name} data-qty-onhand="${warehouse.quantityOnHand}"
-                data-qty-available="${warehouse.quantityAvailable}">
+                data-name="${warehouse.name}" data-qty-onhand="${warehouse.quantityOnHand}"
+                data-qty-available="${warehouse.quantityAvailable}" ${warehouse.quantityOnHand <= 0 ? 'disabled' : ''}>
                 ${this.escape(warehouse.name)} - ${quantity} ${this.escape(item.unitMeasurement)}
             </option>`);
         }
@@ -546,6 +551,7 @@ class FastSale {
                 quantityDecimalPlaces,
                 warehouseId: deliveryNow ? warehouseSelect.value : null,
                 unitMeasurement: row.getAttribute('data-unit-measurement'),
+                quantityOnHand: Number(row.getAttribute('data-qty-on-hand')),
                 quantityAvailable: Number(row.getAttribute('data-qty-available')),
                 availableWarehouses: Array.from(warehouseSelect.options).filter(option => !!option.value).map(option => ({
                     id: option.value,
@@ -772,7 +778,7 @@ class FastSale {
                 if (!item.warehouseId)
                     return `Vui lòng chọn kho cho mặt hàng "${item.name}"`;
                 if (this.#isItemQtyExceeded(item))
-                    return `"${item.name}" chỉ còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}${item.unitMeasurement ? ' ' + item.unitMeasurement : ''} không đủ để giao `;
+                    return `"${item.name}" chỉ còn ${this.formatQuantity(item.quantityOnHand, item.quantityDecimalPlaces)}${item.unitMeasurement ? ' ' + item.unitMeasurement : ''} không đủ để giao `;
             }
         }
 

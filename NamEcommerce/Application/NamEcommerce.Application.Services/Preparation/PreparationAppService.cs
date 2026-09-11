@@ -55,7 +55,7 @@ public sealed class PreparationAppService(
         }
 
         foreach (var item in preparationItems)
-            item.StockQuantityAvailable = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
+            (item.StockQuantityAvailable, _) = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
     }
@@ -112,7 +112,7 @@ public sealed class PreparationAppService(
             }).ToList();
 
         foreach (var item in preparationItems)
-            item.StockQuantityAvailable = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
+            (item.StockQuantityAvailable, _) = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
     }

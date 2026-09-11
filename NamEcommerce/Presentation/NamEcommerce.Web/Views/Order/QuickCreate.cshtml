@@ -96,7 +96,8 @@
                                         @for (var i = 0; i < Model.Items.Count; i++)
                                         {
                                             var item = Model.Items[i];
-                                            <tr data-unit-measurement="@item.UnitMeasurement" data-qty-available="@item.QuantityAvailable.ToString(CultureInfo.InvariantCulture)">
+                                            <tr data-unit-measurement="@item.UnitMeasurement" data-qty-available="@item.QuantityAvailable.ToString(CultureInfo.InvariantCulture)"
+                                                data-qty-on-hand="@item.QuantityOnHand.ToString(CultureInfo.InvariantCulture)">
                                                 <td class="ps-3 fw-medium align-middle">
                                                     <div class="d-flex align-items-center gap-3">
                                                         @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))

@@ -258,7 +258,7 @@ public sealed record Order : AppAggregateEntity
         return true;
     }
 
-    internal bool CanCompleteOrder() => OrderStatus == OrderStatus.Pending && CanProcess();
+    internal bool CanCompleteOrder() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled && CanProcess();
 
     internal bool CanProcess() => !ProcessRequiresPayment || (PayOffRequired ? HadPaid() : PaidAmount.HasValue);
 

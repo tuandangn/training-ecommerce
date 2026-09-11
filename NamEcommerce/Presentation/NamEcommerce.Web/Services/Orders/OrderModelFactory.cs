@@ -153,12 +153,13 @@ public sealed class OrderModelFactory(
 
         foreach (var it in order.Items)
         {
+            var (productAvailableQty, _) = await inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false);
             model.Items.Add(new OrderDetailsModel.OrderItemModel(it.Id)
             {
                 ProductId = it.ProductId,
                 ProductName = it.ProductName,
                 ProductPicture = it.ProductPicture,
-                ProductAvailableQty = await inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false),
+                ProductAvailableQty = productAvailableQty,
                 Quantity = it.Quantity,
                 UnitPrice = it.UnitPrice,
                 QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
@@ -365,6 +366,7 @@ public sealed class OrderModelFactory(
                     item.UnitMeasurement = product.UnitMeasurement;
                     var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
                     item.QuantityAvailable = stockInfo.QuantityAvailable;
+                    item.QuantityOnHand = stockInfo.QuantityOnHand;
                     item.AvailableWarehouseStocks = stockInfo.Warehouses
                         .Where(item => item.WarehouseId != Guid.Empty)
                         .Select(item => new QuickCreateOrderItemModel.ProductWarehouseStockModel
@@ -476,7 +478,6 @@ public sealed class OrderModelFactory(
             ? null
             : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
 
-        model.CanCompleteOrder = model.CanCompleteOrder && deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered;
         model.Workflow = BuildWorkflow(model, deliveryStatus, activeStage);
         model.Preparation = BuildPreparation(model);
         model.DeliveryWorkflow = BuildDeliveryWorkflow(model, deliveryStatus);

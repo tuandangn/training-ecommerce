@@ -103,7 +103,7 @@ public sealed class InventoryAppService(
     public Task<IReadOnlyList<InventoryCostHistoryAppDto>> GetInventoryCostHistoryAsync(Guid productId, Guid? warehouseId = null, int take = StockListCostHistorySize)
         => Task.FromResult(GetCostHistory(productId, warehouseId, take));
 
-    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
+    public Task<(decimal available, decimal reserved)> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
         => stockManager.GetGlobalAvailableQuantityForProductAsync(productId, excludeOrderId);
 
     public async Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
