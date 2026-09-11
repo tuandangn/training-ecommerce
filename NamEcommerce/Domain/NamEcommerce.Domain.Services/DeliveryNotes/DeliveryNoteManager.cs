@@ -329,18 +329,19 @@ public sealed class DeliveryNoteManager(
         var acceptanceDto = dto.Acceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, acceptanceDto);
         var completionMetadata = MergeCompletionMetadata(deliveryNote, dto.CompletionMetadata);
-        if (completionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
+        var amountToCollect = GetEffectiveAmountToCollect(deliveryNote, acceptance.AmountToCollect);
+        if (completionMetadata?.CashCollectedAmount > amountToCollect)
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
 
         if (deliveryNote.CustomerInfo != null && deliveryNote.CustomerInfo.IsRetailWalkInCustomer
-            && (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect)
+            && (completionMetadata?.CashCollectedAmount ?? 0m) < amountToCollect)
         {
             throw new RetailOrderCannotLeaveDebtException();
         }
 
         var isMobileShipper = string.Equals(completionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
         var hasShortfall = acceptance.RejectedGoodsAmount > 0 ||
-            (completionMetadata?.CashCollectedAmount ?? 0m) < acceptance.AmountToCollect;
+            (completionMetadata?.CashCollectedAmount ?? 0m) < amountToCollect;
         if (isMobileShipper && hasShortfall && deliveryNote.SettlementApproval != DeliverySettlementApprovalStatus.Approved)
             throw new NamEcommerceDomainException("Error.DeliverySettlement.ApprovalRequired");
 
@@ -350,7 +351,7 @@ public sealed class DeliveryNoteManager(
                 item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
         }
 
-        deliveryNote.AmountToCollect = acceptance.AmountToCollect;
+        deliveryNote.AmountToCollect = amountToCollect;
         var pictureIds = ResolveProofPictureIds(deliveryNote, dto.PictureIds);
         var receiverName = string.IsNullOrWhiteSpace(dto.ReceiverName)
             ? deliveryNote.DeliveryReceiverName
@@ -401,7 +402,8 @@ public sealed class DeliveryNoteManager(
         }
 
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
-        if (dto.CompletionMetadata?.CashCollectedAmount > acceptance.AmountToCollect)
+        var amountToCollect = GetEffectiveAmountToCollect(deliveryNote, acceptance.AmountToCollect);
+        if (dto.CompletionMetadata?.CashCollectedAmount > amountToCollect)
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
 
         if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
@@ -412,7 +414,7 @@ public sealed class DeliveryNoteManager(
             }
         }
 
-        deliveryNote.AmountToCollect = acceptance.AmountToCollect;
+        deliveryNote.AmountToCollect = amountToCollect;
         var acceptanceLines = acceptance.Lines.Select(line =>
             (line.DeliveryNoteItemId, line.AcceptedQuantity, line.RejectedQuantity, line.RejectReason));
 
@@ -441,7 +443,8 @@ public sealed class DeliveryNoteManager(
         DeliveryAcceptanceResolution? resolvedAcceptance = null;
         if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
         {
-            resolvedAcceptance = ResolveDeliveryAcceptance(deliveryNote, acceptance);
+            var acceptanceDto = acceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
+            resolvedAcceptance = ResolveDeliveryAcceptance(deliveryNote, acceptanceDto);
             if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
             {
                 foreach (var item in deliveryNote.Items)
@@ -450,7 +453,7 @@ public sealed class DeliveryNoteManager(
                 }
             }
 
-            deliveryNote.AmountToCollect = resolvedAcceptance.AmountToCollect;
+            deliveryNote.AmountToCollect = GetEffectiveAmountToCollect(deliveryNote, resolvedAcceptance.AmountToCollect);
         }
 
         var transitionedToDelivered = deliveryNote.MarkReceivedByCustomer(
@@ -758,6 +761,13 @@ public sealed class DeliveryNoteManager(
             }).ToList()
         };
     }
+
+    private static decimal GetEffectiveAmountToCollect(
+        DeliveryNote deliveryNote,
+        decimal calculatedAmountToCollect)
+        => deliveryNote.SettlementApproval == DeliverySettlementApprovalStatus.Approved
+            ? Math.Max(0m, deliveryNote.ApprovedAmountToCollect ?? calculatedAmountToCollect)
+            : calculatedAmountToCollect;
 
     private static Guid ResolveItemWarehouseId(DeliveryNoteItem item)
     {
