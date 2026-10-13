@@ -420,12 +420,12 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Số tiền thu duyệt</label>
-                                            <input type="number" name="approvedAmountToCollect" class="form-control" min="0" step="1000" inputmode="numeric"
+                                            <input name="approvedAmountToCollect" class="form-control" data-decimal="currency" inputmode="numeric"
                                                 value="@proposed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Chi phí trả về</label>
-                                            <input type="number" name="agreedCustomerCharge" class="form-control" min="0" step="1000" value="0" inputmode="numeric"/>
+                                            <input name="agreedCustomerCharge" class="form-control" data-decimal="currency" inputmode="numeric" value="0"/>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do chi phí</label>
