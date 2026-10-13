@@ -12,25 +12,10 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Catalog;
 
-public sealed class ProductAppService : IProductAppService
+public sealed class ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader, IInventoryCostingManager inventoryCostingManager,
+    IGoodsReceiptManager goodsReceiptManager) : IProductAppService
 {
-    private readonly IProductManager _productManager;
-    private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
-    private readonly IInventoryCostingManager _inventoryCostingManager;
-    private readonly IGoodsReceiptManager _goodsReceiptManager;
-
-    public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
-        IEntityDataReader<UnitMeasurement> unitMeasurementDataReader, IInventoryCostingManager inventoryCostingManager,
-        IGoodsReceiptManager goodsReceiptManager)
-    {
-        _productManager = productManager;
-        _productDataReader = productDataReader;
-        _unitMeasurementDataReader = unitMeasurementDataReader;
-        _inventoryCostingManager = inventoryCostingManager;
-        _goodsReceiptManager = goodsReceiptManager;
-    }
-
     public async Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -45,7 +30,7 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
-        if (await _productManager.DoesNameExistAsync(dto.Name).ConfigureAwait(false))
+        if (await productManager.DoesNameExistAsync(dto.Name).ConfigureAwait(false))
         {
             return new CreateProductResultAppDto
             {
@@ -57,7 +42,7 @@ public sealed class ProductAppService : IProductAppService
         var quantityDecimalPlaces = 0;
         if (dto.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
             if (unitMeasurement is null)
             {
                 return new CreateProductResultAppDto
@@ -80,11 +65,11 @@ public sealed class ProductAppService : IProductAppService
             Vendors = dto.Vendors.Select(item => new ProductVendorDto(item.VendorId, item.DisplayOrder)),
             Pictures = dto.Pictures
         };
-        var creationResult = await _productManager.CreateProductAsync(createProductDto).ConfigureAwait(false);
+        var creationResult = await productManager.CreateProductAsync(createProductDto).ConfigureAwait(false);
 
         foreach (var stock in dto.InitialStocks.Where(s => s.Quantity > 0))
         {
-            await _goodsReceiptManager.CreateForOpeningInventoryAsync(new CreateOpeningInventoryReceiptDto
+            await goodsReceiptManager.CreateForOpeningInventoryAsync(new CreateOpeningInventoryReceiptDto
             {
                 ProductId = creationResult.CreatedId,
                 WarehouseId = stock.WarehouseId,
@@ -104,7 +89,7 @@ public sealed class ProductAppService : IProductAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product == null)
         {
             return new DeleteProductResultAppDto
@@ -114,18 +99,29 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
-        await _productManager.DeleteProductAsync(dto.Id).ConfigureAwait(false);
+        await productManager.DeleteProductAsync(dto.Id).ConfigureAwait(false);
 
         return new DeleteProductResultAppDto { Success = true };
     }
 
     public async Task<ProductAppDto?> GetProductByIdAsync(Guid id)
     {
-        var product = await _productDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(id).ConfigureAwait(false);
 
         if (product is null)
             return null;
-        return product.ToDto();
+
+        var dto = product.ToDto();
+        if (product.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is not null)
+            {
+                dto.UnitMeasurement = unitMeasurement.Name;
+                dto.QuantityDecimalPlaces = unitMeasurement.DecimalPlaces;
+            }
+        }
+        return dto;
     }
 
     public async Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
@@ -133,20 +129,14 @@ public sealed class ProductAppService : IProductAppService
         if (!ids.Any())
             return [];
 
-        var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        var products = await productManager.GetProductsByIdsAsync(ids).ConfigureAwait(false);
 
-        return products.Select(p => p.ToDto());
-    }
-
-    public async Task<IEnumerable<ProductAppDto>> GetProductsByVendorIdAsync(Guid vendorId)
-    {
-        var products = await _productManager.GetProductsByVendorIdAsync(vendorId).ConfigureAwait(false);
         return products.Select(p => p.ToDto());
     }
 
     public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null)
     {
-        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords, categoryId, vendorId).ConfigureAwait(false);
+        var pagedData = await productManager.GetProductsAsync(pageIndex, pageSize, keywords, categoryId, vendorId).ConfigureAwait(false);
 
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),
@@ -169,7 +159,7 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
-        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product == null)
         {
             return new UpdateProductResultAppDto
@@ -179,7 +169,7 @@ public sealed class ProductAppService : IProductAppService
             };
         }
 
-        if (await _productManager.DoesNameExistAsync(dto.Name, dto.Id).ConfigureAwait(false))
+        if (await productManager.DoesNameExistAsync(dto.Name, dto.Id).ConfigureAwait(false))
         {
             return new UpdateProductResultAppDto
             {
@@ -190,7 +180,7 @@ public sealed class ProductAppService : IProductAppService
 
         if (dto.UnitMeasurementId.HasValue)
         {
-            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
+            var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
             if (unitMeasurement is null)
             {
                 return new UpdateProductResultAppDto
@@ -201,7 +191,7 @@ public sealed class ProductAppService : IProductAppService
             }
         }
 
-        var result = await _productManager.UpdateProductAsync(new UpdateProductDto(dto.Id)
+        var result = await productManager.UpdateProductAsync(new UpdateProductDto(dto.Id)
         {
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
@@ -213,9 +203,9 @@ public sealed class ProductAppService : IProductAppService
 
         if (dto.NewUnitPrice.HasValue)
         {
-            await _productManager.UpdateProductPriceAsync(new UpdateProductPriceDto(product.Id)
+            await productManager.UpdateProductPriceAsync(new UpdateProductPriceDto(product.Id)
             {
-                UnitCost = (await _inventoryCostingManager.GetCurrentCostSummaryAsync(product.Id).ConfigureAwait(false)).AverageCost,
+                UnitCost = (await inventoryCostingManager.GetCurrentCostSummaryAsync(product.Id).ConfigureAwait(false)).AverageCost,
                 UnitPrice = dto.NewUnitPrice.Value,
                 ChangePriceReason = dto.ChangePriceReason
             }).ConfigureAwait(false);
@@ -230,7 +220,7 @@ public sealed class ProductAppService : IProductAppService
 
     public async Task<IEnumerable<ProductPriceHistoryAppDto>> GetProductPriceHistoryAsync(Guid productId)
     {
-        var history = await _productManager.GetProductPriceHistoryAsync(productId).ConfigureAwait(false);
+        var history = await productManager.GetProductPriceHistoryAsync(productId).ConfigureAwait(false);
         return history.Select(h => new ProductPriceHistoryAppDto
         {
             Id = h.Id,

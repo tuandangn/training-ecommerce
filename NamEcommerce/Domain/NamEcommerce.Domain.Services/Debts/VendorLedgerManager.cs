@@ -210,19 +210,19 @@ public sealed class VendorLedgerManager(
 
     public Task<VendorAccountBalanceDto?> GetVendorSummaryAsync(Guid vendorId)
     {
-        var result = (from b in balanceReader.DataSource
-                      where b.VendorId == vendorId
-                      join v in vendorReader.DataSource on b.VendorId equals v.Id
-                      select new VendorAccountBalanceDto
-                      {
-                          VendorId = b.VendorId,
-                          VendorName = v.Name,
-                          VendorPhone = v.PhoneNumber,
-                          Balance = b.Balance,
-                          LastEntryOnUtc = b.LastEntryOnUtc
-                      }).FirstOrDefaultAsync();
+        var query = from b in balanceReader.DataSource
+                    where b.VendorId == vendorId
+                    join v in vendorReader.DataSource on b.VendorId equals v.Id
+                    select new VendorAccountBalanceDto
+                    {
+                        VendorId = b.VendorId,
+                        VendorName = v.Name,
+                        VendorPhone = v.PhoneNumber,
+                        Balance = b.Balance,
+                        LastEntryOnUtc = b.LastEntryOnUtc
+                    };
 
-        return result;
+        return query.FirstOrDefaultAsync();
     }
 
     private async Task<VendorLedgerEntryDto> PersistEntryAsync(VendorLedgerEntry entry)

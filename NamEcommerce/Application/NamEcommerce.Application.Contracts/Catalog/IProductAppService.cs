@@ -11,8 +11,6 @@ public interface IProductAppService
 
     Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
 
-    Task<IEnumerable<ProductAppDto>> GetProductsByVendorIdAsync(Guid vendorId);
-
     Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto);
 
     Task<UpdateProductResultAppDto> UpdateProductAsync(UpdateProductAppDto dto);

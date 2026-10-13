@@ -9,6 +9,8 @@ public sealed record ProductModel
     public Guid? CategoryId { get; set; }
     public IList<Guid> VendorIds { get; set; } = [];
     public Guid? UnitMeasurementId { get; set; }
+    public string? UnitMeasurement { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal CostPrice { get; set; }
     public int DisplayOrder { get; set; }

@@ -20,7 +20,6 @@ public sealed class DeliveryRunModelFactory(
     IDeliveryNoteAppService deliveryNoteAppService,
     IUserAppService userAppService,
     IProductAppService productAppService,
-    IUnitMeasurementAppService unitMeasurementAppService,
     IWarehouseAppService warehouseAppService,
     AppConfig appConfig, ICurrentUserService currentUserService) : IDeliveryRunModelFactory
 {
@@ -77,9 +76,6 @@ public sealed class DeliveryRunModelFactory(
         var productIds = currentDeliveryNotes.SelectMany(note => note.Value.Items.Select(item => item.ProductId)).Distinct().ToList();
         var products = await productAppService.GetProductsByIdsAsync(productIds).ConfigureAwait(false);
 
-        var unitMeasurementIds = products.Select(product => product.UnitMeasurementId).OfType<Guid>().Distinct().ToList();
-        var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
-
         var warehouseIds = currentDeliveryNotes.SelectMany(note => note.Value.Items.Select(item => item.WarehouseId)).OfType<Guid>().Distinct().ToList();
         var warehouses = (await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false))
             .Where(warehouse => warehouseIds.Contains(warehouse.Id)).ToList();
@@ -116,13 +112,13 @@ public sealed class DeliveryRunModelFactory(
             CreatedOn = DateTimeHelper.ToLocalTime(deliveryRun.CreatedOnUtc),
             UpdatedOn = DateTimeHelper.ToLocalTime(deliveryRun.UpdatedOnUtc),
             Items = itemModels,
-            PickingManifest = BuildPickingManifest(deliveryRun.WarehousePicks, currentDeliveryNotes.Values.ToList(), products, unitMeasurements, warehouses),
+            PickingManifest = BuildPickingManifest(deliveryRun.WarehousePicks, currentDeliveryNotes.Values.ToList(), products, warehouses),
             CanManageDeliveryRun = await currentUserService.IsAdminAsync().ConfigureAwait(false) ||
                 await currentUserService.IsWarehouseManager().ConfigureAwait(false),
             CanConfirmDeliveryRunCashHandover = await currentUserService.IsAdminAsync().ConfigureAwait(false) ||
                 await currentUserService.IsInRole(SystemUserRoleNames.Cashier).ConfigureAwait(false),
             CanIssuePaperManifest = deliveryRun.CanIssuePaperManifest,
-            CanCancel= deliveryRun.CanCancel,
+            CanCancel = deliveryRun.CanCancel,
             CanCloseIfDelivered = deliveryRun.CanCloseIfDelivered,
             CanReviewCashCollected = deliveryRun.CanReviewCashCollected,
             CanReconcileDeliveryRunItems = deliveryRun.CanReconcileDeliveryRunItems
@@ -136,7 +132,6 @@ public sealed class DeliveryRunModelFactory(
             var productItems = note?.Items.Select(noteItem =>
             {
                 var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
-                var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
                 var warehouse = warehouses.FirstOrDefault(warehouse => warehouse.Id == noteItem.WarehouseId);
                 return new DeliveryRunProductItemModel
                 {
@@ -147,8 +142,8 @@ public sealed class DeliveryRunModelFactory(
                     Quantity = noteItem.Quantity,
                     UnitPrice = noteItem.UnitPrice,
                     SubTotal = noteItem.SubTotal,
-                    QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
-                    UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                    QuantityDecimalPlaces = product?.QuantityDecimalPlaces ?? 2,
+                    UnitMeasurement = product?.UnitMeasurement ?? string.Empty
                 };
             }).ToList() ?? [];
             var settlementItems = new List<DeliveryRunSettlementProductItemModel>();
@@ -161,7 +156,6 @@ public sealed class DeliveryRunModelFactory(
                         continue;
 
                     var product = products.FirstOrDefault(product => product.Id == noteItem.ProductId);
-                    var unitMeasurement = product is not null ? unitMeasurements.FirstOrDefault(unitMeasurement => unitMeasurement.Id == product.UnitMeasurementId) : null;
                     settlementItems.Add(new DeliveryRunSettlementProductItemModel
                     {
                         DeliveryNoteItemId = noteItem.Id,
@@ -170,8 +164,8 @@ public sealed class DeliveryRunModelFactory(
                         Quantity = noteItem.Quantity,
                         AcceptedQuantity = settlementItem.AcceptedQuantity,
                         RejectedQuantity = settlementItem.RejectedQuantity,
-                        QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
-                        UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                        QuantityDecimalPlaces = product?.QuantityDecimalPlaces ?? 2,
+                        UnitMeasurement = product?.UnitMeasurement ?? string.Empty
                     });
                 }
             }
@@ -217,12 +211,7 @@ public sealed class DeliveryRunModelFactory(
     public async Task<DeliveryMobileIndexModel> PrepareDeliveryMobileIndexModelAsync(Guid currentUserId, string currentUserFullName,
         bool showCompleted)
     {
-        var pagedData = await deliveryRunAppService.GetListAsync(
-            0,
-            50,
-            null,
-            currentUserId,
-            null).ConfigureAwait(false);
+        var pagedData = await deliveryRunAppService.GetListAsync(0, int.MaxValue, null, currentUserId, null).ConfigureAwait(false);
 
         var candidateRuns = pagedData.Items
             .Where(run => run.Status != (int)DeliveryRunStatus.Cancelled)
@@ -232,6 +221,8 @@ public sealed class DeliveryRunModelFactory(
         foreach (var run in candidateRuns)
         {
             var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
+            if (details is null)
+                continue;
             var model = ToMobileListModel(run, details.Items);
             if (showCompleted != model.IsDeliveryCompleted)
                 continue;
@@ -251,6 +242,9 @@ public sealed class DeliveryRunModelFactory(
     public async Task<DeliveryMobileRunModel> PrepareDeliveryMobileRunModelAsync(Guid id, Guid currentUserId, string currentUserFullName)
     {
         var run = await PrepareDeliveryRunDetailsModelAsync(id).ConfigureAwait(false);
+        if (run is null)
+            throw new InvalidOperationException("Delivery run not found");
+
         if (run.AssignedDeliveryUserId != currentUserId)
             throw new UnauthorizedAccessException("Delivery run is not assigned to current user");
 
@@ -345,6 +339,8 @@ public sealed class DeliveryRunModelFactory(
         foreach (var run in runs)
         {
             var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
+            if (details is null)
+                continue;
             items.Add(ToListModel(run, details.Items));
         }
 
@@ -434,13 +430,11 @@ public sealed class DeliveryRunModelFactory(
         IEnumerable<DeliveryRunWarehousePickAppDto> warehousePicks,
         IEnumerable<DeliveryNoteAppDto> notes,
         IEnumerable<ProductAppDto> products,
-        IEnumerable<UnitMeasurementAppDto> unitMeasurements,
         IEnumerable<WarehouseAppDto> warehouses)
     {
         var confirmedByWarehouse = warehousePicks.ToDictionary(p => p.WarehouseId);
         var warehouseList = warehouses.ToList();
         var productList = products.ToList();
-        var unitMeasurementList = unitMeasurements.ToList();
         var noteItemsByWarehouse = notes
             .SelectMany(note => note.Items)
             .GroupBy(item => item.WarehouseId)
@@ -460,16 +454,13 @@ public sealed class DeliveryRunModelFactory(
                     {
                         var first = group.First();
                         var product = productList.FirstOrDefault(p => p.Id == first.ProductId);
-                        var unitMeasurement = product is not null
-                            ? unitMeasurementList.FirstOrDefault(u => u.Id == product.UnitMeasurementId)
-                            : null;
                         return new DeliveryRunProductLineModel
                         {
                             ProductId = first.ProductId,
                             ProductName = first.ProductName,
                             TotalQuantity = group.Sum(item => item.Quantity),
-                            QuantityDecimalPlaces = unitMeasurement?.DecimalPlaces ?? 2,
-                            UnitMeasurement = unitMeasurement?.Name ?? string.Empty
+                            QuantityDecimalPlaces = product?.QuantityDecimalPlaces ?? 2,
+                            UnitMeasurement = product?.UnitMeasurement ?? string.Empty
                         };
                     })
                     .ToList();

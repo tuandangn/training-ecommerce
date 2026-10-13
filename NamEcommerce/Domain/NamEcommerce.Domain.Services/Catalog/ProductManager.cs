@@ -12,36 +12,15 @@ using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Domain.Services.Catalog;
 
-public sealed class ProductManager : IProductManager
+public sealed class ProductManager(IRepository<Product> productRepository,
+    IEntityDataReader<Product> productEntityDataReader,
+    IEntityDataReader<Category> categoryDataReader,
+    IEntityDataReader<Picture> pictureDataReader,
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+    IRepository<ProductPriceHistory> priceHistoryRepository,
+    IEntityDataReader<ProductPriceHistory> priceHistoryDataReader,
+    IEntityDataReader<Vendor> vendorDataReader) : IProductManager
 {
-    private readonly IRepository<Product> _productRepository;
-    private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IEntityDataReader<Category> _categoryDataReader;
-    private readonly IEntityDataReader<Picture> _pictureDataReader;
-    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
-    private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
-    private readonly IEntityDataReader<ProductPriceHistory> _priceHistoryDataReader;
-    private readonly IEntityDataReader<Vendor> _vendorDataReader;
-
-    public ProductManager(IRepository<Product> productRepository,
-        IEntityDataReader<Product> productEntityDataReader,
-        IEntityDataReader<Category> categoryDataReader,
-        IEntityDataReader<Picture> pictureDataReader,
-        IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
-        IRepository<ProductPriceHistory> priceHistoryRepository,
-        IEntityDataReader<ProductPriceHistory> priceHistoryDataReader,
-        IEntityDataReader<Vendor> vendorDataReader)
-    {
-        _productRepository = productRepository;
-        _productDataReader = productEntityDataReader;
-        _categoryDataReader = categoryDataReader;
-        _pictureDataReader = pictureDataReader;
-        _unitMeasurementDataReader = unitMeasurementDataReader;
-        _priceHistoryRepository = priceHistoryRepository;
-        _priceHistoryDataReader = priceHistoryDataReader;
-        _vendorDataReader = vendorDataReader;
-    }
-
     public async Task<CreateProductResultDto> CreateProductAsync(CreateProductDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -56,16 +35,16 @@ public sealed class ProductManager : IProductManager
             ShortDesc = dto.ShortDesc
         };
         product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
-        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
+        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, unitMeasurementDataReader).ConfigureAwait(false);
         foreach (var categoryInfo in dto.Categories)
-            await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
+            await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, categoryDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.Pictures)
-            await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
+            await product.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
         foreach (var vendorInfo in dto.Vendors)
-            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
+            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, vendorDataReader).ConfigureAwait(false);
 
         product.MarkCreated();
-        var insertedProduct = await _productRepository.InsertAsync(product).ConfigureAwait(false);
+        var insertedProduct = await productRepository.InsertAsync(product).ConfigureAwait(false);
 
         return new CreateProductResultDto
         {
@@ -75,19 +54,19 @@ public sealed class ProductManager : IProductManager
 
     public async Task DeleteProductAsync(Guid id)
     {
-        var product = await _productRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var product = await productRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(id);
 
         product.MarkDeleted();
-        await _productRepository.DeleteAsync(product).ConfigureAwait(false);
+        await productRepository.DeleteAsync(product).ConfigureAwait(false);
     }
 
     public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        var query = from product in _productDataReader.DataSource
+        var query = from product in productEntityDataReader.DataSource
                     where product.Name == name && (comparesWithCurrentId == null || product.Id != comparesWithCurrentId)
                     select product;
 
@@ -100,21 +79,21 @@ public sealed class ProductManager : IProductManager
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        var query = _productDataReader.DataSource;
+        var query = productEntityDataReader.DataSource;
 
         if (!string.IsNullOrEmpty(keywords))
         {
             var normalizedKeywords = TextHelper.Normalize(keywords);
             var uppercaseKeywords = keywords.Trim().ToUpper();
 
-            var vendorIds = (await _vendorDataReader.DataSource
+            var vendorIds = (await vendorDataReader.DataSource
                 .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
                 .Select(v => v.Id)
                 .ToListAsync().ConfigureAwait(false))
                 .OfType<Guid?>()
                 .ToList();
 
-            var categoryIds = (await _categoryDataReader.DataSource
+            var categoryIds = (await categoryDataReader.DataSource
                 .Where(c => c.Name.ToUpper().Contains(uppercaseKeywords) || c.Name.ToUpper().Contains(normalizedKeywords) || c.NormalizedName.Contains(normalizedKeywords))
                 .Select(v => v.Id)
                 .ToListAsync().ConfigureAwait(false))
@@ -142,53 +121,64 @@ public sealed class ProductManager : IProductManager
         if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(new List<ProductDto>(), pageIndex, pageSize, 0);
 
-        var pagedData = await query
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
+        var aggQuery = from p in query
+                       join u in unitMeasurementDataReader.DataSource on p.UnitMeasurementId equals u.Id into unitMeasurements
+                       from u in unitMeasurements.DefaultIfEmpty()
+                       select new { p, u };
+        var pagedData = await aggQuery
+            .Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        var data = PagedDataDto.Create(pagedData.Select(product => product.ToDto()), pageIndex, pageSize, totalCount);
+        var data = PagedDataDto.Create(pagedData.Select(item => item.p.ToDto(item.u)), pageIndex, pageSize, totalCount);
         return data;
     }
 
     public async Task<IEnumerable<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId)
     {
-        var query = _productDataReader.DataSource
-            .Where(p => p.ProductVendors.Any(pv => pv.VendorId == vendorId))
-            .OrderBy(p => p.Name);
+        var productQuery = productEntityDataReader.DataSource
+            .Where(p => p.ProductVendors.Any(pv => pv.VendorId == vendorId));
 
-        var list = (await query.ToListAsync().ConfigureAwait(false)).Select(p => p.ToDto()).ToList();
-        return list;
+        var query = from p in productQuery
+                    join u in unitMeasurementDataReader.DataSource on p.UnitMeasurementId equals u.Id into unitMeasurements
+                    from u in unitMeasurements.DefaultIfEmpty()
+                    select new { p, u };
+        var products = await query.ToListAsync().ConfigureAwait(false);
+
+        return products.Select(item =>
+        {
+            var dto = item.p.ToDto(item.u);
+            return dto;
+        }).ToList();
     }
 
     public async Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder)
     {
-        var product = await _productRepository.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await productRepository.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        await product.AddVendorAsync(vendorId, displayOrder, _vendorDataReader).ConfigureAwait(false);
-        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        await product.AddVendorAsync(vendorId, displayOrder, vendorDataReader).ConfigureAwait(false);
+        await productRepository.UpdateAsync(product).ConfigureAwait(false);
     }
 
     public async Task RemoveProductVendorAsync(Guid productId, Guid vendorId)
     {
-        var product = await _productRepository.GetByIdAsync(productId).ConfigureAwait(false);
+        var product = await productRepository.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
         product.RemoveVendor(vendorId);
-        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        await productRepository.UpdateAsync(product).ConfigureAwait(false);
     }
 
     public async Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId)
     {
-        var product = await _productRepository.GetByIdAsync(productId);
+        var product = await productRepository.GetByIdAsync(productId);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
         product.RemoveFromCategory(categoryId);
-        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        await productRepository.UpdateAsync(product).ConfigureAwait(false);
     }
 
     public async Task<UpdateProductResultDto> UpdateProductAsync(UpdateProductDto dto)
@@ -197,7 +187,7 @@ public sealed class ProductManager : IProductManager
 
         dto.Verify();
 
-        var product = await _productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 
@@ -205,23 +195,23 @@ public sealed class ProductManager : IProductManager
         product.UpdatedOnUtc = DateTime.UtcNow;
 
         await product.SetNameAsync(dto.Name, this).ConfigureAwait(false);
-        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
+        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, unitMeasurementDataReader).ConfigureAwait(false);
 
         product.ClearCategories();
         foreach (var categoryInfo in dto.Categories)
-            await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
+            await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, categoryDataReader).ConfigureAwait(false);
 
         var deletedPictureIds = product.ProductPictures.Select(p => p.PictureId).Where(pictureId => !dto.Pictures.Contains(pictureId)).ToList();
         product.ClearPictures();
         foreach (var pictureId in dto.Pictures)
-            await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
+            await product.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
 
         product.ClearVendors();
         foreach (var vendorInfo in dto.Vendors)
-            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
+            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, vendorDataReader).ConfigureAwait(false);
 
         product.MarkUpdated(deletedPictureIds);
-        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        await productRepository.UpdateAsync(product).ConfigureAwait(false);
 
         return new UpdateProductResultDto(product.Id)
         {
@@ -236,13 +226,28 @@ public sealed class ProductManager : IProductManager
 
     public async Task<IEnumerable<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
     {
-        var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
-        return products.Select(p => p.ToDto()).ToList();
+        if (ids is null || !ids.Any())
+            return Enumerable.Empty<ProductDto>();
+
+        var productQuery = productEntityDataReader.GetDataSource(new() { ReadWrite = true })
+            .Where(p => ids.Contains(p.Id));
+
+        var query = from p in productQuery
+                    join u in unitMeasurementDataReader.DataSource on p.UnitMeasurementId equals u.Id into unitMeasurements
+                    from u in unitMeasurements.DefaultIfEmpty()
+                    select new { p, u };
+        var products = await query.ToListAsync().ConfigureAwait(false);
+
+        return products.Select(item =>
+        {
+            var dto = item.p.ToDto(item.u);
+            return dto;
+        }).ToList();
     }
 
     public async Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
     {
-        var data = await _priceHistoryDataReader.DataSource
+        var data = await priceHistoryDataReader.DataSource
             .Where(ph => ph.ProductId == productId)
             .OrderByDescending(ph => ph.CreatedOnUtc)
             .Select(ph => new ProductPriceHistoryDto
@@ -265,7 +270,7 @@ public sealed class ProductManager : IProductManager
 
         dto.Verify();
 
-        var product = await _productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var product = await productRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 
@@ -278,9 +283,9 @@ public sealed class ProductManager : IProductManager
 
         product.UpdatePrice(dto.UnitPrice, dto.UnitCost);
         product.MarkPriceChanged(oldUnitPrice, oldCostPrice);
-        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        await productRepository.UpdateAsync(product).ConfigureAwait(false);
 
-        await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+        await priceHistoryRepository.InsertAsync(new ProductPriceHistory(
             product.Id, oldUnitPrice, product.UnitPrice, oldCostPrice, product.CostPrice,
             dto.ChangePriceReason ?? "Cập nhật giá hàng hóa")).ConfigureAwait(false);
     }

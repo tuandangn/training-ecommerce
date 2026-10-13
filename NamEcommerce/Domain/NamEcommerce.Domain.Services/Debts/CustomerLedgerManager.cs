@@ -166,8 +166,8 @@ public sealed class CustomerLedgerManager(
             ? null : await query.CountAsync().ConfigureAwait(false);
 
         if (totalCount.HasValue && totalCount == 0)
-            return PagedDataDto.Create(new List<CustomerLedgerStatementEntryDto>(), pageIndex, pageSize, 0); 
-        
+            return PagedDataDto.Create(new List<CustomerLedgerStatementEntryDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
@@ -286,18 +286,17 @@ public sealed class CustomerLedgerManager(
 
     public async Task<CustomerAccountBalanceDto?> GetCustomerSummaryAsync(Guid customerId)
     {
-        var result = await (from b in balanceReader.DataSource
-                      where b.CustomerId == customerId
-                      join c in customerReader.DataSource on b.CustomerId equals c.Id
-                      select new CustomerAccountBalanceDto
-                      {
-                          CustomerId = b.CustomerId,
-                          CustomerName = c.FullName.Value,
-                          CustomerPhone = c.PhoneNumber,
-                          Balance = b.Balance,
-                          LastEntryOnUtc = b.LastEntryOnUtc
-                      }).FirstOrDefaultAsync().ConfigureAwait(false);
-
-        return result;
+        var query = from b in balanceReader.DataSource
+                    where b.CustomerId == customerId
+                    join c in customerReader.DataSource on b.CustomerId equals c.Id
+                    select new CustomerAccountBalanceDto
+                    {
+                        CustomerId = b.CustomerId,
+                        CustomerName = c.FullName.Value,
+                        CustomerPhone = c.PhoneNumber,
+                        Balance = b.Balance,
+                        LastEntryOnUtc = b.LastEntryOnUtc
+                    };
+        return await query.FirstOrDefaultAsync().ConfigureAwait(false);
     }
 }

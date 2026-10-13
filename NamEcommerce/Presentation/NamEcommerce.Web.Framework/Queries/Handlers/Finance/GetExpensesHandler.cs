@@ -7,8 +7,7 @@ using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Finance;
 
-public sealed class GetExpensesHandler(IExpenseAppService expenseAppService, IExpenseBudgetAppService budgetAppService)
-    : IRequestHandler<GetExpensesQuery, ExpenseListModel>
+public sealed class GetExpensesHandler(IExpenseAppService expenseAppService): IRequestHandler<GetExpensesQuery, ExpenseListModel>
 {
     public async Task<ExpenseListModel> Handle(GetExpensesQuery request, CancellationToken cancellationToken)
     {

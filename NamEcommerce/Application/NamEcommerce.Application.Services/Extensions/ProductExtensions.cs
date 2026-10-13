@@ -33,6 +33,8 @@ public static class ProductExtensions
             Vendors = dto.Vendors.Select(pv => new ProductVendorAppDto(pv.VendorId, pv.DisplayOrder)),
             Pictures = dto.Pictures,
             UnitPrice = dto.UnitPrice,
-            CostPrice = dto.CostPrice
+            CostPrice = dto.CostPrice,
+            UnitMeasurement = dto.UnitMeasurement,
+            QuantityDecimalPlaces = dto.QuantityDecimalPlaces
         };
 }

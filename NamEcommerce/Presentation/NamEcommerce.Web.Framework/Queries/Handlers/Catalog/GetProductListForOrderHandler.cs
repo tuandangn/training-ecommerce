@@ -1,6 +1,5 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -9,34 +8,22 @@ using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
-public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductListForOrderQuery, ProductListForOrderModel>
+public sealed class GetProductListForOrderHandler(IProductAppService productAppService, IMediator mediator)
+    : IRequestHandler<GetProductListForOrderQuery, ProductListForOrderModel>
 {
-    private readonly IProductAppService _productAppService;
-    private readonly IPictureAppService _pictureAppService;
-    private readonly IMediator _mediator;
-
-    public GetProductListForOrderHandler(IProductAppService productAppService, IMediator mediator, IPictureAppService pictureAppService)
-    {
-        _productAppService = productAppService;
-        _mediator = mediator;
-        _pictureAppService = pictureAppService;
-    }
-
     public async Task<ProductListForOrderModel> Handle(GetProductListForOrderQuery request, CancellationToken cancellationToken)
     {
-        var products = await _productAppService.GetProductsAsync(0, int.MaxValue, request.Keywords, request.CategoryId, request.VendorId).ConfigureAwait(false);
+        var products = await productAppService.GetProductsAsync(0, int.MaxValue, request.Keywords, request.CategoryId, request.VendorId).ConfigureAwait(false);
 
-        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery(), cancellationToken).ConfigureAwait(false);
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery
+        var vendorOptions = await mediator.Send(new GetVendorOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var categoryOptions = await mediator.Send(new GetCategoryOptionListQuery
         {
             BreadcrumbOpts = new BreadcrumbOptions
             {
                 Disabled = true
             }
         }, cancellationToken).ConfigureAwait(false);
-        var unitMeasurementList = await _mediator.Send(new GetUnitMeasurementListQuery { Keywords = null, PageIndex = 0, PageSize = int.MaxValue }, cancellationToken).ConfigureAwait(false);
-        var unitMeasurementById = unitMeasurementList.Data.ToDictionary(u => u.Id);
-        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var warehouseOptions = await mediator.Send(new GetWarehouseOptionListQuery(), cancellationToken).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
         foreach (var productInfo in products)
@@ -51,13 +38,16 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
                 Name = productInfo.Name,
                 UnitPrice = productInfo.UnitPrice,
                 CategoryName = categoryName,
-                PictureUrl = PictureHelper.GetPictureUrl(productInfo.Pictures.FirstOrDefault())
+                PictureUrl = PictureHelper.GetPictureUrl(productInfo.Pictures.FirstOrDefault()),
+                UnitMeasurement = productInfo.UnitMeasurement,
+                QuantityDecimalPlaces = productInfo.QuantityDecimalPlaces ?? 2
             };
 
-            var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productInfo.Id, request.WarehouseId), cancellationToken).ConfigureAwait(false);
+            var stockInfo = await mediator.Send(new GetProductStockInfoQuery(productInfo.Id, request.WarehouseId), cancellationToken).ConfigureAwait(false);
             productModel.QuantityOnHand = stockInfo.QuantityOnHand;
             productModel.QuantityReserved = stockInfo.QuantityReserved;
             productModel.QuantityAvailable = stockInfo.QuantityAvailable;
+
             productModel.AvailableWarehouses = warehouseOptions.Where(option => stockInfo.AvailableWarehouseIds.Contains(option.Id)).ToList();
             productModel.AvailableWarehouseStocks = stockInfo.Warehouses
                 .Where(stock => stock.QuantityAvailable > 0)
@@ -73,12 +63,6 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
 
             if (productInfo.Vendors != null)
                 productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();
-
-            if (productInfo.UnitMeasurementId.HasValue && unitMeasurementById.TryGetValue(productInfo.UnitMeasurementId.Value, out var um))
-            {
-                productModel.UnitMeasurement = um.Name;
-                productModel.QuantityDecimalPlaces = um.DecimalPlaces;
-            }
 
             productListItems.Add(productModel);
         }

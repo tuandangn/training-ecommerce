@@ -2,12 +2,10 @@ using MediatR;
 using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 
-public sealed class PurchaseOrderCreatedHandler(IPurchaseOrderManager purchaseOrderManager)
-    : INotificationHandler<PurchaseOrderCreated>
+public sealed class PurchaseOrderCreatedHandler(): INotificationHandler<PurchaseOrderCreated>
 {
     public async Task Handle(PurchaseOrderCreated notification, CancellationToken cancellationToken)
     {

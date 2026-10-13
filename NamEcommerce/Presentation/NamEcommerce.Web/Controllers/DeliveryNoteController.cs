@@ -17,7 +17,6 @@ using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
-using NamEcommerce.Web.Services.Common;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using System.Text.Json;
 
@@ -28,7 +27,6 @@ public sealed class DeliveryNoteController(
     IMediator mediator, IConfiguration configuration,
     IDeliveryNoteAppService deliveryNoteAppService,
     ICurrentUserAccessor currentUserAccessor,
-    ICachedValuesService cachedValuesService,
     IOrderAppService orderAppService) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(List));

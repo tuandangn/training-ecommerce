@@ -214,22 +214,25 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
             inventoryStockQuery = inventoryStockQuery.Where(x => searchWarehouseIds.Contains(x.WarehouseId));
 
         var productQuery = productDataReader.DataSource;
+        if (!string.IsNullOrWhiteSpace(keywords))
+        {
+            var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
+            productQuery = productQuery.Where(product => product.Name.ToUpper().Contains(uppercaseKeywords)
+                || product.Name.ToUpper().Contains(normalizedKeywords)
+                || product.NormalizedName.Contains(normalizedKeywords));
+        }
+
         var warehouseQuery = warehouseDataReader.DataSource;
         var unitMeasurementQuery = unitMeasurementDataReader.DataSource;
 
         var query = from s in inventoryStockQuery
                     join p in productQuery on s.ProductId equals p.Id
-                    join w in warehouseQuery on s.WarehouseId equals w.Id
-                    join u in unitMeasurementQuery on p.UnitMeasurementId equals u.Id
+                    join w in warehouseQuery on s.WarehouseId equals w.Id into warehouses
+                    from w in warehouses.DefaultIfEmpty()
+                    join u in unitMeasurementQuery on p.UnitMeasurementId equals u.Id into unitMeasurements
+                    from u in unitMeasurements.DefaultIfEmpty()
                     select new { s, p, w, u };
-
-        if (!string.IsNullOrWhiteSpace(keywords))
-        {
-            var normalizedKeywords = TextHelper.Normalize(keywords);
-            var uppercaseKeywords = keywords.Trim().ToUpper();
-            query = query.Where(agg => agg.p.Name.ToUpper().Contains(uppercaseKeywords) || agg.p.Name.ToUpper().Contains(normalizedKeywords) || agg.p.NormalizedName.Contains(normalizedKeywords)
-                || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
-        }
 
         int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
             ? null : await query.CountAsync().ConfigureAwait(false);
@@ -270,7 +273,8 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
 
         var query = from s in inventoryStockQuery
                     join p in productQuery on s.ProductId equals p.Id
-                    join w in warehouseQuery on s.WarehouseId equals w.Id
+                    join w in warehouseQuery on s.WarehouseId equals w.Id into warehouses
+                    from w in warehouses.DefaultIfEmpty()
                     select new { s, p, w };
         var items = await query
             .Select(x => new InventoryStockDto(x.s.Id)
@@ -295,10 +299,12 @@ public sealed class InventoryStockManager(IRepository<InventoryStock> inventoryS
 
     public async Task<(decimal available, decimal reserved)> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
     {
-        var stockItems = await (from s in inventoryStockDataReader.DataSource
-                                join w in warehouseDataReader.DataSource on s.WarehouseId equals w.Id
-                                where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
-                                select s).ToListAsync().ConfigureAwait(false);
+        var query = from s in inventoryStockDataReader.DataSource
+                    join w in warehouseDataReader.DataSource on s.WarehouseId equals w.Id
+                    where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
+                    select s;
+        var stockItems = await query.ToListAsync().ConfigureAwait(false);
+
         var quantityOnHand = stockItems.Sum(x => x.QuantityOnHand);
         var quantityReservedByWarehouse = stockItems.Sum(x => x.QuantityReserved);
         var quantityReservedByOrder = await productReservationDataReader.DataSource
