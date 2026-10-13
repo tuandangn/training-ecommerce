@@ -171,12 +171,9 @@ class FastSale {
         document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
             button.addEventListener('click', async () => {
                 button.disabled = true;
-                try {
-                    const createdCustomer = await new CustomerQuickCreateController().getCreatedCustomer();
+                const createdCustomer = await new CustomerQuickCreateController().getCreatedCustomer();
+                if (createdCustomer)
                     this.customerPicker.selectCustomer(createdCustomer);
-                } catch (error) {
-                    if (error) this.showAlert('error', error);
-                }
                 button.disabled = false;
             });
         });

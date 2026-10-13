@@ -326,7 +326,7 @@ public sealed class DeliveryNoteManager(
             return;
         }
 
-        var acceptanceDto = dto.Acceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
+        var acceptanceDto = GetCompletionAcceptance(deliveryNote, dto.Acceptance);
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, acceptanceDto);
         var completionMetadata = MergeCompletionMetadata(deliveryNote, dto.CompletionMetadata);
         var amountToCollect = GetEffectiveAmountToCollect(deliveryNote, acceptance.AmountToCollect);
@@ -401,7 +401,7 @@ public sealed class DeliveryNoteManager(
             return;
         }
 
-        var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
+        var acceptance = ResolveDeliveryAcceptance(deliveryNote, GetCompletionAcceptance(deliveryNote, dto.Acceptance));
         var amountToCollect = GetEffectiveAmountToCollect(deliveryNote, acceptance.AmountToCollect);
         if (dto.CompletionMetadata?.CashCollectedAmount > amountToCollect)
             throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotExceedAmountToCollect");
@@ -443,7 +443,7 @@ public sealed class DeliveryNoteManager(
         DeliveryAcceptanceResolution? resolvedAcceptance = null;
         if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
         {
-            var acceptanceDto = acceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
+            var acceptanceDto = GetCompletionAcceptance(deliveryNote, acceptance);
             resolvedAcceptance = ResolveDeliveryAcceptance(deliveryNote, acceptanceDto);
             if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
             {
@@ -760,6 +760,19 @@ public sealed class DeliveryNoteManager(
                 RejectReason = item.RejectReason
             }).ToList()
         };
+    }
+
+    private static DeliveryAcceptanceDto? GetCompletionAcceptance(
+        DeliveryNote deliveryNote,
+        DeliveryAcceptanceDto? submittedAcceptance)
+    {
+        if (deliveryNote.SettlementApproval == DeliverySettlementApprovalStatus.Approved
+            && deliveryNote.SettlementItems.Count > 0)
+        {
+            return BuildAcceptanceFromStoredSettlement(deliveryNote);
+        }
+
+        return submittedAcceptance ?? BuildAcceptanceFromStoredSettlement(deliveryNote);
     }
 
     private static decimal GetEffectiveAmountToCollect(

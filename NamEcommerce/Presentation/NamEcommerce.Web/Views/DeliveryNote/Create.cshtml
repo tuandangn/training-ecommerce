@@ -899,21 +899,23 @@
 
             // Validation on submit
             $('#createDeliveryForm').submit(function (e) {
+                e.preventDefault();
                 var hasSelected = false;
+                var hasError = false;
                 $('.item-checkbox:checked').each(function () {
                     hasSelected = true;
                     var row = $(this).closest('tr');
                     var qty = parseFloat(DecimalFields.stripFormatting(row.find('.quantity-input').val(), 2));
                     if (isNaN(qty) || qty <= 0) {
-                        alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
-                        e.preventDefault();
+                        showAlert('error', 'Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
+                        hasError = true;
                         return false; // break loop
                     }
 
                     var allocationError = hasInvalidAllocation(row);
                     if (allocationError) {
-                        alert(allocationError);
-                        e.preventDefault();
+                        showAlert('error', allocationError);
+                        hasError = true;
                         return false;
                     }
 
@@ -921,21 +923,27 @@
                         var availableQuantity = getAvailableQuantity(row);
                         var maxQuantity = Math.min(getRequiredQuantity(row), availableQuantity);
                         if (availableQuantity <= 0 || qty > maxQuantity) {
-                            alert('Số lượng xuất vượt số lượng có thể xuất trong kho đã chọn.');
-                            e.preventDefault();
+                            showAlert('error', 'Số lượng xuất vượt số lượng có thể xuất trong kho đã chọn.');
+                            hasError = true;
                             return false;
                         }
                     }
                 });
 
                 if (!hasSelected) {
-                    alert('Vui lòng chọn ít nhất một mặt hàng để xuất kho.');
-                    e.preventDefault();
+                    showAlert('error', 'Vui lòng chọn ít nhất một mặt hàng để xuất kho.');
                     return false;
                 }
+                if (hasError)
+                    return;
 
                 showPageLoading();
+                this.submit();
             });
+
+            function showAlert(type, message) {
+                window.NotificationCenter[type](message);
+            }
         });
     </script>
 }

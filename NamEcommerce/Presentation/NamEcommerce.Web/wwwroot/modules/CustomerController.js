@@ -63,7 +63,8 @@ export default class CustomerQuickCreateController {
                 this.#showAlert('success', 'Thêm khách hàng mới thành công');
                 this.#resolveFn(result.customer);
             } catch {
-                this.#rejectFn('error', 'Có lỗi xảy ra khi tạo khách hàng.');
+                this.#showAlert('error', 'Có lỗi xảy ra khi tạo khách hàng.');
+                this.#resolveFn(null);
             } finally {
                 submitButton.disabled = false;
             }
@@ -77,7 +78,7 @@ export default class CustomerQuickCreateController {
         return response;
     }
     #showAlert(type, message) {
-        window.NotificationCenter[type](message, 'warning');
+        window.NotificationCenter[type](message);
     }
 
     getCreatedCustomer() {
