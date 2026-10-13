@@ -31,14 +31,15 @@ public sealed record VendorDebt : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    internal VendorDebt(string code, Guid vendorId, string vendorName,
-        Guid goodsReceiptId,
-        decimal totalAmount, DateTime? dueDateUtc) : base(Guid.NewGuid())
+    internal VendorDebt(string code, Guid vendorId, string vendorName, 
+        decimal totalAmount, DateTime? dueDateUtc,
+        Guid goodsReceiptId, string goodsReceiptCode) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
         VendorName = vendorName;
         GoodsReceiptId = goodsReceiptId;
+        GoodsReceiptCode = goodsReceiptCode;
         TotalAmount = totalAmount;
         RemainingAmount = totalAmount;
         PaidAmount = 0;
@@ -65,7 +66,6 @@ public sealed record VendorDebt : AppAggregateEntity
     public string Code { get; private set; }
 
     public Guid VendorId { get; private set; }
-
     public string VendorName
     {
         get;
@@ -76,7 +76,6 @@ public sealed record VendorDebt : AppAggregateEntity
         }
     }
     internal string NormalizedVendorName { get; private set; } = "";
-
     public string? VendorPhone
     {
         get;
@@ -87,7 +86,6 @@ public sealed record VendorDebt : AppAggregateEntity
         }
     }
     internal string NormalizedVendorPhone { get; private set; } = "";
-
     public string? VendorAddress
     {
         get;
@@ -103,6 +101,7 @@ public sealed record VendorDebt : AppAggregateEntity
     public string? PurchaseOrderCode { get; private set; }
 
     public Guid? GoodsReceiptId { get; private set; }
+    public string? GoodsReceiptCode { get; set; }
 
     public decimal TotalAmount { get; private set; }
     public decimal PaidAmount { get; private set; }

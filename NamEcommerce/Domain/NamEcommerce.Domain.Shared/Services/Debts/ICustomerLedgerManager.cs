@@ -20,16 +20,10 @@ public interface ICustomerLedgerManager
     Task<decimal> GetBalanceAsync(Guid customerId);
 
     Task<IPagedDataDto<CustomerLedgerStatementEntryDto>> GetStatementAsync(
-        Guid customerId,
-        DateTime? from = null,
-        DateTime? to = null,
-        int pageIndex = 0,
-        int pageSize = 30);
+        int pageIndex, int pageSize, Guid customerId, DateTime? from = null, DateTime? to = null);
 
     Task<IPagedDataDto<CustomerAccountBalanceDto>> GetBalancesAsync(
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15);
+        int pageIndex, int pageSize, string? keywords = null);
 
     Task<CustomerAccountBalanceDto?> GetCustomerSummaryAsync(Guid customerId);
 }

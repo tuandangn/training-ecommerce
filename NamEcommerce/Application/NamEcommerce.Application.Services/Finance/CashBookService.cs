@@ -68,7 +68,7 @@ public sealed class CashBookService : ICashBookService
             .Where(e => (e.PaymentMethod == null || e.PaymentMethod == PaymentMethod.Cash)
                      && e.IncurredDate <= cutoff)
             .ToList()
-            .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
+            .Sum(e => (decimal?)e.Amount) ?? 0;
 
         return setup.OpeningCash + cashIn + vendorRefundsIn - refundsOut - vendorOut - expensesOut;
     }
@@ -229,7 +229,7 @@ public sealed class CashBookService : ICashBookService
         else if (!isAll) expQuery = expQuery.Where(e => e.BankAccountId == bankAccountId!.Value
             || (e.BankAccountId == null && e.PaymentMethod == PaymentMethod.BankTransfer && fallbackBankAccountId == bankAccountId.Value));
         foreach (var e in expQuery.ToList())
-            lines.Add(new CashBookLineDto { Date = e.IncurredDate, Description = $"Chi phí: {e.Title}", SourceType = "Expense", SourceId = e.Id, AmountOut = e.AmountExcludingTax });
+            lines.Add(new CashBookLineDto { Date = e.IncurredDate, Description = $"Chi phí: {e.Title}", SourceType = "Expense", SourceId = e.Id, AmountOut = e.Amount });
 
         return lines;
     }

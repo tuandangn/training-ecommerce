@@ -12,6 +12,9 @@ public sealed record GoodsReceiptItemAppDto(Guid Id)
     public decimal Quantity { get; init; }
     public decimal? UnitCost { get; init; }
     public bool IsPendingCosting { get; init; }
+
+    public decimal TaxAmount { get; set; }
+    public decimal? TaxRate { get; set; }
 }
 
 [Serializable]

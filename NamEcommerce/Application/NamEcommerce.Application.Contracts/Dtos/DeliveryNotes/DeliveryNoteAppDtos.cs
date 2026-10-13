@@ -18,6 +18,7 @@ public sealed record DeliveryNoteAppDto
     public DateTime? AssignedDeliveryOnUtc { get; init; }
 
     public required Guid CustomerId { get; init; }
+    public bool IsRetailWalkInCustomer { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
@@ -72,10 +73,10 @@ public sealed record DeliveryNoteAppDto
     public IList<DeliveryNoteItemAppDto> Items { get; init; } = [];
     public IList<DeliveryNoteSettlementItemAppDto> SettlementItems { get; init; } = [];
 
-    public bool CanApprove { get; set; }
-    public bool CanMarkDelivering { get; set; }
-    public bool CanMarkDelivered { get; set; }
-    public bool CanReject { get; set; }
+    public bool CanApprove { get; init; }
+    public bool CanMarkDelivering { get; init; }
+    public bool CanMarkDelivered { get; init; }
+    public bool CanReject { get; init; }
 }
 
 [Serializable]

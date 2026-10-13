@@ -19,4 +19,3 @@ public sealed record KeywordFilter
 
     public static implicit operator KeywordFilter(string value) => new(value);
 }
-

@@ -22,6 +22,7 @@ public sealed record OrderItem : AppEntity
     public decimal Discount { get; internal set; }
     public decimal Quantity { get; internal set; }
 
+    public Guid? WarehouseId { get; internal set; }
     public bool IsDelivered { get; private set; }
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
@@ -40,14 +41,13 @@ public sealed record OrderItem : AppEntity
         UnitPrice = unitPrice;
     }
 
+    #region Events
+
     internal void MarkDelivered(Guid pictureId)
     {
         if (IsDelivered)
             throw new OrderItemDataIsInvalidException("Order item is already delivered.");
             
-        if (pictureId == Guid.Empty)
-            throw new OrderItemDataIsInvalidException("Delivery proof picture is required.");
-
         IsDelivered = true;
         DeliveredOnUtc = DateTime.UtcNow;
         DeliveryProofPictureId = pictureId;
@@ -61,4 +61,6 @@ public sealed record OrderItem : AppEntity
         IsDelivered = true;
         DeliveredOnUtc = DateTime.UtcNow;
     }
+
+    #endregion
 }

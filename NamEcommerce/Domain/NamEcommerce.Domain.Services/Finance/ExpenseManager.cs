@@ -1,67 +1,159 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Services.Finance;
+using NamEcommerce.Domain.Shared.Specifications;
+using NamEcommerce.Domain.Specifications.Finances;
 
 namespace NamEcommerce.Domain.Services.Finance;
 
-public class ExpenseManager : IExpenseManager
+public class ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataReader<Expense> expenseDataReader) : IExpenseManager
 {
-    private readonly IRepository<Expense> _expenseRepository;
-    private readonly IEntityDataReader<Expense> _expenseDataReader;
-
-    public ExpenseManager(IRepository<Expense> expenseRepository, IEntityDataReader<Expense> expenseDataReader)
+    public async Task DeleteExpenseAsync(Guid id)
     {
-        _expenseRepository = expenseRepository;
-        _expenseDataReader = expenseDataReader;
+        var expense = await expenseRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (expense is not null)
+            await expenseRepository.DeleteAsync(expense);
+    }
+
+    public async Task<IPagedDataDto<ExpenseDto>> GetExpensesAsync(
+        int pageIndex, int pageSize, IList<Guid>? orderIds = null,
+        string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null,
+        ExpenseType? expenseType = null, ExpenseSortByEnum? sortBy = null)
+    {
+        var expenseSpec = new CompositeSpecification<Expense>();
+
+        if (orderIds != null && orderIds.Count > 0)
+            expenseSpec.And(new ExpensesOfOrdersSpec(orderIds));
+
+        if (!string.IsNullOrEmpty(keywords))
+            expenseSpec.And(new ExpenseKeywordSearchSpec(keywords));
+
+        expenseSpec.And(new DateRangeExpenseSpec((fromDate, toDate)));
+
+        if (expenseType.HasValue)
+            expenseSpec.And(new HaveTypesExpenseSpec([expenseType.Value]));
+
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null
+            : await expenseDataReader.CountAsync(expenseSpec).ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<ExpenseDto>(), pageIndex, pageSize, 0);
+
+        switch (sortBy)
+        {
+            case ExpenseSortByEnum.Amount:
+                expenseSpec.ApplyOrderBy(expense => expense.Amount);
+                break;
+            case ExpenseSortByEnum.AmountDesc:
+                expenseSpec.ApplyOrderByDescending(expense => expense.Amount);
+                break;
+            case ExpenseSortByEnum.Title:
+                expenseSpec.ApplyOrderBy(expense => expense.Title);
+                break;
+            case ExpenseSortByEnum.TitleDesc:
+                expenseSpec.ApplyOrderByDescending(expense => expense.Title);
+                break;
+            case ExpenseSortByEnum.ExpenseType:
+                expenseSpec.ApplyOrderBy(expense => expense.ExpenseType);
+                break;
+            case ExpenseSortByEnum.IncurredDate:
+                expenseSpec.ApplyOrderBy(expense => expense.IncurredDate);
+                break;
+            case ExpenseSortByEnum.IncurredDateDesc:
+            default:
+                expenseSpec.ApplyOrderByDescending(expense => expense.IncurredDate);
+                break;
+        }
+        var pagedData = await expenseDataReader.GetPagedListAsync(expenseSpec, pageIndex, pageSize).ConfigureAwait(false);
+
+        return PagedDataDto.Create(pagedData.Select(expense => new ExpenseDto
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            Amount = expense.Amount,
+            ExpenseType = expense.ExpenseType,
+            IncurredDate = expense.IncurredDate,
+            ReferenceId = expense.ReferenceId,
+            ReferenceCode = expense.ReferenceCode,
+            ReferenceType = expense.ReferenceType,
+            AmountWithoutTax = expense.AmountExcludingTax,
+            TaxAmount = expense.TaxAmount,
+            TaxRate = expense.TaxRate.HasValue ? expense.TaxRate.Value * 100 : null,
+            IsSystemGenerated = expense.IsSystemGenerated()
+        }).ToList(), pageIndex, pageSize, totalCount);
+    }
+
+    public async Task<ExpenseDto?> GetExpenseByIdAsync(Guid id)
+    {
+        var expense = await expenseRepository.GetByIdAsync(id).ConfigureAwait(false);
+
+        if (expense is null)
+            return null;
+
+        return new ExpenseDto
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            Amount = expense.Amount,
+            ExpenseType = expense.ExpenseType,
+            IncurredDate = expense.IncurredDate,
+            ReferenceId = expense.ReferenceId,
+            ReferenceCode = expense.ReferenceCode,
+            ReferenceType = expense.ReferenceType,
+            AmountWithoutTax = expense.AmountExcludingTax,
+            TaxAmount = expense.TaxAmount,
+            TaxRate = expense.TaxRate.HasValue ? expense.TaxRate.Value * 100 : null,
+            IsSystemGenerated = expense.IsSystemGenerated()
+        };
     }
 
     public async Task<CreateExpenseResultDto> CreateExpenseAsync(CreateExpenseDto dto)
     {
-        if (dto.SourceVendorReturnId.HasValue)
-        {
-            var existing = _expenseDataReader.DataSource
-                .FirstOrDefault(e => e.SourceVendorReturnId == dto.SourceVendorReturnId.Value);
-            if (existing is not null)
-                return new CreateExpenseResultDto { CreatedId = existing.Id };
-        }
-        if (dto.SourceCustomerReturnId.HasValue)
-        {
-            var existing = _expenseDataReader.DataSource
-                .FirstOrDefault(e => e.SourceCustomerReturnId == dto.SourceCustomerReturnId.Value);
-            if (existing is not null)
-                return new CreateExpenseResultDto { CreatedId = existing.Id };
-        }
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
 
-        var expense = new Expense(Guid.NewGuid(), dto.Title, dto.Amount, dto.ExpenseType, dto.IncurredDate, dto.RecordedByUserId)
+        var expense = new Expense(dto.Title, dto.ExpenseType, dto.IncurredDateUtc)
         {
-            SourceVendorReturnId = dto.SourceVendorReturnId,
-            SourceCustomerReturnId = dto.SourceCustomerReturnId,
-            SourceOrderId = dto.SourceOrderId
+            RecordedByUserId = dto.RecordedByUserId,
+            Description = dto.Description,
+            ReferenceId = dto.ReferenceId,
+            ReferenceCode = dto.ReferenceCode,
+            ReferenceType = dto.ReferenceType
         };
-        expense.SetDescription(dto.Description);
+        decimal? taxRate = null;
+        if (dto.TaxRate.HasValue)
+            taxRate = dto.TaxRate.Value / 100;
+        expense.SetAmount(dto.AmountWithoutTax, taxRate);
 
-        await _expenseRepository.InsertAsync(expense);
+        await expenseRepository.InsertAsync(expense).ConfigureAwait(false);
         return new CreateExpenseResultDto { CreatedId = expense.Id };
     }
 
     public async Task UpdateExpenseAsync(UpdateExpenseDto dto)
     {
-        var expense = await _expenseRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var expense = await expenseRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (expense is null)
             throw new ArgumentException($"Expense with ID {dto.Id} not found.");
 
-        expense.UpdateInfo(dto.Title, dto.Description, dto.Amount, dto.ExpenseType, dto.IncurredDate);
-        await _expenseRepository.UpdateAsync(expense);
-    }
+        expense.Title = dto.Title;
+        expense.Description = dto.Description;
+        expense.IncurredDate = dto.IncurredDateUtc;
+        expense.ExpenseType = dto.ExpenseType;
+        decimal? taxRate = null;
+        if (dto.TaxRate.HasValue)
+            taxRate = dto.TaxRate.Value / 100;
+        expense.SetAmount(dto.AmountWithoutTax, taxRate);
 
-    public async Task DeleteExpenseAsync(Guid id)
-    {
-        var expense = await _expenseRepository.GetByIdAsync(id).ConfigureAwait(false);
-        if (expense is not null)
-        {
-            await _expenseRepository.DeleteAsync(expense);
-        }
+        await expenseRepository.UpdateAsync(expense).ConfigureAwait(false);
     }
 }

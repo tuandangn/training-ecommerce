@@ -21,8 +21,7 @@ public sealed class UpdatePurchaseOrderItemHandler : IRequestHandler<UpdatePurch
         {
             PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,
-            ProductId = Guid.Empty,
-            QuantityOrdered = request.Quantity,
+            Quantity = request.Quantity,
             UnitCost = request.UnitCost,
             Note = request.Note
         }).ConfigureAwait(false);

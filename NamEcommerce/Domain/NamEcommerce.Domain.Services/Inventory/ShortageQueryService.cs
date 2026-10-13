@@ -27,8 +27,7 @@ public sealed class ShortageQueryService(
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
-    IRepository<Order> orderRepository,
-    IRepository<DeliveryNote> deliveryNoteRepository) : IShortageQueryService
+    IRepository<Order> orderRepository, IRepository<DeliveryNote> deliveryNoteRepository) : IShortageQueryService
 {
     private static readonly DeliveryNoteStatus[] ShippedStatuses =
     [
@@ -167,7 +166,6 @@ public sealed class ShortageQueryService(
         var orderSpecification = new CompositeSpecification<Order>(new NotHaveStatusOrderSpec([OrderStatus.Completed, OrderStatus.Cancelled]))
             .AndNot(new IsPaymentRequiredOrderSpec());
         orderSpecification.ApplyOrderBy(order => order.CreatedOnUtc);
-
         var orders = await orderReader.GetPagedListAsync(orderSpecification, 0, int.MaxValue).ConfigureAwait(false);
 
         var result = new List<OrderItemShortageDto>();
@@ -285,7 +283,7 @@ public sealed class ShortageQueryService(
     private async Task<Dictionary<Guid, decimal>> GetCompensatedReturnedQuantities(Guid orderId, IList<SecondaryItemId> orderItemIds)
     {
         if (orderItemIds.Count == 0)
-            return new Dictionary<Guid, decimal>();
+            return [];
 
         var itemIds = orderItemIds.Select(id => id.SecondaryId).ToList();
         var validDeliveryNoteItems = deliveryNoteReader.ApplySpecification(new ActiveDeliveryNotesOfOrderItemsSpec(orderId, itemIds))
@@ -313,11 +311,9 @@ public sealed class ShortageQueryService(
         if (itemIds.Count == 0)
             return [];
 
-        var activeAllocationSpec = new CompositeSpecification<PurchaseOrderItemAllocation>(
-            new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemIds.First().PrimaryId, itemIds));
-        activeAllocationSpec.ApplyOrderBy(allocation => allocation.CreatedOnUtc);
-
-        var allocations = await allocationReader.GetListAsync(activeAllocationSpec).ConfigureAwait(false);
+        var allocations = await allocationReader.ApplySpecification(new ActivePurchaseOrderAllocationOfOrderItemSpec(orderItemIds.First().PrimaryId, itemIds))
+            .OrderBy(allocation => allocation.CreatedOnUtc)
+            .ToListAsync().ConfigureAwait(false);
         if (allocations.Count == 0)
             return [];
 

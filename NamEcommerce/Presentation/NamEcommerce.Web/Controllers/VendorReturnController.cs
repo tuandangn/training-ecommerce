@@ -7,6 +7,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Returns;
 using NamEcommerce.Web.Services.Returns;
 
@@ -37,13 +38,9 @@ public sealed class VendorReturnController : BaseAuthorizedController
         return View(model);
     }
 
-    public async Task<IActionResult> Create(
-        Guid? goodsReceiptId = null,
-        Guid? vendorId = null,
-        string? vendorName = null,
-        string? goodsReceiptCode = null,
-        Guid? purchaseOrderId = null,
-        string? purchaseOrderCode = null)
+    public async Task<IActionResult> Create(Guid? goodsReceiptId = null,
+        Guid? vendorId = null, string? vendorName = null,
+        string? goodsReceiptCode = null, Guid? purchaseOrderId = null, string? purchaseOrderCode = null)
     {
         CreateVendorReturnModel? prefilledModel = null;
         if (goodsReceiptId.HasValue || vendorId.HasValue || purchaseOrderId.HasValue)
@@ -123,7 +120,7 @@ public sealed class VendorReturnController : BaseAuthorizedController
             VendorId = model.VendorId.Value,
             GoodsReceiptId = model.GoodsReceiptId,
             WarehouseId = model.WarehouseId,
-            AdditionalCost = model.AdditionalCost,
+            AdditionalCost = model.AdditionalCost ?? 0,
             Note = model.Note,
             Items = returnItems.Select(i => new CreateVendorReturnItemCommand
             {
@@ -173,9 +170,9 @@ public sealed class VendorReturnController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        return Json(new { success = true });
+        return this.JsonOk();
     }
 
     [HttpPost]
@@ -184,9 +181,9 @@ public sealed class VendorReturnController : BaseAuthorizedController
         var result = await _mediator.Send(new MoveVendorReturnToInspectingCommand { Id = id });
 
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        return Json(new { success = true });
+        return this.JsonOk();
     }
 
     [HttpPost]
@@ -198,9 +195,9 @@ public sealed class VendorReturnController : BaseAuthorizedController
         var result = await _mediator.Send(new ConfirmVendorReturnCommand { Id = id, WarehouseId = warehouseId });
 
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        return Json(new { success = true });
+        return this.JsonOk();
     }
 
     [HttpPost]

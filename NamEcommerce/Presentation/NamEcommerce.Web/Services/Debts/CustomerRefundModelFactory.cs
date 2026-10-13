@@ -1,8 +1,6 @@
 using MediatR;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
 using NamEcommerce.Web.Models.Debts;
 
@@ -16,14 +14,14 @@ public sealed class CustomerRefundModelFactory(IMediator mediator) : ICustomerRe
 
         var listQuery = new GetCustomerRefundListQuery
         {
-            CustomerId = model.FilterCustomerId,
-            Status = model.FilterStatus,
-            Keywords = model.FilterKeywords,
+            CustomerId = model.CId,
+            Status = model.Status,
+            Keywords = model.Keywords,
             PageNumber = model.PageNumber,
             PageSize = model.PageSize
         };
-
         model.Data = await mediator.Send(listQuery).ConfigureAwait(false);
+
         return model;
     }
 

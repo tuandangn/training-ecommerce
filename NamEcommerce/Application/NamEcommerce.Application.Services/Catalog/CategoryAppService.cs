@@ -97,7 +97,7 @@ public sealed class CategoryAppService : ICategoryAppService
 
     public async Task<IPagedDataAppDto<CategoryAppDto>> GetCategoriesAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
     {
-        var pagedData = await _categoryManager.GetCategoriesAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await _categoryManager.GetCategoriesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
 
         var result = PagedDataAppDto.Create(
             pagedData.Select(category => category.ToDto()),

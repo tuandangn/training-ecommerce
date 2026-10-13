@@ -2,21 +2,27 @@
 
 $(function () {
     
-    const disabledSubmitForms = [];
-
-    $('form').on('submit', function (e) {
+    $(document).on('submit', 'form', function (e) {
         if (e.isDefaultPrevented())
             return;
+
+        e.preventDefault();
         var form = this;
-        if (!isFormValid(form))
-            return;
         enableSubmitButtons(form, false);
-        disabledSubmitForms.push(form);
+        if (!isFormValid(form)) {
+            enableSubmitButtons(form, true);
+            return;
+        }
+        showPageLoading();
+        form.submit();
+        disableForm(form);
     });
 
-    $(document).ajaxComplete(function () {
-        disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
-    });
+    // $(window).on('beforeunload', function (e) {
+    //     if (e.isDefaultPrevented())
+    //         return;
+    //     showPageLoading();
+    // });
 
     $('.alert-dismissible').each(function () {
         let time = 3000;
@@ -38,6 +44,20 @@ $(function () {
     });
 })
 
+function disableForm(form) {
+    let fieldset = form.querySelector('fieldset');
+    if (!fieldset) {
+        fieldset = document.createElement('fieldset');
+        while (form.firstChild) {
+            fieldset.appendChild(form.firstChild);
+        }
+        form.appendChild(fieldset);
+    }
+    fieldset.className = form.className;
+    form.className = '';
+    fieldset.disabled = true;
+}
+
 function showPageLoading() {
     const mask = document.getElementById('loading-mask');
     mask.style.display = 'flex';
@@ -47,12 +67,27 @@ function hidePageLoading() {
     mask.style.display = 'none';
 }
 
+function reparseForm(formSelector) {
+    var $form = $(formSelector);
+
+    // Remove the cached validator data
+    $form.removeData('validator')
+        .removeData('unobtrusiveValidation');
+
+    // Re-parse the form rules
+    $.validator.unobtrusive.parse($form);
+}
 function isFormValid(form) {
     try {
         return $(form).valid();
     } catch {
-        return false;
+        return true;
     }
+}
+function validateElement(element) {
+    if (!element || !element.form)
+        return;
+    return $(element.form).data('validator')?.element(element);
 }
 
 function enableSubmitButtons(form, enabled) {
@@ -113,13 +148,9 @@ function getEl(id) {
     return el;
 }
 
-function reparseForm(formSelector) {
-    var $form = $(formSelector);
-
-    // Remove the cached validator data
-    $form.removeData('validator')
-        .removeData('unobtrusiveValidation');
-
-    // Re-parse the form rules
-    $.validator.unobtrusive.parse($form);
+function appendToPage(htmlString) {
+    const range = document.createRange();
+    range.selectNode(document.body);
+    const fragment = range.createContextualFragment(htmlString);
+    document.body.appendChild(fragment);
 }

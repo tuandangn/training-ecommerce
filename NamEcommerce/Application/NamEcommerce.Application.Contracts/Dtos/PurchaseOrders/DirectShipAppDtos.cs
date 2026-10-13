@@ -18,6 +18,7 @@ public sealed record PendingDirectShipDeliveryAppDto
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
+    public bool IsRetailWalkInCustomer { get; set; }
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public required DateTime CreatedOnUtc { get; init; }

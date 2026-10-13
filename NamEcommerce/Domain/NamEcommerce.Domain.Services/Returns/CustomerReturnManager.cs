@@ -1,11 +1,16 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.CustomerPortal;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
+using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
@@ -18,11 +23,8 @@ using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Services.Common;
-using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
-using Microsoft.EntityFrameworkCore;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -383,7 +385,12 @@ public sealed class CustomerReturnManager(
         if (status.HasValue)
             query = query.Where(r => (int)r.Status == status.Value);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return (0, new List<CustomerReturnDto>()); 
+        
         var items = (await query
             .OrderByDescending(r => r.CreatedOnUtc)
             .Skip(pageIndex * pageSize)
@@ -392,7 +399,7 @@ public sealed class CustomerReturnManager(
             .Select(r => r.ToDto())
             .ToList();
 
-        return (total, items);
+        return (totalCount ?? items.Count, items);
     }
 
     public async Task<decimal> GetTotalReservedReturnQuantityAsync(
@@ -474,16 +481,18 @@ public sealed class CustomerReturnManager(
             {
                 Title = $"Chi phí phát sinh phiếu trả hàng {customerReturn.Code}",
                 Description = $"Chi phí phát sinh khi nhận hàng trả từ khách {customerReturn.CustomerName}",
-                Amount = customerReturn.AdditionalCost,
+                AmountWithoutTax = customerReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
-                IncurredDate = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
-                SourceCustomerReturnId = customerReturn.Id
+                IncurredDateUtc = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
+                ReferenceId = customerReturn.Id,
+                ReferenceCode = customerReturn.Code,
+                ReferenceType = ExpenseReferenceType.CustomerReturn
             }).ConfigureAwait(false);
         }
 
         if (netRefundAmount <= 0) return;
 
-        var creditNote = await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
+        await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
             customerReturn.CustomerId,
             customerReturn.Id,
             customerReturn.Code,

@@ -48,7 +48,7 @@ public sealed class N8nAppService(HttpClient httpClient, IDeliveryNoteAppService
         {
             var response = await httpClient.PostAsync(PATH, requestContent).ConfigureAwait(false);
         }
-        catch(Exception ex)
+        catch (Exception)
         {
             //*TODO* log error
         }

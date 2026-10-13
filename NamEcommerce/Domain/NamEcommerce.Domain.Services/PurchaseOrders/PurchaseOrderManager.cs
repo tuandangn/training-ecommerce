@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -27,68 +26,28 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
 using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Domain.Shared.Services.Finance;
+using NamEcommerce.Domain.Shared.Dtos.Finance;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 
 namespace NamEcommerce.Domain.Services.PurchaseOrders;
 
-public sealed class PurchaseOrderManager : IPurchaseOrderManager
+public sealed class PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
+    IEntityDataReader<Product> productDataReader, IGoodsReceiptManager goodsReceiptManager,
+    IRepository<GoodsReceipt> goodsReceiptRepository, IEntityDataReader<DeliveryNote> deliveryNoteReader,
+    IEntityDataReader<VendorReturn> vendorReturnReader, IEntityDataReader<VendorDebt> vendorDebtReader,
+    IPurchaseOrderAllocationManager purchaseOrderAllocationManager, IDirectShipManager directShipManager,
+    IVendorDebtManager vendorDebtManager, ICurrentUserAccessor currentUserAccessor,
+    EntityCodeGenerator codeGenerator, IExpenseManager expenseManager) : IPurchaseOrderManager
 {
-    private readonly IRepository<PurchaseOrder> _purchaseOrderRepository;
-    private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
-    private readonly IEntityDataReader<Vendor> _vendorOrderDataReader;
-    private readonly IEntityDataReader<Warehouse> _warehouseOrderDataReader;
-    private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IGoodsReceiptManager _goodsReceiptManager;
-    private readonly IRepository<GoodsReceipt> _goodsReceiptRepository;
-    private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
-    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
-    private readonly IEntityDataReader<VendorReturn> _vendorReturnReader;
-    private readonly IEntityDataReader<VendorDebt> _vendorDebtReader;
-    private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
-    private readonly IDirectShipManager _directShipManager;
-    private readonly IVendorDebtManager _vendorDebtManager;
-    private readonly ICurrentUserAccessor _currentUserAccessor;
-    private readonly EntityCodeGenerator _codeGenerator;
-
-    public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
-        IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
-        IEntityDataReader<Product> productDataReader,
-        IGoodsReceiptManager goodsReceiptManager,
-        IRepository<GoodsReceipt> goodsReceiptRepository,
-        IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
-        IEntityDataReader<DeliveryNote> deliveryNoteReader,
-        IEntityDataReader<VendorReturn> vendorReturnReader,
-        IEntityDataReader<VendorDebt> vendorDebtReader,
-        IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-        IDirectShipManager directShipManager,
-        IVendorDebtManager vendorDebtManager,
-        ICurrentUserAccessor currentUserAccessor,
-        EntityCodeGenerator codeGenerator)
-    {
-        _purchaseOrderRepository = poRepository;
-        _purchaseOrderDataReader = purchaseOrderDataReader;
-        _vendorOrderDataReader = vendorOrderDataReader;
-        _warehouseOrderDataReader = warehouseOrderDataReader;
-        _productDataReader = productDataReader;
-        _goodsReceiptManager = goodsReceiptManager;
-        _goodsReceiptRepository = goodsReceiptRepository;
-        _goodsReceiptDataReader = goodsReceiptDataReader;
-        _deliveryNoteReader = deliveryNoteReader;
-        _vendorReturnReader = vendorReturnReader;
-        _vendorDebtReader = vendorDebtReader;
-        _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
-        _directShipManager = directShipManager;
-        _vendorDebtManager = vendorDebtManager;
-        _currentUserAccessor = currentUserAccessor;
-        _codeGenerator = codeGenerator;
-    }
-
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         dto.Verify();
 
-        var products = await _productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
+        var products = await productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
         var candidateVendorIds = products.SelectMany(p => p.ProductVendors).Select(v => v.VendorId).Distinct().ToList();
         var validVendorIds = candidateVendorIds.Where(vendorId => products.All(p => p.ProductVendors.Any(v => v.VendorId == vendorId))).ToList();
         if (validVendorIds.Count == 0)
@@ -98,23 +57,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderVendorIsNotAppropriateException();
 
         var purchaseOrder = await CreatePurchaseOrderAggregateAsync(
-            dto.VendorId,
-            dto.WarehouseId,
-            dto.PlacedOnUtc,
-            dto.ExpectedDeliveryDateUtc,
-            dto.Note,
-            dto.TaxAmount,
-            dto.ShippingAmount).ConfigureAwait(false);
+            dto.VendorId, dto.WarehouseId, dto.PlacedOnUtc,
+            dto.ExpectedDeliveryDateUtc, dto.Note,
+            dto.TaxAmount, dto.ShippingAmount).ConfigureAwait(false);
         foreach (var orderItem in dto.Items)
         {
             await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)
             {
                 Note = orderItem.Note
-            }, _productDataReader).ConfigureAwait(false);
+            }, productDataReader).ConfigureAwait(false);
         }
 
         purchaseOrder.MarkCreated();
-        var insertedPurchaseOrder = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
+        var insertedPurchaseOrder = await poRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultDto
         {
@@ -122,83 +77,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
-    public async Task<QuickCreatePurchaseOrderResultDto> QuickCreateAndReceiveAsync(QuickCreatePurchaseOrderDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-        dto.Verify();
-
-        var purchaseOrder = await CreatePurchaseOrderAggregateAsync(
-            dto.VendorId, dto.DefaultWarehouseId, dto.ReceivedOnUtc, null, dto.Note, 0, 0).ConfigureAwait(false);
-
-        foreach (var item in dto.Items)
-        {
-            await purchaseOrder.AddPurchaseOrderItemAsync(
-                new PurchaseOrderItem(purchaseOrder.Id, item.ProductId, item.Quantity, item.UnitCost ?? 0),
-                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
-        }
-
-        purchaseOrder.MarkCreated();
-        var inserted = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
-
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
-        var userId = currentUser?.Id;
-
-        inserted.ChangeStatus(PurchaseOrderStatus.Submitted, userId);
-        inserted.UpdatedOnUtc = DateTime.UtcNow;
-        inserted.MarkStatusChanged(PurchaseOrderStatus.Draft);
-        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
-
-        inserted.ChangeStatus(PurchaseOrderStatus.Approved, userId);
-        inserted.UpdatedOnUtc = DateTime.UtcNow;
-        inserted.MarkStatusChanged(PurchaseOrderStatus.Submitted);
-        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
-
-        var createdReceiptIds = new List<Guid>();
-
-        if (dto.ReceiveImmediately)
-        {
-            var insertedItems = inserted.Items.ToList();
-            var lines = dto.Items.Select((item, i) => new BulkReceiveGoodsForPurchaseOrderLineDto
-            {
-                PurchaseOrderItemId = insertedItems[i].Id,
-                WarehouseId = item.WarehouseId ?? dto.DefaultWarehouseId,
-                ReceivedQuantity = item.Quantity,
-                ActualUnitCost = item.UnitCost
-            }).ToList();
-
-            var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(inserted.Id)
-            {
-                Lines = lines,
-                ReceivedByUserId = userId
-            }).ConfigureAwait(false);
-
-            createdReceiptIds.AddRange(receiveResult.CreatedGoodsReceiptIds);
-        }
-
-        if (dto.Payment is not null)
-        {
-            await _vendorDebtManager.RecordFlexiblePaymentForVendorAsync(new CreateVendorPaymentDto
-            {
-                VendorId = dto.VendorId,
-                PurchaseOrderId = inserted.Id,
-                Amount = dto.Payment.Amount,
-                PaymentMethod = dto.Payment.PaymentMethod,
-                PaymentType = dto.Payment.PaymentType,
-                PaidOnUtc = dto.ReceivedOnUtc
-            }).ConfigureAwait(false);
-        }
-
-        return new QuickCreatePurchaseOrderResultDto
-        {
-            PurchaseOrderId = inserted.Id,
-            PurchaseOrderCode = inserted.Code,
-            GoodsReceiptIds = createdReceiptIds.AsReadOnly()
-        };
-    }
-
     public async Task<CreatePurchaseOrderResultDto> CopyPurchaseOrderAsync(Guid sourceId)
     {
-        var source = await _purchaseOrderRepository.GetByIdAsync(sourceId).ConfigureAwait(false);
+        var source = await poRepository.GetByIdAsync(sourceId).ConfigureAwait(false);
         if (source is null)
             throw new PurchaseOrderIsNotFoundException(sourceId);
 
@@ -215,21 +96,24 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         {
             await po.AddPurchaseOrderItemAsync(
                 new PurchaseOrderItem(po.Id, item.ProductId, item.QuantityOrdered, item.UnitCost) { Note = item.Note },
-                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+                productDataReader, requireVendorProduct: false).ConfigureAwait(false);
         }
 
         po.MarkCreated();
-        var inserted = await _purchaseOrderRepository.InsertAsync(po).ConfigureAwait(false);
+        var inserted = await poRepository.InsertAsync(po).ConfigureAwait(false);
         return new CreatePurchaseOrderResultDto { CreatedId = inserted.Id };
     }
 
     public async Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto)
     {
-        var source = await _purchaseOrderRepository.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
-        if (source is null)
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.SourcePurchaseOrderId);
 
-        if (!source.CanUpdateItems())
+        if (!purchaseOrder.CanUpdateItems())
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
         if (dto.Items.Count == 0)
@@ -237,7 +121,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.FirstOrDefault(i => i.Id == split.ItemId)
+            var srcItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == split.ItemId)
                 ?? throw new PurchaseOrderItemIsNotFoundException();
 
             var available = srcItem.QuantityOrdered - srcItem.QuantityReceived;
@@ -245,7 +129,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
         }
 
-        var hasRemainingInSource = source.Items.Any(srcItem =>
+        var hasRemainingInSource = purchaseOrder.Items.Any(srcItem =>
         {
             var splitItem = dto.Items.FirstOrDefault(s => s.ItemId == srcItem.Id);
             if (splitItem is null) return true;
@@ -257,37 +141,37 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         var now = DateTime.UtcNow;
         var po2 = await CreatePurchaseOrderAggregateAsync(
-            source.VendorId,
-            source.WarehouseId,
+            purchaseOrder.VendorId,
+            purchaseOrder.WarehouseId,
             now,
-            source.ExpectedDeliveryDateUtc > now ? source.ExpectedDeliveryDateUtc : null,
-            source.Note,
+            purchaseOrder.ExpectedDeliveryDateUtc > now ? purchaseOrder.ExpectedDeliveryDateUtc : null,
+            purchaseOrder.Note,
             0, 0).ConfigureAwait(false);
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            var srcItem = purchaseOrder.Items.First(i => i.Id == split.ItemId);
             await po2.AddPurchaseOrderItemAsync(
                 new PurchaseOrderItem(po2.Id, srcItem.ProductId, split.Quantity, srcItem.UnitCost) { Note = srcItem.Note },
-                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+                productDataReader, requireVendorProduct: false).ConfigureAwait(false);
         }
 
         po2.MarkCreated();
-        await _purchaseOrderRepository.InsertAsync(po2).ConfigureAwait(false);
+        await poRepository.InsertAsync(po2).ConfigureAwait(false);
 
         foreach (var split in dto.Items)
         {
-            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            var srcItem = purchaseOrder.Items.First(i => i.Id == split.ItemId);
             var remaining = srcItem.QuantityOrdered - split.Quantity;
             if (remaining <= 0)
-                source.RemoveOrderItem(split.ItemId);
+                purchaseOrder.RemoveOrderItem(split.ItemId);
             else
-                source.UpdateOrderItem(split.ItemId, remaining, srcItem.UnitCost, srcItem.Note);
+                purchaseOrder.UpdateOrderItem(split.ItemId, remaining, srcItem.UnitCost, srcItem.Note);
         }
 
-        source.UpdatedOnUtc = DateTime.UtcNow;
-        source.MarkUpdated();
-        await _purchaseOrderRepository.UpdateAsync(source).ConfigureAwait(false);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkUpdated();
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultDto { CreatedId = po2.Id };
     }
@@ -297,7 +181,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (vendorId == Guid.Empty)
             throw new VendorIsNotFoundException(vendorId);
 
-        var draft = await _purchaseOrderDataReader.DataSource
+        var draft = await purchaseOrderDataReader.DataSource
             .Where(purchaseOrder => purchaseOrder.VendorId == vendorId && purchaseOrder.Status == PurchaseOrderStatus.Draft)
             .OrderByDescending(purchaseOrder => purchaseOrder.CreatedOnUtc)
             .FirstOrDefaultAsync().ConfigureAwait(false);
@@ -319,7 +203,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (vendorId == Guid.Empty)
             throw new VendorIsNotFoundException(vendorId);
 
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
@@ -339,11 +223,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             }
             : statuses.Distinct().ToHashSet();
 
-        var products = await _productDataReader.DataSource
+        var products = await productDataReader.DataSource
             .Where(product => productIdSet.Contains(product.Id))
             .ToDictionaryAsync(product => product.Id, product => product.Name).ConfigureAwait(false);
 
-        var purchaseOrders = await _purchaseOrderDataReader.DataSource
+        var purchaseOrders = await purchaseOrderDataReader.DataSource
             .Where(purchaseOrder => purchaseOrder.VendorId == vendorId && statusSet.Contains(purchaseOrder.Status))
             .OrderByDescending(purchaseOrder => purchaseOrder.CreatedOnUtc)
             .ToListAsync().ConfigureAwait(false);
@@ -354,8 +238,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             var items = new List<RelatedPurchaseOrderItemDto>();
             foreach (var item in purchaseOrder.Items.Where(item => productIdSet.Contains(item.ProductId)))
             {
-                ArgumentNullException.ThrowIfNull(_purchaseOrderAllocationManager);
-                var allocations = await _purchaseOrderAllocationManager.GetAllocationsForPurchaseOrderItemAsync(item.Id).ConfigureAwait(false);
+                ArgumentNullException.ThrowIfNull(purchaseOrderAllocationManager);
+                var allocations = await purchaseOrderAllocationManager.GetAllocationsForPurchaseOrderItemAsync(item.Id).ConfigureAwait(false);
                 var allocatedQuantity = allocations.Sum(allocation => allocation.AllocatedQuantity);
                 var availableForAllocation = Math.Max(0, item.QuantityOrdered - allocatedQuantity);
 
@@ -409,23 +293,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
-            Note = dto.Note
-        };
-        foreach (var item in dto.Items)
-        {
-            createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
+            Note = dto.Note,
+            Items = dto.Items.Select(item => new CreatePurchaseOrderDto.CreatedPurchaseOrderItemDto
             {
-                PurchaseOrderId = Guid.Empty,
                 ProductId = item.ProductId,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost,
                 Note = item.Note
-            });
-        }
+            }).ToList()
+        };
 
         var createResult = await CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
         // Repository.GetByIdAsync tìm được PO vừa stage (chưa save) trong ChangeTracker — reader query DB sẽ không thấy
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(createResult.CreatedId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(createResult.CreatedId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(createResult.CreatedId);
 
@@ -445,7 +325,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (items.Count == 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemRequired");
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
         if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
@@ -453,7 +333,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         purchaseOrder.MarkUpdated();
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        var updatedPurchaseOrder = await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         var allocationSources = await AddOrMergeShortageItemsAsync(purchaseOrder, items).ConfigureAwait(false);
         foreach (var allocationSource in allocationSources.Where(source => source.IsNew))
@@ -475,11 +355,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.Id);
 
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        var vendor = await vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(dto.VendorId);
 
@@ -488,7 +368,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         if (dto.WarehouseId.HasValue)
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            var warehouse = await warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(dto.WarehouseId.Value);
         }
@@ -498,11 +378,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
         purchaseOrder.ShippingAmount = dto.ShippingAmount;
         purchaseOrder.TaxAmount = dto.TaxAmount;
-        await purchaseOrder.ChangeVendorAsync(dto.VendorId, _vendorOrderDataReader).ConfigureAwait(false);
-        await purchaseOrder.ChangeWarehouse(dto.WarehouseId, _warehouseOrderDataReader).ConfigureAwait(false);
+        await purchaseOrder.ChangeVendorAsync(dto.VendorId, vendorOrderDataReader).ConfigureAwait(false);
+        await purchaseOrder.ChangeWarehouse(dto.WarehouseId, warehouseOrderDataReader).ConfigureAwait(false);
 
         purchaseOrder.MarkUpdated();
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        var updatedPurchaseOrder = await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         return new UpdatePurchaseOrderResultDto(updatedPurchaseOrder.Id)
         {
@@ -522,11 +402,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
@@ -537,10 +417,10 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         {
             Note = dto.Note,
         };
-        await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, _productDataReader).ConfigureAwait(false);
+        await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReader).ConfigureAwait(false);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         purchaseOrder.MarkItemAdded(purchaseOrderItem, product.Name);
 
@@ -557,7 +437,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
@@ -568,7 +448,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -580,12 +460,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         purchaseOrder.MarkItemUpdated(purchaseOrderItem, oldQuantityOrdered, oldUnitCost, oldNote, product.Name);
 
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task ClosePartialAsync(Guid purchaseOrderId, string reason)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -595,7 +475,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderCannotChangeStatusException();
 
         foreach (var item in purchaseOrder.Items)
-            await _purchaseOrderAllocationManager
+            await purchaseOrderAllocationManager
                 .ReleaseAllocationsOfPurchaseOrderItemAsync((purchaseOrder.Id, item.Id))
                 .ConfigureAwait(false);
 
@@ -604,12 +484,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
         purchaseOrder.MarkStatusChanged(oldStatus);
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -617,17 +497,17 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderCannotChangeStatusException();
 
         var oldStatus = purchaseOrder.Status;
-        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         purchaseOrder.ChangeStatus(status, currentUser?.Id);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
         purchaseOrder.MarkStatusChanged(oldStatus);
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -636,7 +516,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<bool> CanAddPurchaseOrderItemsAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -647,28 +527,23 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         ArgumentException.ThrowIfNullOrEmpty(code);
 
-        var query = from purchaseOrder in _purchaseOrderDataReader.DataSource
+        var query = from purchaseOrder in purchaseOrderDataReader.DataSource
                     where purchaseOrder.Code == code && (comparesWithCurrentId == null || purchaseOrder.Id != comparesWithCurrentId)
                     select purchaseOrder;
 
         return query.AnyAsync();
     }
 
-    public async Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto)
+    public async Task<ReceivedGoodsResultDto> ReceivesItemAsync(ReceivedGoodsDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        return await ReceiveSingleItemAsync(purchaseOrder, dto).ConfigureAwait(false);
-    }
-
-    private async Task<ReceivedGoodsForItemResultDto> ReceiveSingleItemAsync(PurchaseOrder purchaseOrder, ReceivedGoodsForItemDto dto)
-    {
         if (!purchaseOrder.CanReceiveGoods())
             throw new PurchaseOrderCannotReceiveGoodsException();
 
@@ -676,7 +551,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -685,60 +560,53 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new ArgumentException("Warehouse is required", nameof(dto));
         else
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }
 
-        var hasReceivableDirectShip = await _directShipManager
-            .HasReceivableDirectShipAllocationsAsync(purchaseOrderItem.Id).ConfigureAwait(false);
-        if (hasReceivableDirectShip)
-            EnsureDirectShipTransitWarehouseConfigured();
-
-        purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-
-        purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, dto.ReceivedQuantity);
-
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        var grResult = await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
+        var receivedResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsDto(dto.PurchaseOrderId)
         {
-            PurchaseOrderId = purchaseOrder.Id,
-            PurchaseOrderCode = purchaseOrder.Code,
-            VendorId = purchaseOrder.VendorId,
-            ProductId = purchaseOrderItem.ProductId,
-            WarehouseId = warehouseId.Value,
-            Quantity = dto.ReceivedQuantity,
-            UnitCost = dto.ActualUnitCost ?? purchaseOrderItem.UnitCost
+            PictureIds = dto.PictureIds,
+            ReceivedByUserId = dto.ReceivedByUserId,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
+            TaxRate = dto.TaxRate,
+            ShippingAmount = dto.ShippingAmount,
+            Lines = [new BulkReceiveGoodsLineDto {
+                PurchaseOrderItemId = purchaseOrderItem.Id,
+                WarehouseId = warehouseId!.Value,
+                ActualUnitCost = dto.ActualUnitCost,
+                ReceivedQuantity = dto.ReceivedQuantity
+            }]
         }).ConfigureAwait(false);
 
-        var distributeResult = await _purchaseOrderAllocationManager
-            .SyncReceivedForPurchaseOrderItemAsync(purchaseOrderItem.Id, purchaseOrderItem.QuantityReceived)
-            .ConfigureAwait(false);
-        await ProcessDirectShipReceiptsAsync(
-            distributeResult.DirectShipReceipts,
-            grResult.CreatedId,
-            warehouseId.Value).ConfigureAwait(false);
-
-        return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
+        return new ReceivedGoodsResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
             ReceivedQuantity = dto.ReceivedQuantity,
-            CreatedGoodsReceiptId = grResult.CreatedId
+            CreatedGoodsReceiptId = receivedResult.CreatedGoodsReceiptIds[0]
         };
     }
 
-    public async Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto)
+    public async Task<BulkReceiveGoodsResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         if (!purchaseOrder.CanReceiveGoods())
             throw new PurchaseOrderCannotReceiveGoodsException();
+
+        if (dto.ShippingAmount.HasValue && dto.ShippingAmount < 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
+
+        foreach (var line in dto.Lines)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == line.PurchaseOrderItemId)
+                ?? throw new PurchaseOrderItemIsNotFoundException();
+        }
 
         var receivingPurchaseOrderItemIds = dto.Lines
             .Select(line => line.PurchaseOrderItemId)
@@ -747,14 +615,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var hasReceivableDirectShip = false;
         foreach (var itemId in receivingPurchaseOrderItemIds)
         {
-            hasReceivableDirectShip = await _directShipManager.HasReceivableDirectShipAllocationsAsync(itemId)
+            hasReceivableDirectShip = await directShipManager.HasReceivableDirectShipAllocationsAsync(itemId)
                 .ConfigureAwait(false);
             if (hasReceivableDirectShip)
                 break;
         }
 
         if (hasReceivableDirectShip)
-            EnsureDirectShipTransitWarehouseConfigured();
+            await EnsureDirectShipTransitWarehouseConfiguredAsync().ConfigureAwait(false);
 
         // Aggregate-validate qty theo PO item (cùng item nhiều kho phải cộng dồn trước khi check).
         var groupedByItem = dto.Lines.GroupBy(line => line.PurchaseOrderItemId);
@@ -771,50 +639,107 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         // Validate warehouse cho tất cả lines (cache theo Id).
         var warehouseCache = new Dictionary<Guid, Warehouse?>();
-        var createdReceiptIds = new List<Guid>();
         foreach (var line in dto.Lines)
         {
             if (!warehouseCache.TryGetValue(line.WarehouseId, out var warehouse))
             {
-                warehouse = await _warehouseOrderDataReader.GetByIdAsync(line.WarehouseId).ConfigureAwait(false);
+                warehouse = await warehouseOrderDataReader.GetByIdAsync(line.WarehouseId).ConfigureAwait(false);
                 warehouseCache[line.WarehouseId] = warehouse;
             }
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(line.WarehouseId);
         }
 
+        var receivedItems = new List<AddGoodsReceiptItemDto>();
         foreach (var line in dto.Lines)
         {
-            var result = await ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, line.PurchaseOrderItemId)
-            {
-                ReceivedByUserId = dto.ReceivedByUserId,
-                ReceivedQuantity = line.ReceivedQuantity,
-                WarehouseId = line.WarehouseId,
-                ActualUnitCost = line.ActualUnitCost
-            }).ConfigureAwait(false);
+            var purchaseOrderItem = purchaseOrder.Items.First(i => i.Id == line.PurchaseOrderItemId);
+            purchaseOrderItem.AddQuantityReceived(line.ReceivedQuantity);
+            purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, line.ReceivedQuantity);
 
-            if (result.CreatedGoodsReceiptId.HasValue)
-                createdReceiptIds.Add(result.CreatedGoodsReceiptId.Value);
+            receivedItems.Add(new AddGoodsReceiptItemDto
+            {
+                ProductId = purchaseOrderItem.ProductId,
+                Quantity = line.ReceivedQuantity,
+                WarehouseId = line.WarehouseId,
+                TaxRate = dto.TaxRate,
+                UnitCost = line.ActualUnitCost
+            });
+        }
+        var createGoodsReceiptResult = await goodsReceiptManager.CreateGoodsReceiptAsync(new CreateGoodsReceiptDto
+        {
+            PictureIds = dto.PictureIds,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
+            PurchaseOrderId = purchaseOrder.Id,
+            VendorId = purchaseOrder.VendorId,
+            Items = receivedItems,
+            TaxRate = dto.TaxRate
+        }).ConfigureAwait(false);
+
+        if (createGoodsReceiptResult.TaxAmount > 0)
+            purchaseOrder.AccumulatedTaxAmount += createGoodsReceiptResult.TaxAmount;
+
+        if (dto.ShippingAmount.HasValue)
+            purchaseOrder.AccumulatedShippingAmount += dto.ShippingAmount.Value;
+
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        if (dto.ShippingAmount.HasValue && dto.ShippingAmount > 0)
+            await AddShippingExpenseAsync(purchaseOrder.Id, dto.ShippingAmount.Value, dto.ReceivedOnUtc).ConfigureAwait(false);
+
+        foreach (var line in dto.Lines)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(i => i.Id == line.PurchaseOrderItemId);
+            var distributeResult = await purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(purchaseOrderItem.Id, purchaseOrderItem.QuantityReceived)
+                .ConfigureAwait(false);
+            await ProcessDirectShipReceiptsAsync(
+                distributeResult.DirectShipReceipts,
+                createGoodsReceiptResult.CreatedId,
+                line.WarehouseId).ConfigureAwait(false);
         }
 
-        return new BulkReceiveGoodsForPurchaseOrderResultDto
+        return new BulkReceiveGoodsResultDto
         {
             PurchaseOrderId = purchaseOrder.Id,
-            CreatedGoodsReceiptIds = createdReceiptIds
+            CreatedGoodsReceiptIds = [createGoodsReceiptResult.CreatedId]
         };
+    }
+
+    public async Task AddShippingExpenseAsync(Guid purchaseOrderId, decimal shippingAmount, DateTime? incurredOnUtc = null)
+    {
+        if (shippingAmount <= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ShippingAmountIsInvalid");
+
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+        {
+            AmountWithoutTax = shippingAmount,
+            Title = $"Phí vận chuyển đơn nhập {purchaseOrder.Code}",
+            ExpenseType = ExpenseType.Purchase,
+            IncurredDateUtc = incurredOnUtc ?? DateTime.UtcNow,
+            RecordedByUserId = purchaseOrder.CreatedByUserId,
+            ReferenceId = purchaseOrder.Id,
+            ReferenceCode = purchaseOrder.Code,
+            ReferenceType = ExpenseReferenceType.PurchaseOrder
+        }).ConfigureAwait(false);
     }
 
     public async Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var goodsReceipt = await _goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false)
             ?? throw new GoodsReceiptIsNotFoundException(dto.Id);
 
         if (goodsReceipt.PurchaseOrderId.HasValue)
             throw new GoodsReceiptCannotSetToPurchaseOrderException();
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await poRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
         if (!purchaseOrder.CanReceiveGoods())
@@ -830,7 +755,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         ApplyCostAssignmentsAndSplit(goodsReceipt, purchaseOrder.Id, needUpdateUnitCostItems);
 
         goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
-        await _goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+        await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
 
         foreach (var (itemId, qty) in resolvePoItems)
         {
@@ -840,12 +765,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrder.VerifyStatus();
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         foreach (var itemId in resolvePoItems.Select(item => item.itemId).Distinct())
         {
             var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
-            var distributeResult = await _purchaseOrderAllocationManager
+            var distributeResult = await purchaseOrderAllocationManager
                 .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
                 .ConfigureAwait(false);
 
@@ -857,7 +782,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
             foreach (var receipt in distributeResult.DirectShipReceipts)
             {
-                await _directShipManager.OnAllocationReceivedAsync(
+                await directShipManager.DirectShipAllocationReceivesGoodsAsync(
                     receipt.AllocationId,
                     receipt.Quantity,
                     goodsReceipt.Id,
@@ -870,7 +795,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var goodsReceipt = await _goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var goodsReceipt = await goodsReceiptRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.Id);
 
@@ -878,22 +803,22 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             return;
 
         var purchaseOrderId = goodsReceipt.PurchaseOrderId.Value;
-        var hasActiveDirectShipDelivery = _deliveryNoteReader.DataSource
+        var hasActiveDirectShipDelivery = deliveryNoteReader.DataSource
             .Any(note => note.SourceGoodsReceiptId == dto.Id && note.Status != DeliveryNoteStatus.Cancelled);
         if (hasActiveDirectShipDelivery)
             throw new GoodsReceiptCannotRemoveDueToDirectShipDeliveryException(dto.Id);
 
-        var hasConfirmedReturns = _vendorReturnReader.DataSource
+        var hasConfirmedReturns = vendorReturnReader.DataSource
             .Any(r => r.GoodsReceiptId == dto.Id && r.Status == VendorReturnStatus.Confirmed);
         if (hasConfirmedReturns)
             throw new GoodsReceiptHasConfirmedReturnsException(dto.Id);
 
-        var linkedDebt = _vendorDebtReader.DataSource
+        var linkedDebt = vendorDebtReader.DataSource
             .FirstOrDefault(d => d.GoodsReceiptId == dto.Id);
         if (linkedDebt is not null && (linkedDebt.PaidAmount > 0 || linkedDebt.RemainingAmount != linkedDebt.TotalAmount))
             throw new GoodsReceiptCannotDeleteDueToTouchedDebtException(dto.Id);
 
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -926,27 +851,27 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         }
 
         if (linkedDebt is not null)
-            await _vendorDebtManager.DeleteDebtFromGoodsReceiptAsync(dto.Id).ConfigureAwait(false);
+            await vendorDebtManager.DeleteDebtFromGoodsReceiptAsync(dto.Id).ConfigureAwait(false);
 
         goodsReceipt.RemoveFromPurchaseOrder();
-        await _goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+        await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
 
         purchaseOrder.RevertReceivingIfEmpty();
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         foreach (var itemId in changedPurchaseOrderItemIds)
         {
             var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
-            await _purchaseOrderAllocationManager
+            await purchaseOrderAllocationManager
                 .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
                 .ConfigureAwait(false);
         }
     }
 
-    private async Task EnsureDirectShipTransitWarehouseConfigured()
+    private async Task EnsureDirectShipTransitWarehouseConfiguredAsync()
     {
-        var transitWarehouse = await _warehouseOrderDataReader.DataSource
+        var transitWarehouse = await warehouseOrderDataReader.DataSource
             .FirstOrDefaultAsync(w => w.WarehouseType == WarehouseType.DirectTransit)
             .ConfigureAwait(false);
 
@@ -958,7 +883,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         foreach (var receipt in receipts.Where(receipt => receipt.IsDirectShip))
         {
-            await _directShipManager.OnAllocationReceivedAsync(
+            await directShipManager.DirectShipAllocationReceivesGoodsAsync(
                 receipt.AllocationId,
                 receipt.Quantity,
                 sourceGoodsReceiptId,
@@ -968,7 +893,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task VerifyStatusAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -978,7 +903,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             return;
 
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task<IPagedDataDto<PurchaseOrderDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, PurchaseOrderStatus? status)
@@ -986,7 +911,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        var query = _purchaseOrderDataReader.DataSource;
+        var query = purchaseOrderDataReader.DataSource;
 
         if (status.HasValue)
             query = query.Where(c => c.Status == status.Value);
@@ -996,7 +921,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             var normalizedKeywords = TextHelper.Normalize(keywords);
             var uppercaseKeywords = keywords.Trim().ToUpper();
 
-            var vendorIds = await _vendorOrderDataReader.DataSource
+            var vendorIds = await vendorOrderDataReader.DataSource
                 .Where(v => v.Name.ToUpper().Contains(uppercaseKeywords) || v.Name.ToUpper().Contains(normalizedKeywords) || v.NormalizedName.Contains(normalizedKeywords))
                 .Select(v => v.Id)
                 .OfType<Guid?>()
@@ -1010,21 +935,24 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 || userIds.Contains(c.CreatedByUserId));
         }
 
-        query = query.OrderByDescending(c => c.CreatedOnUtc);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
 
-        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<PurchaseOrderDto>(), pageIndex, pageSize, 0);
+
+        query = query.OrderByDescending(c => c.CreatedOnUtc);
         var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        var data = PagedDataDto.Create(pagedData.Select(purchaseOrder => purchaseOrder.ToDto()), pageIndex, pageSize, totalCount);
-        return data;
+        return PagedDataDto.Create(pagedData.Select(purchaseOrder => purchaseOrder.ToDto()), pageIndex, pageSize, totalCount);
     }
 
     public async Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(id);
+        var purchaseOrder = await poRepository.GetByIdAsync(id);
         if (purchaseOrder is null)
             return null;
 
@@ -1033,7 +961,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task<bool> CanReceiveGoodsAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1042,7 +970,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public async Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
@@ -1053,7 +981,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException();
 
-        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
@@ -1061,13 +989,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         purchaseOrder.RemoveOrderItem(itemId);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task<IList<RecentPurchasePriceDto>> GetRecentPurchasePricesAsync(Guid productId)
     {
         // Lấy tất cả đơn nhập (không bị hủy) có chứa sản phẩm này
-        var purchaseOrders = await _purchaseOrderDataReader.DataSource
+        var purchaseOrders = await purchaseOrderDataReader.DataSource
             .Where(po => po.Status != PurchaseOrderStatus.Cancelled
                       && po.Items.Any(item => item.ProductId == productId))
             .OrderByDescending(po => po.PlacedOnUtc)
@@ -1099,7 +1027,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             .ToList();
 
         var vendors = vendorIds.Count > 0
-            ? await _vendorOrderDataReader.GetByIdsAsync(vendorIds).ConfigureAwait(false)
+            ? await vendorOrderDataReader.GetByIdsAsync(vendorIds).ConfigureAwait(false)
             : [];
 
         var vendorMap = vendors.ToDictionary(v => v.Id, v => v.Name);
@@ -1116,29 +1044,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             .ToList();
     }
 
-    public async Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax)
-    {
-        if (additionalShipping < 0)
-            throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
-        if (additionalTax < 0)
-            throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
-
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
-        if (purchaseOrder is null)
-            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
-
-        purchaseOrder.AccumulatedShippingAmount += additionalShipping;
-        purchaseOrder.AccumulatedTaxAmount += additionalTax;
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-    }
-
     public async Task<PurchaseOrderDto?> GetPurchaseOrderByCodeAsync(string code)
     {
         ArgumentException.ThrowIfNullOrEmpty(code);
 
-        var query = from po in _purchaseOrderDataReader.DataSource
+        var query = from po in purchaseOrderDataReader.DataSource
                     where po.Code == code
                     select po;
 
@@ -1153,24 +1063,24 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         Guid purchaseOrderId, Guid purchaseOrderItemId, decimal oversupplyQuantity, Guid warehouseId,
         CancellationToken ct = default)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         var item = purchaseOrder.Items.FirstOrDefault(i => i.Id == purchaseOrderItemId)
             ?? throw new PurchaseOrderItemIsNotFoundException();
 
         purchaseOrder.MarkOversupplyAccepted(item.Id, warehouseId, oversupplyQuantity, item.UnitCost);
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid purchaseOrderId)
     {
-        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await poRepository.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         purchaseOrder.Cancel();
-        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await poRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     #region Helper Classes
@@ -1210,20 +1120,20 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        return _codeGenerator.NextAsync(prefix, () => _purchaseOrderDataReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return codeGenerator.NextAsync(prefix, () => purchaseOrderDataReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private async Task<PurchaseOrder> CreatePurchaseOrderAggregateAsync(
         Guid vendorId, Guid? warehouseId, DateTime placedOnUtc,
         DateTime? expectedDeliveryDateUtc, string? note, decimal taxAmount, decimal shippingAmount)
     {
-        var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        var vendor = await vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(vendorId);
 
         if (warehouseId.HasValue)
         {
-            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            var warehouse = await warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }
@@ -1231,9 +1141,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         var purchaseOrder = await PurchaseOrder.CreateBuilder()
             .WithCode(code, this)
-            .WithVendor(vendorId, _vendorOrderDataReader)
-            .WithWarehouse(warehouseId, _warehouseOrderDataReader)
-            .BuildAsync(_purchaseOrderRepository, _currentUserAccessor);
+            .WithVendor(vendorId, vendorOrderDataReader)
+            .WithWarehouse(warehouseId, warehouseOrderDataReader)
+            .BuildAsync(poRepository, currentUserAccessor);
         purchaseOrder.Note = note;
         purchaseOrder.ExpectedDeliveryDateUtc = expectedDeliveryDateUtc;
         purchaseOrder.SetPlacedDate(placedOnUtc);
@@ -1260,7 +1170,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 {
                     Note = item.Note
                 };
-                await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+                await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReader, requireVendorProduct: false).ConfigureAwait(false);
             }
             else
             {
@@ -1281,7 +1191,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             if (allocationQuantity <= 0)
                 continue;
 
-            await _purchaseOrderAllocationManager
+            await purchaseOrderAllocationManager
                 .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
                 {
                     PurchaseOrderItemId = (purchaseOrderItem.PurchaseOrderId, purchaseOrderItem.Id),

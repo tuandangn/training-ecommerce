@@ -15,6 +15,6 @@ public sealed class GetCustomerRefundListQuery : IRequest<CustomerRefundListMode
     public Guid? CustomerId { get; init; }
     public int? Status { get; init; }
     public string? Keywords { get; init; }
-    public int PageNumber { get; init; } = 1;
-    public int PageSize { get; init; } = 20;
+    public int PageNumber { get; init; }
+    public int PageSize { get; init; }
 }

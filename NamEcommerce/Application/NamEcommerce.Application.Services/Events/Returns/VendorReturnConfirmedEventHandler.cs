@@ -25,15 +25,12 @@ public sealed class VendorReturnConfirmedEventHandler(
 
     public async Task Handle(VendorReturnConfirmed notification, CancellationToken cancellationToken)
     {
-        // Re-fetch để lấy Items đầy đủ — event chỉ mang Id để tránh reference leak qua event boundary.
         var vendorReturn = await _vendorReturnManager.GetByIdAsync(notification.VendorReturnId)
             .ConfigureAwait(false);
         if (vendorReturn is null) return;
 
-        // Idempotency guard: đã xử lý rồi thì bỏ qua
         if (vendorReturn.GeneratedDeliveryNoteId.HasValue) return;
 
-        // 1. Tạo DeliveryNote xuất kho (SourceType=ToVendorReturn, Status=Delivered, trừ tồn inline)
         var result = await _deliveryNoteAppService.CreateAsDeliveredFromVendorReturnAsync(
             new CreateDeliveryNoteFromVendorReturnAppDto
             {
@@ -51,7 +48,6 @@ public sealed class VendorReturnConfirmedEventHandler(
         if (!result.Success)
             return;
 
-        // 2. Ghi nhận DeliveryNoteId + giảm VendorDebt FIFO (net = Σ AcceptedTotal - AdditionalCost)
         var totalReturnAmount = vendorReturn.NetRecoveryAmount;
         await _vendorReturnManager.FinalizeConfirmAsync(
             notification.VendorReturnId, result.CreatedId!.Value, totalReturnAmount).ConfigureAwait(false);

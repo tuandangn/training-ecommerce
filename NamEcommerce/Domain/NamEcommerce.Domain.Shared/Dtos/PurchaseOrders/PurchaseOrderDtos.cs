@@ -50,7 +50,7 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 [Serializable]
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 {
-    public IList<PurchaseOrderItemDto> Items { get; } = [];
+    public required IList<CreatedPurchaseOrderItemDto> Items { get; init; }
 
     public decimal TaxAmount { get; init; }
     public decimal ShippingAmount { get; init; }
@@ -69,6 +69,24 @@ public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 
         base.Verify();
     }
+
+    [Serializable]
+    public sealed record CreatedPurchaseOrderItemDto
+    {
+        public required Guid ProductId { get; init; }
+        public required decimal QuantityOrdered { get; init; }
+
+        public decimal UnitCost { get; set; }
+        public string? Note { get; set; }
+
+        public void Verify()
+        {
+            if (QuantityOrdered <= 0)
+                throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+            if (UnitCost < 0)
+                throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
+        }
+    }
 }
 [Serializable]
 public sealed record CreatePurchaseOrderResultDto
@@ -81,6 +99,15 @@ public sealed class SplitPurchaseOrderDto
 {
     public Guid SourcePurchaseOrderId { get; init; }
     public IList<SplitPurchaseOrderItemDto> Items { get; init; } = [];
+
+    public void Verify()
+    {
+        if (Items.Count == 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrderItemRequired");
+
+        foreach (var item in Items)
+            item.Verify();
+    }
 }
 
 [Serializable]
@@ -88,6 +115,12 @@ public sealed class SplitPurchaseOrderItemDto
 {
     public Guid ItemId { get; init; }
     public decimal Quantity { get; init; }
+
+    public void Verify()
+    {
+        if (Quantity<= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+    }
 }
 
 [Serializable]

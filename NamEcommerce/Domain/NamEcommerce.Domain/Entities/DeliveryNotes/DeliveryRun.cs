@@ -94,7 +94,7 @@ public sealed record DeliveryRun : AppAggregateEntity
 
     internal void AcknowledgeDriverCache(string? deviceId, DateTime acknowledgedOnUtc)
     {
-        if (Status != DeliveryRunStatus.ReadyForHandover)
+        if (Status != DeliveryRunStatus.ReadyForHandover && Status != DeliveryRunStatus.HandedToDriver)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotCache");
 
         DriverCacheDeviceId = string.IsNullOrWhiteSpace(deviceId) ? null : deviceId.Trim();

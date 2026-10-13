@@ -82,6 +82,9 @@ export default class VendorPicker {
         if (this.#options.onRemove) {
             this.target.addEventListener('remove', () => this.#options.onRemove());
         }
+        if (this.#options.onChange) {
+            this.target.addEventListener('change', () => this.#options.onChange());
+        }
     }
 
     #onInput(e) {
@@ -279,13 +282,16 @@ export default class VendorPicker {
 
         this.input.value = '';
         this.#dispatch('select', { vendor: this.#selectedVendor, oldVendor });
+        this.#dispatch('change', { vendor: this.#selectedVendor, oldVendor });
     }
 
     removeVendor() {
+        const oldVendor = this.#selectedVendor;
         this.#selectedVendor = null;
         this.inputGroup.classList.remove('d-none');
         this.displayInfo.classList.add('d-none');
-        this.#dispatch('remove');
+        this.#dispatch('remove', { oldVendor });
+        this.#dispatch('change', { oldVendor });
     }
 
     setLocked(isLocked) {

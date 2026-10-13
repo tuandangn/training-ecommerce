@@ -1,10 +1,8 @@
+@using System.Globalization
 @using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
 @model PurchaseOrderDetailsModel
 @{
     var poStatus = (PurchaseOrderStatus)Model.Info.Status;
-    var totalShipping = Model.Info.ShippingAmount + Model.Info.AccumulatedShippingAmount;
-    var totalTax = Model.Info.TaxAmount + Model.Info.AccumulatedTaxAmount;
-    var subTotal = Model.Info.TotalAmount - totalShipping - totalTax;
     var canSplit = Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0);
 }
 
@@ -18,8 +16,8 @@
             <div class="d-flex gap-2 flex-wrap align-items-center">
                 @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
                 {
-                    <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form" 
-                        data-new-status="@(PurchaseOrderStatus.Submitted.GetDisplayText())" data-confirm-text="Bạn muốn gửi đơn hàng này để duyệt?">
+                    <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form"
+                          data-new-status="@(PurchaseOrderStatus.Submitted.GetDisplayText())" data-confirm-text="Bạn muốn gửi đơn hàng này để duyệt?">
                         <button type="submit" class="btn btn-sm btn-primary" data-testid="po-submit-for-approval">
                             <i class="bi bi-send me-1"></i>Gửi đơn
                         </button>
@@ -36,8 +34,8 @@
                 }
                 @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
                 {
-                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form" 
-                        data-new-status="@(PurchaseOrderStatus.Cancelled.GetDisplayText())" data-confirm-text="Bạn xác nhận hủy đơn hàng này?">
+                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form"
+                          data-new-status="@(PurchaseOrderStatus.Cancelled.GetDisplayText())" data-confirm-text="Bạn xác nhận hủy đơn hàng này?">
                         <button type="submit" class="btn btn-sm btn-outline-danger">
                             <i class="bi bi-x-circle me-1"></i><span class="d-none d-md-inline">Hủy đơn</span>
                         </button>
@@ -97,51 +95,35 @@
                     {
                         <div class="text-muted small fst-italic">Không có ghi chú</div>
                     }
-                    @if (totalShipping > 0 || totalTax > 0)
-                    {
-                        <div class="small mt-2">
-                            @if (totalShipping > 0)
-                            {
-                                <span class="me-2">Vận chuyển: <strong>@totalShipping.DisplayCurrencyWithSymbol()</strong></span>
-                            }
-                            @if (totalTax > 0)
-                            {
-                                <span>Thuế: <strong>@totalTax.DisplayCurrencyWithSymbol()</strong></span>
-                            }
-                        </div>
-                    }
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table data-table mb-0 caption-top">
-                    @if (Model.Info.CanAddItems)
-                    {
-                        <caption>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    @if (poStatus != PurchaseOrderStatus.Cancelled)
-                                    {
-                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary border">
-                                                <i class="bi bi-copy me-1"></i>Sao chép
-                                            </button>
-                                        </form>
-                                    }
-                                    @if (canSplit)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
-                                            <i class="bi bi-scissors me-1"></i>Chia đơn
-                                        </button>
-                                    }
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                    <i class="bi bi-plus-lg me-1"></i>
-                                    <span class="d-none d-md-inline">Thêm hàng hóa</span>
+            @if (Model.Info.CanAddItems)
+            {
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        @if (poStatus != PurchaseOrderStatus.Cancelled)
+                        {
+                            <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline" id="copyForm">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-copy me-1"></i>Sao chép
                                 </button>
-                            </div>
-                        </caption>
-                    }
+                            </form>
+                        }
+                        @if (canSplit)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSplitPurchaseOrder">
+                                <i class="bi bi-scissors me-1"></i>Chia đơn
+                            </button>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        <span>Thêm hàng hóa</span>
+                    </button>
+                </div>
+            }
+            <div class="table-responsive">
+                <table class="table data-table mb-0">
                     <thead>
                         <tr>
                             <th class="ps-3">Hàng hóa</th>
@@ -171,8 +153,7 @@
                                             }
                                             else
                                             {
-                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex ui-size-40 flex-shrink-0"
-                                                    >
+                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex ui-size-40 flex-shrink-0">
                                                     <i class="bi bi-image text-muted"></i>
                                                 </div>
                                             }
@@ -181,14 +162,14 @@
                                         <input type="hidden" class="product-id" value="@item.ProductId" />
                                     </td>
                                     <td class="text-end">
-                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
+                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity(item.QuantityDecimalPlaces)</span>
                                         <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
                                     </td>
                                     <td class="text-end">
                                         @if (item.QuantityReceived >= item.QuantityOrdered)
                                         {
                                             <span class="status-badge success py-1 px-2">
-                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
+                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity(item.QuantityDecimalPlaces)
                                             </span>
                                         }
                                         else if (item.QuantityReceived > 0)
@@ -216,14 +197,14 @@
                                                 <li>
                                                     <button class="dropdown-item btnEditItem"
                                                             data-id="@item.Id"
-                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-purchase-order="@Model.Info.Id"
                                                             data-name="@item.ProductName"
-                                                            data-quantity="@item.QuantityOrdered"
-                                                            data-unitcost="@item.UnitCost"
-                                                            data-note="@item.Note"
-                                                            data-decimalplaces="@item.QuantityDecimalPlaces">
-                                                        <i class="bi bi-pencil-square me-1"></i>Sửa dòng hàng
+                                                            data-quantity="@item.QuantityOrdered.ToString(CultureInfo.InvariantCulture)"
+                                                            data-unit-cost="@item.UnitCost.ToString(CultureInfo.InvariantCulture)"
+                                                            data-decimal-places="@item.QuantityDecimalPlaces">
+                                                        <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
                                                     </button>
+                                                    <span id="itemNote@(item.Id)" class="visually-hidden d-none">@item.Note</span>
                                                 </li>
                                                 <li>
                                                     <button class="dropdown-item btnRemoveItem"
@@ -256,46 +237,47 @@
             <div class="@(Model.Info.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
                 <div class="order-summary-row">
                     <span class="label">Tạm tính</span>
-                    <span class="value" id="subTotal">@subTotal.DisplayCurrencyWithSymbol()</span>
+                    <span class="value" id="subTotal">@Model.Info.SubTotal.DisplayCurrencyWithSymbol()</span>
                 </div>
-                @if (totalShipping > 0)
-                {
-                    <div class="order-summary-row">
-                        <span class="label">
-                            Phí vận chuyển
-                            @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
-                            {
-                                <span class="small text-muted">(@Model.Info.ShippingAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedShippingAmount.DisplayCurrencyWithSymbol())</span>
-                            }
-                            else if (Model.Info.AccumulatedShippingAmount > 0)
-                            {
-                                <span class="small text-muted">(từ nhận hàng)</span>
-                            }
-                        </span>
-                        <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
-                    </div>
-                }
-                @if (totalTax > 0)
+                @if (Model.Info.TotalTaxAmount > 0)
                 {
                     <div class="order-summary-row">
                         <span class="label">
                             Thuế VAT
-                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
+                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0 && Model.Receiving.RemainingQuantity > 0)
                             {
                                 <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
                             }
-                            else if (Model.Info.AccumulatedTaxAmount > 0)
+                            else if (Model.Info.AccumulatedTaxAmount > 0 && Model.Receiving.RemainingQuantity > 0)
                             {
-                                <span class="small text-muted">(từ nhận hàng)</span>
+                                <span class="small text-muted">(tạm tính)</span>
                             }
                         </span>
-                        <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
+                        <span class="value text-muted">@Model.Info.TotalTaxAmount.DisplayCurrencyWithSymbol()</span>
                     </div>
                 }
                 <div class="order-summary-row total">
                     <span class="label">Tổng cộng</span>
                     <span class="value" id="grandTotal">@Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</span>
                 </div>
+                @if (Model.Info.TotalShipping > 0)
+                {
+                    <div class="order-summary-row">
+                        @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
+                        {
+                            <span class="label">
+                                Tổng phí vận chuyển
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label">
+                                Phí vận chuyển
+                            </span>
+                        }
+                        <span class="value text-muted">@Model.Info.TotalShipping.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -306,10 +288,10 @@
     <div class="modal fade" id="poEditInfoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content purchaseorder-modal-content">
-                <form asp-action="Edit" asp-controller="PurchaseOrder">
+                <form asp-action="Edit" asp-controller="PurchaseOrder" method="post" id="editForm">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
-                            <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa thông tin đơn
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa thông tin
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -319,7 +301,7 @@
                     <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>

@@ -79,7 +79,7 @@
     }
 
     function formatCurrencyWithSymbol(raw) {
-        return formatCurrency(raw, '\u20ab');
+        return formatCurrency(raw, getCurrencySymbol());
     }
 
     function formatQuantity(raw, decimals) {
@@ -112,6 +112,10 @@
         var type = input.dataset.decimal || "quantity";
         var decimals = parseInt(input.dataset.decimals, 10) || 0;
         return type === 'currency' ? formatCurrency(value) : formatQuantity(value, decimals);
+    }
+
+    function getCurrencySymbol() {
+        return '\u20ab';
     }
 
     function setValue(input, value) {
@@ -185,7 +189,7 @@
         if (input._focusHandler)
             input.removeEventListener('focus', input._focusHandler);
         input.addEventListener('focus', function onFocus() {
-            this._focusHandler = onFocus;
+            input._focusHandler = onFocus;
             this.value = stripInputFormatting(this);
             if (this.value == '0')
                 this.select();
@@ -193,10 +197,11 @@
                 focusEnd(this);
         });
 
+
         if (input._blurHandler)
             input.removeEventListener('blur', input._blurHandler);
         input.addEventListener('blur', function onBlur(e) {
-            this._blurHandler = onBlur;
+            input._blurHandler = onBlur;
             // parseTypedDecimal vì tại đây value do user gõ, "." là thập phân
             // stripInputFormatting dùng heuristic "3 chữ số sau dấu chấm = hàng nghìn"
             // sẽ sai khi user gõ "1.004" với ý nghĩa một phẩy lẻ bốn
@@ -213,12 +218,15 @@
                 var decimals = parseInt(this.dataset.decimals, 10) || 0;
                 this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw, decimals);
             }
+
+            e.stopImmediatePropagation();
         });
+
 
         if (input._keyPressHandler)
             input.removeEventListener('keypress', input._keyPressHandler);
         input.addEventListener('keypress', function onKeyPress(e) {
-            this._keyPressHandler = onKeyPress;
+            input._keyPressHandler = onKeyPress;
             if (e.key == 'Enter' || e.code == 'Enter' || e.keyCode == 13)
                 return;
             var decimals = parseInt(this.dataset.decimals || '0', 10);
@@ -230,7 +238,7 @@
         if (input._pasteHandler)
             input.removeEventListener('paste', input._pasteHandler);
         input.addEventListener('paste', function onPaste(e) {
-            this._pasteHandler = onPaste;
+            input._pasteHandler = onPaste;
             e.preventDefault();
             var decimals = parseInt(this.dataset.decimals || '0', 10);
             var pasted = (e.clipboardData || window.clipboardData).getData('text');
@@ -476,6 +484,12 @@
         if (!form || !(form instanceof HTMLFormElement))
             throw new Error('Form is required');
         const formData = new FormData(form);
+        processFormData(form, formData);
+        return formData;
+    }
+    function processFormData(form, formData) {
+        if (!formData || !(formData instanceof FormData))
+            throw new Error('FormData is required');
         const decimalFields = form.querySelectorAll('.decimal-input');
         for (const decimalField of decimalFields) {
             formData.set(decimalField.name, DecimalFields.stripInputFormatting(decimalField))
@@ -503,7 +517,9 @@
         stripFormatting: stripFormatting,
         stripInputFormatting: stripInputFormatting,
         getFormData: getFormData,
-        getValue: getValue
+        processFormData: processFormData,
+        getValue: getValue,
+        getCurrencySymbol: getCurrencySymbol
     };
 
 })(window);

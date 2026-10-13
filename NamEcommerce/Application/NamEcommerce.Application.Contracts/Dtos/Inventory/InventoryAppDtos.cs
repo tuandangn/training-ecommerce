@@ -1,5 +1,3 @@
-using NamEcommerce.Application.Contracts.Dtos.Common;
-
 namespace NamEcommerce.Application.Contracts.Dtos.Inventory;
 
 [Serializable]
@@ -16,6 +14,7 @@ public sealed record InventoryStockAppDto
     public required decimal QuantityAvailable { get; init; }
     public required decimal CurrentUnitCost { get; init; }
     public required DateTime UpdatedOnUtc { get; init; }
+    public int QuantityDecimalPlaces { get; set; }
     public decimal ReorderLevel { get; init; }
     public decimal MaxStockLevel { get; init; }
     public IReadOnlyList<InventoryCostHistoryAppDto> CostHistory { get; init; } = [];
@@ -30,6 +29,7 @@ public sealed record InventoryStockByProductAppDto
     public required decimal QuantityReserved { get; init; }
     public required decimal TotalReservedByOrder { get; init; }
     public required decimal QuantityAvailable { get; init; }
+    public int QuantityDecimalPlaces { get; set; }
     public required decimal CurrentUnitCost { get; init; }
     public required DateTime UpdatedOnUtc { get; init; }
     public required IReadOnlyList<InventoryStockAppDto> Warehouses { get; init; }

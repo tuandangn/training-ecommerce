@@ -17,7 +17,6 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<IList<RelatedPurchaseOrderDto>> FindRelatedPurchaseOrdersAsync(Guid vendorId, IList<Guid> productIds, IList<PurchaseOrderStatus> statuses);
 
     Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto);
-    Task<QuickCreatePurchaseOrderResultDto> QuickCreateAndReceiveAsync(QuickCreatePurchaseOrderDto dto);
     Task<CreatePurchaseOrderResultDto> CopyPurchaseOrderAsync(Guid sourceId);
     Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto);
     Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageAsync(CreatePoFromShortageDto dto);
@@ -26,13 +25,12 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto);
     Task UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemDto dto);
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
-    Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
-    Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);
+    Task<ReceivedGoodsResultDto> ReceivesItemAsync(ReceivedGoodsDto dto);
+    Task<BulkReceiveGoodsResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsDto dto);
+    Task AddShippingExpenseAsync(Guid purchaseOrderId, decimal shippingAmount, DateTime? incurredOnUtc = null);
 
     Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
     Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);
-
-    Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
 
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
     Task ClosePartialAsync(Guid purchaseOrderId, string reason);

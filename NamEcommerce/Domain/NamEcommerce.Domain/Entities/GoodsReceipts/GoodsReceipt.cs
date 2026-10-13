@@ -27,14 +27,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
         Code = string.Empty;
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
-        CreatedOnUtc = DateTime.UtcNow;
-    }
-
-    private GoodsReceipt(Guid id, Guid? createdByUserId, string? createdByUsername = null) : base(id)
-    {
-        Code = string.Empty;
-        CreatedByUserId = createdByUserId;
-        CreatedByUsername = createdByUsername;
+        ReceivedOnUtc = DateTime.UtcNow;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -67,10 +60,8 @@ public sealed record GoodsReceipt : AppAggregateEntity
     public Guid? VendorId { get; private set; }
     internal VendorInfo? VendorInfo { get; private set; }
 
-    // PRE-4b: Thuế GTGT đầu vào — computed từ items
     public decimal TotalTaxAmount => _items.Sum(i => i.TaxAmount);
 
-    // PRE-5: Số hóa đơn từ nhà cung cấp
     public string? VendorInvoiceNumber { get; internal set; }
     public DateTime? VendorInvoiceDate { get; internal set; }
 
@@ -78,23 +69,18 @@ public sealed record GoodsReceipt : AppAggregateEntity
     public string? CreatedByUsername { get; private set; }
     public DateTime CreatedOnUtc { get; set; }
 
+
     #region Methods
 
     public bool IsPendingCosting() => Items.Any(item => item.IsPendingCosting());
 
-    internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
+    internal async Task<GoodsReceiptItem> AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
         IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
     {
         var item = await GoodsReceiptItem.CreateAsync(productId, warehouseId, quantity, unitCost, productByIdGetter, warehouseSettings, warehouseByIdGetter).ConfigureAwait(false);
         _items.Add(item);
-    }
 
-    internal void AddItem(GoodsReceiptItem item)
-    {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-        _items.Add(item);
+        return item;
     }
 
     internal void SplitToNewItemWithQuantity(Guid itemId, decimal quantity)
@@ -117,18 +103,6 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     internal void RaiseItemSplitOnLinking(Guid purchaseOrderId, Guid originalItemId, Guid productId, decimal splitQuantity, decimal assignedUnitCost)
         => RaiseDomainEvent(new GoodsReceiptItemSplitOnLinking(Id, purchaseOrderId, originalItemId, productId, splitQuantity, assignedUnitCost));
-
-    internal void ItemUnitCost(Guid itemId, decimal unitCost)
-    {
-        var item = Items.FirstOrDefault(item => item.Id == itemId);
-        if (item is null)
-            throw new GoodsReceiptItemIsNotFoundException(itemId);
-
-        if (!item.IsPendingCosting())
-            throw new GoodsReceiptItemCannotSetUnitCostException();
-
-        item.SetUnitCost(unitCost);
-    }
 
     internal void SetReceivedDate(DateTime receivedOnUtc)
     {
@@ -207,21 +181,17 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     #endregion
 
+
     #region Events
 
-    private void MarkSetToPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptSetToPurchaseOrder(Id, purchaseOrderId));
-
-    private void MarkRemovedFromPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptRemovedFromPurchaseOrder(Id, purchaseOrderId));
-
     internal void MarkCreated() => RaiseDomainEvent(new GoodsReceiptCreated(Id));
-
     internal void MarkUpdated() => RaiseDomainEvent(new GoodsReceiptUpdated(Id));
-
-    internal void MarkItemUnitCostSet(Guid itemId) => RaiseDomainEvent(new GoodsReceiptItemUnitCostSet(Id, itemId));
-
+    internal void MarkDeleted() => RaiseDomainEvent(new GoodsReceiptDeleted(Id, _pictureIds.ToList().AsReadOnly()));
     internal void MarkVendorChanged() => RaiseDomainEvent(new GoodsReceiptVendorChanged(Id));
 
-    internal void MarkDeleted() => RaiseDomainEvent(new GoodsReceiptDeleted(Id, _pictureIds.ToList().AsReadOnly()));
+    private void MarkSetToPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptSetToPurchaseOrder(Id, purchaseOrderId));
+    private void MarkRemovedFromPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptRemovedFromPurchaseOrder(Id, purchaseOrderId));
+    internal void MarkItemUnitCostSet(Guid itemId) => RaiseDomainEvent(new GoodsReceiptItemUnitCostSet(Id, itemId));
 
     #endregion
 }

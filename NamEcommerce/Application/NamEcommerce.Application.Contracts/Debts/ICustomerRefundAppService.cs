@@ -7,12 +7,8 @@ public interface ICustomerRefundAppService
 {
     Task<CustomerRefundAppDto?> GetByIdAsync(Guid id);
 
-    Task<IPagedDataAppDto<CustomerRefundAppDto>> GetListAsync(
-        Guid? customerId = null,
-        int? status = null,
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15);
+    Task<IPagedDataAppDto<CustomerRefundAppDto>> GetListAsync(int pageIndex, int pageSize,
+        Guid? customerId = null, int? status = null, string? keywords = null);
 
     Task<CompleteCustomerRefundResultAppDto> CompleteAsync(CompleteCustomerRefundAppDto dto);
 

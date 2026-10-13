@@ -171,6 +171,19 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var goodsReceipt = await _mediator.Send(new GetGoodsReceiptQuery { Id = id });
+        if (goodsReceipt is null)
+        {
+            NotifyError("Error.GoodsReceipt.IsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        //if (goodsReceipt.PurchaseOrderId.HasValue)
+        //{
+        //    NotifyError("Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder");
+        //    return RedirectToAction(nameof(Details), new { id });
+        //}
+
         var result = await _mediator.Send(new DeleteGoodsReceiptCommand { Id = id });
 
         if (!result.Success)

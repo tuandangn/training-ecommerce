@@ -11,11 +11,13 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Specifications;
 using NamEcommerce.Domain.Specifications.DeliveryNotes;
 using NamEcommerce.Domain.Specifications.Orders;
+using NamEcommerce.Domain.Specifications.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
@@ -168,8 +170,7 @@ public sealed class OrderFulfillmentScheduleAppService(
             return CommonActionResultDto.CreateSuccess();
 
         var poItemIds = purchaseOrderItemIds.Select(id => id.purchaseOrderItemId).Distinct().ToList();
-        var orderItemIds = allocationDataReader.DataSource
-            .Where(allocation => poItemIds.Contains(allocation.PurchaseOrderItemId.SecondaryId))
+        var orderItemIds = (await allocationDataReader.GetListAsync(new ActivePurchaseOrderAllocationOfPurchaseOrderItemSpec(purchaseOrderItemIds.First().purchaseOrderId, poItemIds)))
             .Select(allocation => allocation.OrderItemId)
             .Distinct()
             .ToList();

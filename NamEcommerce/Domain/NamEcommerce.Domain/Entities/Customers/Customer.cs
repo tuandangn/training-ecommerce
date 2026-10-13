@@ -14,8 +14,6 @@ public sealed record Customer : AppAggregateEntity
         FullName = fullName;
         PhoneNumber = phoneNumber;
         Address = address;
-        Kind = CustomerKind.Standard;
-
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -25,7 +23,7 @@ public sealed record Customer : AppAggregateEntity
     public string? Email { get; internal set; }
     public string? Note { get; internal set; }
 
-    public CustomerKind Kind { get; internal set; }
+    public CustomerKind Kind { get; private set; }
     public bool IsSystem { get; internal set; }
 
     public DateTime CreatedOnUtc { get; init; }
@@ -33,6 +31,15 @@ public sealed record Customer : AppAggregateEntity
     #region Methods
 
     public bool IsRetailWalkIn() => Kind == CustomerKind.RetailWalkIn;
+    internal void SetCustomerKind(CustomerKind kind)
+    {
+        var oldKind = Kind;
+        if (kind == oldKind)
+            return;
+
+        Kind = kind;
+        MarkCustomerKindChanged(oldKind);
+    }
 
     #endregion
 
@@ -46,6 +53,9 @@ public sealed record Customer : AppAggregateEntity
 
     internal void MarkDeleted()
         => RaiseDomainEvent(new CustomerDeleted(Id, FullName));
+
+    internal void MarkCustomerKindChanged(CustomerKind oldKind)
+        => RaiseDomainEvent(new CustomerKindChanged(Id, Kind, oldKind));
 
     #endregion
 }

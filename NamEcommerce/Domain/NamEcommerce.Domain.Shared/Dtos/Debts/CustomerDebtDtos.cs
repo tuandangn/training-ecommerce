@@ -173,7 +173,8 @@ public sealed record CreateCustomerPaymentDto
     public PaymentType PaymentType { get; init; }
     public Guid? BankAccountId { get; init; }
     public string? Note { get; init; }
-    
+    public Guid? PaymentIntentId { get; set; }
+
     public DateTime PaidOnUtc { get; init; }
     public Guid? RecordedByUserId { get; init; }
 

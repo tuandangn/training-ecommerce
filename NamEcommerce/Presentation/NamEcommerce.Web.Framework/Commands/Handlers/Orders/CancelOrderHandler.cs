@@ -13,7 +13,6 @@ public sealed class CancelOrderHandler(IOrderAppService orderAppService) : IRequ
         var result = await orderAppService.CancelOrderAsync(new CancelOrderAppDto
         {
             OrderId = request.OrderId,
-            OrderItemIds = request.OrderItemIds,
             ReturnWarehouseId = request.ReturnWarehouseId
         }).ConfigureAwait(false);
 

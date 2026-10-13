@@ -25,18 +25,21 @@ public sealed class CreateCustomerHandler : IRequestHandler<CreateCustomerComman
         {
             FullName = request.FullName,
             PhoneNumber = request.PhoneNumber,
+            Kind = request.Kind,
             Email = request.Email,
             Address = request.Address,
             Note = request.Note
         }).ConfigureAwait(false);
 
         if (!result.Success)
+        {
             return new CreateCustomerResultModel
             {
                 Success = false,
                 ErrorMessage = result.ErrorMessage,
                 CreatedId = Guid.Empty
             };
+        }
 
         // Tạo công nợ ban đầu nếu có
         if (request.InitialDebt.HasValue && request.InitialDebt.Value > 0)
@@ -71,6 +74,7 @@ public sealed class UpdateCustomerHandler : IRequestHandler<UpdateCustomerComman
         {
             FullName = request.FullName,
             PhoneNumber = request.PhoneNumber,
+            Kind = request.Kind,
             Email = request.Email,
             Address = request.Address,
             Note = request.Note

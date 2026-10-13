@@ -10,6 +10,8 @@ public record BaseOrderItemDto
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
 
+    public Guid? WarehouseId { get; set; }
+
     public void Verify()
     {
         if (Quantity <= 0)

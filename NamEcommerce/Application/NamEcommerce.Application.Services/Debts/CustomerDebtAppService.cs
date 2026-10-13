@@ -16,6 +16,8 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
 
     public async Task<CustomerPaymentAppDto> RecordPaymentAsync(CreateCustomerPaymentAppDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
             throw new NamEcommerceDomainException(errorMessage!);
@@ -27,6 +29,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
 
     public async Task<IList<CustomerPaymentAppDto>> RecordFlexiblePaymentForCustomerAsync(CreateCustomerPaymentAppDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
             throw new NamEcommerceDomainException(errorMessage!);
@@ -160,6 +163,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
             PaymentMethod = (PaymentMethod)dto.PaymentMethod,
             PaymentType = (PaymentType)dto.PaymentType,
             BankAccountId = dto.BankAccountId,
+            PaymentIntentId = dto.PaymentIntentId,
             Note = dto.Note,
             PaidOnUtc = dto.PaidOnUtc,
             RecordedByUserId = dto.RecordedByUserId

@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.CustomerPortal;
+using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -10,39 +12,27 @@ using NamEcommerce.Web.Models.Customers;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class CustomerController : BaseAuthorizedController
+public sealed class CustomerController(
+    AppConfig appConfig, IMediator mediator, ICurrentUserService currentUserService,
+    ICustomerPortalAdminAppService customerPortalAdminAppService) : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
-    private readonly ICustomerPortalAdminAppService _customerPortalAdminAppService;
-    private readonly IMediator _mediator;
-
-    public CustomerController(
-        AppConfig appConfig,
-        ICustomerPortalAdminAppService customerPortalAdminAppService,
-        IMediator mediator)
-    {
-        _appConfig = appConfig;
-        _customerPortalAdminAppService = customerPortalAdminAppService;
-        _mediator = mediator;
-    }
-
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.Customers.View)]
     public async Task<IActionResult> List(CustomerListSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
-        var pageSize = searchModel?.PageSize ?? _appConfig.DefaultPageSize;
+        var pageSize = searchModel?.PageSize ?? appConfig.DefaultPageSize;
         if (pageNumber <= 0) pageNumber = 1;
 
-        var model = await _mediator.Send(new GetCustomerListQuery
+        var model = await mediator.Send(new GetCustomerListQuery
         {
             Keywords = searchModel?.Keywords,
+            Kind = searchModel?.Kind,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
 
-        ViewBag.Keywords = searchModel?.Keywords;
         return View(model);
     }
 
@@ -52,7 +42,7 @@ public sealed class CustomerController : BaseAuthorizedController
         var pageIndex = 0;
         var pageSize = int.MaxValue;
 
-        var result = await _mediator.Send(new GetCustomerListQuery
+        var result = await mediator.Send(new GetCustomerListQuery
         {
             Keywords = q,
             PageIndex = pageIndex,
@@ -74,7 +64,7 @@ public sealed class CustomerController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> PickItem(Guid id)
     {
-        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
+        var customer = await mediator.Send(new GetCustomerByIdQuery { Id = id });
         if (customer is null)
             return NotFound();
 
@@ -90,9 +80,14 @@ public sealed class CustomerController : BaseAuthorizedController
     }
 
     [Authorize(Policy = SystemPermissions.Customers.Manage)]
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        return View(new CreateCustomerModel());
+        var model = new CreateCustomerModel
+        {
+            Kind = CustomerKind.RetailWalkIn,
+            CanChangeCustomerKind = await currentUserService.IsAdminAsync()
+        };
+        return View(model);
     }
 
     [HttpPost]
@@ -100,12 +95,16 @@ public sealed class CustomerController : BaseAuthorizedController
     public async Task<IActionResult> Create(CreateCustomerModel model)
     {
         if (!ModelState.IsValid)
+        {
+            model.CanChangeCustomerKind = await currentUserService.IsAdminAsync();
             return View(model);
+        }
 
-        var result = await _mediator.Send(new CreateCustomerCommand
+        var result = await mediator.Send(new CreateCustomerCommand
         {
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
+            Kind = (int)model.Kind,
             Email = model.Email,
             Address = model.Address ?? string.Empty,
             Note = model.Note,
@@ -115,11 +114,22 @@ public sealed class CustomerController : BaseAuthorizedController
         if (!result.Success)
         {
             AddLocalizedModelError(result.ErrorMessage);
+            model.CanChangeCustomerKind = await currentUserService.IsAdminAsync();
             return View(model);
         }
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
+    }
+
+    public async Task<IActionResult> QuickCreate()
+    {
+        var model = new CreateCustomerModel
+        {
+            Kind = CustomerKind.RetailWalkIn,
+            CanChangeCustomerKind = await currentUserService.IsAdminAsync()
+        };
+        return PartialView(model);
     }
 
     [HttpPost]
@@ -129,20 +139,21 @@ public sealed class CustomerController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return Json(new { success = false, message = GetErrorMessage() });
 
-        var result = await _mediator.Send(new CreateCustomerCommand
+        var result = await mediator.Send(new CreateCustomerCommand
         {
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
+            Kind = (int)model.Kind,
             Address = model.Address ?? string.Empty,
             Note = model.Note,
-            InitialDebt = model.InitialDebt
+            InitialDebt = 0
         });
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
-        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = result.CreatedId });
+        var customer = await mediator.Send(new GetCustomerByIdQuery { Id = result.CreatedId });
         if (customer is null)
             return Json(new { success = false, message = LocalizeError("Error.CustomerIsNotFound") });
 
@@ -165,7 +176,7 @@ public sealed class CustomerController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
+        var customer = await mediator.Send(new GetCustomerByIdQuery { Id = id });
         if (customer == null)
         {
             NotifyError("Error.CustomerIsNotFound");
@@ -177,6 +188,8 @@ public sealed class CustomerController : BaseAuthorizedController
             Id = customer.Id,
             FullName = customer.FullName,
             PhoneNumber = customer.PhoneNumber,
+            CanChangeCustomerKind = await currentUserService.IsAdminAsync(),
+            Kind = (CustomerKind)customer.Kind,
             Email = customer.Email,
             Address = customer.Address,
             Note = customer.Note
@@ -193,14 +206,16 @@ public sealed class CustomerController : BaseAuthorizedController
         if (!ModelState.IsValid)
         {
             await PopulatePortalAccountAsync(model).ConfigureAwait(false);
+            model.CanChangeCustomerKind = await currentUserService.IsAdminAsync();
             return View(model);
         }
 
-        var result = await _mediator.Send(new UpdateCustomerCommand
+        var result = await mediator.Send(new UpdateCustomerCommand
         {
             Id = model.Id,
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
+            Kind = (int)model.Kind,
             Email = model.Email,
             Address = model.Address ?? string.Empty,
             Note = model.Note
@@ -210,6 +225,7 @@ public sealed class CustomerController : BaseAuthorizedController
         {
             AddLocalizedModelError(result.ErrorMessage);
             await PopulatePortalAccountAsync(model).ConfigureAwait(false);
+            model.CanChangeCustomerKind = await currentUserService.IsAdminAsync();
             return View(model);
         }
 
@@ -221,7 +237,7 @@ public sealed class CustomerController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var result = await _mediator.Send(new DeleteCustomerCommand { Id = id });
+        var result = await mediator.Send(new DeleteCustomerCommand { Id = id });
 
         if (!result.Success)
             NotifyError(result.ErrorMessage!);
@@ -235,7 +251,7 @@ public sealed class CustomerController : BaseAuthorizedController
         if (model.Id == Guid.Empty)
             return;
 
-        var account = await _customerPortalAdminAppService.GetAccountAsync(model.Id).ConfigureAwait(false);
+        var account = await customerPortalAdminAppService.GetAccountAsync(model.Id).ConfigureAwait(false);
         if (account is null)
             return;
 

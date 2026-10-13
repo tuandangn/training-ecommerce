@@ -20,6 +20,7 @@ public sealed record CustomerModel
 public sealed class CustomerListModel
 {
     public string? Keywords { get; set; }
+    public int? Kind { get; set; }
     public required IPagedDataModel<CustomerItemModel> Data { get; init; }
 
     [Serializable]

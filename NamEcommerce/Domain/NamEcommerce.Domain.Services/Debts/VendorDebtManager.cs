@@ -31,19 +31,19 @@ public sealed class VendorDebtManager(
     private Task<string> GenerateDebtCodeAsync()
     {
         var prefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => debtReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => debtReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)));
     }
 
     private Task<string> GeneratePaymentCodeAsync()
     {
         var prefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => paymentReader.SecuredDataSource.CountAsync(p => p.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => paymentReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(p => p.Code.StartsWith(prefix)));
     }
 
     private Task<string> GenerateCreditNoteCodeAsync()
     {
         var prefix = $"DC-NCC-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.SecuredDataSource.CountAsync(c => c.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(c => c.Code.StartsWith(prefix)));
     }
 
     public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
@@ -126,7 +126,8 @@ public sealed class VendorDebtManager(
     {
         dto.Verify();
 
-        var existing = await debtReader.DataSource.FirstOrDefaultAsync(d => d.GoodsReceiptId == dto.GoodsReceiptId).ConfigureAwait(false);
+        var existing = await debtReader.DataSource
+            .FirstOrDefaultAsync(d => d.GoodsReceiptId == dto.GoodsReceiptId).ConfigureAwait(false);
         if (existing != null)
             return existing.ToDto();
 
@@ -140,7 +141,7 @@ public sealed class VendorDebtManager(
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
 
-        var debt = new VendorDebt(code, vendor.Id, vendor.Name, goodsReceipt.Id, dto.TotalAmount, dto.DueDateUtc)
+        var debt = new VendorDebt(code, vendor.Id, vendor.Name, dto.TotalAmount, dto.DueDateUtc, goodsReceipt.Id, goodsReceipt.Code)
         {
             VendorPhone = vendor.PhoneNumber,
             VendorAddress = vendor.Address
@@ -296,7 +297,7 @@ public sealed class VendorDebtManager(
         if (amount <= 0)
             throw new ArgumentException("Credit note amount must be positive", nameof(amount));
 
-        var existing = await creditNoteReader.DataSource
+        var existing = await creditNoteReader.GetDataSource(new() { ReadWrite = true })
             .FirstOrDefaultAsync(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled)
             .ConfigureAwait(false);
         if (existing is not null)
@@ -311,15 +312,6 @@ public sealed class VendorDebtManager(
             returnId, returnCode, sourceGoodsReceiptId, sourcePurchaseOrderId, amount);
 
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
-
-        await vendorLedgerManager.RecordReturnCreditAsync(new RecordVendorLedgerReturnCreditDto
-        {
-            VendorId = vendorId,
-            Amount = amount,
-            ReferenceId = returnId,
-            ReferenceCode = returnCode,
-            OccurredAtUtc = inserted.CreatedOnUtc
-        }).ConfigureAwait(false);
 
         return inserted.ToDto();
     }
@@ -499,10 +491,15 @@ public sealed class VendorDebtManager(
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorDebtDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(d => d.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(d => d.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<VendorPaymentDto>> GetPaymentsAsync(
@@ -514,10 +511,15 @@ public sealed class VendorDebtManager(
 
         query = query.OrderByDescending(p => p.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorPaymentDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(p => p.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(p => p.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 
     private async Task<IList<VendorCreditNoteAllocationDto>> GetCreditNoteAllocationsByDebtIdAsync(Guid debtId)

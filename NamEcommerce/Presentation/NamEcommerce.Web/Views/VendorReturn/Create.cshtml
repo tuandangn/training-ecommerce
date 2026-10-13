@@ -31,7 +31,7 @@
                 <div>
                     <i class="bi bi-funnel-fill me-1"></i>
                     Đang lọc phiếu nhập theo đơn nhập
-                    <strong class="ms-1">@Model.FilterPurchaseOrderCode</strong>
+                    <a asp-action="Details" asp-controller="PurchaseOrder" asp-route-id="@Model.FilterPurchaseOrderId" class="fw-medium text-dark">@Model.FilterPurchaseOrderCode</a>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-none" id="btnClearPoFilter">
                     <i class="bi bi-x-circle me-1"></i>Bỏ lọc
@@ -55,7 +55,7 @@
                         <h5>Danh sách hàng trả</h5>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnLoadFromReceipt">
-                                <i class="bi bi-arrow-repeat me-1"></i>Load từ phiếu nhập
+                                <i class="bi bi-arrow-repeat me-1"></i>Load lại
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAddFreeItem">
                                 <i class="bi bi-plus-lg me-1"></i>Thêm hàng
@@ -67,16 +67,11 @@
                             <table class="table data-table mb-0" id="returnItemsTable">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3 ui-min-w-160">Hàng hóa</th>
-                                        <th class="text-center ui-w-60">ĐVT</th>
-                                        <th class="text-end ui-w-80">Đã nhập</th>
-                                        <th class="text-end ui-w-80">Đã trả</th>
-                                        <th class="text-end ui-w-80">Còn lại</th>
-                                        <th class="text-end ui-w-100">SL trả</th>
-                                        <th class="text-end ui-w-110">Giá vốn gốc</th>
-                                        <th class="text-end ui-w-115">Giá trả NCC</th>
-                                        <th class="text-end ui-w-115">Thành tiền</th>
-                                        <th class="ui-w-36"></th>
+                                        <th class="ps-3">Hàng hóa</th>
+                                        <th class="text-end">SL trả</th>
+                                        <th class="text-end">Giá trả NCC</th>
+                                        <th class="text-end">Thành tiền</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
@@ -95,17 +90,10 @@
                                                 <input type="hidden" name="Items[@i].OriginalUnitCost" value="@item.OriginalUnitCost" class="item-orig-cost" />
                                                 <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-center text-muted small"></td>
-                                            <td class="text-end text-muted small">—</td>
-                                            <td class="text-end text-muted small">—</td>
-                                            <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
                                                        class="form-control form-control-sm text-end item-req-qty" inputmode="decimal"
                                                        data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0" />
-                                            </td>
-                                            <td class="text-end text-muted small">
-                                                @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].ReturnUnitCost" value="@item.ReturnUnitCost.DisplayCurrency()"
@@ -115,7 +103,7 @@
                                             <td class="text-end item-subtotal text-muted small">
                                                 @((item.RequestedQuantity * item.ReturnUnitCost).DisplayCurrency())
                                             </td>
-                                            <td class="pe-2">
+                                            <td class="text-center">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -126,29 +114,27 @@
                             </table>
                         </div>
                         <div id="noItemsMessage" class="py-4 text-center text-muted @(Model.Items.Count == 0 ? "" : "d-none")">
-                            Chọn nhà cung cấp và phiếu nhập, hoặc nhấn "+ Thêm hàng" để tạo tự do.
+                            Chưa có hàng trả nào
                         </div>
                     </div>
                     <!-- Footer: Chi phí + Tổng -->
                     <div class="content-card-footer py-2">
                         <div class="d-flex justify-content-end align-items-center gap-3">
-                            <span class="text-muted small">Tổng giá trị trả:</span>
-                            <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
-                        </div>
-                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1">
-                            <span class="text-muted small">Chi phí phát sinh:</span>
-                            <span id="additionalCostDisplay" class="text-danger small fw-medium">0 ₫</span>
+                            <span class="text-muted small">Tổng cộng:</span>
+                            <span id="totalReturnValue" class="fw-semibold">0 @ViewConstants.DefaultCurrencySymbol</span>
                         </div>
                         <div class="d-flex justify-content-end align-items-center gap-3 mt-1 border-top pt-2">
                             <span class="text-muted small fw-bold">Tổng thu hồi từ NCC:</span>
-                            <span id="netRecoveryAmount" class="fw-bold text-success fs-6">0 ₫</span>
+                            <span id="netRecoveryAmount" class="fw-bold">0 @ViewConstants.DefaultCurrencySymbol</span>
                         </div>
                     </div>
                     <div class="content-card-footer py-2 d-flex align-items-center justify-content-between border-top">
                         <a asp-action="List" class="btn btn-outline-secondary text-decoration-none btn-sm">
-                            <span class="text-muted small">Trở về</span>
+                            <i class="bi bi-arrow-left me-1"></i>Trở về
                         </a>
-                        <button type="submit" class="btn btn-primary d-lg-none">Tạo phiếu</button>
+                        <button type="submit" class="btn btn-primary d-lg-none">
+                            Tạo phiếu
+                        </button>
                     </div>
                 </div>
             </div>
@@ -160,8 +146,6 @@
                         <h5>Thông tin phiếu trả</h5>
                     </div>
                     <div class="content-card-body">
-
-                        <!-- Nhà cung cấp -->
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Nhà cung cấp <span class="text-danger">*</span>
@@ -172,12 +156,9 @@
                                  data-phone=""></div>
                             <span asp-validation-for="VendorId" class="small text-danger"></span>
                         </div>
-
-                        <!-- Phiếu nhập kho (optional) -->
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Phiếu nhập kho
-                                <span class="badge bg-secondary-subtle text-secondary border ms-1 ui-fs-065">tuỳ chọn</span>
                             </label>
                             <div class="dropdown w-100" id="goodsReceiptDropdown">
                                 <button type="button" id="goodsReceiptToggle"
@@ -188,10 +169,7 @@
                                 </button>
                                 <ul class="dropdown-menu w-100 shadow-sm gr-picker-menu" id="goodsReceiptMenu"></ul>
                             </div>
-                            <div class="form-text">Để trống nếu tạo phiếu trả tự do.</div>
                         </div>
-
-                        <!-- Kho xuất -->
                         <div class="mb-3">
                             <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <select asp-for="WarehouseId" id="warehouseSelect" class="form-select">
@@ -204,24 +182,18 @@
                                     }
                                 }
                             </select>
-                            <div class="form-text">Co the bo trong o buoc tao; he thong se yeu cau chon kho khi xac nhan tra hang.</div>
                             <div id="warehouseFilterHint" class="small text-muted mt-1 d-none">
                                 <i class="bi bi-info-circle me-1"></i>
                                 <span id="warehouseFilterHintText"></span>
                             </div>
                             <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
-
-                        <!-- Chi phí phát sinh -->
                         <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="AdditionalCost" id="additionalCostInput" inputmode="numeric"
-                                   class="form-control" data-decimal="currency" min="0" placeholder="0"
-                                   value="@Model.AdditionalCost.DisplayCurrency()" />
-                            <div class="form-text">Vận chuyển, đền bù... sẽ trừ vào tổng thu hồi.</div>
+                                   class="form-control" data-decimal="currency" placeholder="Chi phí phát sinh"
+                                   value="@Model.AdditionalCost?.DisplayCurrency()" />
                         </div>
-
-                        <!-- Ghi chú -->
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
@@ -242,19 +214,19 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vendorreturn-modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Them hang tra tu do</h5>
+                <h5 class="modal-title fw-bold">Thêm hàng trả</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body py-3">
                 <div id="addFreeProductPicker"></div>
                 <div id="addFreeProductError" class="small text-danger d-none mt-2">
-                    Vui long chon hang hoa.
+                    Vui lòng chọn hàng hóa
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huy</button>
                 <button type="button" class="btn btn-primary" id="btnConfirmAddFreeItem" disabled>
-                    <i class="bi bi-plus-lg me-1"></i>Them vao danh sach
+                    <i class="bi bi-check-lg-all me-1"></i>Xác nhận
                 </button>
             </div>
         </div>
@@ -410,8 +382,8 @@
             const placeholderText = filterPoId ? '— Bỏ chọn —' : '(Không chọn — trả tự do)';
             const liClear = document.createElement('li');
             liClear.innerHTML = `<button type="button" class="gr-option small text-muted" data-receipt-id="">
-                <i class="bi bi-dash-circle me-1"></i>${escapeHtml(placeholderText)}
-            </button>`;
+                                        <i class="bi bi-dash-circle me-1"></i>${escapeHtml(placeholderText)}
+                                    </button>`;
             goodsReceiptMenu.appendChild(liClear);
 
             if (allGoodsReceipts.length === 0) {
@@ -451,16 +423,16 @@
             if (r.itemCount > 0) parts.push(`<span><i class="bi bi-box me-1"></i>${r.itemCount} mặt hàng</span>`);
 
             li.innerHTML = `
-                <button type="button" class="gr-option" data-receipt-id="${r.id}" ${r.isFullyReturned ? 'disabled' : ''}>
-                    <div class="gr-line1">
-                        <span>
-                            <span class="gr-code">${escapeHtml(r.code)}</span>
-                            ${poBadge} ${returnedBadge} ${pendingBadge}
-                        </span>
-                        ${totalHtml}
-                    </div>
-                    <div class="gr-line2">${parts.join('')}</div>
-                </button>`;
+                                        <button type="button" class="gr-option" data-receipt-id="${r.id}" ${r.isFullyReturned ? 'disabled' : ''}>
+                                            <div class="gr-line1">
+                                                <span>
+                                                    <span class="gr-code">${escapeHtml(r.code)}</span>
+                                                    ${poBadge} ${returnedBadge} ${pendingBadge}
+                                                </span>
+                                                ${totalHtml}
+                                            </div>
+                                            <div class="gr-line2">${parts.join('')}</div>
+                                        </button>`;
             return li;
         }
 
@@ -506,11 +478,11 @@
             if (r.itemCount > 0) line2Parts.push(`${r.itemCount} mặt hàng`);
 
             setToggleLabel(`
-                <div class="gr-toggle-line1">${escapeHtml(r.code)}${r.purchaseOrderCode
+                                        <div class="gr-toggle-line1">${escapeHtml(r.code)}${r.purchaseOrderCode
                     ? ` <span class="badge bg-secondary-subtle text-secondary border ms-1 ui-fs-065">PO ${escapeHtml(r.purchaseOrderCode)}</span>`
                     : ''}</div>
-                <div class="gr-toggle-line2">${line2Parts.join(' · ')}</div>
-            `);
+                                        <div class="gr-toggle-line2">${line2Parts.join(' · ')}</div>
+                                    `);
         }
 
         function setToggleLabel(html) {
@@ -628,37 +600,34 @@
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td class="ps-3">
-                    <div class="fw-medium">${item.productName}</div>
-                    <div class="text-muted small">
-                        Da nhap ${fmtQty(item.originalQty)}${unit ? ` ${unit}` : ''} · Da tra ${fmtQty(item.alreadyReturnedQty)} · Con lai ${fmtQty(available)}${origCost > 0 ? ` · Gia goc ${fmtCurrency(origCost)}` : ''}
-                    </div>
-                    <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
-                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
-                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
-                    <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${item.quantityDecimalPlaces ?? 0}" />
-                </td>
-                <td class="text-center text-muted small">${item.unit}</td>
-                <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
-                <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
-                <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
-                <td class="text-end align-middle">
-                    <span class="fw-medium item-req-qty-display">${available > 0 ? fmtQty(available) : '—'}</span>
-                    <input type="hidden" name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : 0}"
-                           class="item-req-qty" data-decimals="${item.quantityDecimalPlaces ?? 0}" />
-                </td>
-                <td class="text-end text-muted small align-middle">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
-                <td class="text-end align-middle">
-                    <span class="text-muted item-return-cost-display">${origCost > 0 ? fmtCurrency(origCost) : '—'}</span>
-                    <input type="hidden" name="Items[${i}].ReturnUnitCost" value="${origCost}"
-                           class="item-return-cost" />
-                </td>
-                <td class="text-end item-subtotal text-muted small align-middle">—</td>
-                <td class="pe-2">
-                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>`;
+                                        <td class="ps-3">
+                                            <div class="fw-medium">${item.productName}</div>
+                                            <div class="text-muted small">
+                                                Đã nhập ${fmtQty(item.originalQty)}${unit ? ` ${unit}` : ''} · Đã trả ${fmtQty(item.alreadyReturnedQty)} · Giá nhập ${fmtCurrency(origCost)}
+                                            </div>
+                                            <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
+                                            <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
+                                            <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
+                                            <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${item.quantityDecimalPlaces ?? 0}" />
+                                        </td>
+                                        <td class="text-end align-middle">
+                                            <span class="fw-medium item-req-qty-display">${available > 0 ? fmtQty(available) : '—'}</span>
+                                            <input type="hidden" name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : 0}"
+                                                   class="item-req-qty" data-decimals="${item.quantityDecimalPlaces ?? 0}" />
+                                        </td>
+                                        <td class="text-end align-middle">
+                                            <span class="text-muted item-return-cost-display">${origCost > 0 ? fmtCurrency(origCost) : '—'}</span>
+                                            <input type="hidden" name="Items[${i}].ReturnUnitCost" value="${origCost}"
+                                                   class="item-return-cost" />
+                                        </td>
+                                        <td class="text-end item-subtotal align-middle">
+                                            ${origCost > 0 && available > 0 ? fmtCurrency(origCost * available) : '—'}
+                                        </td>
+                                        <td class="pe-2">
+                                            <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>`;
             tbody.appendChild(tr);
             updateEmptyState();
         }
@@ -690,35 +659,30 @@
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td class="ps-3 align-middle">
-                    <div class="fw-medium">${escapeHtml(product.name ?? '')}</div>
-                    <div class="text-muted small">${escapeHtml(product.unitMeasurement ?? '') || 'Khong ro don vi'}</div>
-                    <input type="hidden" name="Items[${i}].ProductId" value="${product.id}" />
-                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
-                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
-                    <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${product.quantityDecimalPlaces ?? 0}" />
-                </td>
-                <td class="text-center text-muted small align-middle">${escapeHtml(product.unitMeasurement ?? '')}</td>
-                <td class="text-end text-muted small align-middle">—</td>
-                <td class="text-end text-muted small align-middle">—</td>
-                <td class="text-end text-muted small align-middle">—</td>
-                <td class="text-end align-middle">
-                    <span class="fw-medium item-req-qty-display">1</span>
-                    <input type="hidden" name="Items[${i}].RequestedQuantity" value="1"
-                           class="item-req-qty" data-decimals="${product.quantityDecimalPlaces ?? 0}" />
-                </td>
-                <td class="text-end text-muted small align-middle">—</td>
-                <td class="text-end align-middle">
-                    <span class="text-muted item-return-cost-display">—</span>
-                    <input type="hidden" name="Items[${i}].ReturnUnitCost" value="0"
-                           class="item-return-cost" />
-                </td>
-                <td class="text-end item-subtotal text-muted small align-middle">—</td>
-                <td class="pe-2 align-middle">
-                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>`;
+                    <td class="ps-3 align-middle" >
+                                            <div class="fw-medium">${escapeHtml(product.name ?? '')}</div>
+                                            <div class="text-muted small">${escapeHtml(product.unitMeasurement ?? '') || 'Khong ro don vi'}</div>
+                                            <input type="hidden" name="Items[${i}].ProductId" value="${product.id}" />
+                                            <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
+                                            <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
+                                            <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${product.quantityDecimalPlaces ?? 0}" />
+                                        </td>
+                                        <td class="text-end align-middle">
+                                            <span class="fw-medium item-req-qty-display">1</span>
+                                            <input type="hidden" name="Items[${i}].RequestedQuantity" value="1"
+                                                   class="item-req-qty" data-decimals="${product.quantityDecimalPlaces ?? 0}" />
+                                        </td>
+                                        <td class="text-end align-middle">
+                                            <span class="text-muted item-return-cost-display">—</span>
+                                            <input type="hidden" name="Items[${i}].ReturnUnitCost" value="0"
+                                                   class="item-return-cost" />
+                                        </td>
+                                        <td class="text-end item-subtotal text-muted small align-middle">—</td>
+                                        <td class="pe-2 align-middle">
+                                            <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>`;
             tbody.appendChild(tr);
             updateEmptyState();
         }
@@ -876,7 +840,7 @@
                     const grWh = currentGoodsReceiptWarehouseIds[0];
                     if (validWarehouseIds.has(grWh)) {
                         warehouseSelect.value = grWh;
-                        showHint(`Đã chọn kho theo phiếu nhập. ${validCount} kho còn đủ tồn.`, 'info');
+                        showHint(`Đã chọn kho theo phiếu nhập.${validCount} kho còn đủ tồn.`, 'info');
                         return;
                     }
                     warehouseSelect.value = '';
@@ -948,10 +912,9 @@
             });
 
             const addCost = parseCurrency(additionalCostInput.value);
-            const net = Math.max(0, total - addCost);
+            const net = Math.max(0, total);
 
             document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
-            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
             document.getElementById('netRecoveryAmount').textContent = fmtCurrency(net);
         }
 

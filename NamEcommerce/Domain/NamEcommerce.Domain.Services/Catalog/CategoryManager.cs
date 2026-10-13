@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Catalog;
@@ -82,7 +83,7 @@ public sealed class CategoryManager : ICategoryManager
         return sameNameExists;
     }
 
-    public async Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<CategoryDto>> GetCategoriesAsync(int pageIndex, int pageSize, string? keywords)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -98,7 +99,12 @@ public sealed class CategoryManager : ICategoryManager
         query = query.OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Name);
 
-        var totalCount = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CategoryDto>(), pageIndex, pageSize, 0);
+
         var pagedData = await query
             .Skip(pageIndex * pageSize)
             .Take(pageSize)

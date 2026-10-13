@@ -1,6 +1,7 @@
-@using NamEcommerce.Web.Models.Customers
 @using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.Customers
 @using NamEcommerce.Web.Extensions
+@using NamEcommerce.Web.Models.Customers
 @model EditCustomerModel
 @{
     ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Khách hàng";
@@ -32,31 +33,35 @@
                         <input type="hidden" asp-for="Id" />
                         <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-7">
                                 <label asp-for="FullName" class="form-label"></label>
                                 <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" />
                                 <span asp-validation-for="FullName" class="text-danger small"></span>
                             </div>
+                            <div class="col-md-5">
+                                <label asp-for="Kind" class="form-label"></label>
+                                <select asp-for="Kind" class="form-select" disabled="@(!Model.CanChangeCustomerKind)">
+                                    @foreach (var kind in CustomerKind.GetOptions())
+                                    {
+                                        <option value="@kind.value" selected="@(kind.value == (int)Model.Kind)">@kind.text</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Kind" class="text-danger small"></span>
+                            </div>
                             <div class="col-md-6">
                                 <label asp-for="PhoneNumber" class="form-label"></label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
-                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" inputmode="tel"/>
-                                </div>
+                                <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" inputmode="tel" />
                                 <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
                             </div>
                             <div class="col-12">
                                 <label asp-for="Address" class="form-label"></label>
                                 <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
                                 <span asp-validation-for="Address" class="text-danger small"></span>
-                            </div>
-                            <div class="col-12">
-                                <label asp-for="Email" class="form-label"></label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
-                                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" inputmode="email"/>
-                                </div>
-                                <span asp-validation-for="Email" class="text-danger small"></span>
                             </div>
                             <div class="col-12">
                                 <label asp-for="Note" class="form-label"></label>

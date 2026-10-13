@@ -30,7 +30,7 @@ public sealed class DeliveryRunManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"CHG-{DateTime.UtcNow:yyyyMMdd}";
-        return entityCodeGenerator.NextAsync(prefix, () => runReader.SecuredDataSource.CountAsync(run => run.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => runReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(run => run.Code.StartsWith(prefix)));
     }
 
     public async Task<DeliveryRunDto> CreateAsync(CreateDeliveryRunDto dto)
@@ -265,12 +265,14 @@ public sealed class DeliveryRunManager(
 
         query = query.OrderByDescending(run => run.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
-        if (total == 0)
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(new List<DeliveryRunDto>(), pageIndex, pageSize, 0);
 
         var items = await  query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
-        return PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 
     private static decimal GetCashCollectedAmount(DeliveryNote note)

@@ -57,9 +57,14 @@ export default class DeliveryNoteController {
 
     #deliveredState = {};
 
-    beginDeliveredWorkflow(modalId) {
+    beginDeliveredWorkflow(modalId, workflowOptions) {
         if (!modalId)
             throw new Error('Modal Id is required');
+
+        workflowOptions = Object.assign({ isDirectShip: false, isRetailWalkInCustomer: false }, workflowOptions);
+
+        this.#deliveredState.isDirectShip = workflowOptions.isDirectShip;
+        this.#deliveredState.isRetailWalkInCustomer = workflowOptions.isRetailWalkInCustomer;
 
         const modalContainer = document.getElementById(modalId);
         if (!modalContainer)
@@ -105,18 +110,21 @@ export default class DeliveryNoteController {
         this.#deliveredContainer.querySelector('#deliveryNoteId').value = this.#deliveredState.id;
         this.#renderAcceptantItems();
 
+        $('.direct-ship-text').toggleClass('d-none', !this.#deliveredState.isDirectShip);
+        $('.direct-ship-text').toggleClass('d-block', this.#deliveredState.isDirectShip);
+
         const hasRejectedItems = this.#deliveredState.items?.some(item => Number(item.returnedQuantity || 0) > 0) ?? false;
         const rejectReason = this.#deliveredState.items?.find(item => Number(item.returnedQuantity || 0) > 0 && item.rejectReason)?.rejectReason ?? '';
         $('#rejectReason').val(rejectReason);
         $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
-        $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
+        $('#compensateInNextDeliveryContainer').toggleClass('d-none', this.#deliveredState.isRetailWalkInCustomer || !hasRejectedItems);
 
         $('#receiverName').val(this.#deliveredState.receiverName || '');
 
         const cashCollectedAmount = document.getElementById('cashCollectedAmount');
-        const cashAmount = this.#deliveredState.cashCollectedAmount ?? this.#deliveredState.amountToCollect;
+        const cashAmount = this.#deliveredState.isDirectShip ? 0 : (this.#deliveredState.cashCollectedAmount ?? this.#deliveredState.amountToCollect);
         cashCollectedAmount.value = DecimalFields.formatCurrency(cashAmount);
-        cashCollectedAmount.closest('div').classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
+        cashCollectedAmount.closest('div.form-field')?.classList.toggle('d-none', this.#deliveredState.amountToCollect == 0)
 
         this.#deliveryTableEvents();
 
@@ -137,7 +145,7 @@ export default class DeliveryNoteController {
                                 <input class="form-control form-control-sm text-end returned-qty" name="returnedQty_${item.id}"
                                     value="${DecimalFields.formatQuantity(returnedQty, decimalPlaces)}" inputmode="decimal"
                     data-decimal="quantity" data-decimals="${decimalPlaces}" data-val="true"
-                    data-val-required="Vui lòng nhập số lượng."
+                    placeholder="Số lượng trả"
                     data-val-range="Số lượng trả về phải nhỏ hơn hoặc bằng ${DecimalFields.formatQuantity(deliveredQty, decimalPlaces)}." data-val-range-max="${deliveredQty}"
                     data-val-range-min="0"
                     data-val-number="Số lượng không đúng." />
@@ -165,9 +173,8 @@ export default class DeliveryNoteController {
 
         const formData = DecimalFields.getFormData(this.#deliveredForm);
 
-        const btn = $('#btnSubmitDelivery');
-        const originalText = btn.html();
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
+        const btn = document.getElementById('btnSubmitDelivery');
+        btn.disabled = true;
 
         const result = await apiPost(this.#deliveredForm.action, formData);
         if (result.success) {
@@ -175,7 +182,7 @@ export default class DeliveryNoteController {
             return;
         }
         hidePageLoading();
-        btn.prop('disabled', false).html(originalText);
+        btn.disabled = false;
     }
 
     #buildAcceptancePayload() {
@@ -232,7 +239,7 @@ export default class DeliveryNoteController {
         });
 
         // Form Submit for Delivery Proof
-        $(this.#deliveredForm).submit(e => {
+        this.#deliveredForm.addEventListener('submit', e => {
             e.preventDefault();
 
             if (!$(this.#deliveredForm).valid()) {
@@ -249,6 +256,8 @@ export default class DeliveryNoteController {
         });
     }
     #deliveryTableEvents() {
+        const self = this;
+
         const onInput = debounce((e) => {
             updateAcceptedQuantity($(e.target).closest('tr'));
         }, 700);
@@ -281,8 +290,8 @@ export default class DeliveryNoteController {
             });
 
             $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
-            $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
-            if (!hasRejectedItems) {
+            $('#compensateInNextDeliveryContainer').toggleClass('d-none', self.#deliveredState.isRetailWalkInCustomer || !hasRejectedItems);
+            if (self.#deliveredState.isRetailWalkInCustomer || !hasRejectedItems) {
                 $('#compensateInNextDelivery').prop('checked', false);
             }
         }

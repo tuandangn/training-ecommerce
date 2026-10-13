@@ -1,19 +1,15 @@
 ﻿using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
-using NamEcommerce.Web.Contracts.Queries.Models.Media;
 using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
-public sealed class GetProductListHandler(
-    IProductAppService productAppService, IMediator mediator,
-    IPictureAppService pictureAppService, IUnitMeasurementAppService unitMeasurementAppService,
-    IVendorAppService vendorAppService) : IRequestHandler<GetProductListQuery, ProductListModel>
+public sealed class GetProductListHandler(IProductAppService productAppService, IMediator mediator, IVendorAppService vendorAppService) 
+    : IRequestHandler<GetProductListQuery, ProductListModel>
 {
     public async Task<ProductListModel> Handle(GetProductListQuery request, CancellationToken cancellationToken)
     {
@@ -32,9 +28,6 @@ public sealed class GetProductListHandler(
             categoryBreadcrumbs[categoryId] = breadcrumb;
         }
 
-        var unitMeasurementIds = pagedData.Where(p => p.UnitMeasurementId.HasValue).Select(p => p.UnitMeasurementId!.Value).Distinct();
-        var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
-
         var vendorIds = pagedData.SelectMany(p => p.Vendors.Select(v => v.VendorId)).Distinct();
         var vendors = await vendorAppService.GetVendorsByIdsAsync(vendorIds).ConfigureAwait(false);
 
@@ -46,10 +39,9 @@ public sealed class GetProductListHandler(
                 Name = product.Name,
                 ShortDesc = product.ShortDesc,
                 UnitPrice = product.UnitPrice,
-                PictureUrl = PictureHelper.GetPictureUrl(product.Pictures.FirstOrDefault())
+                PictureUrl = PictureHelper.GetPictureUrl(product.Pictures.FirstOrDefault()),
+                UnitMeasurementName = product.UnitMeasurement
             };
-
-            productModel.UnitMeasurementName = unitMeasurements.FirstOrDefault(um => um.Id == product.UnitMeasurementId)?.Name;
 
             var productCategory = product.Categories.FirstOrDefault();
             if (productCategory != null)

@@ -3,174 +3,194 @@
 @model CustomerLedgerListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Công nợ khách hàng";
-    var query = Model.Keywords;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/debt.css" asp-append-version="true" />
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Công nợ khách hàng</h1>
-        <p class="page-header-subtitle">Số dư công nợ theo từng khách — nhấn vào tên để xem sao kê</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Công nợ khách hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Công nợ khách hàng</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 <div class="content-card" data-responsive-list data-list-key="customer-debt-list">
     <div class="action-toolbar">
-        <partial name="_Search" model="@(new CustomerDebtListSearchModel { Keywords = query })" />
+        <partial name="_Search" model="@(new CustomerDebtListSearchModel { Keywords = Model.Keywords })" />
         <partial name="_ResponsiveListToolbar" />
     </div>
-    <div class="responsive-list-panel" data-list-view-panel="list">
-        <div class="table-responsive">
-        <table class="table data-table align-middle">
-            <thead>
-                <tr>
-                    <th class="ps-4">Khách hàng</th>
-                    <th class="text-end">Số dư công nợ</th>
-                    <th class="text-end">Giao dịch cuối</th>
-                    <th class="ui-w-80"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data?.Pagination.TotalCount > 0)
-                {
-                    @foreach (var item in Model.Data)
-                    {
-                        var isDebt = item.Balance > 0;
-                        var isCredit = item.Balance < 0;
+    <div class="content-card-body-flush">
+        <div class="responsive-list-panel" data-list-view-panel="list">
+            <div class="table-responsive">
+                <table class="table data-table align-middle">
+                    <thead>
                         <tr>
-                            <td class="ps-4">
-                                <a asp-action="Details" asp-route-id="@item.CustomerId" class="fw-medium text-decoration-none">
-                                    <i class="bi bi-person me-1"></i>
+                            <th class="ps-4">Khách hàng</th>
+                            <th class="text-end">Số dư công nợ</th>
+                            <th class="text-end">Giao dịch cuối</th>
+                            <th class="ui-w-80"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Data?.Pagination.TotalCount > 0)
+                        {
+                            @foreach (var item in Model.Data)
+                            {
+                                var isDebt = item.Balance > 0;
+                                var isCredit = item.Balance < 0;
+                                <tr>
+                                    <td class="ps-4">
+                                        <a asp-action="Details" asp-route-id="@item.CustomerId" class="fw-medium text-decoration-none">
+                                            <i class="bi bi-person me-1"></i>
+                                            @HighlighHelper.Highlight(item.CustomerName, Model.Keywords)
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(item.CustomerPhone))
+                                        {
+                                            <div>
+                                                <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none">
+                                                    <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
+                                                </a>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (isDebt)
+                                        {
+                                            <span class="fw-bold text-danger">@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                                            <div class="small text-muted">Còn nợ</div>
+                                        }
+                                        else if (isCredit)
+                                        {
+                                            <span class="fw-bold text-success">@(Math.Abs(item.Balance).ToString(ViewConstants.CurrencyDisplayFormat))</span>
+                                            <div class="small text-success">Khách dư</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-bold text-muted">—</span>
+                                            <div class="small text-muted">Đã đủ</div>
+                                        }
+                                    </td>
+                                    <td class="text-end text-muted small">
+                                        @if (item.LastEntryOnUtc.HasValue)
+                                        {
+                                            @item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
+                                            <i class="bi bi-chevron-right"></i>
+                                            <span class="visually-hidden">Sao kê</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state py-5">
+                                        <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                                        <h5>Không có công nợ nào</h5>
+                                        <p>Các khoản nợ sẽ được tạo tự động khi phiếu xuất kho được xác nhận giao hàng.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+            @if (Model.Data?.Pagination.TotalCount > 0)
+            {
+                @foreach (var item in Model.Data)
+                {
+                    var isDebt = item.Balance > 0;
+                    var isCredit = item.Balance < 0;
+                    <article class="list-card">
+                        <div class="list-card-header">
+                            <div class="list-card-title-group">
+                                <a asp-action="Details" asp-route-id="@item.CustomerId" class="list-card-title">
                                     @HighlighHelper.Highlight(item.CustomerName, Model.Keywords)
                                 </a>
                                 @if (!string.IsNullOrEmpty(item.CustomerPhone))
                                 {
-                                    <div>
-                                        <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none">
-                                            <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
-                                        </a>
-                                    </div>
+                                    <a href="tel:@item.CustomerPhone" class="list-card-meta text-decoration-none">
+                                        <i class="bi bi-telephone me-1"></i>@HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
+                                    </a>
                                 }
-                            </td>
-                            <td class="text-end">
-                                @if (isDebt)
-                                {
-                                    <span class="fw-bold text-danger">@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)</span>
-                                    <div class="small text-muted">Còn nợ</div>
-                                }
-                                else if (isCredit)
-                                {
-                                    <span class="fw-bold text-success">@(Math.Abs(item.Balance).ToString(ViewConstants.CurrencyDisplayFormat))</span>
-                                    <div class="small text-success">Khách dư</div>
-                                }
-                                else
-                                {
-                                    <span class="fw-bold text-muted">—</span>
-                                    <div class="small text-muted">Đã đủ</div>
-                                }
-                            </td>
-                            <td class="text-end text-muted small">
-                                @if (item.LastEntryOnUtc.HasValue)
-                                {
-                                    @item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
-                                }
-                                else
-                                {
-                                    <span>—</span>
-                                }
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
-                                    <i class="bi bi-chevron-right"></i>
-                                    <span class="visually-hidden">Sao kê</span>
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="4">
-                            <div class="empty-state py-5">
-                                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
-                                <h5>Không có công nợ nào</h5>
-                                <p>Các khoản nợ sẽ được tạo tự động khi phiếu xuất kho được xác nhận giao hàng.</p>
                             </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
-        @if (Model.Data?.Pagination.TotalCount > 0)
-        {
-            @foreach (var item in Model.Data)
-            {
-                var isDebt = item.Balance > 0;
-                var isCredit = item.Balance < 0;
-                <article class="list-card">
-                    <div class="list-card-header">
-                        <div class="list-card-title-group">
-                            <a asp-action="Details" asp-route-id="@item.CustomerId" class="list-card-title">
-                                @HighlighHelper.Highlight(item.CustomerName, Model.Keywords)
-                            </a>
-                            @if (!string.IsNullOrEmpty(item.CustomerPhone))
+                            @if (isDebt)
                             {
-                                <a href="tel:@item.CustomerPhone" class="list-card-meta text-decoration-none">
-                                    <i class="bi bi-telephone me-1"></i>@HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
-                                </a>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal">Còn nợ</span>
+                            }
+                            else if (isCredit)
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">Dư</span>
                             }
                         </div>
-                        @if (isDebt)
-                        {
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal">Còn nợ</span>
-                        }
-                        else if (isCredit)
-                        {
-                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">Dư</span>
-                        }
-                    </div>
-                    <div class="list-card-fields">
-                        <div class="list-card-field">
-                            <span class="list-card-label">Số dư</span>
-                            <span class="list-card-value @(isDebt ? "text-danger" : isCredit ? "text-success" : "text-muted")">
-                                @(isCredit ? "-" : "")@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)
-                            </span>
+                        <div class="list-card-fields">
+                            <div class="list-card-field">
+                                <span class="list-card-label">Số dư</span>
+                                <span class="list-card-value @(isDebt ? "text-danger" : isCredit ? "text-success" : "text-muted")">
+                                    @(isCredit ? "-" : "")@item.Balance.ToString(ViewConstants.CurrencyDisplayFormat)
+                                </span>
+                            </div>
+                            <div class="list-card-field">
+                                <span class="list-card-label">Giao dịch cuối</span>
+                                <span class="list-card-value">
+                                    @(item.LastEntryOnUtc.HasValue ? item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")
+                                </span>
+                            </div>
                         </div>
-                        <div class="list-card-field">
-                            <span class="list-card-label">Giao dịch cuối</span>
-                            <span class="list-card-value">
-                                @(item.LastEntryOnUtc.HasValue ? item.LastEntryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")
-                            </span>
+                        <div class="list-card-actions">
+                            <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
+                                <i class="bi bi-chevron-right"></i>
+                                <span class="visually-hidden">Sao kê</span>
+                            </a>
                         </div>
-                    </div>
-                    <div class="list-card-actions">
-                        <a class="btn-table-action" asp-action="Details" asp-route-id="@item.CustomerId" title="Xem sao kê">
-                            <i class="bi bi-chevron-right"></i>
-                            <span class="visually-hidden">Sao kê</span>
-                        </a>
-                    </div>
-                </article>
+                    </article>
+                }
             }
-        }
-        else
+            else
+            {
+                <div class="empty-state py-5">
+                    <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                    <h5>Không có công nợ nào</h5>
+                    <p>Các khoản nợ sẽ được tạo tự động khi phiếu xuất kho được xác nhận giao hàng.</p>
+                </div>
+            }
+        </div>
+
+        @if (Model.Data?.Pagination.TotalCount > 0)
         {
-            <div class="empty-state py-5">
-                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
-                <h5>Không có công nợ nào</h5>
-                <p>Các khoản nợ sẽ được tạo tự động khi phiếu xuất kho được xác nhận giao hàng.</p>
-            </div>
+            <partial name="_Pager" model="Model.Data.Pagination" />
         }
     </div>
-
-    @if (Model.Data?.Pagination.TotalCount > 0)
-    {
-        <partial name="_Pager" model="Model.Data.Pagination" />
-    }
 </div>
+@section Scripts {
+    <script type="module">
+        const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
+        const form = txtKeywords.closest('form');
+        const onSearchChanged = debounce(function() {
+            form.submit();
+        }, 500);
+        txtKeywords.addEventListener('input', onSearchChanged);
+
+        if (txtKeywords.value) {
+            focusEnd(txtKeywords);
+        }
+    </script>
+}

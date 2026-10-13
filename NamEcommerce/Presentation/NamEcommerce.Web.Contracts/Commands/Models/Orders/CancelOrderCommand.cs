@@ -2,7 +2,5 @@
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Orders;
 
-public sealed record CancelOrderCommand(
-    Guid OrderId,
-    IReadOnlyList<Guid> OrderItemIds,
-    Guid? ReturnWarehouseId = null) : ICommand<CommonActionResultModel>;
+public sealed record CancelOrderCommand(Guid OrderId, IReadOnlyList<Guid> OrderItemIds, Guid? ReturnWarehouseId = null) 
+    : ICommand<CommonActionResultModel>;

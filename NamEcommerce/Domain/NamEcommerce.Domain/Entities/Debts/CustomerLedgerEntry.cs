@@ -13,14 +13,11 @@ public sealed record CustomerLedgerEntry : AppAggregateEntity
 
     internal CustomerLedgerEntry(
         Guid customerId,
-        CustomerLedgerEntryType entryType,
         decimal amount,
+        CustomerLedgerEntryType entryType,
         CustomerLedgerReferenceType referenceType,
-        Guid? referenceId,
-        string? referenceCode,
-        string? note,
-        DateTime occurredAtUtc,
-        Guid? createdByUserId) : base(Guid.NewGuid())
+        Guid? referenceId, string? referenceCode,
+        string? note, DateTime occurredAtUtc, Guid? createdByUserId) : base(Guid.NewGuid())
     {
         CustomerId = customerId;
         EntryType = entryType;

@@ -120,7 +120,7 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
         // Chưa gắn NCC → không có chủ thể để ghi nợ.
         if (!goodsReceipt.VendorId.HasValue) return;
 
-        var totalAmount = goodsReceipt.Items.Sum(i => i.Quantity * i.UnitCost!.Value);
+        var totalAmount = goodsReceipt.Items.Sum(i => i.Quantity * i.UnitCost!.Value) + goodsReceipt.TotalTaxAmount;
         if (totalAmount <= 0) return;
 
         await _vendorDebtManager.CreateDebtFromGoodsReceiptAsync(new CreateVendorDebtFromGoodsReceiptDto

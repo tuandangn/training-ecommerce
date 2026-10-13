@@ -41,8 +41,9 @@ public static class DecimalFormatHelper
         if (parts.Length == 1)
             return intPart;
 
-        var fracPart = parts[1];
-        if (fracPart == new string('0', decimalPlaces))
+        // Bỏ các số 0 thừa ở cuối phần thập phân
+        var fracPart = parts[1].TrimEnd('0');
+        if (fracPart.Length == 0)
             return intPart;
 
         return $"{intPart},{fracPart}";

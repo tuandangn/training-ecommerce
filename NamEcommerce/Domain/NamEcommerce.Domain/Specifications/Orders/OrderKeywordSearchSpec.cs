@@ -7,5 +7,6 @@ namespace NamEcommerce.Domain.Specifications.Orders;
 public sealed class OrderKeywordSearchSpec(string keywords) : BaseSpecification<Order>(
     new MatchedCodeOrderSpec(keywords).Criteria
     .Or(new MatchedShippingAddressOrderSpec(keywords).Criteria)
+    .Or(new MatchedShippingPhoneOrderSpec(keywords).Criteria)
 );
 

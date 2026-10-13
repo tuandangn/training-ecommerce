@@ -24,7 +24,8 @@ public sealed record DeliveryNoteDto
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public string? CustomerAddress { get; init; }
-    
+    public bool IsRetailWalkInCustomer { get; set; }
+
     public required string ShippingAddress { get; init; }
     public string? ShippingPhoneNumber { get; init; }
     public bool CanUpdateShippingInfo { get; init; }

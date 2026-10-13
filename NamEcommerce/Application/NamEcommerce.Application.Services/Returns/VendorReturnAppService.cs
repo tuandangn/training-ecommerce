@@ -8,7 +8,6 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
-using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
@@ -67,142 +66,64 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
             }
         }
 
-        try
+        var domainDto = new CreateVendorReturnDto
         {
-            var domainDto = new CreateVendorReturnDto
+            VendorId = dto.VendorId,
+            GoodsReceiptId = dto.GoodsReceiptId,
+            WarehouseId = dto.WarehouseId,
+            Note = dto.Note,
+            AdditionalCost = dto.AdditionalCost,
+            Items = dto.Items.Select(i => new CreateVendorReturnItemDto
             {
-                VendorId = dto.VendorId,
-                GoodsReceiptId = dto.GoodsReceiptId,
-                WarehouseId = dto.WarehouseId,
-                Note = dto.Note,
-                AdditionalCost = dto.AdditionalCost,
-                Items = dto.Items.Select(i => new CreateVendorReturnItemDto
-                {
-                    ProductId = i.ProductId,
-                    GoodsReceiptItemId = i.GoodsReceiptItemId,
-                    RequestedQuantity = i.RequestedQuantity,
-                    AcceptedQuantity = i.AcceptedQuantity,
-                    OriginalUnitCost = i.OriginalUnitCost,
-                    ReturnUnitCost = i.ReturnUnitCost
-                })
-            };
+                ProductId = i.ProductId,
+                GoodsReceiptItemId = i.GoodsReceiptItemId,
+                RequestedQuantity = i.RequestedQuantity,
+                AcceptedQuantity = i.AcceptedQuantity,
+                OriginalUnitCost = i.OriginalUnitCost,
+                ReturnUnitCost = i.ReturnUnitCost
+            })
+        };
 
-            var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
-            return new CreateVendorReturnResultAppDto { Success = true, CreatedId = result.Id };
-        }
-        catch (ReturnDataIsInvalidException ex)
-        {
-            return new CreateVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new CreateVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
+        return new CreateVendorReturnResultAppDto { Success = true, CreatedId = result.Id };
     }
 
     public async Task<UpdateVendorReturnResultAppDto> UpdateAsync(UpdateVendorReturnAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        try
+        var domainDto = new UpdateVendorReturnDto(dto.Id)
         {
-            var domainDto = new UpdateVendorReturnDto(dto.Id)
-            {
-                Note = dto.Note,
-                ReturnDate = dto.ReturnDate
-            };
+            Note = dto.Note,
+            ReturnDate = dto.ReturnDate
+        };
 
-            await _manager.UpdateAsync(domainDto).ConfigureAwait(false);
-            return new UpdateVendorReturnResultAppDto { Success = true };
-        }
-        catch (VendorReturnNotFoundException ex)
-        {
-            return new UpdateVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new UpdateVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.UpdateAsync(domainDto).ConfigureAwait(false);
+        return new UpdateVendorReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmVendorReturnResultAppDto> MoveToInspectingAsync(Guid id)
     {
-        try
-        {
-            await _manager.MoveToInspectingAsync(id).ConfigureAwait(false);
-            return new ConfirmVendorReturnResultAppDto { Success = true };
-        }
-        catch (VendorReturnNotFoundException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.MoveToInspectingAsync(id).ConfigureAwait(false);
+        return new ConfirmVendorReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
-        try
-        {
-            await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
-            return new ConfirmVendorReturnResultAppDto { Success = true };
-        }
-        catch (VendorReturnNotFoundException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ExceedsReceivedQuantityException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
+        return new ConfirmVendorReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmVendorReturnResultAppDto> CancelAsync(Guid id)
     {
-        try
-        {
-            await _manager.CancelAsync(id).ConfigureAwait(false);
-            return new ConfirmVendorReturnResultAppDto { Success = true };
-        }
-        catch (VendorReturnNotFoundException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (ReturnCannotChangeStatusException ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.CancelAsync(id).ConfigureAwait(false);
+        return new ConfirmVendorReturnResultAppDto { Success = true };
     }
 
     public async Task<ConfirmVendorReturnResultAppDto> ReverseConfirmedAsync(Guid id, string reason)
     {
-        try
-        {
-            await _manager.ReverseConfirmedAsync(id, reason).ConfigureAwait(false);
-            return new ConfirmVendorReturnResultAppDto { Success = true };
-        }
-        catch (Exception ex)
-        {
-            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
-        }
+        await _manager.ReverseConfirmedAsync(id, reason).ConfigureAwait(false);
+        return new ConfirmVendorReturnResultAppDto { Success = true };
     }
 
     public async Task<VendorReturnAppDto?> GetByIdAsync(Guid id)
@@ -212,7 +133,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
     }
 
     public async Task<(int Total, List<VendorReturnAppDto> Items)> GetListAsync(
-        Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize)
+        int pageIndex, int pageSize, Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status)
     {
         var (total, items) = await _manager.GetListAsync(
             vendorId, purchaseOrderId, goodsReceiptId, status, pageIndex, pageSize).ConfigureAwait(false);
@@ -271,7 +192,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
                 .Distinct()
                 .ToList();
             var warehouseNames = warehouseIds
-                .Select(id => warehouseNameDict.TryGetValue(id, out var name) ? name : null)
+                .Select(id => warehouseNameDict.TryGetValue(id, out var name) ? name.Value : null)
                 .OfType<string>()
                 .ToList();
 

@@ -68,7 +68,8 @@ public sealed record CreateOrderDto : BaseOrderDto
 
     public override void Verify()
     {
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+        //*TODO* check date on presentation
+        if (ExpectedShippingDateUtc < DateTime.Today.ToUniversalTime())
             throw new OrderDataIsInvalidException("Error.ExpectedShippingDateInvalid");
 
         foreach (var item in Items)
@@ -112,7 +113,8 @@ public sealed record UpdateShippingDto
 
     public void Verify()
     {
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+        //*TODO* check date on presentation
+        if (ExpectedShippingDateUtc < DateTime.Today.ToUniversalTime())
             throw new OrderDataIsInvalidException("Error.ExpectedShippingDateInvalid");
     }
 }
@@ -121,4 +123,12 @@ public sealed record UpdateShippingDto
 public sealed record CompleteOrderDto
 {
     public required Guid OrderId { get; init; }
+}
+
+
+[Serializable]
+public sealed record UpdateOrderCustomerKindDto
+{
+    public required Guid OrderId { get; set; }
+    public required Guid CustomerId { get; set; }
 }

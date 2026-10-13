@@ -42,13 +42,15 @@
         };
 
         window.initFlatPickrDate = function (element) {
-            const minDate = getDateFromAttribute(element, 'data-min-date');
-            const maxDate = getDateFromAttribute(element, 'data-max-date');
+            if (element._flatpickr)
+                element._flatpickr.destroy();
+            const minDate = getDateFromAttribute(element, ['data-val-range-min', 'data-min-date']);
+            const maxDate = getDateFromAttribute(element, ['data-val-range-max', 'data-max-date']);
             if (minDate && maxDate && minDate > maxDate)
                 throw new Error('Min date must less than max date');
             flatpickr(element, {
                 locale: cfg.locale,
-                dateFormat: 'Y-m-d',
+                dateFormat: 'Y-m-d\\TH:i:S',
                 altInput: true,
                 altFormat: cfg.dateFmt,
                 allowInput: false,
@@ -60,7 +62,10 @@
                     const original = instance.input;
                     original.type = "text";
                     original.classList.add("visually-hidden");
-                    instance._input?.classList.add('bg-white');
+                    instance._input?.classList.add('bg-white'); 
+                    if (instance.altInput) {
+                        instance.altInput.id = original.id + '_alt';
+                    }
                 },
                 onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
@@ -69,8 +74,13 @@
             });
         }
         window.initFlatPickrDateTime = function (element) {
-            const minDate = getDateFromAttribute(element, 'data-min-date');
-            const maxDate = getDateFromAttribute(element, 'data-max-date');
+            if (element._flatpickr){
+                element._flatpickr.destroy();
+                element.classList.remove("flatpickr-input", "active", "visually-hidden");
+                element.readOnly = false;
+            }
+            const minDate = getDateFromAttribute(element, ['data-val-range-min', 'data-min-date']);
+            const maxDate = getDateFromAttribute(element, ['data-val-range-max', 'data-max-date']);
             if (minDate && maxDate && minDate > maxDate)
                 throw new Error('Min date must less than max date');
             flatpickr(element, {
@@ -90,6 +100,9 @@
                     original.type = "text";
                     original.classList.add("visually-hidden");
                     instance._input?.classList.add('bg-white');
+                    if (instance.altInput) {
+                        instance.altInput.id = original.id + '_alt';
+                    }
                 },
                 onChange: function (selectedDates, dateStr, instance) {
                     $(instance.input.form).data('validator')?.element(instance.input);
@@ -107,22 +120,28 @@
 
         initFlatPickrControls(document);
 
-        function getDateFromAttribute(element, attributeName){
+        function isIsoDate(value) {
+            return typeof value === "string"
+                && (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)
+                    || /^\d{4}-\d{2}-\d{2}/.test(value));
+        }
+        function getDateFromAttribute(element, attributeNames){
             if(!element) 
                 throw new Error('Element is required');
             if(!element.getAttribute)
                 throw new Error('Element is invalid');
 
-            const dateStr = element.getAttribute(attributeName);
-            if(!dateStr) 
-                return null;
+            for(let attributeName of Array.from(attributeNames)){
+                const dateStr = element.getAttribute(attributeName);
+                if (!dateStr || !isIsoDate(dateStr)) 
+                    continue;
+                const date = new Date(dateStr);
+                if (!date.getTime())
+                    continue;
 
-            const date = new Date(dateStr);
-
-            if(!date.getTime())
-                return null;
-
-            return date;
+                return date;
+            }
+            return null;
         }
 
         var toggle = document.getElementById('sidebarToggle');

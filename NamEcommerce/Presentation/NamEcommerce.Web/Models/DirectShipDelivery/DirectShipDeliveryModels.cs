@@ -23,6 +23,7 @@ public sealed class PendingDirectShipDeliveryModel
     public required string Code { get; init; }
     public required Guid OrderId { get; init; }
     public string? OrderCode { get; init; }
+    public bool IsRetailWalkInCustomer { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
     public required string ShippingAddress { get; init; }

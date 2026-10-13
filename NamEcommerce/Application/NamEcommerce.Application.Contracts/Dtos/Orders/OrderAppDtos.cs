@@ -70,7 +70,8 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 
     public override (bool valid, string? errorMessage) Validate()
     {
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+        //*TODO* check date on presentation
+        if (ExpectedShippingDateUtc < DateTime.Today.ToUniversalTime())
             return (false, "Error.ExpectedShippingDateInvalid");
         if (string.IsNullOrWhiteSpace(ShippingAddress))
             return (false, "Error.ShippingAddressRequired");
@@ -101,6 +102,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public Guid? WarehouseId { get; set; }
 
         public (bool valid, string? errorMessage) Validate()
         {
@@ -146,7 +148,8 @@ public sealed record UpdateOrderShippingAppDto
 
     public (bool valid, string? errorMessage) Validate()
     {
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+        //*TODO* check date on presentation
+        if (ExpectedShippingDateUtc < DateTime.Today.ToUniversalTime())
             return (false, "Error.ExpectedShippingDateInvalid");
         if (string.IsNullOrWhiteSpace(Address))
             return (false, "Error.ShippingAddressRequired");
@@ -193,7 +196,6 @@ public sealed record MarkOrderItemDeliveredResultAppDto
 public sealed record CancelOrderAppDto
 {
     public required Guid OrderId { get; init; }
-    public IReadOnlyList<Guid> OrderItemIds { get; init; } = [];
     public Guid? ReturnWarehouseId { get; init; }
 }
 

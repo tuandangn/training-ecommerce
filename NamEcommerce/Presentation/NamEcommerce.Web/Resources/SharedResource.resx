@@ -375,6 +375,9 @@
   <data name="Error.CustomerReturn.IsNotFound" xml:space="preserve">
     <value>Customer return was not found.</value>
   </data>
+  <data name="Error.CustomerReturnIsNotFound" xml:space="preserve">
+    <value>Customer return was not found.</value>
+  </data>
   <data name="Error.CustomerReturn.ExceedsDeliveredQuantity" xml:space="preserve">
     <value>Return quantity exceeds the remaining returnable quantity.</value>
   </data>
@@ -408,6 +411,9 @@
   <data name="Error.OrderItemQuantityMustBePositive" xml:space="preserve">
     <value>Order item quantity must be greater than 0.</value>
   </data>
+  <data name="Error.AgreedCustomerChargeMustBePositive" xml:space="preserve">
+    <value>Agreed customer charge must be greater than 0</value>
+  </data>
   <data name="Error.OrderItemUnitPriceCannotBeNegative" xml:space="preserve">
     <value>Order item unit price cannot be negative.</value>
   </data>
@@ -428,6 +434,9 @@
   </data>
   <data name="Error.OrderCannotDelete" xml:space="preserve">
     <value>Order cannot be deleted.</value>
+  </data>
+  <data name="Order.GoodsReturningByCancelling" xml:space="preserve">
+    <value>Returning goods by order cancelling</value>
   </data>
   <data name="Error.OrderCannotDelete_Processing" xml:space="preserve">
     <value>Order cannot be deleted because it is being processed.</value>
@@ -458,6 +467,9 @@
   </data>
   <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
     <value>Vendor is not appropriate for products</value>
+  </data>
+  <data name="Error.PurchaseOrder.NoItemsForSplit" xml:space="preserve">
+    <value>Purchase order don't have  any appropriate items for split</value>
   </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Purchase order cannot be submitted at current state.</value>
@@ -528,6 +540,9 @@
   <data name="Error.ShippingAmountCannotBeNegative" xml:space="preserve">
     <value>Shipping amount cannot be negative.</value>
   </data>
+  <data name="Error.ShippingAmountIsInvalid" xml:space="preserve">
+    <value>Shipping amount is invalid</value>
+  </data>
   <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
     <value>Delivery note code is required.</value>
   </data>
@@ -565,7 +580,10 @@
     <value>Expense title is required.</value>
   </data>
   <data name="Error.ExpenseTitleTooLong" xml:space="preserve">
-    <value>Expense title is too long (maximum 255 characters).</value>
+    <value>Title maximum length is 255 characters.</value>
+  </data>
+  <data name="Error.ExpenseDescriptionTooLong" xml:space="preserve">
+    <value>Description maximum length is 500 characters</value>
   </data>
   <data name="Error.ExpenseAmountRequired" xml:space="preserve">
     <value>Expense amount is required.</value>
@@ -1028,5 +1046,98 @@
   </data>
   <data name="Error.CannotEditInactiveSchedule" xml:space="preserve">
     <value>Cannot edit inactive schedule</value>
+  </data>
+  <data name="Label.ReceivedOn" xml:space="preserve">
+    <value>Received date</value>
+  </data>
+  <data name="Error.ReceivedOnMustBeAfterPlacedOn" xml:space="preserve">
+    <value>Received date must be after placed purchase order date</value>
+  </data>
+  <data name="Label.PaidAmount" xml:space="preserve">
+    <value>Paid amount</value>
+  </data>
+  <data name="Error.PaidAmountExceedsOrderTotal" xml:space="preserve">
+    <value>Paid amount cannot exceed order total</value>
+  </data>
+  <data name="Error.ReceivedDateCannotBeInFuture" xml:space="preserve">
+    <value>Received date cannot be in the future.</value>
+  </data>
+  <data name="Error.PaymentInfoRequired" xml:space="preserve">
+    <value>Payment information is required</value>
+  </data>
+  <data name="Error.BankTransferMethodRequireBankAccount" xml:space="preserve">
+    <value>Bank transfer method requires bank account</value>
+  </data>
+  <data name="Error.BankAccountIsNotFound" xml:space="preserve">
+    <value>Bank account is not found</value>
+  </data>
+  <data name="Error.PurchaseOrder.SplitMustLeaveItemsInSource" xml:space="preserve">
+    <value>Purchase order target after split must have items</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate" xml:space="preserve">
+    <value>Expected delivery date cannot be less than placed date</value>
+  </data>
+  <data name="Error.ExpenseTaxRateInvalid" xml:space="preserve">
+    <value>Expense tax rate is invalid</value>
+  </data>
+  <data name="Error.ExpenseDataIsInvalid" xml:space="preserve">
+    <value>Expense data is invalid</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeInFuture" xml:space="preserve">
+    <value>Expense incurred date cannot be in future</value>
+  </data>
+  <data name="Label.IncurredDate" xml:space="preserve">
+    <value>Incurred date</value>
+  </data>
+  <data name="Error.ExpenseTypeIsNotAllow" xml:space="preserve">
+    <value>Expense type is not allow</value>
+  </data>
+  <data name="Error.ExpenseCannotDeleted" xml:space="preserve">
+    <value>Expense cannot be deleted</value>
+  </data>
+  <data name="Error.OrderIdIsRequired" xml:space="preserve">
+    <value>Order ID is required</value>
+  </data>
+  <data name="Error.OrderCancelled" xml:space="preserve">
+    <value>Order cancelled</value>
+  </data>
+  <data name="Error.OrderCancelling.WarehouseRequired" xml:space="preserve">
+    <value>Goods is returned to warehouse</value>
+  </data>
+  <data name="Error.OrderCancelling.GoodsReturned" xml:space="preserve">
+    <value>Return warehouse is required</value>
+  </data>
+  <data name="Error.ExpenseIncurredDateCannotBeLessThanOrderCreationDate" xml:space="preserve">
+    <value>Expense incurred date cannot be less than order creation date</value>
+  </data>
+  <data name="Label.PurchaseOrderItemId" xml:space="preserve">
+    <value>Purchase order item ID</value>
+  </data>
+  <data name="Msg.PurchaseOrder.YouAreWatchingNewPurchaseOrder" xml:space="preserve">
+    <value>You're watching new created purchase order</value>
+  </data>
+  <data name="Error.DataIsInvalid" xml:space="preserve">
+    <value>Data is invalid</value>
+  </data>
+  <data name="Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder" xml:space="preserve">
+    <value>The goods receipt cannot delete when it's associated with purchase order</value>
+  </data>
+  <data name="Error.TaxRateIsNotAllowed" xml:space="preserve">
+    <value>Tax rate is not allowed</value>
+  </data>
+  <data name="Error.VendorReturnIsNotFound" xml:space="preserve">
+    <value>Vendor return is not found</value>
+  </data>
+  <data name="Error.OrderCannotCancel_Processing" xml:space="preserve">
+    <value>Order cannot cancelled because it is processing</value>
+  </data>
+  <data name="Error.PurchaseOrderAllocationIsNotFound" xml:space="preserve">
+    <value>Purchase order allocation is not found</value>
+  </data>
+  <data name="Error.Unauthorized" xml:space="preserve">
+    <value>Unauthorized process</value>
+  </data>
+  <data name="Error.OrderPayoffRequired" xml:space="preserve">
+    <value>Order payoff is required</value>
   </data>
 </root>

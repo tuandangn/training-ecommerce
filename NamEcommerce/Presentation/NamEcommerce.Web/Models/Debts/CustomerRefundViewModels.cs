@@ -6,11 +6,11 @@ namespace NamEcommerce.Web.Models.Debts;
 
 public sealed class CustomerRefundListSearchModel
 {
-    public Guid? FilterCustomerId { get; set; }
-    public int? FilterStatus { get; set; }
-    public string? FilterKeywords { get; set; }
-    public int PageNumber { get; set; } = 1;
-    public int PageSize { get; set; } = 20;
+    public Guid? CId { get; set; }
+    public int? Status { get; set; }
+    public string? Keywords { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
     public CustomerRefundListModel? Data { get; set; }
 }
 

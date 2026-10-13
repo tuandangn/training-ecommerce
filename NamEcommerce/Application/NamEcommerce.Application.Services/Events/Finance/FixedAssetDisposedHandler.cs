@@ -16,9 +16,9 @@ public sealed class FixedAssetDisposedHandler(IExpenseManager expenseManager)
         await expenseManager.CreateExpenseAsync(new CreateExpenseDto
         {
             Title = "Thanh lý TSCĐ - giá trị còn lại",
-            Amount = notification.RemainingBookValue,
+            AmountWithoutTax = notification.RemainingBookValue,
             ExpenseType = ExpenseType.AssetDisposal,
-            IncurredDate = DateTime.UtcNow
+            IncurredDateUtc = DateTime.UtcNow
         }).ConfigureAwait(false);
     }
 }

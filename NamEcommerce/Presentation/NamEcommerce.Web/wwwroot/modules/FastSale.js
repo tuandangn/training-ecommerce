@@ -1,10 +1,12 @@
-import { apiPost } from "/modules/ajax-helper.js";
+import { apiPost, apiGet } from "/modules/ajax-helper.js";
 import { confirm } from "/modules/modals.js";
 import { customerInfo } from "/modules/CustomerInfo.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
 import DecimalFields from "/modules/DecimalFields.js";
+import CustomerQuickCreateController from '/modules/CustomerController.js';
+import { customerSettings } from '/modules/Settings.js'
 
 class FastSale {
     #deliveryNow = Symbol('deliveryNow');
@@ -12,6 +14,7 @@ class FastSale {
     #payNow = Symbol('payNow');
     #unpaid = Symbol('unpaid');
 
+    #uncompletedOrderId;
     #paymentProcess;
 
     #shippingAddressRequiredMsg;
@@ -153,7 +156,7 @@ class FastSale {
         return initialValues;
     }
     applyCustomerShippingDefaults() {
-        if (this.selectedCustomer && !this.isRetailWalkInCustomer()) {
+        if (this.selectedCustomer && this.selectedCustomer.id != customerSettings.defaultCustomerId) {
             this.shippingAddress.value = this.selectedCustomer.address ?? '';
             this.shippingPhoneNumber.value = this.selectedCustomer.phone ?? '';
             return;
@@ -165,42 +168,14 @@ class FastSale {
         }
     }
     bindQuickCustomerForm() {
-        const quickCustomerModalEl = document.getElementById('quickCustomerModal');
-        const quickCustomerModal = quickCustomerModalEl
-            ? bootstrap.Modal.getOrCreateInstance(quickCustomerModalEl)
-            : null;
-
         document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
-            button.addEventListener('click', () => quickCustomerModal?.show());
-        });
-
-        const form = document.getElementById('quickCreateCustomerForm');
-        form?.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            if (window.$ && typeof $(form).valid === 'function' && !$(form).valid()) {
-                return;
-            }
-
-            const submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-
-            try {
-                const result = await apiPost(form.action, new FormData(form));
-                if (!result.success) {
-                    this.showAlert('error', result.message || 'Không thể tạo khách hàng.');
-                    return;
-                }
-
-                this.customerPicker?.selectCustomer(result.customer);
-                form.reset();
-                quickCustomerModal?.hide();
-                this.showAlert('success', result.message || 'Đã tạo khách hàng.');
-            } catch {
-                this.showAlert('error', 'Có lỗi xảy ra khi tạo khách hàng.');
-            } finally {
-                submitButton.disabled = false;
-            }
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                const createdCustomer = await new CustomerQuickCreateController().getCreatedCustomer();
+                if (createdCustomer)
+                    this.customerPicker.selectCustomer(createdCustomer);
+                button.disabled = false;
+            });
         });
     }
     bindEvents() {
@@ -227,8 +202,8 @@ class FastSale {
     #prepareSubmitFormData(formData) {
         if (this.fulfillmentMode == this.#deliveryNow) {
             formData.set('deliveryNow', true);
-            formData.set(this.shippingAddress.name, this.shippingAddress.value || this.selectedCustomer.address);
-            formData.set(this.shippingPhoneNumber.name, this.shippingPhoneNumber.value || this.selectedCustomer.phone);
+            // formData.set(this.shippingAddress.name, this.shippingAddress.value || this.selectedCustomer.address);
+            // formData.set(this.shippingPhoneNumber.name, this.shippingPhoneNumber.value || this.selectedCustomer.phone);
         }
     }
 
@@ -270,6 +245,8 @@ class FastSale {
             availableWarehouses: product.availableWarehouses || [],
             quantity: 1,
             quantityAvailable: product.quantityAvailable,
+            quantityOnHand: product.quantityOnHand,
+            quantityReserved: product.quantityReserved,
             unitPrice: Number(product.unitPrice || 0),
             quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
             pictureUrl: product.pictureUrl
@@ -317,6 +294,8 @@ class FastSale {
             unitPrice: Number(product.unitPrice || 0),
             pictureUrl: product.pictureUrl || product.picture || '',
             quantityAvailable: Number(product.quantityAvailable ?? product.availableQty ?? 0),
+            quantityOnHand: Number(product.onHandQty ?? 0),
+            quantityReserved: Number(product.reservedQty ?? 0),
             quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
             unitMeasurement: product.unitMeasurement || '',
             availableWarehouses: (product.availableWarehouses || []).map(warehouse => ({
@@ -351,19 +330,20 @@ class FastSale {
             this.setPaymentTiming(this.#payNow);
             return;
         }
-        if (this.cart.some(item => item.quantity > item.quantityAvailable) && this.fulfillmentMode == this.#deliveryNow) {
+        if (this.cart.some(item => item.quantity > item.quantityOnHand) && this.fulfillmentMode == this.#deliveryNow) {
             this.setFulfillmentMode(this.#notDelivered);
             return;
         }
 
         this.discountInput.disabled = subTotal == 0;
+        this.discountInput.closest('.order-summary-row').querySelector('i')?.classList.toggle('d-none', subTotal == 0);
 
         this.payNowBtn.disabled = subTotal == 0 && total == 0;
         this.unpaid.disabled = subTotal == 0 || this.isRetailWalkInCustomer();
         this.#togglePaymentTabs();
 
         this.notDelivered.disabled = this.cart.length === 0;
-        this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
+        this.deliveryNowBtn.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityOnHand);
         this.#toggleDeliveryTabs();
 
         this.renderCart();
@@ -380,13 +360,13 @@ class FastSale {
 
         const showShippingInfo = this.selectedCustomer != null && this.cart.length;
         this.shippingAddress.closest('.ship-info')?.classList.toggle('d-none', !showShippingInfo);
-        if (this.fulfillmentMode == this.#deliveryNow) {
-            this.shippingAddress.removeAttribute('data-val-required');
-            this.shippingPhoneNumber.removeAttribute('data-val-required');
-        } else {
-            this.shippingAddress.setAttribute('data-val-required', this.#shippingAddressRequiredMsg);
-            this.shippingPhoneNumber.setAttribute('data-val-required', this.#shippingPhoneNumberRequiredMsg);
-        }
+        // if (this.fulfillmentMode == this.#deliveryNow) {
+        //     this.shippingAddress.removeAttribute('data-val-required');
+        //     this.shippingPhoneNumber.removeAttribute('data-val-required');
+        // } else {
+        //     this.shippingAddress.setAttribute('data-val-required', this.#shippingAddressRequiredMsg);
+        //     this.shippingPhoneNumber.setAttribute('data-val-required', this.#shippingPhoneNumberRequiredMsg);
+        // }
 
         reparseForm(this.root);
         document.querySelectorAll('.retailWalkinPaymentWarning')?.forEach(warning =>
@@ -432,12 +412,13 @@ class FastSale {
     }
     renderCart() {
         this.cartBody.innerHTML = '';
-        this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
+        this.emptyCart.classList.toggle('d-none', this.cart.length > 0);
         document.querySelector('.warehouse-col')?.classList.toggle('d-none', this.fulfillmentMode != this.#deliveryNow);
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
             row.setAttribute('data-unit-measurement', item.unitMeasurement);
             row.setAttribute('data-qty-available', item.quantityAvailable);
+            row.setAttribute('data-qty-on-hand', item.quantityOnHand);
 
             const isQtyExceeded = this.#isItemQtyExceeded(item);
 
@@ -532,7 +513,7 @@ class FastSale {
             return false;
         const sameProductItems = this.cart.filter(ci => ci.productId == item.productId);
         const totalQty = sameProductItems.reduce((total, ci) => total + ci.quantity, 0);
-        return totalQty > item.quantityAvailable;
+        return totalQty > item.quantityOnHand;
     }
     renderWarehouseSelect(item, index) {
         if (this.fulfillmentMode !== this.#deliveryNow) {
@@ -544,8 +525,8 @@ class FastSale {
             const selected = warehouse.id === item.warehouseId ? 'selected' : '';
             const quantity = this.formatQuantity(warehouse.quantityOnHand, item.quantityDecimalPlaces);
             options.push(`<option value="${this.escape(warehouse.id)}" ${selected} 
-                data-name="${warehouse.name} data-qty-onhand="${warehouse.quantityOnHand}"
-                data-qty-available="${warehouse.quantityAvailable}">
+                data-name="${warehouse.name}" data-qty-onhand="${warehouse.quantityOnHand}"
+                data-qty-available="${warehouse.quantityAvailable}" ${warehouse.quantityOnHand <= 0 ? 'disabled' : ''}>
                 ${this.escape(warehouse.name)} - ${quantity} ${this.escape(item.unitMeasurement)}
             </option>`);
         }
@@ -567,6 +548,7 @@ class FastSale {
                 quantityDecimalPlaces,
                 warehouseId: deliveryNow ? warehouseSelect.value : null,
                 unitMeasurement: row.getAttribute('data-unit-measurement'),
+                quantityOnHand: Number(row.getAttribute('data-qty-on-hand')),
                 quantityAvailable: Number(row.getAttribute('data-qty-available')),
                 availableWarehouses: Array.from(warehouseSelect.options).filter(option => !!option.value).map(option => ({
                     id: option.value,
@@ -622,13 +604,15 @@ class FastSale {
         this.showAlert('success', 'Đơn hàng đã được tạo thành công');
 
         const orderInfo = createOrderResult.data;
+        const unmarkDeleteOrderFn = this.#markDeleteOrderIfFailed(orderInfo.orderId);
 
         if (orderInfo.subTotal != subTotal || orderInfo.total != total || orderInfo.discount != discount) {
             this.showAlert('warning', 'Thông tin đơn hàng không trùng khớp');
-            location = `/Order/Details/${orderInfo.orderId}`;
+            this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
 
+        this.#markTryPreventUserNavigate();
         hidePageLoading();
         const paymentResult = await this.#paymentProcess.startPayment({
             orderId: orderInfo.orderId,
@@ -636,15 +620,32 @@ class FastSale {
             subTotal: orderInfo.subTotal,
             discount: orderInfo.discount,
             canChangePaidAmount: !this.isRetailWalkInCustomer() || this.fulfillmentMode != this.#deliveryNow,
+            allowSkipPayment: this.selectedCustomer.id != customerSettings.defaultCustomerId
+                || this.fulfillmentMode != this.#deliveryNow,
             customer: {
                 id: this.selectedCustomer.id,
                 isRetailWalkIn: this.isRetailWalkInCustomer()
             }
+        }).then(result => {
+            this.#unmarkTryPreventUserNavigate();
+            unmarkDeleteOrderFn();
+            return result;
         });
+        if (paymentResult.skipped) {
+            showPageLoading();
+            const skipPaymentResult = await this.postJson(`/Order/ProcessOrderWithoutPayment/${orderInfo.orderId}`);
+            if (!skipPaymentResult.success) {
+                this.showAlert('warning', 'Phát sinh lỗi khi bỏ qua thanh toán');
+            }
+            this.#redirectToOrderPage(orderInfo.orderId);
+            return;
+        }
+
         if (!paymentResult.success) {
             // modal is closed by user
             showPageLoading();
-            this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán')
+            if (this.isRetailWalkInCustomer())
+                this.showAlert('warning', 'Đơn hàng chưa hoàn thành do chưa thanh toán');
             this.#redirectToOrderPage(orderInfo.orderId);
             return;
         }
@@ -670,6 +671,73 @@ class FastSale {
     }
     #redirectToOrderPage(orderId) {
         location = `/Order/Details/${orderId}`
+    }
+    #markDeleteOrderIfFailed(orderId) {
+        const self = this;
+        this.#uncompletedOrderId = orderId;
+        document.addEventListener('visibilitychange', deleteUncompletedOrder);
+        window.addEventListener('pagehide', deleteUncompletedOrder);
+
+        let deleteTimeout;
+        let needToReload;
+        const deleteInterval = 1000 * 60 * 3;
+        function deleteUncompletedOrder(e) {
+            if (!self.isRetailWalkInCustomer())
+                return;
+            if (deleteTimeout) {
+                clearTimeout(deleteTimeout);
+                deleteTimeout = null;
+            }
+            if (e.type != 'visibilitychange') {
+                self.#unmarkTryPreventUserNavigate();
+                const sent = handleDeleteOrder();
+                if (sent) showPageLoading();
+                return;
+            }
+            if (document.visibilityState === "hidden") {
+                deleteTimeout = setTimeout(() => {
+                    self.#unmarkTryPreventUserNavigate();
+                    needToReload = handleDeleteOrder();
+                }, deleteInterval);
+            } else {
+                if (!needToReload) {
+                    clearTimeout(deleteTimeout);
+                    return;
+                }
+                needToReload = false;
+                showPageLoading();
+                setTimeout(() => {
+                    alert('Đơn hàng đã bị hủy. Nhấn "OK" để tạo đơn mới');
+                    location.reload();
+                }, 200);
+            }
+        }
+        function handleDeleteOrder() {
+            if (!self.#uncompletedOrderId)
+                return;
+            const orderId = self.#uncompletedOrderId;
+            self.#uncompletedOrderId = null;
+            return navigator.sendBeacon(`/Order/Delete/${orderId}`);
+        }
+
+        return function unmark() {
+            self.#uncompletedOrderId = null;
+            if (deleteTimeout)
+                clearTimeout(deleteTimeout);
+            document.removeEventListener('visibilitychange', self.deleteUncompletedOrder);
+            window.removeEventListener('pagehide', self.deleteUncompletedOrder);
+        };
+    }
+    #markTryPreventUserNavigate() {
+        window.addEventListener('beforeunload', this.#preventUserNavigateIfUncompleted);
+    }
+    #unmarkTryPreventUserNavigate() {
+        window.removeEventListener('beforeunload', this.#preventUserNavigateIfUncompleted);
+    }
+    #preventUserNavigateIfUncompleted(event) {
+        event.preventDefault();
+        event.returnValue = '';
+        hidePageLoading();
     }
 
     validateQuickCreateOrder() {
@@ -707,7 +775,7 @@ class FastSale {
                 if (!item.warehouseId)
                     return `Vui lòng chọn kho cho mặt hàng "${item.name}"`;
                 if (this.#isItemQtyExceeded(item))
-                    return `"${item.name}" chỉ còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}${item.unitMeasurement ? ' ' + item.unitMeasurement : ''} không đủ để giao `;
+                    return `"${item.name}" chỉ còn ${this.formatQuantity(item.quantityOnHand, item.quantityDecimalPlaces)}${item.unitMeasurement ? ' ' + item.unitMeasurement : ''} không đủ để giao `;
             }
         }
 
@@ -779,8 +847,8 @@ class FastSale {
         return DecimalFields.formatQuantity(value, decimals);
     }
 
-    showAlert(type, message) {
-        window.NotificationCenter[type](message, 'warning');
+    showAlert(type, message, title) {
+        window.NotificationCenter[type](message, { title });
     }
 
     escape(value) {
@@ -798,6 +866,7 @@ class PaymentProcess {
     #discount;
     #amount;
     #canChangePaidAmount;
+    #allowSkipPayment;
 
     #orderId;
     #orderCode;
@@ -840,7 +909,8 @@ class PaymentProcess {
         this.paymentDiscount = this.form.querySelector('#paymentDiscount');
         this.paymentTotal = this.form.querySelector('#paymentTotal');
         this.paymentTotalHint = this.form.querySelector('#paymentTotalHint');
-        this.skipPaymentBtn = this.form.querySelector('#paymentSkip');
+        this.cancelPaymentBtn = this.form.querySelector('#paymentSkip');
+        this.continueWithoutPaymentBtn = this.form.querySelector('#continueWithoutPayment');
         this.paidAmountInput = this.form.querySelector('#paidAmount');
         this.debtAmount = this.form.querySelector('#debtAmount');
         this.paymentProcessContainer = this.form.querySelector('#paymentProcessContainer');
@@ -883,9 +953,8 @@ class PaymentProcess {
     }
 
     async startPayment({ orderId, orderCode,
-        subTotal, discount, total,
-        canChangePaidAmount, customer,
-        deliveryWaiting
+        subTotal, discount, total, customer,
+        deliveryWaiting, canChangePaidAmount, allowSkipPayment
     }) {
         if (subTotal <= 0)
             throw new Error('Số tiền thanh toán không đúng');
@@ -898,6 +967,7 @@ class PaymentProcess {
         this.#discount = discount || 0;
 
         this.#canChangePaidAmount = canChangePaidAmount;
+        this.#allowSkipPayment = allowSkipPayment;
 
         this.#resetPaymentIntent();
         this.#saleInputVersion = 0;
@@ -965,7 +1035,7 @@ class PaymentProcess {
             if (this.#amount != DecimalFields.getValue(this.paidAmountInput)) {
                 onAmountChanged.flush();
             }
-                
+
             if (this.isBank()) {
                 if (!this.#paymentIntent || this.#paymentIntent.amount != this.#amount) {
                     this.#createPaymentQrCode();
@@ -986,16 +1056,29 @@ class PaymentProcess {
         const onCloseModal = async () => {
             this.root.classList.add('d-none');
             let confirmed;
-            if (this.#reference.isRetailWalkInCustomer()) {
+            if (this.#customer.isRetailWalkIn) {
                 confirmed = await confirm('Bỏ qua thanh toán', 'Đơn hàng chưa thể hoàn thành nếu bạn chưa thanh toán, bạn có muốn tiếp tục?');
             } else {
-                confirmed = await confirm('Bỏ qua thanh toán', 'Xác nhận sẽ thanh toán đơn hàng sau?');
+                confirmed = await confirm('Bỏ qua thanh toán', 'Sẽ thanh toán đơn hàng sau?');
             }
             if (!confirmed) {
                 this.root.classList.remove('d-none');
                 return;
             }
             this.modal.hide();
+        };
+
+        const onSkipPayment = async () => {
+            if (!this.#allowSkipPayment)
+                return;
+
+            this.root.classList.add('d-none');
+            const confirmed = await confirm('Cho phép xử lý đơn', 'Tiếp tục xử lý đơn hàng, khách hàng sẽ thanh toán sau');
+            if (!confirmed) {
+                this.root.classList.remove('d-none');
+                return;
+            }
+            this.#skipPayment();
         };
 
         const setCashPayment = () => this.#setPaymentMethod(this.#cashMethod);
@@ -1012,15 +1095,16 @@ class PaymentProcess {
             this.form.addEventListener('submit', onPaymentSubmit);
             this.cashMethod.addEventListener('click', setCashPayment);
             this.bankMethod.addEventListener('click', setBankPayment);
-            this.skipPaymentBtn.addEventListener('click', onCloseModal);
+            this.cancelPaymentBtn.addEventListener('click', onCloseModal);
+            if (this.continueWithoutPaymentBtn) {
+                this.continueWithoutPaymentBtn.addEventListener('click', onSkipPayment);
+            }
 
             this.root.addEventListener('show.bs.modal', function onShow() {
-                self.root.removeEventListener('show.bs.modal', onShow);
                 self.render();
-            });
+            }, { once: true });
 
             this.root.addEventListener('hidden.bs.modal', function onHidden(e) {
-                self.root.removeEventListener('hidden.bs.modal', onHidden);
                 self.paidAmountInput.removeEventListener('input', onAmountChanged);
                 self.paidAmountInput.removeEventListener('change', onAmountChanged.flush);
                 self.createQr.removeEventListener('click', createQr);
@@ -1028,7 +1112,10 @@ class PaymentProcess {
                 self.form.removeEventListener('submit', this.onPaymentSubmit);
                 self.cashMethod.removeEventListener('click', setCashPayment);
                 self.bankMethod.removeEventListener('click', setBankPayment);
-                self.skipPaymentBtn.removeEventListener('click', onCloseModal);
+                self.cancelPaymentBtn.removeEventListener('click', onCloseModal);
+                if (this.continueWithoutPaymentBtn) {
+                    this.continueWithoutPaymentBtn.removeEventListener('click', onSkipPayment);
+                }
                 self.root.classList.remove('d-none');
                 self.debtAmount.classList.add('d-none');
 
@@ -1038,7 +1125,10 @@ class PaymentProcess {
 
                 self.#_promiseResolve = null;
                 self.#_promiseReject = null;
-            });
+            }, { once: true });
+        }).then(result => {
+            this.modal.hide();
+            return result;
         });
 
         this.modal.show();
@@ -1061,8 +1151,15 @@ class PaymentProcess {
                 success: false
             });
         }
+    }
+    #skipPayment() {
+        if (!this.#_promiseResolve) {
+            throw new Error('Thao tác không hợp lệ');
+        }
 
-        this.modal.hide();
+        this.#_promiseResolve({
+            skipped: true
+        });
     }
 
     async render() {
@@ -1116,6 +1213,9 @@ class PaymentProcess {
         this.moneyReceivedBtn.classList.toggle('d-none', total == 0);
         this.moneyReceivedBtn.disabled = this.isBank() && (!this.#paymentIntent || this.#paymentIntentConfirmed
             || !this.#config.manualConfirmEnabled || !this.#isIntentPending(this.#paymentIntent));
+
+        if (this.continueWithoutPaymentBtn)
+            this.continueWithoutPaymentBtn.classList.toggle('d-none', !this.#customer.isRetailWalkIn || total == 0 || !this.#allowSkipPayment);
     }
 
     #calculateTotal() {

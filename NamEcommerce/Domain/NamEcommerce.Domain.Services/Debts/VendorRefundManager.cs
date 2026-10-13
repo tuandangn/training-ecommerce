@@ -1,6 +1,5 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
-using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
@@ -17,14 +16,13 @@ namespace NamEcommerce.Domain.Services.Debts;
 public sealed class VendorRefundManager(
     IRepository<VendorRefund> refundRepository,
     IEntityDataReader<VendorRefund> refundReader,
-    IEntityDataReader<VendorReturn> vendorReturnReader,
     IVendorLedgerManager vendorLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : IVendorRefundManager
 {
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PT-NCC-R-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => refundReader.SecuredDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => refundReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     public async Task<VendorRefundDto> CreateAsync(CreateVendorRefundDto dto)
@@ -111,13 +109,18 @@ public sealed class VendorRefundManager(
 
         query = query.OrderByDescending(r => r.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<VendorRefundDto>(), pageIndex, pageSize, 0);
+
         var items = (await query.Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false))
             .Select(MapToDto)
             .ToList();
 
-        return PagedDataDto.Create(items, pageIndex, pageSize, total);
+        return PagedDataDto.Create(items, pageIndex, pageSize, totalCount);
     }
 
     private static VendorRefundDto MapToDto(VendorRefund r) => new()

@@ -48,7 +48,9 @@ public sealed record CustomerPayment : AppAggregateEntity
     public PaymentType PaymentType { get; private set; }
     public Guid? BankAccountId { get; internal set; }
     public string? Note { get; private set; }
-    
+    public Guid? PaymentIntentId { get; internal set; }
+
+
     public DateTime PaidOnUtc { get; private set; }
     public Guid? RecordedByUserId { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }

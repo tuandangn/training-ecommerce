@@ -1,21 +1,22 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.StockAdjustment;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.StockAdjustment;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.Users;
-using Microsoft.EntityFrameworkCore;
-using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Domain.Services.StockAdjustment;
 
@@ -140,11 +141,13 @@ public sealed class StockAdjustmentNoteManager(
 
         query = query.OrderByDescending(n => n.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
-        if (total == 0)
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
             return PagedDataDto.Create(new List<StockAdjustmentNoteDto>(), pageIndex, pageSize, 0);
 
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
-        return PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(n => n.ToDto()).ToList(), pageIndex, pageSize, totalCount);
     }
 }

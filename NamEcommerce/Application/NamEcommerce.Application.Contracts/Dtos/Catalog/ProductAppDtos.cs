@@ -1,5 +1,3 @@
-using NamEcommerce.Application.Contracts.Dtos.Common;
-
 namespace NamEcommerce.Application.Contracts.Dtos.Catalog;
 
 [Serializable]
@@ -26,6 +24,9 @@ public sealed record ProductAppDto(Guid Id) : BaseProductAppDto
 {
     public decimal UnitPrice { get; set; }
     public decimal CostPrice { get; set; }
+
+    public string? UnitMeasurement { get; set; }
+    public int? QuantityDecimalPlaces { get; set; }
 }
 
 [Serializable]

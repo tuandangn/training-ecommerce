@@ -15,14 +15,10 @@ public sealed class CustomerRefundAppService(ICustomerRefundManager refundManage
         return dto == null ? null : MapToAppDto(dto);
     }
 
-    public async Task<IPagedDataAppDto<CustomerRefundAppDto>> GetListAsync(
-        Guid? customerId = null,
-        int? status = null,
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15)
+    public async Task<IPagedDataAppDto<CustomerRefundAppDto>> GetListAsync(int pageIndex, int pageSize,
+        Guid? customerId = null, int? status = null, string? keywords = null)
     {
-        var paged = await refundManager.GetListAsync(customerId, status, keywords, pageIndex, pageSize)
+        var paged = await refundManager.GetListAsync(pageIndex, pageSize, customerId, status, keywords)
             .ConfigureAwait(false);
         return PagedDataAppDto.Create(paged.Items.Select(MapToAppDto).ToList(),
             paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);

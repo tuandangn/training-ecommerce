@@ -37,4 +37,7 @@ public sealed record PagerInfoDto
                 : throw new NamEcommerceDomainException("Error.TotalCountInvalid");
         }
     }
+
+    public void Deconstruct(out int pageIndex, out int pageSize, out int totalCount)
+        => (pageIndex, pageSize, totalCount) = (PageIndex, PageSize, TotalCount);
 }

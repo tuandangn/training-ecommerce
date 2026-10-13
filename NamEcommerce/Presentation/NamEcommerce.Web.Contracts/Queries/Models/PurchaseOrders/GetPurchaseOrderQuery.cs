@@ -1,4 +1,3 @@
-using MediatR;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;

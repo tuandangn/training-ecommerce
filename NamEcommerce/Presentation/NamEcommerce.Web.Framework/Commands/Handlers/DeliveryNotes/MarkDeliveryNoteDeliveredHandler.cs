@@ -10,9 +10,6 @@ public sealed class MarkDeliveryNoteDeliveredHandler(IDeliveryNoteAppService del
 {
     public async Task<MarkDeliveryNoteDeliveredResult> Handle(MarkDeliveryNoteDeliveredCommand request, CancellationToken cancellationToken)
     {
-        if (request.PictureIds.Count == 0)
-            return new MarkDeliveryNoteDeliveredResult(false, "Vui lòng tải lên ít nhất 1 hình ảnh bằng chứng giao hàng.");
-
         var appResult = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,

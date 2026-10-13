@@ -5,18 +5,11 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
-public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, ProductModel?>
+public sealed class GetProductByIdHandler(IProductAppService productAppService) : IRequestHandler<GetProductByIdQuery, ProductModel?>
 {
-    private readonly IProductAppService _productAppService;
-
-    public GetProductByIdHandler(IProductAppService productAppService)
-    {
-        _productAppService = productAppService;
-    }
-
     public async Task<ProductModel?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        var product = await _productAppService.GetProductByIdAsync(request.Id).ConfigureAwait(false);
+        var product = await productAppService.GetProductByIdAsync(request.Id).ConfigureAwait(false);
         if (product is null)
             return null;
 
@@ -27,8 +20,10 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
             ShortDesc = product.ShortDesc,
             UnitPrice = product.UnitPrice,
             CostPrice = product.CostPrice,
+            PictureId = product.Pictures.FirstOrDefault() is Guid pid && pid != Guid.Empty ? pid : null,
             UnitMeasurementId = product.UnitMeasurementId,
-            PictureId = product.Pictures.FirstOrDefault() is Guid pid && pid != Guid.Empty ? pid : null
+            UnitMeasurement = product.UnitMeasurement,
+            QuantityDecimalPlaces = product.QuantityDecimalPlaces ?? 2 
         };
 
         var productCategory = product.Categories.FirstOrDefault();

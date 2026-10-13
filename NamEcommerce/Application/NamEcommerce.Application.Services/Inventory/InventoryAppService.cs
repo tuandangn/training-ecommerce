@@ -12,45 +12,24 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Inventory;
 
-public sealed class InventoryAppService : IInventoryAppService
+public sealed class InventoryAppService(
+    IInventoryStockManager stockManager,
+    IEntityDataReader<ProductReservationLedger> reservationLedgerReader,
+    IEntityDataReader<Product> productReader,
+    IEntityDataReader<Order> orderReader,
+    IEntityDataReader<Warehouse> warehouseReader,
+    IEntityDataReader<InventoryCostLedgerEntry> costLedgerReader,
+    IEntityDataReader<StockMovementLog> stockMovementReader,
+    IInventoryCostingManager inventoryCostingManager) : IInventoryAppService
 {
     private const int StockListCostHistorySize = 20;
-
-    private readonly IInventoryStockManager _stockManager;
-    private readonly IEntityDataReader<ProductReservationLedger> _reservationLedgerReader;
-    private readonly IEntityDataReader<Product> _productReader;
-    private readonly IEntityDataReader<Order> _orderReader;
-    private readonly IEntityDataReader<Warehouse> _warehouseReader;
-    private readonly IEntityDataReader<InventoryCostLedgerEntry> _costLedgerReader;
-    private readonly IEntityDataReader<StockMovementLog> _stockMovementReader;
-    private readonly IInventoryCostingManager _inventoryCostingManager;
-
-    public InventoryAppService(
-        IInventoryStockManager stockManager,
-        IEntityDataReader<ProductReservationLedger> reservationLedgerReader,
-        IEntityDataReader<Product> productReader,
-        IEntityDataReader<Order> orderReader,
-        IEntityDataReader<Warehouse> warehouseReader,
-        IEntityDataReader<InventoryCostLedgerEntry> costLedgerReader,
-        IEntityDataReader<StockMovementLog> stockMovementReader,
-        IInventoryCostingManager inventoryCostingManager)
-    {
-        _stockManager = stockManager;
-        _reservationLedgerReader = reservationLedgerReader;
-        _productReader = productReader;
-        _orderReader = orderReader;
-        _warehouseReader = warehouseReader;
-        _costLedgerReader = costLedgerReader;
-        _stockMovementReader = stockMovementReader;
-        _inventoryCostingManager = inventoryCostingManager;
-    }
 
     public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(int pageIndex, int pageSize,
         Guid? warehouseId = null, Guid? productId = null, string? keywords = null, bool includeDirectTransit = false)
     {
         var warehouseIds = await ResolveWarehouseIdsAsync(warehouseId, includeDirectTransit).ConfigureAwait(false);
 
-        var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(pageIndex, pageSize, warehouseIds, [productId], keywords).ConfigureAwait(false);
+        var (total, dataItems) = await stockManager.GetInventoryStocksAsync(pageIndex, pageSize, warehouseIds, [productId], keywords).ConfigureAwait(false);
         var productIds = dataItems.Select(x => x.ProductId).Distinct().ToList();
         var rowWarehouseIds = dataItems.Select(x => x.WarehouseId).Distinct().ToList();
         var reservedByOrder = GetReservedByOrder(productIds);
@@ -67,14 +46,10 @@ public sealed class InventoryAppService : IInventoryAppService
     }
 
     public async Task<IPagedDataAppDto<InventoryStockByProductAppDto>> GetInventoryStocksGroupedByProductAsync(
-        int pageIndex,
-        int pageSize,
-        Guid? warehouseId = null,
-        string? keywords = null,
-        bool includeDirectTransit = false)
+        int pageIndex, int pageSize, Guid? warehouseId = null, string? keywords = null, bool includeDirectTransit = false)
     {
         var warehouseIds = await ResolveWarehouseIdsAsync(warehouseId, includeDirectTransit).ConfigureAwait(false);
-        var (_, stockRows) = await _stockManager.GetInventoryStocksAsync(0, int.MaxValue, warehouseIds, null, keywords).ConfigureAwait(false);
+        var (_, stockRows) = await stockManager.GetInventoryStocksAsync(0, int.MaxValue, warehouseIds, null, keywords).ConfigureAwait(false);
         var allProductIds = stockRows.Select(x => x.ProductId).Distinct().ToList();
         var reservedByOrder = GetReservedByOrder(allProductIds);
         var currentCostByProduct = await GetCurrentCostByProductAsync(allProductIds).ConfigureAwait(false);
@@ -117,7 +92,8 @@ public sealed class InventoryAppService : IInventoryAppService
                 CurrentUnitCost = currentCostByProduct.GetValueOrDefault(group.Key),
                 UpdatedOnUtc = warehouses.Max(x => x.UpdatedOnUtc),
                 Warehouses = warehouses,
-                CostHistory = costHistoryByProduct.GetValueOrDefault(group.Key, [])
+                CostHistory = costHistoryByProduct.GetValueOrDefault(group.Key, []),
+                QuantityDecimalPlaces = first.QuantityDecimalPlaces
             };
         }).ToList();
 
@@ -127,12 +103,12 @@ public sealed class InventoryAppService : IInventoryAppService
     public Task<IReadOnlyList<InventoryCostHistoryAppDto>> GetInventoryCostHistoryAsync(Guid productId, Guid? warehouseId = null, int take = StockListCostHistorySize)
         => Task.FromResult(GetCostHistory(productId, warehouseId, take));
 
-    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
-        => _stockManager.GetGlobalAvailableQuantityForProductAsync(productId, excludeOrderId);
+    public Task<(decimal available, decimal reserved)> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
+        => stockManager.GetGlobalAvailableQuantityForProductAsync(productId, excludeOrderId);
 
     public async Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {
-        var (total, dataItems) = await _stockManager.GetStockMovementLogsAsync(productId, warehouseId, pageIndex, pageSize);
+        var (total, dataItems) = await stockManager.GetStockMovementLogsAsync(productId, warehouseId, pageIndex, pageSize);
 
         var items = dataItems.Select(x => new StockMovementLogAppDto
         {
@@ -158,7 +134,7 @@ public sealed class InventoryAppService : IInventoryAppService
 
         try
         {
-            await _stockManager.SetStockLevelsAsync(new SetStockLevelsDto(dto.Id)
+            await stockManager.SetStockLevelsAsync(new SetStockLevelsDto(dto.Id)
             {
                 ReorderLevel = dto.ReorderLevel,
                 MaxStockLevel = dto.MaxStockLevel
@@ -178,15 +154,15 @@ public sealed class InventoryAppService : IInventoryAppService
 
     public async Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize)
     {
-        var product = await _productReader.GetByIdAsync(productId).ConfigureAwait(false);
-        var query = _reservationLedgerReader.DataSource
+        var product = await productReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var query = reservationLedgerReader.DataSource
             .Where(x => x.ProductId == productId)
             .OrderByDescending(x => x.CreatedOnUtc);
 
         var total = query.Count();
         var entries = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
         var orderIds = entries.Select(x => x.OrderId).Distinct().ToList();
-        var orders = _orderReader.DataSource
+        var orders = orderReader.DataSource
             .Where(x => orderIds.Contains(x.Id))
             .ToList();
         var orderMap = orders.ToDictionary(x => x.Id);
@@ -232,7 +208,7 @@ public sealed class InventoryAppService : IInventoryAppService
         if (warehouseId.HasValue)
             return [warehouseId.Value];
 
-        var warehouses = await _warehouseReader.GetAllAsync().ConfigureAwait(false);
+        var warehouses = await warehouseReader.GetAllAsync().ConfigureAwait(false);
         return includeDirectTransit
             ? warehouses.Select(warehouse => (Guid?)warehouse.Id).ToArray()
             : warehouses.Where(warehouse => warehouse.WarehouseType != WarehouseType.DirectTransit).Select(warehouse => (Guid?)warehouse.Id).ToArray();
@@ -243,7 +219,7 @@ public sealed class InventoryAppService : IInventoryAppService
         if (productIds.Count == 0)
             return [];
 
-        return _reservationLedgerReader.DataSource
+        return reservationLedgerReader.DataSource
             .Where(x => productIds.Contains(x.ProductId))
             .GroupBy(x => x.ProductId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.QuantityDelta));
@@ -254,7 +230,7 @@ public sealed class InventoryAppService : IInventoryAppService
         var currentCostByProduct = new Dictionary<Guid, decimal>();
         foreach (var id in productIds)
         {
-            var costSummary = await _inventoryCostingManager.GetCurrentCostSummaryAsync(id).ConfigureAwait(false);
+            var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(id).ConfigureAwait(false);
             currentCostByProduct[id] = costSummary.AverageCost;
         }
 
@@ -281,13 +257,14 @@ public sealed class InventoryAppService : IInventoryAppService
             UpdatedOnUtc = x.UpdatedOnUtc,
             ReorderLevel = x.ReorderLevel,
             MaxStockLevel = x.MaxStockLevel,
-            CostHistory = costHistory
+            CostHistory = costHistory,
+            QuantityDecimalPlaces = x.QuantityDecimalPlaces
         };
 
     private IReadOnlyList<InventoryCostHistoryAppDto> GetCostHistory(Guid productId, Guid? warehouseId, int take)
     {
         var safeTake = Math.Max(1, take);
-        var query = _costLedgerReader.DataSource
+        var query = costLedgerReader.DataSource
             .Where(x => x.ProductId == productId && x.CostingStatus != InventoryCostingStatus.Superseded);
 
         if (warehouseId.HasValue)
@@ -310,7 +287,7 @@ public sealed class InventoryAppService : IInventoryAppService
         if (productIds.Count == 0 || warehouseIds.Count == 0)
             return new Dictionary<(Guid ProductId, Guid WarehouseId), IReadOnlyList<InventoryCostHistoryAppDto>>();
 
-        var entries = _costLedgerReader.DataSource
+        var entries = costLedgerReader.DataSource
             .Where(x => productIds.Contains(x.ProductId)
                 && warehouseIds.Contains(x.WarehouseId)
                 && x.CostingStatus != InventoryCostingStatus.Superseded)
@@ -330,7 +307,7 @@ public sealed class InventoryAppService : IInventoryAppService
         if (productIds.Count == 0)
             return new Dictionary<Guid, IReadOnlyList<InventoryCostHistoryAppDto>>();
 
-        var entries = _costLedgerReader.DataSource
+        var entries = costLedgerReader.DataSource
             .Where(x => productIds.Contains(x.ProductId)
                 && x.CostingStatus != InventoryCostingStatus.Superseded)
             .OrderByDescending(x => x.OccurredAtUtc)
@@ -344,7 +321,7 @@ public sealed class InventoryAppService : IInventoryAppService
 
     public async Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId)
     {
-        var returnWarehouseId = _stockMovementReader.DataSource
+        var returnWarehouseId = stockMovementReader.DataSource
             .Where(log => log.ReferenceId == deliveryNoteId
                           && log.ReferenceType == StockReferenceType.StockTransfer
                           && log.WarehouseId != deliveryNoteWarehouseId)
@@ -354,7 +331,7 @@ public sealed class InventoryAppService : IInventoryAppService
         if (returnWarehouseId == default)
             return null;
 
-        var name = _warehouseReader.DataSource
+        var name = warehouseReader.DataSource
             .Where(w => w.Id == returnWarehouseId)
             .Select(w => w.Name)
             .FirstOrDefault();
@@ -369,10 +346,10 @@ public sealed class InventoryAppService : IInventoryAppService
 
         var productIds = entries.Select(x => x.ProductId).Distinct().ToList();
         var warehouseIds = entries.Select(x => x.WarehouseId).Distinct().ToList();
-        var productMap = _productReader.DataSource
+        var productMap = productReader.DataSource
             .Where(x => productIds.Contains(x.Id))
             .ToDictionary(x => x.Id, x => x.Name);
-        var warehouseMap = _warehouseReader.DataSource
+        var warehouseMap = warehouseReader.DataSource
             .Where(x => warehouseIds.Contains(x.Id))
             .ToDictionary(x => x.Id, x => x.Name);
 

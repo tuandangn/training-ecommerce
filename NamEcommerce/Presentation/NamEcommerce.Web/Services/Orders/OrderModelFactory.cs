@@ -1,7 +1,4 @@
-﻿using Azure.Core;
-using DocumentFormat.OpenXml.Spreadsheet;
-using MediatR;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using MediatR;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
@@ -16,6 +13,7 @@ using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -26,7 +24,6 @@ using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -38,6 +35,7 @@ using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.OrderFulfillment;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Web.Services.Common;
 
 namespace NamEcommerce.Web.Services.Orders;
 
@@ -55,7 +53,9 @@ public sealed class OrderModelFactory(
     IBankTransferReceivingAccountResolver bankTransferReceivingAccountResolver,
     BankTransferPaymentSettings bankTransferPaymentSettings,
     ICustomerLedgerManager customerLedgerManager,
-    IBankTransferReceivingAccountResolver receivingAccountResolver) : IOrderModelFactory
+    ICurrentUserService currentUserService,
+    IBankTransferReceivingAccountResolver receivingAccountResolver,
+    ICachedValuesService cachedValuesService) : IOrderModelFactory
 {
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
@@ -86,7 +86,7 @@ public sealed class OrderModelFactory(
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await mediator.Send(new GetProductsByIdsForOrderQuery
@@ -143,20 +143,23 @@ public sealed class OrderModelFactory(
             PaymentRequired = !order.CanProcess && order.ProcessRequiresPayment,
             PayOffRequired = order.PayOffRequired,
             PaidAmount = order.PaidAmount,
-            CreatedOn = order.CreatedOn
+            CreatedOn = order.CreatedOn,
+            PlacedOn = order.CreatedOn,
+            CanAllowUnpaid = order.CustomerId != cachedValuesService.DefaultCustomerId && await currentUserService.IsAdminAsync().ConfigureAwait(false)
         };
-        var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
+        var orderProductIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
         var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
         var orderDecimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         foreach (var it in order.Items)
         {
+            var (productAvailableQty, _) = await inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false);
             model.Items.Add(new OrderDetailsModel.OrderItemModel(it.Id)
             {
                 ProductId = it.ProductId,
                 ProductName = it.ProductName,
                 ProductPicture = it.ProductPicture,
-                ProductAvailableQty = await inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false),
+                ProductAvailableQty = productAvailableQty,
                 Quantity = it.Quantity,
                 UnitPrice = it.UnitPrice,
                 QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
@@ -319,6 +322,7 @@ public sealed class OrderModelFactory(
             ? string.Empty
             : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
         model.ManualBankTransferConfirmEnabled = bankTransferPaymentSettings.Verification.AllowManualConfirm;
+        model.CanAllowRetailWalkInCustomerUnpaid = await currentUserService.IsAdminAsync().ConfigureAwait(false);
 
         if (model.CustomerId.HasValue)
         {
@@ -342,7 +346,7 @@ public sealed class OrderModelFactory(
 
         if (model.Items.Count > 0)
         {
-            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().Distinct().ToList();
             if (productIds.Count > 0)
             {
                 var products = await mediator.Send(new GetProductsByIdsForOrderQuery
@@ -362,6 +366,7 @@ public sealed class OrderModelFactory(
                     item.UnitMeasurement = product.UnitMeasurement;
                     var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
                     item.QuantityAvailable = stockInfo.QuantityAvailable;
+                    item.QuantityOnHand = stockInfo.QuantityOnHand;
                     item.AvailableWarehouseStocks = stockInfo.Warehouses
                         .Where(item => item.WarehouseId != Guid.Empty)
                         .Select(item => new QuickCreateOrderItemModel.ProductWarehouseStockModel
@@ -462,7 +467,7 @@ public sealed class OrderModelFactory(
             ? await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, model.Id).ConfigureAwait(false)
             : await customerDebtAppService.GetPaymentsAsync(0, 100, model.CustomerId, null).ConfigureAwait(false);
         var orderPayments = customerPayments.Items.Where(payment => payment.OrderId == model.Id).ToList();
-        var expenses = await expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
+        var expenses = await expenseAppService.GetExpensesAsync(orderIds: [model.Id]).ConfigureAwait(false);
         var itemChangeAudits = await orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
         var receivingAccount = await bankTransferReceivingAccountResolver.ResolveAsync().ConfigureAwait(false);
         var customerBalance = model.IsRetailWalkInCustomer
@@ -473,7 +478,6 @@ public sealed class OrderModelFactory(
             ? null
             : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}";
 
-        model.CanCompleteOrder = model.CanCompleteOrder && deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered;
         model.Workflow = BuildWorkflow(model, deliveryStatus, activeStage);
         model.Preparation = BuildPreparation(model);
         model.DeliveryWorkflow = BuildDeliveryWorkflow(model, deliveryStatus);
@@ -495,7 +499,7 @@ public sealed class OrderModelFactory(
             return new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
 
         var purchaseOrderGoodsReceiptsMap = new Dictionary<Guid, IList<GoodsReceiptAppDto>>();
-        foreach(var purchaseOrder in model.AllocatedPurchaseOrders.Items)
+        foreach (var purchaseOrder in model.AllocatedPurchaseOrders.Items)
         {
             var goodReceipts = await goodsReceiptAppService
                     .GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrder.PurchaseOrderId)
@@ -793,7 +797,7 @@ public sealed class OrderModelFactory(
             .ToList();
 
         var expenseRows = expenses
-            .OrderBy(expense => expense.IncurredDate)
+            .OrderBy(expense => expense.IncurredDateUtc)
             .Select(expense => new OrderDetailsModel.SettlementExpenseModel
             {
                 Id = expense.Id,
@@ -801,7 +805,7 @@ public sealed class OrderModelFactory(
                 Description = expense.Description,
                 ExpenseTypeText = GetExpenseTypeText((ExpenseType)expense.ExpenseType),
                 Amount = expense.Amount,
-                IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDate)
+                IncurredDate = DateTimeHelper.ToLocalTime(expense.IncurredDateUtc)
             })
             .ToList();
 

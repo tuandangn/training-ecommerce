@@ -6,13 +6,13 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
 public sealed class VendorLedgerManager(
-    IDbContext dbContext,
-    IUnitOfWork unitOfWork,
+    IUnitOfWork unitOfWork, IDbContext dbContext,
     IRepository<VendorLedgerEntry> entryRepository,
     IEntityDataReader<VendorLedgerEntry> entryReader,
     IRepository<VendorAccountBalance> balanceRepository,
@@ -75,7 +75,7 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = await entryReader.DataSource
+            var existing = await entryReader.GetDataSource(new() { ReadWrite = true })
                 .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.ReturnCredit
                     && e.ReferenceId == dto.ReferenceId.Value)
@@ -97,7 +97,7 @@ public sealed class VendorLedgerManager(
 
         if (dto.ReferenceId.HasValue)
         {
-            var existing = await entryReader.DataSource
+            var existing = await entryReader.GetDataSource(new() { ReadWrite = true })
                 .FirstOrDefaultAsync(e => e.VendorId == dto.VendorId
                     && e.EntryType == VendorLedgerEntryType.RefundReceipt
                     && e.ReferenceId == dto.ReferenceId.Value)
@@ -105,7 +105,7 @@ public sealed class VendorLedgerManager(
             if (existing is not null) return MapToDto(existing);
         }
 
-        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.RefundReceipt, 
+        var entry = new VendorLedgerEntry(dto.VendorId, VendorLedgerEntryType.RefundReceipt,
             dto.Amount, VendorLedgerReferenceType.VendorRefund, dto.ReferenceId, dto.ReferenceCode,
             dto.Note, dto.OccurredAtUtc == default ? DateTime.UtcNow : dto.OccurredAtUtc, dto.CreatedByUserId);
 
@@ -142,21 +142,18 @@ public sealed class VendorLedgerManager(
         if (from.HasValue) query = query.Where(e => e.OccurredAtUtc >= from.Value);
         if (to.HasValue) query = query.Where(e => e.OccurredAtUtc <= to.Value);
 
-        query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(Enumerable.Empty<VendorLedgerStatementEntryDto>(), 0, pageSize, 0);
+
+        query = query.OrderBy(e => e.OccurredAtUtc).ThenBy(e => e.CreatedOnUtc);
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
         var runningBalance = pageIndex == 0
             ? 0m
-            : await entryReader.DataSource
-                .Where(e => e.VendorId == vendorId
-                    && (from == null || e.OccurredAtUtc >= from.Value)
-                    && (to == null || e.OccurredAtUtc <= to.Value))
-                .OrderBy(e => e.OccurredAtUtc)
-                .ThenBy(e => e.CreatedOnUtc)
-                .Take(pageIndex * pageSize)
-                .SumAsync(e => e.Amount).ConfigureAwait(false);
+            : await query.Take(pageIndex * pageSize).SumAsync(e => e.Amount).ConfigureAwait(false);
 
         var result = new List<VendorLedgerStatementEntryDto>(items.Count);
         foreach (var item in items)
@@ -176,7 +173,7 @@ public sealed class VendorLedgerManager(
             });
         }
 
-        return PagedDataDto.Create(result, pageIndex, pageSize, total);
+        return PagedDataDto.Create(result, pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<VendorAccountBalanceDto>> GetBalancesAsync(
@@ -187,8 +184,12 @@ public sealed class VendorLedgerManager(
                      select new { b, v };
 
         if (!string.IsNullOrWhiteSpace(keywords))
+        {
+            var normalizedKeywords = TextHelper.Normalize(keywords);
             joined = joined.Where(x => x.v.Name.Contains(keywords)
+                || x.v.NormalizedName.Contains(normalizedKeywords)
                 || x.v.PhoneNumber.Contains(keywords));
+        }
 
         joined = joined.OrderBy(x => x.v.Name);
 
@@ -209,19 +210,19 @@ public sealed class VendorLedgerManager(
 
     public Task<VendorAccountBalanceDto?> GetVendorSummaryAsync(Guid vendorId)
     {
-        var result = (from b in balanceReader.DataSource
-                      where b.VendorId == vendorId
-                      join v in vendorReader.DataSource on b.VendorId equals v.Id
-                      select new VendorAccountBalanceDto
-                      {
-                          VendorId = b.VendorId,
-                          VendorName = v.Name,
-                          VendorPhone = v.PhoneNumber,
-                          Balance = b.Balance,
-                          LastEntryOnUtc = b.LastEntryOnUtc
-                      }).FirstOrDefaultAsync();
+        var query = from b in balanceReader.DataSource
+                    where b.VendorId == vendorId
+                    join v in vendorReader.DataSource on b.VendorId equals v.Id
+                    select new VendorAccountBalanceDto
+                    {
+                        VendorId = b.VendorId,
+                        VendorName = v.Name,
+                        VendorPhone = v.PhoneNumber,
+                        Balance = b.Balance,
+                        LastEntryOnUtc = b.LastEntryOnUtc
+                    };
 
-        return result;
+        return query.FirstOrDefaultAsync();
     }
 
     private async Task<VendorLedgerEntryDto> PersistEntryAsync(VendorLedgerEntry entry)
@@ -238,7 +239,7 @@ public sealed class VendorLedgerManager(
 
     private async Task UpsertBalanceAsync(Guid vendorId, decimal delta, DateTime occurredAtUtc)
     {
-        var existingId = await balanceReader.DataSource
+        var existingId = await balanceReader.GetDataSource(new() { ReadWrite = true })
             .Where(b => b.VendorId == vendorId)
             .Select(b => b.Id)
             .FirstOrDefaultAsync().ConfigureAwait(false);

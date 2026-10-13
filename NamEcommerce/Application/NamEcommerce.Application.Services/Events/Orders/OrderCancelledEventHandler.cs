@@ -1,21 +1,21 @@
 using MediatR;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.Orders;
-using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.Events.Orders;
 
-public sealed class OrderCancelledEventHandler(
-    IProductReservationManager productReservationManager) : INotificationHandler<OrderCancelled>
+public sealed class OrderCancelledEventHandler(IDeliveryNoteManager deliveryNoteManager) : INotificationHandler<OrderCancelled>
 {
     public async Task Handle(OrderCancelled notification, CancellationToken cancellationToken)
     {
-        foreach (var item in notification.Items)
-            await productReservationManager.ReleaseAsync(
-                item.ProductId,
-                item.Quantity,
-                notification.OrderId,
-                ProductReservationReason.OrderCancelled,
-                notification.OrderId).ConfigureAwait(false);
+        var deliveryNotes = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue, orderId: notification.OrderId).ConfigureAwait(false);
+        foreach (var deliveryNote in deliveryNotes)
+        {
+            if (deliveryNote.Status != DeliveryNoteStatus.Draft)
+                continue;
+
+            await deliveryNoteManager.CancelAsync(deliveryNote.Id).ConfigureAwait(false);
+        }
     }
 }

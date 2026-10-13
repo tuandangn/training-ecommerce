@@ -149,7 +149,7 @@
                                     </td>
                                     <td>
                                         <div class="position-relative">
-                                            <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                            <a asp-action="Details" asp-controller="VendorDebt" asp-route-id="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
                                                 @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
                                             </a>
                                             @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
@@ -230,7 +230,7 @@
                         <div class="list-card-fields">
                             <div class="list-card-field list-card-field-stack">
                                 <span class="list-card-label">Nhà cung cấp</span>
-                                <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId"
+                                <a asp-action="Details" asp-controller="VendorDebt" asp-route-id="@purchaseOrder.VendorId"
                                    class="text-decoration-none fw-medium text-dark">
                                     @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
                                 </a>

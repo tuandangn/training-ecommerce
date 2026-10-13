@@ -1,7 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
-using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
@@ -9,11 +12,7 @@ using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Services.Debts;
-using NamEcommerce.Domain.Shared.Common;
-using Microsoft.EntityFrameworkCore;
-using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -27,32 +26,32 @@ public sealed class CustomerDebtManager(
     IRepository<Customer> customerRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     ICustomerLedgerManager customerLedgerManager,
-    EntityCodeGenerator entityCodeGenerator,
-    IOrderManager orderManager) : ICustomerDebtManager
+    EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
         var prefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => debtReader.SecuredDataSource.CountAsync(d => d.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => debtReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(d => d.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
         var prefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => paymentReader.SecuredDataSource.CountAsync(p => p.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => paymentReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(p => p.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 
     private async Task<string> GenerateCreditNoteCodeAsync()
     {
         var prefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
-        return await entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.SecuredDataSource.CountAsync(c => c.Code.StartsWith(prefix)))
+        return await entityCodeGenerator.NextAsync(prefix, () => creditNoteReader.GetDataSource(new() { IncludeDeleted = true }).CountAsync(c => c.Code.StartsWith(prefix)))
             .ConfigureAwait(false);
     }
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
@@ -87,6 +86,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerDebtDto> CreateDebtFromDeliveryNoteAsync(CreateCustomerDebtDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var existing = await debtReader.DataSource.FirstOrDefaultAsync(d => d.DeliveryNoteId == dto.DeliveryNoteId).ConfigureAwait(false);
@@ -133,6 +133,7 @@ public sealed class CustomerDebtManager(
 
     public async Task<CustomerPaymentDto> RecordPaymentAsync(CreateCustomerPaymentDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
         var customer = await customerRepository.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
@@ -155,14 +156,12 @@ public sealed class CustomerDebtManager(
             OrderId = dto.OrderId,
             DeliveryNoteId = dto.DeliveryNoteId,
             CustomerDebtId = dto.CustomerDebtId,
-            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null
+            BankAccountId = dto.PaymentMethod == PaymentMethod.BankTransfer ? dto.BankAccountId : null,
+            PaymentIntentId = dto.PaymentIntentId
         };
         payment.MarkCreated();
 
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-
-        if (dto.OrderId.HasValue)
-            await orderManager.MarkOrderHasPayment(dto.OrderId.Value, dto.Amount, null).ConfigureAwait(false);
 
         await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
         {
@@ -264,9 +263,9 @@ public sealed class CustomerDebtManager(
             .Select(g => new
             {
                 CustomerId = g.Key,
-                CustomerName = g.First().CustomerName,
-                CustomerPhone = g.First().CustomerPhone,
-                CustomerAddress = g.First().CustomerAddress,
+                g.First().CustomerName,
+                g.First().CustomerPhone,
+                g.First().CustomerAddress,
                 TotalDebtAmount = g.Sum(d => d.TotalAmount),
                 TotalPaidAmount = g.Sum(d => d.PaidAmount),
                 TotalRemainingAmount = g.Sum(d => d.RemainingAmount),
@@ -382,10 +381,15 @@ public sealed class CustomerDebtManager(
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerDebtDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize).ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public async Task<IPagedDataDto<CustomerPaymentDto>> GetPaymentsAsync(int pageIndex = 0, int pageSize = 15, Guid? customerId = null, Guid? orderId = null)
@@ -398,11 +402,16 @@ public sealed class CustomerDebtManager(
 
         query = query.OrderByDescending(p => p.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerPaymentDto>(), pageIndex, pageSize, 0);
+
         var items = await query.Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false);
 
-        return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, total);
+        return PagedDataDto.Create(items.Select(MapToPaymentDto).ToList(), pageIndex, pageSize, totalCount);
     }
 
     public Task<decimal> GetTotalPaidByOrderAsync(Guid orderId)

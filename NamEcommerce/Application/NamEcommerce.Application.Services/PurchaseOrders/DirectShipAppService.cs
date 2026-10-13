@@ -7,22 +7,13 @@ using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
-public sealed class DirectShipAppService(
-    IDirectShipManager directShipManager,
-    ICurrentUserAccessor currentUserAccessor) : IDirectShipAppService
+public sealed class DirectShipAppService(IDirectShipManager directShipManager, ICurrentUserAccessor currentUserAccessor) : IDirectShipAppService
 {
     public async Task<CommonActionResultDto> MarkAllocationAsDirectShipAsync(MarkAllocationAsDirectShipAppDto dto)
     {
-        try
-        {
-            await directShipManager.MarkAllocationAsDirectShipAsync(dto.AllocationId, dto.Address, dto.ContactName, dto.ContactPhone, dto.Priority)
-                .ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
+        await directShipManager.MarkAllocationAsDirectShipAsync(dto.AllocationId, dto.Address, dto.ContactName, dto.ContactPhone, dto.Priority)
+            .ConfigureAwait(false);
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<CommonActionResultDto> UpdateDirectShipAddressAsync(UpdateDirectShipAddressAppDto dto)
@@ -91,6 +82,7 @@ public sealed class DirectShipAppService(
             OrderCode = d.OrderCode,
             CustomerName = d.CustomerName,
             CustomerPhone = d.CustomerPhone,
+            IsRetailWalkInCustomer = d.IsRetailWalkInCustomer,
             ShippingAddress = d.ShippingAddress,
             ShippingPhoneNumber = d.ShippingPhoneNumber,
             CreatedOnUtc = d.CreatedOnUtc,
@@ -106,7 +98,7 @@ public sealed class DirectShipAppService(
     public async Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(
         IReadOnlyList<(Guid orderId, Guid orderItemId)> orderItemIds)
     {
-        var items = await directShipManager.GetDirectShipAllocationsForOrderItemsAsync(orderItemIds.Select(id => (SecondaryItemId) id).ToList())
+        var items = await directShipManager.GetDirectShipAllocationsForOrderItemsAsync(orderItemIds.Select(id => (SecondaryItemId)id).ToList())
             .ConfigureAwait(false);
         return items.Select(a => new DirectShipAllocationStatusAppDto
         {
@@ -124,7 +116,7 @@ public sealed class DirectShipAppService(
     public async Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(
         IReadOnlyList<(Guid purchaseOrderId, Guid purchaseOrderItemId)> purchaseOrderItemIds)
     {
-        var items = await directShipManager.GetDirectShipAllocationsForPoItemsAsync(purchaseOrderItemIds.Select(id => (SecondaryItemId) id).ToList())
+        var items = await directShipManager.GetDirectShipAllocationsForPoItemsAsync(purchaseOrderItemIds.Select(id => (SecondaryItemId)id).ToList())
             .ConfigureAwait(false);
         return items.Select(a => new DirectShipAllocationForPoItemAppDto
         {

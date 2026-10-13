@@ -55,7 +55,7 @@ public sealed class OrderFulfillmentController(
         });
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
         return this.JsonError(result.ErrorMessage!);
     }
 
@@ -84,7 +84,7 @@ public sealed class OrderFulfillmentController(
         });
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
         return this.JsonError(result.ErrorMessage!);
     }
 
@@ -95,7 +95,7 @@ public sealed class OrderFulfillmentController(
         var result = await mediator.Send(new SetOrderFulfillmentScheduleActiveCommand(id, isActive));
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
         return this.JsonError(result.ErrorMessage!);
     }
 
@@ -106,7 +106,7 @@ public sealed class OrderFulfillmentController(
         var result = await mediator.Send(new DeleteOrderFulfillmentScheduleCommand(id));
 
         if (result.Success)
-            return this.JsonOk();
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
         return this.JsonError(result.ErrorMessage!);
     }
 

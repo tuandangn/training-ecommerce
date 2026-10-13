@@ -1,7 +1,6 @@
 @model DeliveryMobileRunModel
 @using System.Text.Json
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
-@inject ICachedValuesService CachedValuesService
 @{
     Layout = "_DeliveryMobileLayout";
     ViewData["Title"] = Model.Run.Code;
@@ -152,7 +151,7 @@
             {
                 <a href="/Picture/@item.DeliveryProofPictureId.Value" target="_blank" class="mobile-proof-image">
                     <img src="/Picture/@item.DeliveryProofPictureId.Value" alt="Ảnh bằng chứng giao hàng" />
-                    <span>Ảnh bằng chứng</span>
+                    <span class="text-light">Ảnh bằng chứng</span>
                 </a>
             }
         }
@@ -170,7 +169,7 @@
             {
                 <a href="/Picture/@item.DeliveryProofPictureId.Value" target="_blank" class="mobile-proof-image">
                     <img src="/Picture/@item.DeliveryProofPictureId.Value" alt="Ảnh bằng chứng" />
-                    <span>Ảnh bằng chứng</span>
+                    <span class="text-light">Ảnh bằng chứng</span>
                 </a>
             }
         }
@@ -255,7 +254,7 @@
                 <input type="hidden" name="acceptanceItemsJson" />
                 <div class="mb-2">
                     <label class="form-label" for="receiverName_@(item.DeliveryNoteId)">Người nhận</label>
-                    <input type="text" id="receiverName_@(item.DeliveryNoteId)" name="receiverName" class="form-control" autocomplete="name" value="@(item.CustomerId == CachedValuesService.DefaultCustomerId ? "" : receiverName)" placeholder="Nhập tên người nhận" />
+                    <input type="text" id="receiverName_@(item.DeliveryNoteId)" name="receiverName" class="form-control" autocomplete="name" value="@(item.IsRetailWalkInCustomer ? "" : receiverName)" placeholder="Nhập tên người nhận" />
                 </div>
                 <div class="mobile-goods-box mt-0 mb-2">
                     <div class="mobile-goods-head">

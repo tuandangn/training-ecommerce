@@ -1,0 +1,179 @@
+﻿@using System.Globalization
+@model PurchaseOrderSingleReceiveItemsModel
+<div class="modal fade" id="receiveItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content purchaseorder-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Nhập hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="ReceivesItem" method="post">
+                <div class="modal-body py-3">
+                    <input type="hidden" asp-for="PurchaseOrderId" id="receive@(Html.IdFor(m => m.PurchaseOrderId))" />
+                    <input type="hidden" asp-for="PurchaseOrderItemId" id="receive@(Html.IdFor(m => m.PurchaseOrderItemId))" />
+                    <input type="hidden" asp-for="QuantityDecimalPlaces" id="receive@(Html.IdFor(m => m.QuantityDecimalPlaces))" />
+                    <input type="hidden" asp-for="DirectShipOrderId" id="modalDsOrderId" />
+                    <input type="hidden" asp-for="DirectShipOrderItemId" id="modalDsOrderItemId" />
+                    <input type="hidden" asp-for="DirectShipExistingAllocationId" id="modalDsExistingAllocationId" />
+                    <div class="alert alert-info border-0 mb-3">
+                        <div class="small fw-bold">
+                            Sản phẩm
+                            <span id="modalItemName" class="fs-6 fw-bold text-dark">@Model.ProductName</span>
+                        </div>
+                        <div class="small mt-1 mt-1 fst-italic">
+                            Số lượng còn lại
+                            <span id="modalItemRemaining" class="fw-bold">@Model.Quantity.DisplayQuantity(Model.QuantityDecimalPlaces)</span>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-xl-3 col-lg-4" id="modalWarehouseSection">
+                            <label class="form-label small fw-bold text-muted text-uppercase" asp-for="WarehouseId" for="receive@(Html.IdFor(m => m.WarehouseId))">Kho nhập</label>
+                            <select asp-for="WarehouseId" id="receive@(Html.IdFor(m => m.WarehouseId))" class="form-select">
+                                @foreach (var option in Model.AvailableWarehouses)
+                                {
+                                    <option value="@option.Id" selected="@(Model.WarehouseId == option.Id)">@option.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="WarehouseId" class="small text-danger"></span>
+                        </div>
+                        <div class="col-xl-6 col-lg-4">
+                            <div class="d-flex align-items-center gap-3 justify-content-between">
+                                <label class="form-label small fw-bold text-muted text-uppercase" asp-for="Quantity" for="modalReceivedQty">Số lượng</label>
+                                @if (Model.RemainingDirectShipQuantity > 0)
+                                {
+                                    <div id="modalDistributionPreview" class="d-inline-block small mb-1 text-muted">
+                                        Giao thẳng <span class="fw-medium text-decoration-underline">@Model.RemainingDirectShipQuantity.DisplayQuantity(Model.QuantityDecimalPlaces) @Model.UnitMeasurement</span>
+                                    </div>
+                                }
+                            </div>
+                            <input asp-for="Quantity" id="modalReceivedQty" inputmode="decimal" class="form-control text-end" placeholder="Số lượng nhận"
+                                   data-decimal="quantity" data-val="true" data-val-required="Vui lòng nhập số lượng" data-val-number="Số lượng phải là số"
+                                   data-val-range="Số lượng phải lớn hơn 0 và nhỏ hơn @Model.Quantity.DisplayQuantity(Model.QuantityDecimalPlaces)"
+                                   data-val-range-min="0.001" data-val-range-max="@Model.Quantity.ToString(CultureInfo.InvariantCulture)"
+                                   data-decimals="@Model.QuantityDecimalPlaces" value="@Model.Quantity.DisplayQuantity(Model.QuantityDecimalPlaces)" />
+                            <span asp-validation-for="Quantity" class="small text-danger"></span>
+                        </div>
+                        <div class="col-xl-3 col-lg-4">
+                            <label asp-for="ReceivedOn" for="receiveReceivedOn" class="form-label small fw-bold text-muted text-uppercase">Ngày nhận</label>
+                            <input type="datetime-local" asp-for="ReceivedOn" id="receiveReceivedOn" class="form-control text-sm" placeholder="Ngày nhận"
+                                   data-val-range-max="@DateTime.Now.ToString("s")" data-val-range-min="@Model.PurchaseOrderPlacedOn.ToString("s")" />
+                            <span asp-validation-for="ReceivedOn" class="small text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-lg-9">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="receiveAdditionalShipping">
+                                        Phí vận chuyển
+                                    </label>
+                                    <input id="receiveAdditionalShipping" asp-for="AdditionalShipping" class="form-control include-suffix" inputmode="numeric"
+                                           data-decimal="currency" value="" placeholder="Phí vận chuyển" data-val="true"
+                                           data-val-number="Số tiền phải là số" data-val-range="Số tiền phải lớn hơn 0" data-val-range-min="0.1" />
+                                    <span asp-validation-for="AdditionalShipping" class="small text-danger"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="receiveAdditionalTax">
+                                        <span class="text-uppercase">Thuế</span>
+                                        <span class="small text-muted d-none" id="receiveAdditionalTaxHint"></span>
+                                    </label>
+                                    <select asp-for="TaxRate" id="receiveTaxRate" class="form-select">
+                                        <option value="" selected="@(!Model.TaxRate.HasValue)">Không thuế</option>
+                                        @foreach (var taxRate in Model.AvailableTaxRates)
+                                        {
+                                            <option value="@taxRate" selected="@(taxRate == Model.TaxRate)">@(taxRate)%</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="TaxRate" class="small text-danger"></span>
+                                </div>
+                                <div class="col-md-6" id="modalUnitCostSection">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" asp-for="ActualUnitCost">Giá nhập</label>
+                                    <input asp-for="ActualUnitCost" id="modalUnitCost" class="form-control text-end include-suffix"
+                                           data-decimal="currency" inputmode="numeric" data-val="true" data-val-required="Vui lòng nhập giá nhập" data-val-number="Giá nhập phải là số"
+                                           data-val-range="Giá nhập phải lớn hơn 0" data-val-range-min="0.001"
+                                           value="@Model.ActualUnitCost?.DisplayCurrency()" placeholder="Giá nhập" />
+                                    <span asp-validation-for="ActualUnitCost" class="small text-danger"></span>
+                                </div>
+                                <div class="col-md-6 d-none" id="modalSellingPriceSection">
+                                    <div class="d-flex align-items-center gap-3 justify-content-between">
+                                        <label class="form-label small fw-bold text-muted text-uppercase" asp-for="SellingPrice">Giá bán</label>
+                                        <div class="text-muted small mb-1">
+                                            Giá mua <span id="modalItemUnitCost" class="fw-bold">@Model.ActualUnitCost.DisplayCurrencyWithSymbol()</span>
+                                        </div>
+                                    </div>
+                                    <input asp-for="SellingPrice" id="modalSellingPrice" class="form-control text-end include-suffix"
+                                           data-decimal="currency" inputmode="numeric" data-val="true" data-val-required="Vui lòng nhập giá bán" data-val-number="Giá bán phải là số"
+                                           data-val-range="Giá bán phải lớn hơn 0" data-val-range-min="0.001"
+                                           value="@Model.SellingPrice?.DisplayCurrency()" placeholder="Giá bán" />
+                                    <span asp-validation-for="SellingPrice" class="small text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
+                            {
+                                FieldName = "PictureIds",
+                                Label = "Bằng chứng nhận",
+                                MaxFiles = 1,
+                                Required = true,
+                                ExistingPictureIds = Model.PictureIds
+                            })
+                        </div>
+                    </div>
+                    <hr class="my-3" />
+                    <div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="modalDsToggle" />
+                            <label class="form-check-label fw-semibold small" for="modalDsToggle">
+                                Giao thẳng cho khách hàng
+                            </label>
+                        </div>
+                        <div id="modalDsSection" class="d-none">
+                            <div id="modalDsLoading" class="text-muted small py-2 d-none">
+                                <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
+                            </div>
+                            <div id="modalDsEmpty" class="alert alert-warning py-2 small d-none">
+                                <i class="bi bi-exclamation-circle me-1"></i> Không có đơn hàng phù hợp cho sản phẩm này.
+                            </div>
+                            <div id="modalDsOrderList" class="d-none mb-3">
+                                <label class="form-label small fw-semibold text-muted text-uppercase">Chọn đơn hàng</label>
+                                <div id="modalDsOrderItems" class="list-group list-group-flush border rounded ui-max-h-180-scroll"></div>
+                            </div>
+                            <div id="modalDsFields" class="d-none">
+                                <div class="alert alert-primary py-2 small mb-2" id="modalDsSelectedOrder"></div>
+                                <div class="row g-2">
+                                    <div class="col-lg-4">
+                                        <input type="text" asp-for="DirectShipAddress" id="modalDsAddressInput"
+                                               class="form-control form-control-sm" placeholder="Địa chỉ giao hàng"
+                                               data-val="true" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
+                                        <span asp-validation-for="DirectShipAddress" class="small text-danger"></span>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <input type="text" asp-for="DirectShipContactPhone" id="modalDsContactPhone"
+                                               class="form-control form-control-sm" placeholder="Số điện thoại" inputmode="tel"
+                                               data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
+                                               data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                                        <span asp-validation-for="DirectShipContactPhone" class="small text-danger"></span>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <input type="text" asp-for="DirectShipContactName" id="modalDsContactName"
+                                               class="form-control form-control-sm" placeholder="Tên người nhận"
+                                               data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
+                                        <span asp-validation-for="DirectShipContactName" class="small text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-danger py-2 small d-none" id="modalDsError"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-all me-1"></i>Xác nhận
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

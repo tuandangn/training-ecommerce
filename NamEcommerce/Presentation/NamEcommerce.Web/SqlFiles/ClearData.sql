@@ -5,7 +5,7 @@ DELETE FROM tbl.CustomerRefund
 DELETE FROM tbl.CustomerReturn
 DELETE FROM tbl.DeliveryNote
 DELETE FROM tbl.DirectShipAddressChangeLog
-DELETE FROM tbl.Expenses
+DELETE FROM tbl.Expense
 DELETE FROM tbl.GoodsReceipt
 DELETE FROM tbl.InventoryStock
 DELETE FROM tbl.ProductReservationLedger
@@ -37,3 +37,4 @@ DELETE FROM tbl.DeliveryRun
 DELETE FROM tbl.[OrderFulfillmentSchedule]
 DELETE FROM tbl.FixedAsset
 DELETE FROM tbl.BankTransferPaymentIntent
+DELETE FROM tbl.StockReservationEntry

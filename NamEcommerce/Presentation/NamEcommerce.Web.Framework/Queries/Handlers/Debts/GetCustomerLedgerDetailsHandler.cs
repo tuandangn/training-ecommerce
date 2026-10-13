@@ -14,9 +14,9 @@ public sealed class GetCustomerLedgerDetailsHandler(ICustomerLedgerManager ledge
         if (summary is null) return null;
 
         var statement = await ledgerManager.GetStatementAsync(
-            request.CustomerId,
             pageIndex: request.PageIndex - 1,
-            pageSize: request.PageSize).ConfigureAwait(false);
+            pageSize: request.PageSize,
+            customerId: request.CustomerId).ConfigureAwait(false);
 
         return new CustomerLedgerDetailsModel
         {

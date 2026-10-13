@@ -33,6 +33,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.CustomerId).IsRequired();
         builder.ComplexProperty(o => o.CustomerInfo, customerInfoBuilder =>
         {
+            customerInfoBuilder.IsRequired(false);
             customerInfoBuilder.Property(info => info.FullName)
                 .HasColumnName($"CustomerName")
                 .HasMaxLength(200)

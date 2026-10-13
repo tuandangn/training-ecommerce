@@ -13,7 +13,7 @@ async function submitFormAsync(form) {
         formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
     }
 
-    return apiPost(form.action, formData);
+    return await apiPost(form.action, formData);
 }
 
 function parseDecimalInput(input) {
@@ -370,6 +370,8 @@ function parseDecimalInput(input) {
             isPaidOnValid();
         });
         settlementModal.element?.addEventListener('shown.bs.modal', () => {
+            if (amountInput.readOnly)
+                return;
             amountInput.focus();
             amountInput.select();
         });
@@ -581,17 +583,11 @@ function parseDecimalInput(input) {
             const expenseModal = new PromiseModal('#orderExpenseModal');
             expenseModal.hide();
 
-            try {
-                const result = await submitFormAsync(this);
-                if (result.success) {
-                    location.reload();
-                } else {
-                    hidePageLoading();
-                    toast('Lỗi', result.message || 'Không thể thêm chi phí phát sinh.', 'error');
-                }
-            } catch (err) {
+            const result = await submitFormAsync(this);
+            if (result.success) {
+                location.reload();
+            } else {
                 hidePageLoading();
-                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
             }
         });
     }
@@ -823,6 +819,27 @@ function parseDecimalInput(input) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = false;
             }
+        });
+    }
+
+    const continueWithoutPayment = document.getElementById('continueWithoutPayment');
+    if (continueWithoutPayment) {
+        continueWithoutPayment.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = continueWithoutPayment.dataset.id;
+            if (!id) return;
+
+            const confirmed = await confirm('Cho phép xử lý đơn', 'Tiếp tục xử lý đơn hàng, khách hàng sẽ thanh toán sau');
+            if (!confirmed)
+                return;
+
+            showPageLoading();
+            const skipPaymentResult = await apiPost(`/Order/ProcessOrderWithoutPayment/${id}`);
+            if (!skipPaymentResult.success) {
+                hidePageLoading();
+                return;
+            }
+            location.reload();
         });
     }
 })();

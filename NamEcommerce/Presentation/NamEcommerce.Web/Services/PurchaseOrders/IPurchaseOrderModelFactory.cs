@@ -7,10 +7,11 @@ namespace NamEcommerce.Web.Services.PurchaseOrders;
 public interface IPurchaseOrderModelFactory
 {
     Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel);
-
     Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id);
+    Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null);
+    Task<PurchaseOrderQuickCreateModel> PrepareQuickCreatePurchaseOrderModel(PurchaseOrderQuickCreateModel? oldModel = null);
+    Task<SplitsPurchaseOrderModel?> PrepareSplitsPurchaseOrderModel(Guid id);
 
-    Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? model = null);
-
-    Task<QuickCreatePurchaseOrderModel> PrepareQuickCreatePurchaseOrderModel();
+    Task<PurchaseOrderBulkReceiveItemsModel?> PreparePurchaseOrderBulkReceiveModel(Guid id);
+    Task<PurchaseOrderSingleReceiveItemsModel?> PreparePurchaseOrderSingleReceiveModel(Guid id, Guid itemId);
 }

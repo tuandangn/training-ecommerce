@@ -18,17 +18,26 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
     {
         var stockItems = await _inventoryAppService.GetInventoryStocksAsync(0, int.MaxValue, request.WarehouseId, request.ProductId).ConfigureAwait(false);
 
-        var quantityAvailable = request.WarehouseId.HasValue
-            ? stockItems.Sum(item => item.QuantityAvailable)
-            : await _inventoryAppService.GetGlobalAvailableQuantityForProductAsync(request.ProductId).ConfigureAwait(false);
+        var availableQty = 0m;
+        var reservedQty = 0m;
+        if (request.WarehouseId.HasValue)
+        {
+            availableQty = stockItems.Sum(item => item.QuantityAvailable);
+            reservedQty = stockItems.Sum(item => item.QuantityReserved);
+        }
+        else
+        {
+            (availableQty, reservedQty) = await _inventoryAppService.GetGlobalAvailableQuantityForProductAsync(request.ProductId).ConfigureAwait(false);
+        }
 
         return new ProductStockInfoModel
         {
             ProductId = request.ProductId,
             WarehouseId = request.WarehouseId,
             QuantityOnHand = stockItems.Sum(item => item.QuantityOnHand),
-            QuantityReserved = stockItems.Sum(item => item.QuantityReserved),
-            QuantityAvailable = quantityAvailable,
+            QuantityReserved = reservedQty,
+            QuantityAvailable = availableQty,
+            QuantityDecimalPlaces = stockItems.FirstOrDefault()?.QuantityDecimalPlaces ?? 0,
             AvailableWarehouseIds = stockItems.Where(item => item.QuantityAvailable > 0)
                 .Select(item => item.WarehouseId)
                 .OfType<Guid>().Distinct().ToList(),
@@ -40,7 +49,8 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
                     WarehouseName = item.WarehouseName,
                     QuantityOnHand = item.QuantityOnHand,
                     QuantityReserved = item.QuantityReserved,
-                    QuantityAvailable = item.QuantityAvailable
+                    QuantityAvailable = item.QuantityAvailable,
+                    QuantityDecimalPlaces = item.QuantityDecimalPlaces
                 })
                 .ToList()
         };

@@ -1,10 +1,12 @@
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 
 [Serializable]
 public sealed record CreateGoodsReceiptFromPurchaseOrderDto
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required Guid PurchaseOrderId { get; init; }
     public required string PurchaseOrderCode { get; init; }
 
@@ -28,6 +30,9 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderDto
             throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
         if (Quantity <= 0)
             throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedDateCannotBeInFuture");
+
     }
 }
 
@@ -41,6 +46,7 @@ public sealed record CreateGoodsReceiptFromVendorOversupplyDto
     public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitCost { get; init; }
+    public decimal? TaxRate { get; set; }
 
     public void Verify()
     {
@@ -110,8 +116,6 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderBulkItemDto
 [Serializable]
 public abstract record BaseGoodsReceiptDto
 {
-    public required DateTime ReceivedOnUtc { get; init; }
-
     public string? TruckDriverName { get; set; }
     public string? TruckNumberSerial { get; set; }
 
@@ -123,17 +127,13 @@ public abstract record BaseGoodsReceiptDto
 
     public virtual void Verify()
     {
-        if (PictureIds is null || !PictureIds.Any())
-            throw new GoodsReceiptProofPictureRequired();
-
-        if (ReceivedOnUtc > DateTime.UtcNow)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
     }
 }
 
 [Serializable]
 public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 {
+    public DateTime ReceivedOnUtc { get; set; }
     public string Code { get; init; } = string.Empty;
     public required IEnumerable<GoodsReceiptItemDto> Items { get; init; }
     public bool IsPendingCosting { get; init; }
@@ -151,10 +151,17 @@ public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 [Serializable]
 public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 {
+    public DateTime? ReceivedOnUtc { get; set; }
     public required IList<AddGoodsReceiptItemDto> Items { get; init; }
+    public decimal? TaxRate { get; set; }
+
+    public Guid? PurchaseOrderId { get; set; }
 
     public override void Verify()
     {
+        if (ReceivedOnUtc.HasValue && ReceivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+
         foreach (var item in Items)
             item.Verify();
 
@@ -166,10 +173,22 @@ public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 public sealed record CreateGoodsReceiptResultDto
 {
     public required Guid CreatedId { get; init; }
+    public decimal TaxAmount { get; set; }
 }
 
 [Serializable]
-public sealed record UpdateGoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto;
+public sealed record UpdateGoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
+{
+    public DateTime ReceivedOnUtc { get; set; }
+
+    public override void Verify()
+    {
+        if (ReceivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+
+        base.Verify();
+    }
+}
 
 [Serializable]
 public sealed record UpdateGoodsReceiptResultDto
@@ -178,7 +197,7 @@ public sealed record UpdateGoodsReceiptResultDto
 }
 
 [Serializable]
-public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId) : BaseGoodsReceiptDto;
+public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId);
 
 [Serializable]
 public sealed record SetGoodsReceiptVendorDto(Guid GoodsReceiptId)
@@ -207,6 +226,8 @@ public sealed record CreateOpeningInventoryReceiptDto
     public required decimal UnitCost { get; init; }
     public Guid? CreatedByUserId { get; init; }
 
+    public decimal? TaxRate { get; set; }
+
     public void Verify()
     {
         if (ProductId == Guid.Empty)
@@ -226,6 +247,7 @@ public sealed record CreateGoodsReceiptFromCustomerReturnDto
     public required Guid CustomerReturnId { get; init; }
     public required Guid WarehouseId { get; init; }
     public required IEnumerable<CreateGoodsReceiptFromCustomerReturnItemDto> Items { get; init; }
+    public decimal? TaxRate { get; set; }
 }
 
 [Serializable]

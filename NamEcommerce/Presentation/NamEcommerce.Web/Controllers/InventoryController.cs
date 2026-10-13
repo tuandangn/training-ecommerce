@@ -9,32 +9,22 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class InventoryController : BaseAuthorizedController
+public sealed class InventoryController(AppConfig appConfig, IMediator mediator, IInventoryAppService inventoryAppService) : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
-    private readonly IMediator _mediator;
-    private readonly IInventoryAppService _inventoryAppService;
-
-    public InventoryController(AppConfig appConfig, IMediator mediator, IInventoryAppService inventoryAppService)
-    {
-        _appConfig = appConfig;
-        _mediator = mediator;
-        _inventoryAppService = inventoryAppService;
-    }
-
     public IActionResult Index() => RedirectToAction(nameof(StockList));
 
     [Authorize(Policy = SystemPermissions.Inventory.View)]
-    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null, bool includeDS = false, bool groupByProduct = false)
+    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null, bool includeDS = false, bool groupByProduct = true)
     {
-        var pageSize = _appConfig.DefaultPageSize;
+        var pageSize = appConfig.DefaultPageSize;
 
-        var model = await _mediator.Send(new GetInventoryStockListQuery
+        var model = await mediator.Send(new GetInventoryStockListQuery
         {
             Keywords = keywords,
             WarehouseId = null,
@@ -50,16 +40,16 @@ public sealed class InventoryController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> CostHistory(Guid productId, Guid? warehouseId = null, int take = 20)
     {
-        var items = await _inventoryAppService.GetInventoryCostHistoryAsync(productId, warehouseId, take);
+        var items = await inventoryAppService.GetInventoryCostHistoryAsync(productId, warehouseId, take);
         return PartialView("_InventoryCostHistoryFullTable", items.Select(MapCostHistory).ToList());
     }
 
     [Authorize(Policy = SystemPermissions.Inventory.View)]
     public async Task<IActionResult> MovementLogs(Guid productId, Guid warehouseId, int pageNumber = 1)
     {
-        var pageSize = _appConfig.DefaultPageSize;
+        var pageSize = appConfig.DefaultPageSize;
 
-        var model = await _mediator.Send(new GetStockMovementLogsQuery
+        var model = await mediator.Send(new GetStockMovementLogsQuery
         {
             ProductId = productId,
             WarehouseId = warehouseId,
@@ -71,13 +61,13 @@ public sealed class InventoryController : BaseAuthorizedController
     }
 
     [Authorize(Policy = SystemPermissions.Inventory.View)]
-    public async Task<IActionResult> ReservationLedger(Guid productId, int pageNumber = 1)
+    public async Task<IActionResult> ReservationLedger(Guid id, int pageNumber = 1)
     {
-        var pageSize = _appConfig.DefaultPageSize;
+        var pageSize = appConfig.DefaultPageSize;
 
-        var model = await _mediator.Send(new GetProductReservationLedgerQuery
+        var model = await mediator.Send(new GetProductReservationLedgerQuery
         {
-            ProductId = productId,
+            ProductId = id,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
@@ -88,7 +78,7 @@ public sealed class InventoryController : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> CostingPolicy()
     {
-        var settings = await _mediator.Send(new GetInventoryCostingPolicyQuery());
+        var settings = await mediator.Send(new GetInventoryCostingPolicyQuery());
         return View(InventoryCostingPolicyModel.FromSettings(settings));
     }
 
@@ -101,7 +91,7 @@ public sealed class InventoryController : BaseAuthorizedController
 
         try
         {
-            var result = await _mediator.Send(new UpdateInventoryCostingPolicyCommand
+            var result = await mediator.Send(new UpdateInventoryCostingPolicyCommand
             {
                 CostingMethod = (int)model.CostingMethod,
                 ValuationScope = (int)model.ValuationScope,
@@ -131,7 +121,7 @@ public sealed class InventoryController : BaseAuthorizedController
     {
         try
         {
-            var result = await _mediator.Send(new RebuildInventoryCostingCommand
+            var result = await mediator.Send(new RebuildInventoryCostingCommand
             {
                 CostingMethod = (int)model.CostingMethod,
                 ValuationScope = (int)model.ValuationScope
@@ -158,19 +148,18 @@ public sealed class InventoryController : BaseAuthorizedController
     public async Task<IActionResult> SetStockLevels(SetStockLevelsModel model)
     {
         if (!ModelState.IsValid)
-        {
-            var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-            return Json(new { success = false, errorMessage = errors });
-        }
+            return this.JsonError(GetErrorMessage());
 
-        var result = await _mediator.Send(new SetStockLevelsCommand
+        var result = await mediator.Send(new SetStockLevelsCommand
         {
             Id = model.Id,
             ReorderLevel = model.ReorderLevel,
             MaxStockLevel = model.MaxStockLevel
         });
+        if (result.Success)
+            return this.JsonOk(message: Localizer["Msg.SaveSuccess"]);
 
-        return Json(new { success = result.Success, errorMessage = result.ErrorMessage });
+        return this.JsonError(result.ErrorMessage!);
     }
 
     private static InventoryStockListModel.CostHistoryItemModel MapCostHistory(InventoryCostHistoryAppDto item)

@@ -5,6 +5,7 @@ import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
+import CustomerQuickCreateController from '/modules/CustomerController.js';
 
 class Customer {
     constructor({ id, name, phone, address, kind, isSystem }) {
@@ -492,15 +493,20 @@ export default class OrderController {
     }
 
     #bindQuickCreateForms() {
-        const quickCustomerModalEl = document.getElementById('quickCustomerModal');
-        const quickProductModalEl = document.getElementById('quickProductModal');
-        const quickCustomerModal = quickCustomerModalEl ? bootstrap.Modal.getOrCreateInstance(quickCustomerModalEl) : null;
-        const quickProductModal = quickProductModalEl ? bootstrap.Modal.getOrCreateInstance(quickProductModalEl) : null;
-
+        //customer quick create
         document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
-            button.addEventListener('click', () => quickCustomerModal?.show());
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                const createdCustomer = await new CustomerQuickCreateController().getCreatedCustomer();
+                if (createdCustomer)
+                    this.#customerPicker.selectCustomer(createdCustomer);
+                button.disabled = false;
+            });
         });
 
+        //product quick create
+        const quickProductModalEl = document.getElementById('quickProductModal');
+        const quickProductModal = quickProductModalEl ? bootstrap.Modal.getOrCreateInstance(quickProductModalEl) : null;
         document.querySelectorAll('[data-open-quick-product]').forEach(button => {
             button.addEventListener('click', () => {
                 const addProductModalEl = document.getElementById('addProductModal');
@@ -510,37 +516,6 @@ export default class OrderController {
                 quickProductModal?.show();
             });
         });
-
-        document.getElementById('quickCreateCustomerForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-
-            if (!$(form).valid())
-                return;
-
-            const submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-
-            try {
-                const result = await apiPost(form.action, new FormData(form));
-                if (!result.success) {
-                    if (result.message) {
-                        toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
-                    }
-                    return;
-                }
-
-                this.#customerPicker.selectCustomer(new Customer(result.customer));
-                form.reset();
-                quickCustomerModal?.hide();
-                toast('Thành công', result.message || 'Đã tạo khách hàng.', 'success');
-            } catch {
-                toast('Lỗi', 'Có lỗi xảy ra khi tạo khách hàng.', 'error');
-            } finally {
-                submitButton.disabled = false;
-            }
-        });
-
         document.getElementById('quickCreateProductForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.currentTarget;

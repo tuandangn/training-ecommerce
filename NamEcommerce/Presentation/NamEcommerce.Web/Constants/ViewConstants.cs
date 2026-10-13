@@ -17,5 +17,6 @@ public static class ViewConstants
     public const string CurrencyDisplayFormat = $"#,##0.## {DefaultCurrencySymbol}";
     public const string DefaultDateFormat = "dd/MM/yyyy";
     public const string DefaultDateTimeFormat = "dd/MM/yyyy hh:mm";
-    public const string DefaultCurrencySymbol = "đ";
+    public const string DateTimeFormat = "dd/MM/yyyy HH:mm";
+    public const string DefaultCurrencySymbol = "\u20ab";
 }

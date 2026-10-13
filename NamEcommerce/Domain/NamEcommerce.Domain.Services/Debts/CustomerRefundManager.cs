@@ -22,7 +22,8 @@ public sealed class CustomerRefundManager(
     private Task<string> GenerateCodeAsync()
     {
         var prefix = $"PC-KH-{DateTime.UtcNow:yyMM}";
-        return entityCodeGenerator.NextAsync(prefix, () => refundReader.SecuredDataSource.CountAsync(r => r.Code.StartsWith(prefix)));
+        return entityCodeGenerator.NextAsync(prefix, () => refundReader.GetDataSource(new() { IncludeDeleted = true })
+            .CountAsync(r => r.Code.StartsWith(prefix)));
     }
 
     public async Task<CustomerRefundDto> CreateAsync(CreateCustomerRefundDto dto)
@@ -93,8 +94,8 @@ public sealed class CustomerRefundManager(
     }
 
     public async Task<IPagedDataDto<CustomerRefundDto>> GetListAsync(
-        Guid? customerId = null, int? status = null, string? keywords = null,
-        int pageIndex = 0, int pageSize = 15)
+        int pageIndex, int pageSize, Guid? customerId = null,
+        int? status = null, string? keywords = null)
     {
         var query = refundReader.DataSource;
 
@@ -109,13 +110,18 @@ public sealed class CustomerRefundManager(
 
         query = query.OrderByDescending(r => r.CreatedOnUtc);
 
-        var total = await query.CountAsync().ConfigureAwait(false);
+        int? totalCount = pageIndex == 0 && pageSize == int.MaxValue
+            ? null : await query.CountAsync().ConfigureAwait(false);
+
+        if (totalCount.HasValue && totalCount == 0)
+            return PagedDataDto.Create(new List<CustomerRefundDto>(), pageIndex, pageSize, 0);
+
         var items = (await query.Skip(pageIndex * pageSize).Take(pageSize)
             .ToListAsync().ConfigureAwait(false))
             .Select(MapToDto)
             .ToList();
 
-        return PagedDataDto.Create(items, pageIndex, pageSize, total);
+        return PagedDataDto.Create(items, pageIndex, pageSize, totalCount);
     }
 
     private static CustomerRefundDto MapToDto(CustomerRefund r) => new()

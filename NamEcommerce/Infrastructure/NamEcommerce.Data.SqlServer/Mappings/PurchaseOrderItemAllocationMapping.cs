@@ -27,14 +27,13 @@ public sealed class PurchaseOrderItemAllocationMapping : IEntityTypeConfiguratio
                           .IsRequired();
         });
 
-        builder.Property(allocation => allocation.AllocatedQuantity).HasColumnType("decimal(18,2)").IsRequired();
-        builder.Property(allocation => allocation.ReceivedQuantity).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
-        builder.Property(allocation => allocation.Status).IsRequired().HasConversion<int>();
+        builder.Property(allocation => allocation.AllocatedQuantity).HasColumnType("decimal(18,2)");
+        builder.Property(allocation => allocation.ReceivedQuantity).HasColumnType("decimal(18,2)");
+
         builder.Property(allocation => allocation.IsDirectShip).IsRequired().HasDefaultValue(false);
-        builder.Property(allocation => allocation.DirectShipAddress).HasMaxLength(500).IsRequired(false);
-        builder.Property(allocation => allocation.DirectShipContactName).HasMaxLength(200).IsRequired(false);
-        builder.Property(allocation => allocation.DirectShipContactPhone).HasMaxLength(50).IsRequired(false);
+        builder.Property(allocation => allocation.DirectShipAddress).HasMaxLength(500);
+        builder.Property(allocation => allocation.DirectShipContactName).HasMaxLength(200);
+        builder.Property(allocation => allocation.DirectShipContactPhone).HasMaxLength(50);
         builder.Property(allocation => allocation.DirectShipPriority).IsRequired().HasDefaultValue(0);
-        builder.Property(allocation => allocation.CreatedOnUtc).IsRequired();
     }
 }

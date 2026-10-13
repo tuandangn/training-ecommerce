@@ -40,13 +40,15 @@ async function request(method, url, body, options) {
         method: method,
         headers: headers,
         body: method === 'GET' || method === 'HEAD' ? undefined : payload,
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: opts.signal
     });
 
     const contentType = response.headers.get('Content-Type') || '';
     const isJson = contentType.indexOf('application/json') >= 0;
 
     let parsed = null;
+
     if (isJson) {
         try { parsed = await response.json(); } catch (_) { parsed = null; }
     }
@@ -66,10 +68,13 @@ async function request(method, url, body, options) {
         return parsed;  // already in JsonNotificationResult shape
     }
 
+    if (!parsed && method === 'GET')
+        return await response.text();
+
     return { success: response.ok, data: parsed, status: response.status };
 }
 
-export const apiGet    = (url, options)        => request('GET',    url, null, options);
-export const apiPost   = (url, body, options)  => request('POST',   url, body, options);
-export const apiPut    = (url, body, options)  => request('PUT',    url, body, options);
-export const apiDelete = (url, body, options)  => request('DELETE', url, body, options);
+export const apiGet = (url, options) => request('GET', url, null, options);
+export const apiPost = (url, body, options) => request('POST', url, body, options);
+export const apiPut = (url, body, options) => request('PUT', url, body, options);
+export const apiDelete = (url, body, options) => request('DELETE', url, body, options);

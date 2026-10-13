@@ -38,6 +38,7 @@ public sealed record OrderDetailsModel
     public bool CanCancelOrder { get; set; }
     public bool CanDeleteOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
+    public bool CanAllowUnpaid { get; init; }
 
     public bool PaymentRequired { get; init; }
     public bool PayOffRequired { get; init; }

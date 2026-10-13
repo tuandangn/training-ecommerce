@@ -32,8 +32,8 @@ public sealed record GoodsReceiptItem : AppEntity
     internal string? WarehouseName { get; private set; }
 
     // PRE-4b: Thuế GTGT đầu vào (TK 133)
-    public decimal? TaxRate { get; internal set; }
-    public decimal TaxAmount { get; internal set; }
+    public decimal? TaxRate { get; private set; }
+    public decimal TaxAmount { get; private set; }
 
     public decimal Quantity
     {
@@ -47,6 +47,7 @@ public sealed record GoodsReceiptItem : AppEntity
         }
     }
     public decimal? UnitCost { get; private set; }
+
     public Guid? SourceDeliveryNoteItemId { get; internal set; }
 
     #region Methods
@@ -59,6 +60,13 @@ public sealed record GoodsReceiptItem : AppEntity
             throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.UnitCostCannotBeNegative");
 
         UnitCost = unitCost;
+    }
+
+    internal void SetTaxRate(decimal taxRate)
+    {
+        TaxRate = taxRate;
+        if (UnitCost.HasValue)
+            TaxAmount = Quantity * UnitCost.Value * taxRate;
     }
 
     internal GoodsReceiptItem CopyWithQuantity(decimal quantity)

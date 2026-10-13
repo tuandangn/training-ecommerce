@@ -1,6 +1,5 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
@@ -11,6 +10,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace NamEcommerce.Application.Services.GoodsReceipts;
 
@@ -142,14 +142,15 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
                 WarehouseId = item.WarehouseId,
                 Quantity = item.Quantity,
                 UnitCost = item.UnitCost
-            }).ToList()
+            }).ToList(),
+            TaxRate = dto.TaxRate
         };
         var result = await _goodsReceiptManager.CreateGoodsReceiptAsync(createDto).ConfigureAwait(false);
 
         return new CreateGoodsReceiptResultAppDto
         {
             Success = true,
-            CreatedId = result.CreatedId
+            CreatedId = result.CreatedId,
         };
     }
 
@@ -209,12 +210,10 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         if (goodsReceipt is null)
             return (false, "Error.GoodsReceipt.IsNotFound");
 
-        var deleteDto = new DeleteGoodsReceiptDto(id)
-        {
-            ReceivedOnUtc = goodsReceipt.ReceivedOnUtc,
-            PictureIds = goodsReceipt.PictureIds
-        };
+        //if (goodsReceipt.PurchaseOrderId.HasValue)
+        //    return (false, "Error.GoodsReceipt.CannotDeleteWhenHasPurchaseOrder");
 
+        var deleteDto = new DeleteGoodsReceiptDto(id);
         await _goodsReceiptManager.DeleteGoodsReceiptAsync(deleteDto).ConfigureAwait(false);
 
         return (true, null);
@@ -289,31 +288,11 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         };
     }
 
-    public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto)
-    {
-        try
-        {
-            return await _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
-    }
+    public Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto)
+        => _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto);
 
-    public async Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
-    {
-        try
-        {
-            return await _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            return CommonActionResultDto.CreateError(ex.Message);
-        }
-    }
+    public Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
+        => _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto);
 
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptAppDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
     {

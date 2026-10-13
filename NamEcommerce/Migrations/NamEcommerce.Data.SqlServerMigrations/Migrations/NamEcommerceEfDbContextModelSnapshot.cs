@@ -1715,6 +1715,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime>("PaidOnUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("PaymentIntentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
 
@@ -2007,6 +2010,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("DueDateUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("GoodsReceiptCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("GoodsReceiptId")
                         .HasColumnType("uniqueidentifier");
@@ -2518,8 +2524,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "CustomerInfo", "NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote.CustomerInfo#CustomerInfo", b1 =>
                         {
-                            b1.IsRequired();
-
                             b1.Property<string>("Address")
                                 .IsRequired()
                                 .HasMaxLength(500)
@@ -3015,14 +3019,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("RecordedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("SourceCustomerReturnId")
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid?>("ReferenceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("SourceOrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("SourceVendorReturnId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ReferenceType")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("TaxAmount")
                         .ValueGeneratedOnAdd()
@@ -3039,17 +3044,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SourceCustomerReturnId")
-                        .IsUnique()
-                        .HasFilter("[SourceCustomerReturnId] IS NOT NULL");
-
-                    b.HasIndex("SourceOrderId");
-
-                    b.HasIndex("SourceVendorReturnId")
-                        .IsUnique()
-                        .HasFilter("[SourceVendorReturnId] IS NOT NULL");
-
-                    b.ToTable("Expenses", "tbl");
+                    b.ToTable("Expense", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.ExpenseBudget", b =>
@@ -4374,6 +4369,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
@@ -4718,9 +4716,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasDefaultValue(false);
 
                     b.Property<decimal>("ReceivedQuantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m);
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -5653,7 +5649,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasOne("NamEcommerce.Domain.Entities.Orders.OrderItem", null)
                         .WithMany()
                         .HasForeignKey("OrderItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

@@ -36,7 +36,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             .ToList();
         if (itemsNeedInfo.Count > 0)
         {
-            var ids = itemsNeedInfo.Select(i => i.ProductId!.Value).Distinct();
+            var ids = itemsNeedInfo.Select(i => i.ProductId!.Value).Distinct().ToList();
             var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = ids })
                 .ConfigureAwait(false);
 
@@ -108,7 +108,6 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
-        // Tổng số lượng đã trả NCC (Confirmed) — group theo GoodsReceiptItemId.
         var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByGoodsReceiptQuery
         {
             GoodsReceiptId = id
@@ -130,6 +129,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
                 PendingReturnQuantity = summary?.PendingQuantity ?? 0m
             });
         }
+        model.HasReturns = returnedQuantities.Count > 0;
 
         return model;
     }

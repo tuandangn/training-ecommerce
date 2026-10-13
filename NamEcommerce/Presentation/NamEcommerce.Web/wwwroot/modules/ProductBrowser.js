@@ -258,7 +258,6 @@ export default class ProductBrowser {
                     vendorInfoHtml = `<div class="small text-muted"><i class="bi bi-truck me-1"></i>${p.vendorCount} NCC</div>`;
                 }
             }
-
             let qtyInfoHtml = `<span class="text-success fw-medium d-block">
                 <i class="bi bi-boxes text-muted"></i>
                 Tồn: ${DecimalFields.formatQuantity(p.onHandQty, p.quantityDecimalPlaces)}${p.unitMeasurement ? ' ' + p.unitMeasurement : ''}

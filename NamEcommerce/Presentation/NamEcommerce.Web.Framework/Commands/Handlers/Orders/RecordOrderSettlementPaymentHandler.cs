@@ -27,6 +27,9 @@ public sealed class RecordOrderSettlementPaymentHandler(
         if (order is null)
             return new CommonActionResultModel { Success = false, ErrorMessage = "Error.OrderIsNotFound" };
 
+        if (order.PayOffRequired && request.Amount != Math.Max(0, order.TotalAmount - order.PaidAmount))
+            return new CommonActionResultModel { Success = false, ErrorMessage = "Error.OrderPayoffRequired" };
+
         var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
         await customerDebtAppService.RecordPaymentAsync(new CreateCustomerPaymentAppDto
         {
@@ -72,6 +75,9 @@ public sealed class RecordOrderSettlementQrPaymentHandler(
         var receivingAccount = await receivingAccountResolver.ResolveAsync().ConfigureAwait(false);
         if (receivingAccount?.BankAccountId is null)
             return new CommonActionResultModel { Success = false, ErrorMessage = "Error.BankTransferAccountNotConfigured" };
+
+        if (order.PayOffRequired && intent.Amount != Math.Max(0, order.TotalAmount - order.PaidAmount))
+            return new CommonActionResultModel { Success = false, ErrorMessage = "Error.OrderPayoffRequired" };
 
         var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
         var payment = await customerDebtAppService.RecordPaymentAsync(new CreateCustomerPaymentAppDto

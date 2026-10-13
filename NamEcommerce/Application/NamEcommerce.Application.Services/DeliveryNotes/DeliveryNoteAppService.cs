@@ -481,26 +481,19 @@ public sealed class DeliveryNoteAppService(
     public async Task<CommonActionResultDto> CompleteApprovedSettlementAsync(
         Guid id, IReadOnlyList<Guid> pictureIds, DeliveryCompletionMetadataAppDto? completionMetadata)
     {
-        try
-        {
-            await deliveryNoteManager.CompleteApprovedSettlementAsync(id, pictureIds, completionMetadata is null
-                ? null
-                : new DeliveryCompletionMetadataDto
-                {
-                    Latitude = completionMetadata.Latitude,
-                    Longitude = completionMetadata.Longitude,
-                    LocationAddress = completionMetadata.LocationAddress,
-                    Note = completionMetadata.Note,
-                    Source = completionMetadata.Source,
-                    IdempotencyKey = completionMetadata.IdempotencyKey
-                }).ConfigureAwait(false);
+        await deliveryNoteManager.CompleteApprovedSettlementAsync(id, pictureIds, completionMetadata is null
+            ? null
+            : new DeliveryCompletionMetadataDto
+            {
+                Latitude = completionMetadata.Latitude,
+                Longitude = completionMetadata.Longitude,
+                LocationAddress = completionMetadata.LocationAddress,
+                Note = completionMetadata.Note,
+                Source = completionMetadata.Source,
+                IdempotencyKey = completionMetadata.IdempotencyKey
+            }).ConfigureAwait(false);
 
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
+        return CommonActionResultDto.CreateSuccess();
     }
 
     private static DeliveryAcceptanceDto? MapAcceptance(DeliveryAcceptanceAppDto? acceptance)
@@ -553,9 +546,6 @@ public sealed class DeliveryNoteAppService(
 
     public async Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId, bool includeCancelled = false)
     {
-        // For simplicity, we use GetListAsync and filter it down.
-        // In a real app we might add a specific domain query.
-        // Assuming page 0 to MAX gets enough for a single order's notes.
         var paged = await deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
         return paged.Where(d => d.OrderId == orderId)
             .Where(d => includeCancelled || d.Status != DeliveryNoteStatus.Cancelled)

@@ -8,6 +8,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Models\Media\**" />
+	  <Content Remove="Models\Media\**" />
+	  <EmbeddedResource Remove="Models\Media\**" />
+	  <None Remove="Models\Media\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
 		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
@@ -34,7 +41,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Models\Media\" />
 		<Folder Include="Services\CustomerPortal\" />
 	</ItemGroup>
 

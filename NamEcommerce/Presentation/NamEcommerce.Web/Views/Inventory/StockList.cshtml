@@ -143,7 +143,7 @@
                                                 }
                                                 <a class="btn btn-outline-primary btn-sm rounded-pill px-3"
                                                    asp-action="ReservationLedger"
-                                                   asp-route-productId="@item.ProductId"
+                                                   asp-route-id="@item.ProductId"
                                                    title="Lịch sử giữ hàng">
                                                     <i class="bi bi-list-check" aria-hidden="true"></i>
                                                 </a>
@@ -212,7 +212,7 @@
                                             {
                                                 <a class="fw-semibold text-primary text-decoration-none"
                                                    asp-action="ReservationLedger"
-                                                   asp-route-productId="@item.ProductId"
+                                                   asp-route-id="@item.ProductId"
                                                    title="Xem lịch sử giữ hàng của @item.ProductName">
                                                     @item.TotalReservedByOrder.DisplayQuantity()
                                                 </a>
@@ -269,6 +269,7 @@
                                                         data-warehouse-name="@item.WarehouseName"
                                                         data-reorder-level="@item.ReorderLevel"
                                                         data-max-stock-level="@item.MaxStockLevel"
+                                                        data-quantity-decimal-places="@item.QuantityDecimalPlaces"
                                                         title="Cấu hình mức tồn">
                                                     <i class="bi bi-sliders" aria-hidden="true"></i>
                                                 </button>
@@ -428,7 +429,7 @@
                                                 @if (item.TotalReservedByOrder > 0)
                                                 {
                                                     <a class="fw-semibold fs-5 text-primary text-decoration-none" title="Xem lịch sử giữ hàng của @item.ProductName"
-                                                       asp-action="ReservationLedger" asp-route-productId="@item.ProductId">
+                                                       asp-action="ReservationLedger" asp-route-id="@item.ProductId">
                                                         @item.TotalReservedByOrder.DisplayQuantity()
                                                     </a>
                                                 }
@@ -458,7 +459,8 @@
                                                     <i class="bi bi-clock-history"></i>
                                                 </button>
                                             }
-                                            <a class="btn btn-outline-primary btn-sm border-0 px-3" asp-action="ReservationLedger" asp-route-productId="@item.ProductId" title="Lịch sử giữ hàng">
+                                            <a class="btn btn-outline-primary btn-sm border-0 px-3" asp-action="ReservationLedger" 
+                                                asp-route-id="@item.ProductId" title="Lịch sử giữ hàng">
                                                 <i class="bi bi-list-check"></i>
                                             </a>
                                         </div>
@@ -520,16 +522,23 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label for="setStockLevels-reorderLevel" class="form-label">Mức cảnh báo</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-reorderLevel" name="ReorderLevel" required inputmode="numeric"/>
+                            <input class="form-control" id="setStockLevels-reorderLevel" name="ReorderLevel" inputmode="numeric"
+                                data-decimal="quantity" data-val="true" placeholder="Mức cảnh báo"
+                                data-val-range-min="0" data-val-range="Mức cảnh báo phải lớn hơn hoặc bằng 0"
+                                   data-val-required="Vui lòng nhập mức cảnh báo" />
+                            <span class="small text-danger" data-valmsg-for="ReorderLevel" data-valmsg-replace="true"></span>
                             <div class="form-text">Hàng sẽ vào danh sách cảnh báo nếu tồn <= mức này.</div>
                         </div>
                         <div class="col-6">
                             <label for="setStockLevels-maxStockLevel" class="form-label">Mức tối đa</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-maxStockLevel" name="MaxStockLevel" required inputmode="numeric"/>
+                            <input class="form-control" id="setStockLevels-maxStockLevel" name="MaxStockLevel" inputmode="numeric"
+                                data-decimal="quantity" data-val="true" placeholder="Mức tối đa"
+                                data-val-range-min="0" data-val-range="Mức tối đa phải lớn hơn hoặc bằng 0"
+                                   data-val-required="Vui lòng nhập mức tối đa" />
+                            <span class="small text-danger" data-valmsg-for="MaxStockLevel" data-valmsg-replace="true"></span>
                             <div class="form-text">Để 0 nếu không giới hạn.</div>
                         </div>
                     </div>
-                    <div id="setStockLevels-error" class="alert alert-danger mt-3 d-none small mb-0"></div>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
@@ -544,7 +553,10 @@
 </div>
 
 @section Scripts {
-    <script>
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module" defer>
+        import { apiPost } from '/modules/ajax-helper.js';
+
         (function () {
             document.querySelectorAll('.btn-cost-history-panel').forEach(btn => {
                 btn.addEventListener('click', function () {
@@ -570,7 +582,6 @@
             const warehouseNameEl = document.getElementById('setStockLevels-warehouseName');
             const reorderInput = document.getElementById('setStockLevels-reorderLevel');
             const maxInput = document.getElementById('setStockLevels-maxStockLevel');
-            const errorEl = document.getElementById('setStockLevels-error');
             const submitBtn = document.getElementById('setStockLevels-submit');
             const spinner = document.getElementById('setStockLevels-spinner');
 
@@ -579,41 +590,40 @@
                     idInput.value = this.dataset.id;
                     productNameEl.textContent = this.dataset.productName;
                     warehouseNameEl.textContent = this.dataset.warehouseName;
-                    reorderInput.value = this.dataset.reorderLevel || '0';
-                    maxInput.value = this.dataset.maxStockLevel || '0';
-                    errorEl.classList.add('d-none');
-                    errorEl.textContent = '';
+
+                    const decimalPlaces = parseInt(this.dataset.quantityDecimalPlaces || '0', 10);
+                    reorderInput.setAttribute('data-decimals', decimalPlaces);
+                    maxInput.setAttribute('data-decimals', decimalPlaces);
+                    DecimalFields.autoWrap(modalEl);
+
+                    reorderInput.value = DecimalFields.formatQuantity(this.dataset.reorderLevel || '0', decimalPlaces);
+                    maxInput.value = DecimalFields.formatQuantity(this.dataset.maxStockLevel || '0', decimalPlaces);
+
                     modal.show();
+                    reparseForm(form);
                 });
             });
 
             form.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                errorEl.classList.add('d-none');
+                if(!isFormValid(form))
+                    return;
+
                 submitBtn.disabled = true;
                 spinner.classList.remove('d-none');
 
+                showPageLoading();
+
                 const formData = new FormData(form);
-                try {
-                    const response = await fetch('@Url.Action("SetStockLevels", "Inventory")', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        modal.hide();
-                        window.location.reload();
-                    } else {
-                        errorEl.textContent = result.errorMessage || 'Có lỗi xảy ra.';
-                        errorEl.classList.remove('d-none');
-                    }
-                } catch (err) {
-                    errorEl.textContent = 'Lỗi kết nối tới máy chủ.';
-                    errorEl.classList.remove('d-none');
-                } finally {
-                    submitBtn.disabled = false;
-                    spinner.classList.add('d-none');
+                const result = await apiPost('@Url.Action("SetStockLevels", "Inventory")', formData);
+
+                if (result.success) {
+                    window.location.reload();
+                    return;
                 }
+                hidePageLoading();
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
             });
         })();
     </script>

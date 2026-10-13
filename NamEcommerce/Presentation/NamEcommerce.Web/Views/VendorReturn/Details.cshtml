@@ -7,12 +7,12 @@
     var status = (VendorReturnStatus)Model.Status;
     var (badgeClass, badgeText) = status switch
     {
-        VendorReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
-        VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
-        VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
-        VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
-        VendorReturnStatus.Reversed => ("bg-dark", "Đã đảo ngược"),
-        _ => ("bg-secondary", "—")
+        VendorReturnStatus.Draft => ("bg-secondary text-light", "Bản nháp"),
+        VendorReturnStatus.Inspecting => ("bg-warning text-light", "Đang kiểm tra"),
+        VendorReturnStatus.Confirmed => ("bg-success text-light", "Đã xác nhận"),
+        VendorReturnStatus.Cancelled => ("bg-danger text-light", "Đã huỷ"),
+        VendorReturnStatus.Reversed => ("bg-dark text-light", "Đã đảo ngược"),
+        _ => ("bg-secondary text-light", "—")
     };
 }
 @Html.AntiForgeryToken()
@@ -46,57 +46,52 @@
                         @Model.Items.Count mặt hàng
                     </span>
                 </h5>
-                <span class="fw-semibold text-success">@Model.NetRecoveryAmount.DisplayCurrency()</span>
             </div>
             <div class="content-card-body-flush">
                 <div class="table-responsive">
                     <table class="table data-table mb-0">
                         <thead>
                             <tr>
-                                <th class="ps-4">Hàng hóa</th>
-                                <th class="text-end ui-w-110">SL yêu cầu</th>
-                                <th class="text-end ui-w-110">SL chấp nhận</th>
-                                <th class="text-end ui-w-120">Giá vốn gốc</th>
-                                <th class="text-end ui-w-120">Giá trả NCC</th>
-                                <th class="text-end pe-4 ui-w-130">Thành tiền</th>
+                                <th class="ps-3">Hàng hóa</th>
+                                <th class="text-end">SL yêu cầu</th>
+                                <th class="text-end">SL chấp nhận</th>
+                                <th class="text-end">Giá vốn gốc</th>
+                                <th class="text-end">Giá trả NCC</th>
+                                <th class="text-end pe-3">Thành tiền</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model.Items)
                             {
                                 <tr class="align-middle">
-                                    <td class="ps-4">
+                                    <td class="ps-3">
                                         <div class="fw-medium">@item.ProductName</div>
-                                        @if (item.GoodsReceiptItemId.HasValue)
-                                        {
-                                            <div class="text-muted ui-fs-075"><i class="bi bi-link-45deg me-1"></i>Từ phiếu nhập</div>
-                                        }
                                     </td>
                                     <td class="text-end text-muted">@item.RequestedQuantity.DisplayQuantity()</td>
                                     <td class="text-end fw-medium">@item.AcceptedQuantity.DisplayQuantity()</td>
                                     <td class="text-end text-muted small">
-                                        @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
+                                        @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrencyWithSymbol() : "—")
                                     </td>
-                                    <td class="text-end text-muted">@item.ReturnUnitCost.DisplayCurrency()</td>
-                                    <td class="text-end pe-4 fw-semibold">@item.AcceptedTotal.DisplayCurrency()</td>
+                                    <td class="text-end text-muted">@item.ReturnUnitCost.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end pe-3 fw-semibold">@item.AcceptedTotal.DisplayCurrencyWithSymbol()</td>
                                 </tr>
                             }
                         </tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị trả</td>
-                                <td class="text-end pe-4 fw-semibold text-dark">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrency()</td>
+                                <td class="text-end pe-4 fw-semibold text-dark">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrencyWithSymbol()</td>
                             </tr>
                             @if (Model.AdditionalCost > 0)
                             {
                                 <tr>
                                     <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Chi phí phát sinh</td>
-                                    <td class="text-end pe-4 fw-medium text-danger">−@Model.AdditionalCost.DisplayCurrency()</td>
+                                    <td class="text-end pe-4 fw-medium text-danger">−@Model.AdditionalCost.DisplayCurrencyWithSymbol()</td>
                                 </tr>
                             }
                             <tr class="table-success">
                                 <td colspan="5" class="ps-4 text-end small fw-bold pe-3">Tổng thu hồi từ NCC</td>
-                                <td class="text-end pe-4 fw-bold text-success">@Model.NetRecoveryAmount.DisplayCurrency()</td>
+                                <td class="text-end pe-4 fw-bold text-success">@Model.NetRecoveryAmount.DisplayCurrencyWithSymbol()</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -109,7 +104,7 @@
                 <div class="d-flex gap-2">
                     @if (status == VendorReturnStatus.Draft)
                     {
-                        <button type="button" class="btn btn-sm btn-outline-warning btn-move-inspecting" data-id="@Model.Id">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-move-inspecting" data-id="@Model.Id">
                             <i class="bi bi-search me-1"></i>Chuyển sang kiểm tra
                         </button>
                     }
@@ -146,7 +141,6 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content vendorreturn-modal-content">
                     <form asp-action="Reverse" asp-route-id="@Model.Id" method="post">
-                        @Html.AntiForgeryToken()
                         <div class="modal-header border-0 pb-0">
                             <h5 class="modal-title fw-bold">
                                 <i class="bi bi-arrow-counterclockwise me-2 text-danger"></i>
@@ -312,17 +306,16 @@
     </div>
 </div>
 
-<!-- Modal: Chon kho xac nhan -->
 <div class="modal fade" id="confirmReturnModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vendorreturn-modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Xac nhan tra hang NCC</h5>
+                <h5 class="modal-title fw-bold">Xác nhận trả hàng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body py-3">
                 <div class="mb-0">
-                    <label class="form-label small fw-medium text-muted" for="confirmWarehouseId">Kho xuat hang tra <span class="text-danger">*</span></label>
+                    <label class="form-label small fw-medium text-muted" for="confirmWarehouseId">Kho xuất hàng</label>
                     <select class="form-select" id="confirmWarehouseId">
                         <option value="">(Chon kho)</option>
                         @foreach (var warehouse in warehouses)
@@ -333,9 +326,9 @@
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huy</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnConfirmReturn" class="btn btn-success">
-                    <i class="bi bi-check-circle me-1"></i>Xac nhan
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận
                 </button>
             </div>
         </div>
@@ -378,57 +371,70 @@
 
 @section Scripts {
     <script type="module">
-        import { toast } from "/modules/modals.js";
+        import { toast, confirm } from "/modules/modals.js";
+        import { apiPost } from "/modules/ajax-helper.js";
 
-        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
         const returnId = '@Model.Id';
 
         // ── Chuyển sang kiểm tra ────────────────────────────────────────────
         document.querySelector('.btn-move-inspecting')?.addEventListener('click', async () => {
-            if (!confirm('Xác nhận chuyển phiếu sang trạng thái Đang kiểm tra?')) return;
+            if (!await confirm('Chuyển sang kiểm tra', 'Xác nhận chuyển hàng hóa trả lại sang trạng thái kiểm tra?'))
+                return;
+            showPageLoading();
             const fd = new FormData();
             fd.append('id', returnId);
-            fd.append('__RequestVerificationToken', antiForgeryToken);
-            try {
-                const res = await fetch('@Url.Action("MoveToInspecting")', { method: 'POST', body: fd }).then(r => r.json());
-                if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+            const res = await apiPost('@Url.Action("MoveToInspecting")', fd);
+            if (res.success){
+                location.reload();
+                return;
+            }
+            hidePageLoading();
+            toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
         });
 
         // ── Xác nhận trả hàng ───────────────────────────────────────────────
         document.getElementById('btnConfirmReturn')?.addEventListener('click', async () => {
             const warehouseId = document.getElementById('confirmWarehouseId')?.value;
             if (!warehouseId) {
-                toast('Loi', 'Vui long chon kho xuat hang tra.', 'danger');
+                toast('Lỗi', 'Vui lòng chọn kho xuất hàng', 'danger');
                 return;
             }
-            if (!confirm('Xác nhận phiếu trả hàng NCC? Hệ thống sẽ tự động tạo phiếu xuất kho và giảm công nợ nhà cung cấp.')) return;
+            const modalElement = document.getElementById('confirmReturnModal');
+            modalElement.classList.add('d-none');
+            if (!await confirm('Xác nhận phiếu trả hàng NCC', 'Hệ thống sẽ tự động tạo phiếu xuất kho và giảm công nợ nhà cung cấp.')){
+                modalElement.classList.remove('d-none');
+                return;
+            }
+            showPageLoading();
+            bootstrap.Modal.getOrCreateInstance(modalElement).hide();
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('warehouseId', warehouseId);
-            fd.append('__RequestVerificationToken', antiForgeryToken);
-            try {
-                const res = await fetch('@Url.Action("Confirm")', { method: 'POST', body: fd }).then(r => r.json());
-                if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+            const res = await apiPost('@Url.Action("Confirm")', fd);
+            if (res.success){
+                location.reload();
+                return;
+            }
+            hidePageLoading();
+            toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
         });
 
         // ── Lưu thông tin ───────────────────────────────────────────────────
         document.getElementById('btnSaveInfo')?.addEventListener('click', async () => {
             const errEl = document.getElementById('editInfoError');
             errEl.classList.add('d-none');
+            showPageLoading();
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('returnDate', document.getElementById('editReturnDate').value);
             fd.append('note', document.getElementById('editNote').value);
-            fd.append('__RequestVerificationToken', antiForgeryToken);
-            try {
-                const res = await fetch('@Url.Action("Update")', { method: 'POST', body: fd }).then(r => r.json());
-                if (res.success) location.reload();
-                else { errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none'); }
-            } catch { errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.'; errEl.classList.remove('d-none'); }
+            const res = await apiPost('@Url.Action("Update")', fd);
+            if (res.success){
+                location.reload();
+                return;
+            }
+            hidePageLoading();
+            errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none');
         });
     </script>
 }

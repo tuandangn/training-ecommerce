@@ -24,6 +24,9 @@ public sealed record ProductDto(Guid Id) : BaseProductDto
 {
     public decimal CostPrice { get; set; }
     public decimal UnitPrice { get; set; }
+
+    public string? UnitMeasurement { get; set; }
+    public int? QuantityDecimalPlaces { get; set; }
 }
 
 [Serializable]

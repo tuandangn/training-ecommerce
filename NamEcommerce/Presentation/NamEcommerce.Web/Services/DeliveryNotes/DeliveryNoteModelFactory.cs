@@ -164,9 +164,9 @@ public sealed class DeliveryNoteModelFactory(
                 group => group.Key,
                 group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
 
-        var productIds = order.Items.Select(i => i.ProductId).Distinct();
-        var orderProducts = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
-        var decimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+        var productIds = order.Items.Select(i => i.ProductId).Distinct().ToList();
+        var products = await mediator.Send(new GetProductsByIdsQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(product => product.Id, product => product.QuantityDecimalPlaces);
 
         foreach (var orderItem in order.Items)
         {
@@ -232,8 +232,8 @@ public sealed class DeliveryNoteModelFactory(
         var availableWarehouses = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
-        var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct();
-        var products = await mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var productIds = deliveryNote.Items.Select(item => item.ProductId).Distinct().ToList();
+        var products = await mediator.Send(new GetProductsByIdsQuery { Ids = productIds }).ConfigureAwait(false);
         var decimalPlacesByProductId = products.ToDictionary(product => product.Id, product => product.QuantityDecimalPlaces);
 
         var retailWalkinCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
@@ -275,7 +275,7 @@ public sealed class DeliveryNoteModelFactory(
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
-            OrderDiscount = order.OrderDiscount ?? 0,
+            OrderDiscount = order?.OrderDiscount ?? 0,
             AppliedOrderDiscount = deliveryNote.AppliedOrderDiscount,
             AppliedPrepaidAmount = deliveryNote.AppliedOrderPrepaid,
             SettlementApproval = deliveryNote.SettlementApproval,

@@ -15,9 +15,11 @@ public interface IOrderManager : ICodeExistCheckingService
 
     Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto);
     Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto);
+    Task UpdateOrderCustomerKindAsync(UpdateOrderCustomerKindDto dto);
     Task DeleteOrderAsync(DeleteOrderDto dto);
 
     Task UpdateShippingAsync(UpdateShippingDto dto);
+    Task ProcessOrderWithoutPayment(Guid id);
     Task MarkOrderHasPayment(Guid orderId, decimal paidAmount, Guid? paymentIntentId);
     Task RequestDeliveryAsync(Guid orderId, Guid deliveryNoteId, DateTime requestedAtUtc);
 

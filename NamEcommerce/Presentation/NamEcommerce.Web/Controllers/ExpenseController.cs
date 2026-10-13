@@ -1,33 +1,36 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Application.Contracts.Dtos.Finance;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Finance;
 using NamEcommerce.Web.Contracts.Security;
+using NamEcommerce.Web.Models.Finances;
 
 namespace NamEcommerce.Web.Controllers;
 
-public class ExpenseController(IMediator mediator) : BaseAuthorizedController
+public class ExpenseController(IMediator mediator, AppConfig appConfig) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(List));
 
     [Authorize(Policy = SystemPermissions.Finance.ExpensesView)]
     public async Task<IActionResult> List(
-        int page = 1,
-        string? keywords = null,
-        DateTime? fromDate = null,
-        DateTime? toDate = null,
-        int? expenseType = null,
-        string? sortBy = null,
-        bool sortDesc = true)
+        int page, string? keywords = null,
+        DateTime? fromDate = null, DateTime? toDate = null,
+        int? expenseType = null, string? sortBy = null, bool sortDesc = true)
     {
+        var pageNumber = 1;
+        if (page > 0) pageNumber = page;
+        var pageSize = appConfig.DefaultPageSize;
+
         var model = await mediator.Send(new GetExpensesQuery
         {
-            Page = page,
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize,
             Keywords = keywords,
-            FromDate = fromDate,
-            ToDate = toDate,
+            FromDate = fromDate.HasValue ? new DateTime(fromDate.Value.Year, fromDate.Value.Month, fromDate.Value.Day, 0, 0, 0, 0) : null,
+            ToDate = toDate.HasValue ? new DateTime(toDate.Value.Year, toDate.Value.Month, toDate.Value.Day, 23, 59, 59, 999) : null,
             ExpenseType = expenseType,
             SortBy = sortBy,
             SortDesc = sortDesc
@@ -39,84 +42,140 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     [HttpGet]
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public IActionResult Create()
-        => View(new CreateExpenseAppDto { IncurredDate = DateTime.Today, ExpenseType = 5 });
+    {
+        var model = new CreateExpenseModel
+        {
+            IncurredDate = DateTime.Today,
+            ExpenseType = ExpenseType.General,
+            AvailableTaxRates = appConfig.TaxRates,
+        };
+        return View(model);
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
-    public async Task<IActionResult> Create(CreateExpenseAppDto dto)
+    public async Task<IActionResult> Create(CreateExpenseModel model)
     {
-        if (!ModelState.IsValid) return View(dto);
-
-        var (isValid, errorMessage) = dto.Validate();
-        if (!isValid)
-        {
-            AddLocalizedModelError(errorMessage);
-            return View(dto);
+        if (!ModelState.IsValid) {
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
         }
 
-        var result = await mediator.Send(new CreateExpenseCommand
+        if (model.ExpenseType == ExpenseType.AssetDisposal)
         {
-            Title = dto.Title,
-            Description = dto.Description,
-            Amount = dto.Amount,
-            ExpenseType = dto.ExpenseType,
-            IncurredDate = dto.IncurredDate
+            AddLocalizedModelError("Error.ExpenseTypeIsNotAllow");
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
+        }
+
+        if (model.TaxRate.HasValue && !appConfig.TaxRates.Contains(model.TaxRate.Value))
+        {
+            AddLocalizedModelError("Error.ExpenseTaxRateInvalid");
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
+        }
+
+        var result = await mediator.Send(new CreateGeneralExpenseCommand
+        {
+            Title = model.Title!,
+            Description = model.Description,
+            AmountWithoutTax = model.AmountWithoutTax,
+            TaxRate = model.TaxRate,
+            ExpenseType = (int)model.ExpenseType,
+            IncurredDate = model.IncurredDate
         });
 
-        if (result.Success) return RedirectToAction(nameof(List));
+        if (result.Success)
+        {
+            NotifyError("Msg.SaveSuccess");
+            return RedirectToAction(nameof(List));
+        }
 
         AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseCreateFailed");
-        return View(dto);
+        model.AvailableTaxRates = appConfig.TaxRates;
+        return View(model);
     }
 
     [HttpGet]
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var model = await mediator.Send(new GetExpenseByIdQuery(id));
-        if (model is null) return NotFound();
-
-        ViewData["IsSystemGenerated"] = model.IsSystemGenerated;
-        return View(new UpdateExpenseAppDto
+        var dto = await mediator.Send(new GetExpenseByIdQuery(id));
+        if (dto is null)
         {
-            Id = model.Id,
-            Title = model.Title,
-            Description = model.Description,
-            Amount = model.Amount,
-            ExpenseType = model.ExpenseType,
-            IncurredDate = model.IncurredDate
-        });
+            NotifyError("Error.ExpenseIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var model = new EditExpenseModel
+        {
+            Id = dto.Id,
+            Title = dto.Title,
+            Description = dto.Description,
+            AmountWithoutTax = dto.AmountWithoutTax,
+            TaxRate = dto.TaxRate,
+            ExpenseType = (ExpenseType)dto.ExpenseType,
+            IncurredDate = dto.IncurredDate,
+            IsSystemGenerated = dto.IsSystemGenerated,
+            AvailableTaxRates = appConfig.TaxRates
+        };
+        return View(model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
-    public async Task<IActionResult> Edit(UpdateExpenseAppDto dto)
+    public async Task<IActionResult> Edit(EditExpenseModel model)
     {
-        if (!ModelState.IsValid) return View(dto);
-
-        var (isValid, errorMessage) = dto.Validate();
-        if (!isValid)
+        if (!ModelState.IsValid)
         {
-            AddLocalizedModelError(errorMessage);
-            return View(dto);
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
+        }
+
+        var dto = await mediator.Send(new GetExpenseByIdQuery(model.Id));
+        if (dto is null)
+        {
+            NotifyError("Error.ExpenseIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        if (model.ExpenseType == ExpenseType.AssetDisposal && !dto.IsSystemGenerated)
+        {
+            AddLocalizedModelError("Error.ExpenseTypeIsNotAllow");
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
+        }
+
+
+        if (model.TaxRate.HasValue && !appConfig.TaxRates.Contains(model.TaxRate.Value) && model.TaxRate != dto.TaxRate)
+        {
+            AddLocalizedModelError("Error.ExpenseTaxRateInvalid");
+            model.AvailableTaxRates = appConfig.TaxRates;
+            return View(model);
         }
 
         var result = await mediator.Send(new UpdateExpenseCommand
         {
-            Id = dto.Id,
-            Title = dto.Title,
-            Description = dto.Description,
-            Amount = dto.Amount,
-            ExpenseType = dto.ExpenseType,
-            IncurredDate = dto.IncurredDate
+            Id = model.Id,
+            Title = model.Title!,
+            Description = model.Description,
+            AmountWithoutTax = model.AmountWithoutTax,
+            TaxRate = model.TaxRate,
+            ExpenseType = (int)model.ExpenseType,
+            IncurredDate = model.IncurredDate
         });
 
-        if (result.Success) return RedirectToAction(nameof(List));
+        if (result.Success)
+        {
+            NotifyError("Msg.SaveSuccess");
+            return RedirectToAction(nameof(List));
+        }
 
         AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseUpdateFailed");
-        return View(dto);
+        model.AvailableTaxRates = appConfig.TaxRates;
+        return View(model);
     }
 
     [HttpPost]
@@ -124,17 +183,30 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var expense = await mediator.Send(new GetExpenseByIdQuery(id));
+        if (expense is null)
+        {
+            NotifyError("Error.ExpenseIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+        if (expense.IsSystemGenerated)
+        {
+            NotifyError("Error.ExpenseCannotDeleted");
+            return RedirectToAction(nameof(List));
+        }
+
         await mediator.Send(new DeleteExpenseCommand(id));
+
+        NotifyError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
     [Authorize(Policy = SystemPermissions.Finance.ExpensesView)]
-    public async Task<IActionResult> Budgets(int? year, int? month)
+    public async Task<IActionResult> Budgets(int? month)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var model = await mediator.Send(new GetExpenseBudgetsQuery
         {
-            Year = year ?? now.Year,
             Month = month ?? now.Month
         });
 
@@ -148,9 +220,16 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     {
         var result = await mediator.Send(command);
         if (result.Success)
+        {
+            NotifyError("Msg.SaveSuccess");
             return RedirectToAction(nameof(Budgets), new { year = command.Year, month = command.Month });
+        }
 
-        AddLocalizedModelError(result.ErrorMessage ?? "Error.BudgetUpsertFailed");
-        return RedirectToAction(nameof(Budgets), new { year = command.Year, month = command.Month });
+        AddLocalizedModelError(result.ErrorMessage ?? "Msg.OperationFailed");
+        return RedirectToAction(nameof(Budgets), new
+        {
+            year = command.Year,
+            month = command.Month
+        });
     }
 }

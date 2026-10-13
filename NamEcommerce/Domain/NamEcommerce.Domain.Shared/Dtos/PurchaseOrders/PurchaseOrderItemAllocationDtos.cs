@@ -61,12 +61,13 @@ public sealed record EligibleOrderItemForAllocationDto
     public required string CustomerName { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
-    public int QuantityDecimalPlaces { get; init; }
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
-    public string? ShippingAddress { get; init; }
     public string? CustomerPhone { get; init; }
+    public string? ShippingContactName { get; init; }
+    public string? ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 }
 
 [Serializable]
@@ -80,7 +81,9 @@ public sealed record NonDirectShipAllocationDto
     public required decimal AllocatedQuantity { get; init; }
     public required decimal RemainingQuantity { get; init; }
     public string? CustomerPhone { get; init; }
+    public string? ShippingContactName { get; set; }
     public string? ShippingAddress { get; init; }
+    public string? ShippingPhoneNumber { get; init; }
 }
 
 [Serializable]

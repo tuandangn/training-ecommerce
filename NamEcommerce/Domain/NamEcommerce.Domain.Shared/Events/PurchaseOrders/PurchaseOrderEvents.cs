@@ -6,7 +6,7 @@ public sealed record PurchaseOrderCreated(
     Guid PurchaseOrderId,
     string Code,
     Guid VendorId,
-    Guid? WarehouseId) : DomainEvent;
+    Guid? WarehouseId) : DomainEvent, IReliableDomainEvent;
 
 public sealed record PurchaseOrderUpdated(Guid PurchaseOrderId) : DomainEvent;
 

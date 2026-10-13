@@ -18,6 +18,7 @@
     var hasAnyAllocations = allocationCount > 0;
     var receivingDocumentCount = Model.RelatedGoodsReceipts.Count + Model.RelatedVendorReturns.Count;
 }
+
 @functions {
     string BuildReceiptItemsHtml(IList<RelatedGoodsReceiptItemModel> items)
     {
@@ -94,6 +95,7 @@
         _ => "secondary"
     };
 }
+
 @section TitleSection {
     <h1 class="topbar-page-title">
         Đơn nhập
@@ -117,6 +119,11 @@
         </nav>
     </div>
 }
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/purchaseorder-details.css" asp-append-version="true" />
+}
+
 @await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
 
 <div class="order-workflow-layout">
@@ -130,6 +137,7 @@
         @await Html.PartialAsync("_PurchaseOrderWorkflowTimeline", Model)
     </aside>
 </div>
+
 @if (Model.Info.Status == (int)PurchaseOrderStatus.Receiving)
 {
     <div class="modal fade" id="closePartialModal" tabindex="-1" aria-hidden="true">
@@ -139,7 +147,7 @@
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-archive me-2 text-warning"></i>
-                            Đóng đơn dù chưa nhận hết
+                            Đóng đơn
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -158,7 +166,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-warning">
-                            <i class="bi bi-check-lg me-1"></i> Xác nhận đóng đơn
+                            <i class="bi bi-archive me-1"></i>Đóng đơn
                         </button>
                     </div>
                 </form>
@@ -166,6 +174,7 @@
         </div>
     </div>
 }
+
 @if (Model.Info.CanAddItems)
 {
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -239,53 +248,7 @@
                     <div class="modal-footer border-0 pt-0 pb-3">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="btnAddItem" class="btn btn-success d-none">
-                            <i class="bi bi-plus-lg me-1"></i>Thêm vào
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-}
-@if (Model.Info.CanAddItems)
-{
-    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content purchaseorder-modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Sửa dòng hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="editProductForm">
-                    <input type="hidden" id="editPurchaseOrderId" value="@Model.Info.Id" />
-                    <input type="hidden" id="editPurchaseOrderItemId" />
-                    <div class="modal-body py-3">
-                        <div class="alert alert-light border mb-3">
-                            <div class="small text-muted">Hàng hóa</div>
-                            <div class="fw-semibold" id="editProductName"></div>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label small fw-medium text-muted" for="editItemQuantity">Số lượng</label>
-                                <input id="editItemQuantity" class="form-control no-additional-element"
-                                       data-decimal="quantity" inputmode="decimal"/>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-medium text-muted" for="editItemUnitCost">Đơn giá</label>
-                                <input id="editItemUnitCost" class="form-control no-additional-element"
-                                       data-decimal="currency" inputmode="numeric"/>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="form-label small fw-medium text-muted" for="editItemNote">Ghi chú</label>
-                            <textarea id="editItemNote" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div id="editProductError" class="alert alert-danger d-none mt-3 mb-0"></div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
                         </button>
                     </div>
                 </form>
@@ -296,487 +259,191 @@
 
 @if (Model.Info.CanReceiveGoods)
 {
-    <div class="modal fade" id="receiveItemModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content purchaseorder-modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Nhập hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+    
+}
+
+<div class="modal fade" id="editDirectShipAddressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content purchaseorder-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Sửa địa chỉ giao</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="UpdateAddress" asp-controller="DirectShipDelivery" method="post">
+                <div class="modal-body py-4">
+                    <input type="hidden" id="editDsAllocationId" name="AllocationId" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsAddress">Địa chỉ giao</label>
+                        <input name="NewAddress" id="editDsAddress" class="form-control" data-val="true"
+                               data-val-required="Vui lòng nhập địa chỉ" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewAddress" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsContactPhone">Điện thoại</label>
+                        <input id="editDsContactPhone" name="NewContactPhone" type="text" class="form-control" inputmode="tel"
+                               data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
+                               data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewContactPhone" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="editDsContactName">Người nhận</label>
+                        <input id="editDsContactName" name="NewContactName" type="text" class="form-control"
+                               data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="NewContactName" data-valmsg-replace="true"></span>
+                    </div>
                 </div>
-                <form asp-action="Receive" method="post">
-                    <div class="modal-body py-4">
-                        <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
-                        <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
-                        <input type="hidden" name="QuantityDecimalPlaces" id="modalDecimalPlaces" value="0" />
-                        <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
-                        <input type="hidden" name="DirectShipOrderId" id="modalDsOrderId" value="" />
-                        <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
-                        <input type="hidden" name="DirectShipExistingAllocationId" id="modalDsExistingAllocationId" value="" />
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveDirectShipAddress">
+                        <i class="bi bi-check-lg me-1"></i>Xác nhận
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-                        <div class="alert alert-info border-0 mb-4">
-                            <div class="small fw-bold">
-                                Sản phẩm:
-                                <span id="modalItemName" class="fs-6 fw-bold text-dark">Tên sản phẩm</span>
-                            </div>
-                            <div class="small mt-1 mt-1 fst-italic">
-                                Còn lại cần nhập:
-                                <span id="modalItemRemaining" class="fw-bold">0</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Số lượng nhận</label>
-                            <input name="ReceivedQuantity" id="modalReceivedQty" inputmode="decimal" class="form-control" data-testid="po-receive-quantity" data-decimal="quantity" value="0" required />
-                            <div id="modalDistributionPreview" class="d-none mt-2 p-2 rounded border-start border-3 border-primary bg-light small">
-                                <div class="fw-semibold text-muted mb-1 text-uppercase ui-fs-07">Phân phối hàng nhận</div>
-                                <div id="modalDistributionDetails" class="d-flex flex-column gap-1"></div>
-                            </div>
-                        </div>
-
-                        <div id="oversupplyWarningPanel" class="alert alert-warning border-0 mt-0 mb-3 d-none">
-                            <div class="fw-bold mb-2 small">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                Số lượng nhận vượt quá số lượng đặt hàng. Chọn cách xử lý:
-                            </div>
-                            <div class="d-flex flex-column gap-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="oversupplyChoice" id="oversupplyAccept" value="AcceptToMainWarehouse" />
-                                    <label class="form-check-label small" for="oversupplyAccept">
-                                        <span class="fw-semibold">Nhập kho chính phần thừa</span>
-                                        <div class="text-muted">Phần thừa được nhập vào kho chính, không giao khách.</div>
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="oversupplyChoice" id="oversupplyReject" value="RejectOversupply" />
-                                    <label class="form-check-label small" for="oversupplyReject">
-                                        <span class="fw-semibold">Từ chối phần thừa</span>
-                                        <div class="text-muted">Chỉ ghi nhận đúng số lượng đặt, trả lại phần thừa cho NCC.</div>
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="oversupplyChoice" id="oversupplyCancel" value="Cancel" checked />
-                                    <label class="form-check-label small" for="oversupplyCancel">
-                                        <span class="fw-semibold">Hủy</span>
-                                        <div class="text-muted">Đóng modal, không lưu.</div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3" id="modalWarehouseSection">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Kho nhập hàng</label>
-                            <select name="WarehouseId" class="form-select" data-testid="po-receive-warehouse" required>
-                                @foreach (var option in Model.AvailableWarehouses.Options)
-                                {
-                                    <option value="@option.Id" selected="@(Model.Info.WarehouseId == option.Id)">@option.Name</option>
-                                }
-                            </select>
-                            <span id="remainingWarehouseReceivedQuantity"></span>
-                        </div>
-
-                        <div class="mb-2" id="modalSellingPriceSection">
-                            <label class="form-label small fw-bold text-muted text-uppercase">
-                                Giá bán
-                                <span class="text-body-tertiary text-lowercase fw-normal">(có thể bỏ trống để giữ nguyên giá hiện tại)</span>
-                            </label>
-                            <input name="SellingPrice" id="modalSellingPrice" class="form-control no-additional-element no-hint"
-                                   data-decimal="currency" value="" inputmode="numeric" />
-                            <div class="small text-muted mt-1">
-                                Giá vốn của lô này: <span id="modalItemUnitCost" class="fw-bold">0</span>
-                            </div>
-                            <div id="modalSellingPriceWarning" class="alert alert-warning mt-2 py-2 small d-none" role="alert">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                <span>Cảnh báo: giá bán nhỏ hơn hoặc bằng giá vốn — bán sẽ bị lỗ.</span>
-                            </div>
-                        </div>
-
-                        <hr class="my-3" />
-                        <div>
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="modalDsToggle" data-testid="po-receive-direct-ship" />
-                                <label class="form-check-label fw-semibold small" for="modalDsToggle">
-                                    <i class="bi bi-send me-1"></i> Giao thẳng cho khách hàng
-                                </label>
-                            </div>
-                            <div id="modalDsSection" class="d-none">
-                                <div id="modalDsLoading" class="text-muted small py-2 d-none">
-                                    <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
-                                </div>
-                                <div id="modalDsEmpty" class="alert alert-warning py-2 small d-none">
-                                    <i class="bi bi-exclamation-circle me-1"></i> Không có đơn hàng phù hợp cho sản phẩm này.
-                                </div>
-                                <div id="modalDsOrderList" class="d-none mb-3">
-                                    <label class="form-label small fw-semibold text-muted text-uppercase">Chọn đơn hàng</label>
-                                    <div id="modalDsOrderItems" class="list-group list-group-flush border rounded ui-max-h-180-scroll"></div>
-                                </div>
-                                <div id="modalDsFields" class="d-none">
-                                    <div class="alert alert-primary py-2 small mb-2" id="modalDsSelectedOrder"></div>
-                                    <div class="mb-2">
-                                        <input type="text" name="DirectShipAddress" id="modalDsAddressInput"
-                                               class="form-control form-control-sm" placeholder="Địa chỉ giao hàng" />
-                                    </div>
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <input type="text" name="DirectShipContactName" id="modalDsContactName"
-                                                   class="form-control form-control-sm" placeholder="Tên người nhận" />
-                                        </div>
-                                        <div class="col-6">
-                                            <input type="text" name="DirectShipContactPhone" id="modalDsContactPhone"
-                                                   class="form-control form-control-sm" placeholder="Số điện thoại" inputmode="tel" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="alert alert-danger py-2 small d-none" id="modalDsError"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 pb-4">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-success" data-testid="po-receive-submit">
-                            Xác nhận nhập kho
-                        </button>
-                    </div>
-                </form>
+<div class="modal fade" id="markDirectShipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content purchaseorder-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bold">@L["PurchaseOrder.MarkDirectShip.Title"]</h5>
+                    <p class="text-muted small mb-0" id="markDsOrderSummary"></p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <input type="hidden" id="markDsAllocationId" />
+                <div class="alert alert-info border-0 small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    @L["PurchaseOrder.MarkDirectShip.HelpText"]
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.Address"] <span class="text-danger">*</span></label>
+                    <textarea id="markDsAddress" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactName"]</label>
+                    <input id="markDsContactName" type="text" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactPhone"] <span class="text-danger">*</span></label>
+                    <input id="markDsContactPhone" type="text" class="form-control" inputmode="tel" />
+                </div>
+                <div id="markDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Btn.Close"]</button>
+                <button type="button" class="btn btn-primary" id="btnMarkDirectShip">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận
+                </button>
             </div>
         </div>
     </div>
+</div>
 
-    var dsPerItem = new System.Collections.Generic.Dictionary<string, object>();
-    foreach (var kvp in Model.DirectShipAllocationsPerItem)
-    {
-        var activeDs = kvp.Value
-            .Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m)
-            .Select(a => new {
-                remaining = a.AllocatedQuantity - a.ReceivedQuantity,
-                label = !string.IsNullOrEmpty(a.DirectShipContactName) ? a.DirectShipContactName : a.DirectShipAddress
-            })
-            .ToList();
-        if (activeDs.Count > 0)
-            dsPerItem[kvp.Key.ToString()] = activeDs;
-    }
-    <script type="application/json" id="receiveItemDsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(dsPerItem))</script>
-
-    var remainingItems = Model.Info.Items.Where(i => i.RemainingQuantity > 0).ToList();
-    var warehouseOptions = Model.AvailableWarehouses.Options.ToList();
-
-    <div class="modal fade" id="bulkReceiveModal" tabindex="-1" aria-hidden="true">
+@if (Model.CanAllocateItems)
+{
+    <div class="modal fade" id="allocateToOrderModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content purchaseorder-modal-content">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">
-                        <i class="bi bi-box-arrow-in-down me-2 text-success"></i>
-                        Nhận hàng cùng lúc
-                    </h5>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Phân bổ cho đơn hàng</h5>
+                        <p class="text-muted small mb-0 mt-1" id="allocateModalItemName"></p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form asp-action="BulkReceive" method="post" id="bulkReceiveForm">
-                    <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
-
-                    <script type="application/json" id="bulkReceiveData">
-                                        {
-                                            "defaultWarehouseId": @Json.Serialize(Model.Info.WarehouseId),
-                                            "items": [
-                                                @for (var idx = 0; idx < remainingItems.Count; idx++)
-                                                {
-                                                            var item = remainingItems[idx];
-                                                            var itemDsRemaining = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
-                                                                ? itemDsAllocs.Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m).Sum(a => a.AllocatedQuantity - a.ReceivedQuantity)
-                                                                : 0m;
-                                                            <text>{
-                                                                        "id": "@item.Id",
-                                                                        "name": @Json.Serialize(item.ProductName),
-                                                                        "remaining": @item.RemainingQuantity.ToString("#0"),
-                                                                        "unitCost": @item.UnitCost.ToString("#0"),
-                                                                        "dsRemaining": @itemDsRemaining.ToString("#0"),
-                                                                        "decimalPlaces": @item.QuantityDecimalPlaces
-                                                                    }@(idx < remainingItems.Count - 1 ? "," : "")</text>
-                                                        }
-                                                    ],
-                                                    "warehouses": [
-                                                        @for (var w = 0; w < warehouseOptions.Count; w++)
-                                                        {
-                                                                    var option = warehouseOptions[w];
-                                                                    <text>{
-                                                                                "id": "@option.Id",
-                                                                                "name": @Json.Serialize(option.Name)
-                                                                            }@(w < warehouseOptions.Count - 1 ? "," : "")</text>
-                                                                }
-                                                            ]
-                                                        }
-                            </script>
-
-                            <div class="modal-body py-3">
-                                <div class="alert alert-info border-0 small mb-3">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Mỗi dòng = một lần nhận: cùng một hàng hóa có thể chia ra nhiều dòng để nhận vào các kho khác nhau.
-                                </div>
-
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
-                                        <thead class="text-muted small text-uppercase">
-                                            <tr>
-                                                <th class="ps-2">Hàng hóa</th>
-                                                <th class="text-end pe-2">Số lượng</th>
-                                                <th class="text-end pe-3">Giá vốn thực tế</th>
-                                                <th class="ps-2">Kho nhận</th>
-                                                <th class="text-end pe-2"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="bulkReceiveTableBody"></tbody>
-                                    </table>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkReceiveAddRow">
-                                        <i class="bi bi-plus-lg me-1"></i> Thêm dòng
-                                    </button>
-                                    <span class="small text-danger d-none" id="bulkReceiveItemsError">
-                                        Vui lòng thêm ít nhất một dòng nhận hàng.
-                                    </span>
-                                </div>
-
-                                <hr class="my-3" />
-
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-medium text-muted" for="bulkAdditionalShipping">
-                                            Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
-                                        </label>
-                                        <input id="bulkAdditionalShipping" name="AdditionalShipping"
-                                               class="form-control" inputmode="numeric"
-                                               data-decimal="currency" value="" placeholder="0" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-medium text-muted d-flex justify-content-between align-items-end" for="bulkAdditionalTax">
-                                            <span>Thuế <span class="text-body-tertiary fw-normal">(tùy chọn)</span></span>
-                                            <div class="btn-group btn-group-sm" role="group" aria-label="Chế độ thuế">
-                                                <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModeAmount" value="amount" checked />
-                                                <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModeAmount">Số tiền</label>
-                                                <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModePercent" value="percent" />
-                                                <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModePercent">%</label>
-                                            </div>
-                                        </label>
-                                        <div class="input-group">
-                                            <input id="bulkAdditionalTaxInput" class="form-control"
-                                                   data-decimal="currency" value="" placeholder="0" inputmode="numeric" />
-                                            <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
-                                        </div>
-                                        <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
-                                        <div class="small text-muted mt-1 d-none" id="bulkAdditionalTaxHint"></div>
-                                    </div>
-                                </div>
-
-                                <hr class="my-3" />
-
-                                <div class="order-summary">
-                                    <div class="order-summary-row">
-                                        <span class="label">Tạm tính đợt nhận</span>
-                                        <span class="value" id="bulkSubtotal">0</span>
-                                    </div>
-                                    <div class="order-summary-row">
-                                        <span class="label">Phí vận chuyển</span>
-                                        <span class="value text-muted" id="bulkShippingDisplay">0</span>
-                                    </div>
-                                    <div class="order-summary-row">
-                                        <span class="label">Thuế</span>
-                                        <span class="value text-muted" id="bulkTaxDisplay">0</span>
-                                    </div>
-                                    <div class="order-summary-row total">
-                                        <span class="label">Cộng dồn vào đơn</span>
-                                        <span class="value" id="bulkGrandTotal">0</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer border-0 pt-0 pb-3">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                                <button type="submit" class="btn btn-success" id="bulkReceiveSubmit">
-                                    <i class="bi bi-check-lg me-1"></i> Xác nhận nhận hàng
-                                </button>
-                            </div>
-                        </form>
+                <div class="modal-body py-3">
+                    <div id="allocateOrderItemsLoading" class="text-center py-4 d-none">
+                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Đang tải...
                     </div>
-                </div>
-            </div>
-        }
-
-        <div class="modal fade" id="editDirectShipAddressModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content purchaseorder-modal-content">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">Sửa địa chỉ giao</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div id="allocateOrderItemsEmpty" class="text-center py-3 text-muted d-none">
+                        <i class="bi bi-inbox me-1"></i> Không có đơn hàng phù hợp.
                     </div>
-                    <div class="modal-body py-4">
-                        <input type="hidden" id="editDsAllocationId" />
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Địa chỉ giao <span class="text-danger">*</span></label>
-                            <textarea id="editDsAddress" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Người nhận</label>
-                            <input id="editDsContactName" type="text" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại <span class="text-danger">*</span></label>
-                            <input id="editDsContactPhone" type="text" class="form-control" inputmode="tel"/>
-                        </div>
-                        <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            Đã cập nhật — vui lòng in lại phiếu giao cho NCC.
-                        </div>
-                        <div id="editDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
+                    <div id="allocateOrderItemsError" class="alert alert-danger d-none"></div>
+                    <div id="allocateOrderItemsTableWrapper" class="d-none">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-2">Đơn hàng</th>
+                                    <th class="ps-2">Khách hàng</th>
+                                    <th class="text-end pe-2">SL đặt</th>
+                                    <th class="text-end pe-2">Khả dụng</th>
+                                    <th class="text-end pe-2">SL phân bổ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allocateOrderItemsBody"></tbody>
+                        </table>
                     </div>
-                    <div class="modal-footer border-0 pt-0 pb-4">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="button" class="btn btn-primary" id="btnSaveDirectShipAddress">
-                            <i class="bi bi-save me-1"></i> Lưu
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade" id="markDirectShipModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content purchaseorder-modal-content">
-                    <div class="modal-header border-0 pb-0">
-                        <div>
-                            <h5 class="modal-title fw-bold">@L["PurchaseOrder.MarkDirectShip.Title"]</h5>
-                            <p class="text-muted small mb-0" id="markDsOrderSummary"></p>
+                    <hr class="my-3" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Giao thẳng</label>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="allocateIsDirectShip" data-testid="po-allocate-direct-ship" />
+                            <label class="form-check-label small" for="allocateIsDirectShip">Đánh dấu là giao thẳng</label>
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body py-4">
-                        <input type="hidden" id="markDsAllocationId" />
-                        <div class="alert alert-info border-0 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            @L["PurchaseOrder.MarkDirectShip.HelpText"]
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.Address"] <span class="text-danger">*</span></label>
-                            <textarea id="markDsAddress" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactName"]</label>
-                            <input id="markDsContactName" type="text" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactPhone"] <span class="text-danger">*</span></label>
-                            <input id="markDsContactPhone" type="text" class="form-control" inputmode="tel" />
-                        </div>
-                        <div id="markDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 pb-4">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Btn.Close"]</button>
-                        <button type="button" class="btn btn-primary" id="btnMarkDirectShip">
-                            <i class="bi bi-send me-1"></i> @L["PurchaseOrder.MarkDirectShip.Submit"]
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if (Model.CanAllocateItems)
-        {
-        <div class="modal fade" id="allocateToOrderModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content purchaseorder-modal-content">
-                    <div class="modal-header border-0 pb-0">
-                        <div>
-                            <h5 class="modal-title fw-bold mb-0">Phân bổ cho đơn hàng</h5>
-                            <p class="text-muted small mb-0 mt-1" id="allocateModalItemName"></p>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body py-3">
-                        <div id="allocateOrderItemsLoading" class="text-center py-4 d-none">
-                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Đang tải...
-                        </div>
-                        <div id="allocateOrderItemsEmpty" class="text-center py-3 text-muted d-none">
-                            <i class="bi bi-inbox me-1"></i> Không có đơn hàng phù hợp.
-                        </div>
-                        <div id="allocateOrderItemsError" class="alert alert-danger d-none"></div>
-                        <div id="allocateOrderItemsTableWrapper" class="d-none">
-                            <table class="table table-sm table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-2">Đơn hàng</th>
-                                        <th class="ps-2">Khách hàng</th>
-                                        <th class="text-end pe-2">SL đặt</th>
-                                        <th class="text-end pe-2">Khả dụng</th>
-                                        <th class="text-end pe-2">SL phân bổ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="allocateOrderItemsBody"></tbody>
-                            </table>
-                        </div>
-
-                        <hr class="my-3" />
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold">Giao thẳng (tùy chọn)</label>
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="allocateIsDirectShip" data-testid="po-allocate-direct-ship" />
-                                <label class="form-check-label small" for="allocateIsDirectShip">Đánh dấu là giao thẳng</label>
-                            </div>
-                            <div id="allocateDirectShipFields" class="d-none">
-                                <div class="mb-2">
+                        <div id="allocateDirectShipFields" class="d-none">
+                            <div class="row g-2">
+                                <div class="col-xl-4 col-lg-12">
                                     <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao" />
                                 </div>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
-                                    </div>
-                                    <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" inputmode="tel"/>
-                                    </div>
+                                <div class="col-xl-4 col-6">
+                                    <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
+                                </div>
+                                <div class="col-xl-4 col-6">
+                                    <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" inputmode="tel" />
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="alert alert-danger d-none" id="allocateSubmitError"></div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 pb-4">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="button" class="btn btn-primary d-none" id="btnAllocateToOrder" data-testid="po-allocate-submit">
-                            <i class="bi bi-check-lg me-1"></i> Xác nhận phân bổ
-                        </button>
-                    </div>
+                    <div class="alert alert-danger d-none" id="allocateSubmitError"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary d-none" id="btnAllocateToOrder" data-testid="po-allocate-submit">
+                        <i class="bi bi-check-all me-1"></i>Xác nhận
+                    </button>
                 </div>
             </div>
         </div>
-        }
+    </div>
+}
 
-    @if (Model.Info.CanReceiveGoods)
-    {
+@if (Model.Info.CanReceiveGoods)
+{
     <div class="modal fade" id="markDsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content purchaseorder-modal-content">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">
-                        <i class="bi bi-send me-2 text-primary"></i>Chuyển sang Giao thẳng
+                        Chuyển sang giao thẳng
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                        <form asp-action="MarkAsDirectShip" asp-controller="DirectShipDelivery" method="post">
+                <form asp-action="MarkAsDirectShip" asp-controller="DirectShipDelivery" method="post">
                     <div class="modal-body">
                         <p class="text-muted small mb-3">Phân bổ cho đơn: <strong id="markDsOrderCode"></strong></p>
-                        <input type="text" id="markDsAllocationId" name="allocationId" class="visually-hidden" data-val="true" data-val-required="Vui lòng chọn phân bổ"/>
+                        <input type="text" id="markDsAllocationId" name="allocationId" class="visually-hidden" data-val="true" data-val-required="Vui lòng chọn phân bổ" />
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Tên người nhận</label>
-                            <input type="text" class="form-control" id="markDsContactName" name="contactName" placeholder="Tên người nhận" 
+                            <input type="text" class="form-control" id="markDsContactName" name="contactName" placeholder="Tên người nhận"
                                    data-val="true" data-val-maxlength="Tên người nhận tối đa 200 ký tự" data-val-maxlength-max="200" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="contactName" data-valmsg-replace="true"></span>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="markDsPhone" name="contactPhone" placeholder="Số điện thoại" inputmode="tel"
-                                data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}" data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
+                                   data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}" data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="contactPhone" data-valmsg-replace="true"></span>
                         </div>
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="markDsAddress" name="address" placeholder="Địa chỉ giao hàng" 
-                                data-val="true" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
+                            <input type="text" class="form-control" id="markDsAddress" name="address" placeholder="Địa chỉ giao hàng"
+                                   data-val="true" data-val-maxlength="Địa chỉ tối đa 500 ký tự" data-val-maxlength-max="500" />
                             <span class="text-danger small field-validation-valid" data-valmsg-for="address" data-valmsg-replace="true"></span>
                         </div>
                     </div>
@@ -790,458 +457,854 @@
             </div>
         </div>
     </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function() {
+            function activatePanel(targetId) {
+                document.querySelectorAll('.workflow-panel').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById(targetId.replace('#', ''));
+                if (target) {
+                    target.classList.add('active');
+                    //target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                document.querySelectorAll('.workflow-step').forEach(s => {
+                    const href = s.getAttribute('href') || '';
+                    s.classList.toggle('active', href === targetId);
+                    s.setAttribute('aria-selected', href === targetId ? 'true' : 'false');
+                });
+            }
+
+            document.querySelectorAll('.workflow-step').forEach(step => {
+                step.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    if (href) activatePanel(href);
+                });
+            });
+
+            // Activate the initial active panel
+            const activeStep = document.querySelector('.workflow-step.active');
+            if (activeStep) {
+                const href = activeStep.getAttribute('href');
+                if (href) {
+                    const target = document.getElementById(href.replace('#', ''));
+                    if (target && !target.classList.contains('active')) {
+                        target.classList.add('active');
+                    }
+                }
+            } else {
+                // Default: show ordering panel
+                const firstPanel = document.getElementById('po-stage-ordering');
+                if (firstPanel) firstPanel.classList.add('active');
+            }
+        })();
+    </script>
+
+    <script type="module" defer>
+        import { confirm } from '/modules/modals.js';
+
+        (function() {
+            document.querySelectorAll('.change-status-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const newStatus = this.dataset.newStatus || '';
+                    const message = this.dataset.confirmText || 'Bạn có chắc chắn muốn thay đổi trạng thái?';
+                    confirm('Xác nhận', message)
+                        .then(confirmed => {
+                            if (confirmed) {
+                                showPageLoading();
+                                this.submit();
+                            }
+                        });
+                });
+            });
+
+            document.getElementById('copyForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                if (!await confirm('Sao chép đơn nhập', 'Tạo đơn nhập mới có hàng hóa, số lượng, giá nhập tương tự'))
+                    return;
+                showPageLoading();
+                e.target.submit();
+            });
+        })();
+    </script>
+
+    <script type="module">
+        import { apiPost } from '/modules/ajax-helper.js';
+
+        //edit direct ship address
+        (function() {
+            const modalElement = document.getElementById('editDirectShipAddressModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = modalElement.querySelector('form');
+
+            document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    modalElement.querySelector('#editDsAllocationId').value = this.dataset.allocationId;
+                    modalElement.querySelector('#editDsAddress').value = this.dataset.address || '';
+                    modalElement.querySelector('#editDsContactName').value = this.dataset.contactName || '';
+                    modalElement.querySelector('#editDsContactPhone').value = this.dataset.contactPhone || '';
+                    modal.show();
+                });
+            });
+
+            form.addEventListener('submit', async e => {
+                e.preventDefault();
+
+                if (!isFormValid(form))
+                    return;
+
+                const btnSubmit = form.querySelector('[type=submit]');
+                btnSubmit.disabled = true;
+                showPageLoading();
+
+                const response = await apiPost('@Url.Action("UpdateAddress", "DirectShipDelivery")', new FormData(form));
+                if (response.success) {
+                    location.reload();
+                    return;
+                }
+                btnSubmit.disabled = false;
+                hidePageLoading();
+            });
+        })();
+
+        const markDirectShipText = {
+            addressRequired: @Json.Serialize(L["Error.DirectShipAddressRequired"].Value),
+            phoneRequired: @Json.Serialize(L["Error.DirectShipContactPhoneRequired"].Value),
+            unexpected: @Json.Serialize(L["Error.UnexpectedError"].Value),
+            network: @Json.Serialize(L["Error.Network"].Value),
+            saving: @Json.Serialize(L["Common.Processing"].Value),
+            submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
+            orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
+            customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
+                                                                                                                                                };
+
+        document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('markDsAllocationId').value = this.dataset.allocationId || '';
+                document.getElementById('markDsAddress').value = this.dataset.shippingAddress || '';
+                document.getElementById('markDsContactName').value = this.dataset.customerName || '';
+                document.getElementById('markDsContactPhone').value = this.dataset.customerPhone || '';
+                document.getElementById('markDsErrorBanner').classList.add('d-none');
+                document.getElementById('markDsErrorBanner').textContent = '';
+                const summaryParts = [];
+                if (this.dataset.orderCode) summaryParts.push(`${markDirectShipText.orderPrefix}: ${this.dataset.orderCode}`);
+                if (this.dataset.customerName) summaryParts.push(`${markDirectShipText.customerPrefix}: ${this.dataset.customerName}`);
+                document.getElementById('markDsOrderSummary').textContent = summaryParts.join(' · ');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('markDirectShipModal')).show();
+            });
+        });
+
+        document.getElementById('btnMarkDirectShip')?.addEventListener('click', async function() {
+            const allocationId = document.getElementById('markDsAllocationId')?.value;
+            const address = document.getElementById('markDsAddress').value.trim();
+            const contactName = document.getElementById('markDsContactName').value.trim();
+            const contactPhone = document.getElementById('markDsContactPhone').value.trim();
+            const errorBanner = document.getElementById('markDsErrorBanner');
+            errorBanner.classList.add('d-none');
+            errorBanner.textContent = '';
+            if (!address) {
+                errorBanner.textContent = markDirectShipText.addressRequired;
+                errorBanner.classList.remove('d-none');
+                return;
+            }
+            if (!contactPhone) {
+                errorBanner.textContent = markDirectShipText.phoneRequired;
+                errorBanner.classList.remove('d-none');
+                return;
+            }
+
+            showPageLoading();
+            const originalHtml = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${markDirectShipText.saving}`;
+            try {
+                const resp = await fetch('/PurchaseOrder/MarkAllocationAsDirectShip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                    body: JSON.stringify({
+                        allocationId,
+                        address,
+                        contactName: contactName || null,
+                        contactPhone,
+                        priority: 0
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    location.reload();
+                    return;
+                }
+                hidePageLoading();
+                errorBanner.textContent = data.message || markDirectShipText.unexpected;
+                errorBanner.classList.remove('d-none');
+            } catch {
+                hidePageLoading();
+                errorBanner.textContent = markDirectShipText.network;
+                errorBanner.classList.remove('d-none');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = originalHtml || `<i class="bi bi-send me-1"></i> ${markDirectShipText.submit}`;
+            }
+        });
+    </script>
+
+    @if (Model.RelatedGoodsReceipts.Count > 0 || Model.RelatedVendorReturns.Count > 0)
+    {
+        <script>
+            // Init popover cho mã phiếu nhận/trả hàng. Bootstrap không auto-init popover.
+            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+                bootstrap.Popover.getOrCreateInstance(el, { container: 'body', sanitize: false });
+            });
+        </script>
     }
 
-        @section Styles {
-    <link rel="stylesheet" href="~/css/pages/purchaseorder-details.css" asp-append-version="true" />
-}
-        @section Scripts {
-            <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        import ProductPicker from '/modules/ProductPicker.js';
+        import { apiGet } from '/modules/ajax-helper.js';
 
-            <script>
-                // Workflow panel switching
-                (function () {
-                    function activatePanel(targetId) {
-                        document.querySelectorAll('.workflow-panel').forEach(p => p.classList.remove('active'));
-                        const target = document.getElementById(targetId.replace('#', ''));
-                        if (target) {
-                            target.classList.add('active');
-                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                        document.querySelectorAll('.workflow-step').forEach(s => {
-                            const href = s.getAttribute('href') || '';
-                            s.classList.toggle('active', href === targetId);
-                            s.setAttribute('aria-selected', href === targetId ? 'true' : 'false');
-                        });
-                    }
+        let productPickerInstance = null;
 
-                    document.querySelectorAll('.workflow-step').forEach(step => {
-                        step.addEventListener('click', function (e) {
-                            e.preventDefault();
-                            const href = this.getAttribute('href');
-                            if (href) activatePanel(href);
-                        });
-                    });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Product Picker for Add Product Modal
+            const addProductModal = document.getElementById('addProductModal');
+            if (addProductModal) {
+                initializeProductPicker();
 
-                    // Activate the initial active panel
-                    const activeStep = document.querySelector('.workflow-step.active');
-                    if (activeStep) {
-                        const href = activeStep.getAttribute('href');
-                        if (href) {
-                            const target = document.getElementById(href.replace('#', ''));
-                            if (target && !target.classList.contains('active')) {
-                                target.classList.add('active');
-                            }
-                        }
-                    } else {
-                        // Default: show ordering panel
-                        const firstPanel = document.getElementById('po-stage-ordering');
-                        if (firstPanel) firstPanel.classList.add('active');
-                    }
-                })();
-            </script>
-
-            <script type="module">
-                import { confirm } from '/modules/modals.js';
-                (function(){
-                    document.querySelectorAll('.change-status-form').forEach(form => {
-                        form.addEventListener('submit', function(e) {
-                            e.preventDefault();
-                            const newStatus = this.dataset.newStatus || '';
-                            const message = this.dataset.confirmText || 'Bạn có chắc chắn muốn thay đổi trạng thái?';
-                            confirm('Xác nhận', message)
-                                .then(confirmed => {
-                                    if (confirmed) {
-                                        showPageLoading();
-                                        this.submit();
-                                    }
-                                });
-                        });
-                    });
-                })();
-            </script>
-
-            <script>
-                document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        document.getElementById('editDsAllocationId').value = this.dataset.allocationId;
-                        document.getElementById('editDsAddress').value = this.dataset.address || '';
-                        document.getElementById('editDsContactName').value = this.dataset.contactName || '';
-                        document.getElementById('editDsContactPhone').value = this.dataset.contactPhone || '';
-                        document.getElementById('editDsSuccessBanner').classList.add('d-none');
-                        document.getElementById('editDsErrorBanner').classList.add('d-none');
-                        bootstrap.Modal.getOrCreateInstance(document.getElementById('editDirectShipAddressModal')).show();
-                    });
+                addProductModal.addEventListener('hidden.bs.modal', function() {
+                    // Reset form when modal closes
+                    resetAddProductForm();
                 });
+            }
 
-                document.getElementById('btnSaveDirectShipAddress')?.addEventListener('click', async function() {
-                    const allocationId = document.getElementById('editDsAllocationId')?.value;
-                    const newAddress = document.getElementById('editDsAddress').value.trim();
-                    const successBanner = document.getElementById('editDsSuccessBanner');
-                    const errorBanner = document.getElementById('editDsErrorBanner');
-                    successBanner.classList.add('d-none');
-                    errorBanner.classList.add('d-none');
-                    if (!newAddress) {
-                        errorBanner.textContent = 'Địa chỉ giao không được để trống.';
-                        errorBanner.classList.remove('d-none');
+            // Handle Add Product Form Submission
+            const addProductForm = document.getElementById('addProductForm');
+            if (addProductForm) {
+                addProductForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    if (!$(this).valid())
                         return;
-                    }
-                    const newContactPhone = document.getElementById('editDsContactPhone').value.trim();
-                    if (!newContactPhone) {
-                        errorBanner.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
-                        errorBanner.classList.remove('d-none');
-                        return;
-                    }
-                    try {
-                        const resp = await fetch('/DirectShipDelivery/UpdateAddress', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
-                            body: JSON.stringify({
-                                allocationId,
-                                newAddress,
-                                newContactName: document.getElementById('editDsContactName').value.trim() || null,
-                                newContactPhone
-                            })
-                        });
-                        const data = await resp.json();
-                        if (data.success) successBanner.classList.remove('d-none');
-                        else { errorBanner.textContent = data.message || 'Có lỗi xảy ra.'; errorBanner.classList.remove('d-none'); }
-                    } catch { errorBanner.textContent = 'Lỗi kết nối.'; errorBanner.classList.remove('d-none'); }
+                    await submitAddProductForm();
                 });
+            }
 
-                const markDirectShipText = {
-                    addressRequired: @Json.Serialize(L["Error.DirectShipAddressRequired"].Value),
-                    phoneRequired: @Json.Serialize(L["Error.DirectShipContactPhoneRequired"].Value),
-                    unexpected: @Json.Serialize(L["Error.UnexpectedError"].Value),
-                    network: @Json.Serialize(L["Error.Network"].Value),
-                    saving: @Json.Serialize(L["Common.Processing"].Value),
-                    submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
-                    orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
-                    customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
-                };
+            // Handle Edit Item Button
+            document.querySelectorAll('.btnEditItem').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const btn = this;
+                    const itemId = btn.dataset.id;
+                    if (!itemId) return;
+                    btn.disabled = true;
+                    showPageLoading();
 
-                document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        document.getElementById('markDsAllocationId').value = this.dataset.allocationId || '';
-                        document.getElementById('markDsAddress').value = this.dataset.shippingAddress || '';
-                        document.getElementById('markDsContactName').value = this.dataset.customerName || '';
-                        document.getElementById('markDsContactPhone').value = this.dataset.customerPhone || '';
-                        document.getElementById('markDsErrorBanner').classList.add('d-none');
-                        document.getElementById('markDsErrorBanner').textContent = '';
-                        const summaryParts = [];
-                        if (this.dataset.orderCode) summaryParts.push(`${markDirectShipText.orderPrefix}: ${this.dataset.orderCode}`);
-                        if (this.dataset.customerName) summaryParts.push(`${markDirectShipText.customerPrefix}: ${this.dataset.customerName}`);
-                        document.getElementById('markDsOrderSummary').textContent = summaryParts.join(' · ');
-                        bootstrap.Modal.getOrCreateInstance(document.getElementById('markDirectShipModal')).show();
-                    });
-                });
+                    const response = await apiGet(`@Url.Action("UpdatePurchaseOrderItem")?id=@Model.Info.Id&itemId=${itemId}`);
 
-                document.getElementById('btnMarkDirectShip')?.addEventListener('click', async function() {
-                    const allocationId = document.getElementById('markDsAllocationId')?.value;
-                    const address = document.getElementById('markDsAddress').value.trim();
-                    const contactName = document.getElementById('markDsContactName').value.trim();
-                    const contactPhone = document.getElementById('markDsContactPhone').value.trim();
-                    const errorBanner = document.getElementById('markDsErrorBanner');
-                    errorBanner.classList.add('d-none');
-                    errorBanner.textContent = '';
-                    if (!address) {
-                        errorBanner.textContent = markDirectShipText.addressRequired;
-                        errorBanner.classList.remove('d-none');
+                    hidePageLoading();
+                    if (!response || (typeof response == 'object' && !response.success))
                         return;
-                    }
-                    if (!contactPhone) {
-                        errorBanner.textContent = markDirectShipText.phoneRequired;
-                        errorBanner.classList.remove('d-none');
+
+                    document.body.insertAdjacentHTML('beforeend', response);
+
+                    const modalElement = document.getElementById('editProductModal');
+                    attachEditEventHandler(modalElement);
+                    DecimalFields.autoWrap(modalElement);
+
+                    modalElement.addEventListener('hidden.bs.modal', () => {
+                        modalElement.remove();
+                    }, { once: true });
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    btn.disabled = false;
+                });
+            });
+
+            function attachEditEventHandler(modalElement) {
+                const form = modalElement.querySelector('form');
+                if (!form) return;
+                reparseForm(form);
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const submitBtn = form.querySelector('[type="submit"]');
+                    submitBtn.disabled = true;
+
+                    if (!isFormValid(form)) {
+                        submitBtn.disabled = false;
                         return;
                     }
 
                     showPageLoading();
-                    const originalHtml = this.innerHTML;
-                    this.disabled = true;
-                    this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${markDirectShipText.saving}`;
-                    try {
-                        const resp = await fetch('/PurchaseOrder/MarkAllocationAsDirectShip', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
-                            body: JSON.stringify({
-                                allocationId,
-                                address,
-                                contactName: contactName || null,
-                                contactPhone,
-                                priority: 0
-                            })
-                        });
-                        const data = await resp.json();
-                        if (data.success) {
-                            location.reload();
-                            return;
-                        }
-                        hidePageLoading();
-                        errorBanner.textContent = data.message || markDirectShipText.unexpected;
-                        errorBanner.classList.remove('d-none');
-                    } catch {
-                        hidePageLoading();
-                        errorBanner.textContent = markDirectShipText.network;
-                        errorBanner.classList.remove('d-none');
-                    } finally {
-                        this.disabled = false;
-                        this.innerHTML = originalHtml || `<i class="bi bi-send me-1"></i> ${markDirectShipText.submit}`;
-                    }
+                    form.submit();
+                    const fieldset = form.querySelector('fieldset');
+                    fieldset.disabled = true;
                 });
-            </script>
-
-            @if (Model.RelatedGoodsReceipts.Count > 0 || Model.RelatedVendorReturns.Count > 0)
-            {
-                <script>
-                    // Init popover cho mã phiếu nhận/trả hàng. Bootstrap không auto-init popover.
-                    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-                        bootstrap.Popover.getOrCreateInstance(el, { container: 'body', sanitize: false });
-                    });
-                </script>
             }
 
-            <script type="module">
-                import ProductPicker from '/modules/ProductPicker.js';
+            // Handle Remove Item Button
+            document.querySelectorAll('.btnRemoveItem').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const itemId = this.getAttribute('data-id');
+                    const purchaseOrderId = this.getAttribute('data-purchaseorder');
+                    const itemName = this.getAttribute('data-name');
 
-                let productPickerInstance = null;
-
-                document.addEventListener('DOMContentLoaded', function() {
-                // Initialize Product Picker for Add Product Modal
-                const addProductModal = document.getElementById('addProductModal');
-                if (addProductModal) {
-                initializeProductPicker();
-
-                addProductModal.addEventListener('hidden.bs.modal', function() {
-                // Reset form when modal closes
-                resetAddProductForm();
+                    if (confirm(`Bạn có chắc chắn muốn xóa "${itemName}" khỏi đơn hàng?`)) {
+                        await removeItem(itemId, purchaseOrderId);
+                    }
                 });
-                }
+            });
+        });
 
-                // Handle Add Product Form Submission
-                const addProductForm = document.getElementById('addProductForm');
-                if (addProductForm) {
-                    addProductForm.addEventListener('submit', async function(e) {
-                        e.preventDefault();
-                        if(!$(this).valid())
-                            return;
-                        await submitAddProductForm();
-                    });
-                }
+        function initializeProductPicker() {
+            const container = document.getElementById('productPicker');
+            if (container && !productPickerInstance) {
+                productPickerInstance = new ProductPicker(container, { purchase: true });
+                productPickerInstance.setVendor('@Model.Info.VendorId', '@Html.Raw(Model.Info.VendorName)');
+                container.addEventListener('select', (e) => {
+                    onProductSelected(e.detail.product);
+                });
+                container.addEventListener('remove', onProductRemove);
 
-                // Initialize Receive Item Modal
-                let itemRemainingQty = 0;
-                let currentDsAvailableQty = 0;
-                let currentDsCustomerName = null;
-                let currentReceivePoItemId = null;
-                const receiveItemModal = document.getElementById('receiveItemModal');
-                let receiveDsAbortController = null;
-				let receiveOriginalPhone = '';
-                let currentUnitMeasurement = '';
+            }
+        }
 
-                const _receiveItemDsData = (() => {
-                    try { return JSON.parse(document.getElementById('receiveItemDsData')?.textContent || '{}'); }
-                    catch { return {}; }
-                })();
-                function _escReceive(s) {
-                    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                }
-                function _parseReceiveQty() {
-                    const el = document.getElementById('modalReceivedQty');
-                    const v = el?.value || '0';
-                    const decimals = parseInt(el?.dataset?.decimals ?? '2', 10);
-                    return (window.DecimalFields?.stripFormatting)
-                        ? parseFloat(DecimalFields.stripFormatting(v, decimals)) || 0
-                        : parseFloat(v.replace(/[^0-9.]/g, '')) || 0;
-                }
-                function syncWarehouseVisibility() {
-                    const warehouseSection = document.getElementById('modalWarehouseSection');
-                    const sellingPriceSection = document.getElementById('modalSellingPriceSection');
-                    if (!warehouseSection) return;
-                    const qty = _parseReceiveQty();
-                    const dsToggle = document.getElementById('modalDsToggle');
-                    // Only hide warehouse when user explicitly enabled DS toggle and qty fully covered
-                    const isDsActive = dsToggle?.checked && currentDsAvailableQty > 0;
-                    const hide = isDsActive && qty > 0 && qty <= currentDsAvailableQty;
-                    warehouseSection.classList.toggle('d-none', hide);
-                    sellingPriceSection?.classList.toggle('d-none', hide);
-                }
-                function toggleDirectShipCheckbox() {
-                    // DS toggle is always available — user decides whether to direct ship
-                }
+        let detailsRecentPrices = [];
 
-                function updateDistributionPreview() {
-                    const preview = document.getElementById('modalDistributionPreview');
-                    const details = document.getElementById('modalDistributionDetails');
-                    if (!preview || !details) return;
-                    const dsToggle = document.getElementById('modalDsToggle');
-                    const qty = _parseReceiveQty();
-                    // Only show distribution preview when user explicitly chose DS via toggle
-                    if (!dsToggle?.checked || currentDsAvailableQty <= 0 || qty <= 0) {
-                        preview.classList.add('d-none');
+        async function onProductSelected(product) {
+            const modalProductInfo = document.getElementById('modalProductInfo');
+            const itemUnitPrice = document.getElementById('itemUnitPrice');
+            const itemProductId = document.getElementById('itemProductId');
+            const btnAddProduct = document.getElementById('btnAddItem');
+
+            modalProductInfo.classList.remove('d-none');
+            itemUnitPrice.value = 0;
+            itemProductId.value = product.id;
+            btnAddProduct.classList.remove('d-none');
+            const itemQtyInput = document.getElementById('itemQuantity');
+            if (itemQtyInput) {
+                const dp = String(product.quantityDecimalPlaces ?? 0);
+                itemQtyInput.dataset.decimals = dp;
+                itemQtyInput.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(itemQtyInput);
+                const addDpInput = document.getElementById('addItemDecimalPlaces');
+                if (addDpInput) addDpInput.value = dp;
+            }
+
+            // Fetch giá nhập gần nhất
+            detailsRecentPrices = [];
+            try {
+                const res = await fetch(`@Url.Action("RecentPurchasePrices")?productId=${product.id}`);
+                if (res.ok) detailsRecentPrices = await res.json();
+            } catch { }
+
+            // VendorId của đơn nhập hiện tại (server-side)
+            const currentVendorId = '@Model.Info.VendorId.ToString()';
+
+            // Tự động điền giá theo NCC đang chọn
+            if (currentVendorId) {
+                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
+                if (match) {
+                    itemUnitPrice.value = match.unitCost;
+                    DecimalFields.autoWrap(itemUnitPrice.closest('div') ?? document.body);
+                }
+            }
+
+            renderDetailsPriceTable(currentVendorId);
+            renderDetailsAutoFillInfo(currentVendorId);
+        }
+
+        function onProductRemove() {
+            const modalProductInfo = document.getElementById('modalProductInfo');
+            const itemUnitPrice = document.getElementById('itemUnitPrice');
+            const itemProductId = document.getElementById('itemProductId');
+            const btnAddProduct = document.getElementById('btnAddItem');
+
+            modalProductInfo.classList.add('d-none');
+            itemUnitPrice.value = 0;
+            itemProductId.value = '';
+            btnAddProduct.classList.add('d-none');
+            detailsRecentPrices = [];
+            document.getElementById('recentPricesHint')?.classList.add('d-none');
+            document.getElementById('recentPricesAutoFillInfo')?.classList.add('d-none');
+        }
+
+        function renderDetailsPriceTable(currentVendorId) {
+            const hintEl = document.getElementById('recentPricesHint');
+            const emptyEl = document.getElementById('recentPricesEmpty');
+            const tableWrapper = document.getElementById('recentPricesTableWrapper');
+            const tbody = document.getElementById('recentPricesTbody');
+            if (!hintEl || !tbody) return;
+
+            hintEl.classList.remove('d-none');
+
+            if (detailsRecentPrices.length === 0) {
+                tableWrapper?.classList.add('d-none');
+                emptyEl?.classList.remove('d-none');
+                return;
+            }
+
+            tableWrapper?.classList.remove('d-none');
+            emptyEl?.classList.add('d-none');
+            tbody.innerHTML = '';
+
+            detailsRecentPrices.forEach(p => {
+                const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
+                const tr = document.createElement('tr');
+                tr.className = isCurrentVendor ? 'table-success' : '';
+                tr.style.cursor = 'pointer';
+                tr.title = `Đơn: ${p.purchaseOrderCode}`;
+                tr.innerHTML = `
+                                                                                                                                                    <td class="ps-0 py-1 text-nowrap">
+                                                                                                                                                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                                                                                                                                                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
+                                                                                                                                                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
+                                                                                                                                                    </td>
+                                                                                                                                                    <td class="text-end py-1 fw-semibold text-nowrap">
+                                                                                                                                                        ${DecimalFields.formatCurrency(String(p.unitCost))}
+                                                                                                                                                    </td>
+                                                                                                                                                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
+
+                tr.addEventListener('click', () => {
+                    const priceInput = document.getElementById('itemUnitPrice');
+                    if (priceInput) {
+                        priceInput.value = p.unitCost;
+                        DecimalFields.autoWrap(priceInput.closest('div') ?? document.body);
+                    }
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDetailsAutoFillInfo(currentVendorId) {
+            const infoEl = document.getElementById('recentPricesAutoFillInfo');
+            const textEl = document.getElementById('recentPricesAutoFillText');
+            if (!infoEl || !textEl) return;
+
+            if (detailsRecentPrices.length === 0) { infoEl.classList.add('d-none'); return; }
+
+            if (currentVendorId) {
+                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
+                if (match) {
+                    textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
+                    infoEl.className = 'small text-success mb-1';
+                    infoEl.classList.remove('d-none');
+                } else {
+                    textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
+                    infoEl.className = 'small text-warning mb-1';
+                    infoEl.classList.remove('d-none');
+                }
+            } else {
+                textEl.textContent = 'Nhấn vào hàng trong bảng bên dưới để chọn giá nhập.';
+                infoEl.className = 'small text-info mb-1';
+                infoEl.classList.remove('d-none');
+            }
+        }
+
+        function escapeHtmlDetails(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function submitAddProductForm() {
+            const form = document.getElementById('addProductForm');
+            showPageLoading();
+            try {
+                const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: $(form).serialize()
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close modal and refresh page
+                    bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
+                    setTimeout(() => location.reload(), 300);
+                } else {
+                    hidePageLoading();
+                    alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
+                }
+            } catch (error) {
+                hidePageLoading();
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi thêm sản phẩm');
+            }
+        }
+
+        function resetAddProductForm() {
+            document.getElementById('itemQuantity').value = '1';
+            document.getElementById('itemUnitPrice').value = '';
+            document.getElementById('modalProductInfo').classList.add('d-none');
+
+            if (productPickerInstance) {
+                productPickerInstance.clear();
+            }
+        }
+
+        function parsePurchaseOrderDecimal(value, scale) {
+            const raw = String(value ?? '').trim();
+            if (!raw) return 0;
+            const stripped = window.DecimalFields?.stripFormatting
+                ? DecimalFields.stripFormatting(raw, scale)
+                : normalizePurchaseOrderDecimal(raw);
+            const parsed = parseFloat(stripped);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function normalizePurchaseOrderDecimal(value) {
+            let normalized = String(value ?? '').replace(/[^0-9,.-]/g, '');
+            if (normalized.includes(',') && normalized.includes('.')) {
+                normalized = normalized.replace(/\./g, '').replace(',', '.');
+            } else if (normalized.includes(',')) {
+                normalized = normalized.replace(',', '.');
+            }
+            return normalized;
+        }
+
+        function showEditProductError(message) {
+            const errorEl = document.getElementById('editProductError');
+            if (!errorEl) return;
+            errorEl.textContent = message;
+            errorEl.classList.remove('d-none');
+        }
+
+        async function removeItem(itemId, purchaseOrderId) {
+            showPageLoading();
+            try {
+                const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        purchaseOrderItemId: itemId,
+                        purchaseOrderId: purchaseOrderId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove row from table
+                    document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
+
+                    // Refresh page after short delay
+                    setTimeout(() => location.reload(), 300);
+                } else {
+                    hidePageLoading();
+                    alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
+                }
+            } catch (error) {
+                hidePageLoading();
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi xóa sản phẩm');
+            }
+        }
+
+    </script>
+
+    <script type="module">
+        import { Vendor, default as VendorPicker } from '/modules/VendorPicker.js';
+
+        (() => {
+            const elementVendorPicker = document.getElementById('vendorPicker');
+            if (!elementVendorPicker)
+                return;
+
+            let editPurchaseOrderState = {
+
+            };
+            function setState(patch) {
+                const newState = Object.assign({}, editPurchaseOrderState, patch);
+                editPurchaseOrderState = newState;
+                renderState();
+            }
+            function renderState() {
+                getEl('VendorId').value = editPurchaseOrderState.vendor?.id ?? '';
+            }
+
+            const { vendorPicker, vendor } = bindVendorPicker();
+
+            setState({ vendor });
+
+            function bindVendorPicker() {
+                const vendorPicker = new VendorPicker(elementVendorPicker);
+
+                elementVendorPicker.addEventListener('select', (e) => {
+                    setState({ vendor: e.detail?.vendor ? new Vendor(e.detail.vendor) : null });
+                });
+                elementVendorPicker.addEventListener('remove', () => {
+                    setState({ vendor: null });
+                });
+
+                const initialVendor = elementVendorPicker.dataset;
+                if (initialVendor.id) {
+                    var vendor = new Vendor(initialVendor);
+                    vendorPicker.displayVendor(vendor);
+                    return { vendorPicker, vendor: initialVendor };
+                }
+                return { vendorPicker, vendor: null };
+            }
+        })();
+    </script>
+
+    @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
+    {
+        <script type="module" defer>
+            import BulkReceiveController from '/modules/BulkReceiveController.js';
+            import { apiGet } from '/modules/ajax-helper.js';
+            import { initImageUploaders } from '/modules/image-uploader.js';
+
+            const bulkReceiveBtn = document.getElementById('btnBulkReceiveItems');
+            bulkReceiveBtn.addEventListener('click', async () => {
+                bulkReceiveBtn.disabled = true;
+                showPageLoading();
+
+                const response = await apiGet('@Url.Action("BulkReceiveItems", new { id = Model.Info.Id })');
+
+                hidePageLoading();
+                if (!response || (typeof response == 'object' && !response.success))
+                    return;
+
+                document.body.insertAdjacentHTML('beforeend', response);
+
+                const modalElement = document.getElementById('bulkReceiveModal');
+                new BulkReceiveController('@Model.Info.Id').init(modalElement);
+
+                modalElement.addEventListener('hidden.bs.modal', () => {
+                    modalElement.remove();
+                }, { once: true });
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+
+                bulkReceiveBtn.disabled = false;
+            });
+
+            const receiveItemBtns = document.querySelectorAll('.receives-item-btn[data-item-id]');
+            receiveItemBtns.forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const poItemId = btn.dataset.itemId;
+                    const unitMeasurement = btn.dataset.unit || '';
+                    const quantityDecimalPlaces = btn.dataset.decimalPlaces || 0;
+
+                    if (!poItemId)
+                        throw new Error('ItemId required');
+
+                    btn.disabled = true;
+                    showPageLoading();
+
+                    const response = await apiGet(`@(Url.Action("ReceivesItem", new { id = Model.Info.Id }))?itemId=${poItemId}`);
+
+                    hidePageLoading();
+                    if (!response || (typeof response == 'object' && !response.success))
                         return;
-                    }
-                    let rem = qty;
-                    const rows = [];
-                    const dsQty = Math.min(rem, currentDsAvailableQty);
-                    if (dsQty > 0) {
-                        const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(dsQty)) : dsQty;
-                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(currentDsCustomerName)}</span></div>`);
-                        rem -= dsQty;
-                    }
-                    if (rem > 0) {
-                        const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(rem)) : rem;
-                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-secondary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-building me-1"></i>Nhập kho</span></div>`);
-                    }
-                    details.innerHTML = rows.join('');
-                    preview.classList.remove('d-none');
-                }
 
-                if (receiveItemModal) {
-                    receiveItemModal.addEventListener('show.bs.modal', function(event) {
-                        const button = event.relatedTarget;
-                        const itemId = button.getAttribute('data-item-id');
-                        const itemName = button.getAttribute('data-item-name');
-                        const remainingRaw = button.getAttribute('data-item-remaining');
-                        const remaining = DecimalFields.formatQuantity(remainingRaw);
-                        const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
-                        const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
-                        currentUnitMeasurement = button.getAttribute('data-unit') ? ' ' + button.getAttribute('data-unit') : '';
+                    document.body.insertAdjacentHTML('beforeend', response);
 
-                        currentReceivePoItemId = itemId;
-                        document.getElementById('modalItemId').value = itemId;
-                        document.getElementById('modalItemName').innerText = itemName;
-                        document.getElementById('modalItemRemaining').innerText = remaining + currentUnitMeasurement;
-                        const receivedQtyInput = document.getElementById('modalReceivedQty');
-                        receivedQtyInput.value = remaining;
-                        receivedQtyInput.max = remainingRaw;
-                        const receiveDecimalPlaces = parseInt(button.getAttribute('data-decimalplaces') || '0', 10);
-                        receivedQtyInput.dataset.decimals = String(receiveDecimalPlaces);
-                        receivedQtyInput.dataset.decimalBound = '';
-                        window.DecimalFields?.bindInput?.(receivedQtyInput);
-                        const modalDpInput = document.getElementById('modalDecimalPlaces');
-                        if (modalDpInput) modalDpInput.value = receiveDecimalPlaces;
-                        itemRemainingQty = parseFloat(remainingRaw) || 0;
-                        document.getElementById('oversupplyWarningPanel').classList.add('d-none');
-                        document.getElementById('modalOversupplyAction').value = '';
-                        document.getElementById('oversupplyCancel').checked = true;
-                        document.getElementById('remainingWarehouseReceivedQuantity').textContent = '';
-
-                        // Reset DS section and distribution preview
-                        document.getElementById('modalDistributionPreview')?.classList.add('d-none');
-                        currentDsAvailableQty = 0;
-                        currentDsCustomerName = null;
-                        receiveOriginalPhone = '';
-                        document.getElementById('modalDsToggle').checked = false;
-                        document.getElementById('modalDsSection').classList.add('d-none');
-                        document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
-                        document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
-                        document.getElementById('modalDsOrderItemId').value = '';
-                        document.getElementById('modalDsOrderId').value = '';
-                        document.getElementById('modalDsExistingAllocationId').value = '';
-                        document.getElementById('modalDsAddressInput').value = '';
-                        document.getElementById('modalDsContactName').value = '';
-                        document.getElementById('modalDsContactPhone').value = '';
-                        document.getElementById('modalDsOrderList').classList.add('d-none');
-                        document.getElementById('modalDsFields').classList.add('d-none');
-                        document.getElementById('modalDsEmpty').classList.add('d-none');
-                        document.getElementById('modalDsError').classList.add('d-none');
-
-                        // Pre-fill selling price with current UnitPrice; display unit cost for reference
-                        const sellingPriceInput = document.getElementById('modalSellingPrice');
-                        const unitCostDisplay = document.getElementById('modalItemUnitCost');
-                        sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
-                        sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
-                        unitCostDisplay.innerText = DecimalFields.formatCurrencyWithSymbol(String(Math.trunc(unitCostRaw)));
-                        updateSellingPriceWarning();
-                        toggleDirectShipCheckbox();
-                        updateDistributionPreview();
-                        syncWarehouseVisibility();
+                    const modalElement = document.getElementById('receiveItemModal');
+                    new ReceiveItemController('@Model.Info.Id').init(modalElement, {
+                        itemId: poItemId,
+                        unitMeasurement,
+                        quantityDecimalPlaces
                     });
 
-                    // DS toggle
-                    document.getElementById('modalDsToggle')?.addEventListener('change', function () {
-                        const section = document.getElementById('modalDsSection');
-                        if (this.checked) {
-                            section.classList.remove('d-none');
-							loadReceiveDsItems(currentReceivePoItemId);
+                    modalElement.addEventListener('hidden.bs.modal', () => {
+                        modalElement.remove();
+                    }, { once: true });
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    btn.disabled = false;
+                });
+            });
+
+            class ReceiveItemController{
+                #poId;
+                #poItemId;
+
+                #root;
+
+                #form;
+                #receivedOn;
+
+                #directShipController;
+                #unitMeasurement;
+                #quantityDecimalPlaces;
+
+                constructor(poId) {
+                    this.#poId = poId;
+                }
+
+                init(root, info) {
+                    if(!info.itemId)
+                        throw new Error('Item ID requried');
+
+                    this.#poItemId = info.itemId;
+                    this.#unitMeasurement = info.unitMeasurement;
+                    this.#quantityDecimalPlaces = info.quantityDecimalPlaces;
+
+                    this.#root = root;
+                    this.#bindElements();
+                    this.#bindEvents();
+
+                    this.#directShipController = new ReceiveDirectShipController(this.#root, this.#poId, this.#poItemId, this.#unitMeasurement, this.#quantityDecimalPlaces);
+
+                    DecimalFields.autoWrap(this.#form);
+                    initImageUploaders(this.#form);
+                    initFlatPickrDateTime(this.#receivedOn);
+                    reparseForm(this.#form);
+                }
+                #bindElements() {
+                    this.#form = this.#root.querySelector('form');
+                    this.#receivedOn = this.#root.querySelector('#receiveReceivedOn');
+                }
+                #bindEvents(){
+                    this.#root.querySelector('#modalDsToggle')?.addEventListener('change', async (e) => {
+                        if (e.target.checked) {
+                            await this.#directShipController.load();
                         } else {
-                            section.classList.add('d-none');
-                            currentDsAvailableQty = 0;
-                            currentDsCustomerName = null;
-                            document.getElementById('modalDsOrderItemId').value = '';
-                            document.getElementById('modalDsOrderId').value = '';
-                            document.getElementById('modalDsExistingAllocationId').value = '';
-                            receiveOriginalPhone = '';
+                            this.#directShipController.reset();
                         }
-						syncWarehouseVisibility();
-						toggleDirectShipCheckbox();
-						updateDistributionPreview();
+                        reparseForm(this.#form);
                     });
+                    this.#form.addEventListener('submit', e => {
+                        e.preventDefault();
+                        if(!isFormValid(this.#form))
+                            return;
+                        showPageLoading();
+                        this.#form.submit();
+                    });
+                }
+           }
 
-                    // Warning when selling price <= unit cost (lỗ)
-                    const sellingPriceInput = document.getElementById('modalSellingPrice');
-                    if (sellingPriceInput) {
-                        sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
-                        sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
-                    }
+            class ReceiveDirectShipController {
+                #poId;
+                #poItemId;
+                #unitMeasurement;
+                #quantityDecimalPlaces;
+
+                #root;
+                #form;
+
+                #dsOrderId;
+                #dsOrderItemId;
+                #dsExistingAllocationId;
+
+                #modalDsToggle;
+                #modalDsSection;
+                #dsAbortRequestController;
+
+                constructor(root, poId, poItemId, unitMeasurement, quantityDecimalPlaces) {
+                    this.#poId = poId;
+                    this.#poItemId = poItemId;
+                    this.#unitMeasurement = unitMeasurement;
+                    this.#quantityDecimalPlaces = quantityDecimalPlaces;
+
+                    this.#root = root;
+                    this.#form = this.#root.querySelector('form');
+                    this.#dsOrderId = this.#root.querySelector('#modalDsOrderId');
+                    this.#dsOrderItemId = this.#root.querySelector('#modalDsOrderItemId');
+                    this.#dsExistingAllocationId = this.#root.querySelector('#modalDsExistingAllocationId');
+
+                    this.#modalDsToggle = this.#root.querySelector('#modalDsToggle');
+                    this.#modalDsSection = this.#root.querySelector('#modalDsSection');
                 }
 
-                async function loadReceiveDsItems(poItemId) {
-                    receiveDsAbortController?.abort();
-                    receiveDsAbortController = new AbortController();
-                    const signal = receiveDsAbortController.signal;
+                reset() {
+                    this.#modalDsSection.classList.add('d-none');
+                    this.#dsOrderId.value = '';
+                    this.#dsOrderItemId.value = '';
+                    this.#dsExistingAllocationId.value = '';
+                }
+                 
+                async load() {
+                    [this.eligible, this.nonDs] = await this.#requestData();
+                    this.#render();
+                }
+                async #requestData() {
                     const loading = document.getElementById('modalDsLoading');
                     const empty = document.getElementById('modalDsEmpty');
                     const list = document.getElementById('modalDsOrderList');
-                    const items = document.getElementById('modalDsOrderItems');
                     const fields = document.getElementById('modalDsFields');
                     const errorBox = document.getElementById('modalDsError');
+
                     loading.classList.remove('d-none');
                     empty.classList.add('d-none');
                     list.classList.add('d-none');
                     fields.classList.add('d-none');
                     errorBox.classList.add('d-none');
-                    try {
-                        const [resp1, resp2] = await Promise.all([
-                            fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal }),
-                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=@(Model.Info.Id)&purchaseOrderItemId=${poItemId}`, { signal })
-                        ]);
-                        if (!resp1.ok || !resp2.ok) throw new Error('Lỗi tải dữ liệu');
-                        const [eligible, nonDs] = await Promise.all([resp1.json(), resp2.json()]);
-                        loading.classList.add('d-none');
-                        if ((!eligible || !eligible.length) && (!nonDs || !nonDs.length)) {
-                            empty.classList.remove('d-none');
-                            return;
-                        }
-                        items.innerHTML = '';
 
+                    this.#dsAbortRequestController?.abort();
+                    this.#dsAbortRequestController = new AbortController();
+                    const signal = this.#dsAbortRequestController.signal;
+
+                    try {
+                        const [eligibleResponse, nonDirectShipResponse] = await Promise.all([
+                            apiGet(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${this.#poId}&purchaseOrderItemId=${this.#poItemId}`, { signal }),
+                            apiGet(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderId=${this.#poId}&purchaseOrderItemId=${this.#poItemId}`, { signal })
+                        ]);
+                        if (!eligibleResponse.success || !nonDirectShipResponse.success)
+                            throw new Error('Lỗi tải dữ liệu');
+
+                        loading.classList.add('d-none');
+
+                        const [eligible, nonDs] = [eligibleResponse.data, nonDirectShipResponse.data];
+                        return [eligible, nonDs];
+                    } catch (err) {
+                        if (err.name === 'AbortError') return;
+                        loading.classList.add('d-none');
+                        errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
+                        errorBox.classList.remove('d-none');
+                    }
+                    return [];
+                }
+                #render(){
+                    const eligible = this.eligible || [];
+                    const nonDs = this.nonDs || [];
+
+                    this.#modalDsSection.classList.remove('d-none');
+
+                    const empty = document.getElementById('modalDsEmpty');
+                    if ((!eligible.length) && (!nonDs.length)) {
+                        empty.classList.remove('d-none');
+                        return;
+                    }
+
+                    const list = document.getElementById('modalDsOrderList');
+                    const items = document.getElementById('modalDsOrderItems');
+                    const fields = document.getElementById('modalDsFields');
+
+                    list.classList.remove('d-none');
+                    items.innerHTML = '';
                         function selectDsItem(availableQty, shippingAddress, customerName, customerPhone) {
                             document.querySelectorAll('#modalDsOrderItems .list-group-item-action').forEach(el => el.classList.remove('active'));
                             document.getElementById('modalDsAddressInput').value = shippingAddress;
                             document.getElementById('modalDsContactName').value = customerName;
                             document.getElementById('modalDsContactPhone').value = customerPhone;
-                            receiveOriginalPhone = customerPhone;
                             fields.classList.remove('d-none');
-                            currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(availableQty), 2)) || 0;
-                            currentDsCustomerName = customerName;
-                            syncWarehouseVisibility();
-                            toggleDirectShipCheckbox();
-                            updateDistributionPreview();
-                        }
+                         }
 
                         if (eligible && eligible.length) {
                             const hdr = document.createElement('div');
                             hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
-                            hdr.textContent = 'Tạo phân bổ mới + Giao thẳng';
+                            hdr.textContent = 'Đơn bán';
                             items.appendChild(hdr);
-                            eligible.forEach(function(order) {
+                            eligible.forEach(order => {
                                 const btn = document.createElement('button');
                                 btn.type = 'button';
                                 btn.className = 'list-group-item list-group-item-action py-2 px-3';
                                 btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
-                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                                </div>`;
+                                        <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                        <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate, this.#quantityDecimalPlaces)} ${this.#unitMeasurement}</span>
+                                    </div>`;
                                 btn.addEventListener('click', function() {
                                     btn.classList.add('active');
                                     document.getElementById('modalDsOrderId').value = order.orderId;
@@ -1258,16 +1321,16 @@
                         if (nonDs && nonDs.length) {
                             const hdr = document.createElement('div');
                             hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
-                            hdr.textContent = 'Nâng cấp giao thẳng (phân bổ hiện có)';
+                            hdr.textContent = 'Chuyển thành giao thẳng';
                             items.appendChild(hdr);
-                            nonDs.forEach(function(alloc) {
+                            nonDs.forEach(alloc => {
                                 const btn = document.createElement('button');
                                 btn.type = 'button';
                                 btn.className = 'list-group-item list-group-item-action py-2 px-3';
                                 btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
-                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
-                                </div>`;
+                                        <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                        <span class="badge bg-warning text-light ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty, this.#quantityDecimalPlaces)} ${this.#unitMeasurement}</span>
+                                    </div>`;
                                 btn.addEventListener('click', function() {
                                     btn.classList.add('active');
                                     document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
@@ -1280,682 +1343,194 @@
                                 items.appendChild(btn);
                             });
                         }
-
-                        list.classList.remove('d-none');
-                    } catch (err) {
-                        if (err.name === 'AbortError') return;
-                        loading.classList.add('d-none');
-                        errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
-                        errorBox.classList.remove('d-none');
-                    }
                 }
-
-                const modalQtyInput = document.getElementById('modalReceivedQty');
-                if (modalQtyInput) {
-					modalQtyInput.addEventListener('change', function () {
-						const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-							? parseFloat(DecimalFields.stripFormatting(this.value, 2)) || 0
-							: parseFloat((this.value || '').replace(/[^0-9.]/g, '')) || 0;
-						const panel = document.getElementById('oversupplyWarningPanel');
-						if (val > itemRemainingQty && itemRemainingQty > 0) {
-							panel.classList.remove('d-none');
-						} else {
-							panel.classList.add('d-none');
-							document.getElementById('modalOversupplyAction').value = '';
-						}
-                        toggleDirectShipCheckbox();
-						updateDistributionPreview();
-						syncWarehouseVisibility();
-					});
-                }
-
-                const receiveItemForm = receiveItemModal?.querySelector('form');
-                if (receiveItemForm) {
-                receiveItemForm.addEventListener('submit', function (e) {
-                const _rqEl = document.getElementById('modalReceivedQty');
-                const _rqDecimals = parseInt(_rqEl?.dataset?.decimals ?? '2', 10);
-                const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? parseFloat(DecimalFields.stripFormatting(_rqEl.value, _rqDecimals)) || 0
-                    : parseFloat((_rqEl?.value || '').replace(/[^0-9.]/g, '')) || 0;
-                if (val > itemRemainingQty && itemRemainingQty > 0) {
-                const choice = document.querySelector('input[name="oversupplyChoice"]:checked')?.value;
-                if (!choice || choice === 'Cancel') {
-                e.preventDefault();
-                bootstrap.Modal.getInstance(receiveItemModal)?.hide();
-                return;
-                }
-                document.getElementById('modalOversupplyAction').value = choice;
-                }
-                const dsToggle = document.getElementById('modalDsToggle');
-                if (dsToggle && dsToggle.checked) {
-                const dsOrderItemId = document.getElementById('modalDsOrderItemId').value;
-                const dsExistingAllocationId = document.getElementById('modalDsExistingAllocationId').value;
-                const dsAddress = document.getElementById('modalDsAddressInput').value.trim();
-                const errorBox = document.getElementById('modalDsError');
-                if (!dsOrderItemId && !dsExistingAllocationId) {
-                    e.preventDefault();
-                    errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
-                    errorBox.classList.remove('d-none');
-                    return;
-                }
-                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
-                if (!currentPhone) {
-                    e.preventDefault();
-                    errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
-                    errorBox.classList.remove('d-none');
-                    return;
-                }
-                if (!dsAddress) {
-                    e.preventDefault();
-                    errorBox.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
-                    errorBox.classList.remove('d-none');
-                    return;
-                }
-                if (receiveOriginalPhone && currentPhone !== receiveOriginalPhone) {
-                    if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${receiveOriginalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
-                        e.preventDefault();
-                        return;
-                    }
-                }
-                }
-                });
-                }
-
-                function updateSellingPriceWarning() {
-                const sellingPriceInput = document.getElementById('modalSellingPrice');
-                const warningBox = document.getElementById('modalSellingPriceWarning');
-                if (!sellingPriceInput || !warningBox) return;
-                // Currency format trên UI là "3.400.000" (dấu chấm phân cách nghìn) — không có phần thập phân.
-                const stripped = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? DecimalFields.stripFormatting(sellingPriceInput.value)
-                    : (sellingPriceInput.value || '').toString().replace(/[^0-9]/g, '');
-                const unitCost = parseFloat(sellingPriceInput.getAttribute('data-unit-cost')) || 0;
-                const sellingPrice = parseFloat(stripped);
-                if (!isNaN(sellingPrice) && sellingPrice > 0 && sellingPrice <= unitCost) {
-                warningBox.classList.remove('d-none');
-                } else {
-                warningBox.classList.add('d-none');
-                }
-                }
-
-                // Handle Edit Item Button
-                document.querySelectorAll('.btnEditItem').forEach(btn => {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const modal = document.getElementById('editProductModal');
-                        if (!modal) return;
-                        document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
-                        document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
-                        document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
-                        const editQtyInput = document.getElementById('editItemQuantity');
-                        editQtyInput.value = this.getAttribute('data-quantity') || '';
-                        const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
-                        editQtyInput.dataset.decimals = String(editDecimalPlaces);
-                        editQtyInput.dataset.decimalBound = '';
-                        document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
-                        document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
-                        document.getElementById('editProductError')?.classList.add('d-none');
-                        window.DecimalFields?.autoWrap?.(modal);
-
-                        new bootstrap.Modal(modal).show();
-                    });
-                });
-
-                document.getElementById('editProductForm')?.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-
-                    const errorEl = document.getElementById('editProductError');
-                    const submitBtn = document.getElementById('btnEditItemSubmit');
-                    errorEl?.classList.add('d-none');
-
-                    const payload = {
-                        purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
-                        purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
-                        quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
-                        unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
-                        note: document.getElementById('editItemNote')?.value || null
-                    };
-
-                    if (!payload.quantity || payload.quantity <= 0) {
-                        showEditProductError('Số lượng phải lớn hơn 0.');
-                        return;
-                    }
-                    if (payload.unitCost < 0) {
-                        showEditProductError('Đơn giá không được âm.');
-                        return;
-                    }
-
-                    submitBtn.disabled = true;
-                    const originalHtml = submitBtn.innerHTML;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
-                    showPageLoading();
-
-                    try {
-                        const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-                            },
-                            body: JSON.stringify(payload)
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
-                            setTimeout(() => location.reload(), 300);
-                            return;
-                        }
-                        hidePageLoading();
-                        showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
-                    } catch (error) {
-                        hidePageLoading();
-                        console.error('Error:', error);
-                        showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
-                    } finally {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalHtml;
-                    }
-                });
-
-                // Handle Remove Item Button
-                document.querySelectorAll('.btnRemoveItem').forEach(btn => {
-                btn.addEventListener('click', async function(e) {
-                e.preventDefault();
-                const itemId = this.getAttribute('data-id');
-                const purchaseOrderId = this.getAttribute('data-purchaseorder');
-                const itemName = this.getAttribute('data-name');
-
-                if (confirm(`Bạn có chắc chắn muốn xóa "${itemName}" khỏi đơn hàng?`)) {
-                await removeItem(itemId, purchaseOrderId);
-                }
-                });
-                });
-                });
-
-                function initializeProductPicker() {
-                const container = document.getElementById('productPicker');
-                if (container && !productPickerInstance) {
-                productPickerInstance = new ProductPicker(container, { purchase: true });
-                productPickerInstance.setVendor('@Model.Info.VendorId', '@Html.Raw(Model.Info.VendorName)');
-                container.addEventListener('select', (e) => {
-                onProductSelected(e.detail.product);
-                });
-                container.addEventListener('remove', onProductRemove);
-
-                }
-                }
-
-                let detailsRecentPrices = [];
-
-                async function onProductSelected(product) {
-                const modalProductInfo = document.getElementById('modalProductInfo');
-                const itemUnitPrice = document.getElementById('itemUnitPrice');
-                const itemProductId = document.getElementById('itemProductId');
-                const btnAddProduct = document.getElementById('btnAddItem');
-
-                modalProductInfo.classList.remove('d-none');
-                itemUnitPrice.value = 0;
-                itemProductId.value = product.id;
-                btnAddProduct.classList.remove('d-none');
-                const itemQtyInput = document.getElementById('itemQuantity');
-                if (itemQtyInput) {
-                    const dp = String(product.quantityDecimalPlaces ?? 0);
-                    itemQtyInput.dataset.decimals = dp;
-                    itemQtyInput.dataset.decimalBound = '';
-                    window.DecimalFields?.bindInput?.(itemQtyInput);
-                    const addDpInput = document.getElementById('addItemDecimalPlaces');
-                    if (addDpInput) addDpInput.value = dp;
-                }
-
-                // Fetch giá nhập gần nhất
-                detailsRecentPrices = [];
-                try {
-                const res = await fetch(`@Url.Action("RecentPurchasePrices")?productId=${product.id}`);
-                if (res.ok) detailsRecentPrices = await res.json();
-                } catch {}
-
-                // VendorId của đơn nhập hiện tại (server-side)
-                const currentVendorId = '@Model.Info.VendorId.ToString()';
-
-                // Tự động điền giá theo NCC đang chọn
-                if (currentVendorId) {
-                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
-                if (match) {
-                itemUnitPrice.value = match.unitCost;
-                DecimalFields.autoWrap(itemUnitPrice.closest('div') ?? document.body);
-                }
-                }
-
-                renderDetailsPriceTable(currentVendorId);
-                renderDetailsAutoFillInfo(currentVendorId);
-                }
-
-                function onProductRemove() {
-                const modalProductInfo = document.getElementById('modalProductInfo');
-                const itemUnitPrice = document.getElementById('itemUnitPrice');
-                const itemProductId = document.getElementById('itemProductId');
-                const btnAddProduct = document.getElementById('btnAddItem');
-
-                modalProductInfo.classList.add('d-none');
-                itemUnitPrice.value = 0;
-                itemProductId.value = '';
-                btnAddProduct.classList.add('d-none');
-                detailsRecentPrices = [];
-                document.getElementById('recentPricesHint')?.classList.add('d-none');
-                document.getElementById('recentPricesAutoFillInfo')?.classList.add('d-none');
-                }
-
-                function renderDetailsPriceTable(currentVendorId) {
-                const hintEl = document.getElementById('recentPricesHint');
-                const emptyEl = document.getElementById('recentPricesEmpty');
-                const tableWrapper = document.getElementById('recentPricesTableWrapper');
-                const tbody = document.getElementById('recentPricesTbody');
-                if (!hintEl || !tbody) return;
-
-                hintEl.classList.remove('d-none');
-
-                if (detailsRecentPrices.length === 0) {
-                tableWrapper?.classList.add('d-none');
-                emptyEl?.classList.remove('d-none');
-                return;
-                }
-
-                tableWrapper?.classList.remove('d-none');
-                emptyEl?.classList.add('d-none');
-                tbody.innerHTML = '';
-
-                detailsRecentPrices.forEach(p => {
-                const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
-                const tr = document.createElement('tr');
-                tr.className = isCurrentVendor ? 'table-success' : '';
-                tr.style.cursor = 'pointer';
-                tr.title = `Đơn: ${p.purchaseOrderCode}`;
-                tr.innerHTML = `
-                    <td class="ps-0 py-1 text-nowrap">
-                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
-                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
-                        <div class="text-muted ui-fs-072">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
-                    </td>
-                    <td class="text-end py-1 fw-semibold text-nowrap">
-                        ${DecimalFields.formatCurrency(String(p.unitCost))}
-                    </td>
-                    <td class="text-end py-1 text-muted text-nowrap ui-fs-075">${escapeHtmlDetails(p.purchaseDate)}</td>`;
-
-                tr.addEventListener('click', () => {
-                const priceInput = document.getElementById('itemUnitPrice');
-                if (priceInput) {
-                priceInput.value = p.unitCost;
-                DecimalFields.autoWrap(priceInput.closest('div') ?? document.body);
-                }
-                });
-                tbody.appendChild(tr);
-                });
-                }
-
-                function renderDetailsAutoFillInfo(currentVendorId) {
-                const infoEl = document.getElementById('recentPricesAutoFillInfo');
-                const textEl = document.getElementById('recentPricesAutoFillText');
-                if (!infoEl || !textEl) return;
-
-                if (detailsRecentPrices.length === 0) { infoEl.classList.add('d-none'); return; }
-
-                if (currentVendorId) {
-                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
-                if (match) {
-                textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
-                infoEl.className = 'small text-success mb-1';
-                infoEl.classList.remove('d-none');
-                } else {
-                textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
-                infoEl.className = 'small text-warning mb-1';
-                infoEl.classList.remove('d-none');
-                }
-                } else {
-                textEl.textContent = 'Nhấn vào hàng trong bảng bên dưới để chọn giá nhập.';
-                infoEl.className = 'small text-info mb-1';
-                infoEl.classList.remove('d-none');
-                }
-                }
-
-                function escapeHtmlDetails(str) {
-                return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                }
-
-                async function submitAddProductForm() {
-                    const form = document.getElementById('addProductForm');
-                    showPageLoading();
-                    try {
-                        const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: $(form).serialize()
-                        });
-
-                        const data = await response.json();
-
-                        if (data.success) {
-                            // Close modal and refresh page
-                            bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
-                            setTimeout(() => location.reload(), 300);
-                        } else {
-                            hidePageLoading();
-                            alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
-                        }
-                    } catch (error) {
-                        hidePageLoading();
-                        console.error('Error:', error);
-                        alert('Có lỗi xảy ra khi thêm sản phẩm');
-                    }
-                }
-
-                function resetAddProductForm() {
-                    document.getElementById('itemQuantity').value = '1';
-                    document.getElementById('itemUnitPrice').value = '';
-                    document.getElementById('modalProductInfo').classList.add('d-none');
-
-                    if (productPickerInstance) {
-                        productPickerInstance.clear();
-                    }
-                }
-
-                function parsePurchaseOrderDecimal(value, scale) {
-                const raw = String(value ?? '').trim();
-                if (!raw) return 0;
-                const stripped = window.DecimalFields?.stripFormatting
-                    ? DecimalFields.stripFormatting(raw, scale)
-                    : normalizePurchaseOrderDecimal(raw);
-                const parsed = parseFloat(stripped);
-                return isNaN(parsed) ? 0 : parsed;
-                }
-
-                function normalizePurchaseOrderDecimal(value) {
-                let normalized = String(value ?? '').replace(/[^0-9,.-]/g, '');
-                if (normalized.includes(',') && normalized.includes('.')) {
-                normalized = normalized.replace(/\./g, '').replace(',', '.');
-                } else if (normalized.includes(',')) {
-                normalized = normalized.replace(',', '.');
-                }
-                return normalized;
-                }
-
-                function showEditProductError(message) {
-                const errorEl = document.getElementById('editProductError');
-                if (!errorEl) return;
-                errorEl.textContent = message;
-                errorEl.classList.remove('d-none');
-                }
-
-                async function removeItem(itemId, purchaseOrderId) {
-                    showPageLoading();
-                    try {
-                        const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-                            },
-                            body: JSON.stringify({
-                                purchaseOrderItemId: itemId,
-                                purchaseOrderId: purchaseOrderId
-                            })
-                        });
-
-                        const data = await response.json();
-
-                        if (data.success) {
-                            // Remove row from table
-                            document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
-
-                            // Refresh page after short delay
-                            setTimeout(() => location.reload(), 300);
-                        } else {
-                            hidePageLoading();
-                            alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
-                        }
-                    } catch (error) {
-                        hidePageLoading();
-                        console.error('Error:', error);
-                        alert('Có lỗi xảy ra khi xóa sản phẩm');
-                    }
-                }
-
-            </script>
-            <script type="module">
-                import {Vendor, default as VendorPicker} from '/modules/VendorPicker.js';
-
-                (() => {
-                    const elementVendorPicker = document.getElementById('vendorPicker');
-                    if (!elementVendorPicker)
-                        return;
-
-                    let editPurchaseOrderState = {
-
-                    };
-                    function setState(patch){
-                        const newState = Object.assign({}, editPurchaseOrderState, patch);
-                        editPurchaseOrderState = newState;
-                        renderState();
-                    }
-                    function renderState() {
-                        getEl('VendorId').value = editPurchaseOrderState.vendor?.id ?? '';
-                    }
-
-                    const {vendorPicker, vendor} = bindVendorPicker();
-
-                    setState({ vendor });
-
-                    function bindVendorPicker() {
-                        const vendorPicker = new VendorPicker(elementVendorPicker);
-
-                        elementVendorPicker.addEventListener('select', (e) => {
-                            setState({ vendor: e.detail?.vendor ? new Vendor(e.detail.vendor) : null });
-                        });
-                        elementVendorPicker.addEventListener('remove', () => {
-                             setState({ vendor: null });
-                        });
-
-                        const initialVendor = elementVendorPicker.dataset;
-                        if (initialVendor.id) {
-                            var vendor = new Vendor(initialVendor);
-                            vendorPicker.displayVendor(vendor);
-                            return {vendorPicker, vendor: initialVendor};
-                        }
-                        return {vendorPicker, vendor: null};
-                    }
-                })();
-            </script>
-            @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
-            {
-                <script type="module">
-                    import BulkReceiveController from '/modules/BulkReceiveController.js';
-
-                    document.addEventListener('DOMContentLoaded', () => {
-                        const modalEl = document.getElementById('bulkReceiveModal');
-                        if (!modalEl) return;
-                        new BulkReceiveController('@Model.Info.Id').init(modalEl);
-                    });
-                </script>
             }
-            @if (Model.CanAllocateItems)
-            {
-                <script>
-                (function () {
-                    const modal = document.getElementById('allocateToOrderModal');
-                    if (!modal) return;
+        </script>
+    }
 
-                    let currentPoId = null;
-                    let currentPoItemId = null;
-                    let selectedRow = null;
-                    let originalPhone = '';
+    @if (Model.CanAllocateItems)
+    {
+        <script type="module">
+            import { apiGet } from '/modules/ajax-helper.js';
 
-                    function fmtQty(n) {
-                        return window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(n) : String(n);
+            (function() {
+                const modal = document.getElementById('allocateToOrderModal');
+                if (!modal) return;
+
+                let currentPoId = null;
+                let currentPoItemId = null;
+                let selectedRow = null;
+                let originalPhone = '';
+
+                function fmtQty(n) {
+                    return window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(n) : String(n);
+                }
+                function parseQty(v) {
+                    if (!v) return 0;
+                    const s = window.DecimalFields?.stripFormatting
+                        ? DecimalFields.stripFormatting(String(v), 2)
+                        : String(v).replace(/[^0-9.,]/g, '').replace(',', '.');
+                    const n = parseFloat(s);
+                    return isNaN(n) ? 0 : n;
+                }
+
+                document.addEventListener('click', function(e) {
+                    const btn = e.target.closest('.btn-allocate-to-order');
+                    if (!btn) return;
+                    currentPoId = btn.dataset.purchaseId;
+                    currentPoItemId = btn.dataset.itemId;
+                    selectedRow = null;
+                    document.getElementById('allocateModalItemName').textContent = btn.dataset.itemName || '';
+                    document.getElementById('allocateOrderItemsError').classList.add('d-none');
+                    document.getElementById('allocateSubmitError').classList.add('d-none');
+                    document.getElementById('allocateOrderItemsTableWrapper').classList.add('d-none');
+                    document.getElementById('allocateOrderItemsEmpty').classList.add('d-none');
+                    document.getElementById('allocateOrderItemsLoading').classList.remove('d-none');
+                    document.getElementById('btnAllocateToOrder').classList.add('d-none');
+                    document.getElementById('allocateIsDirectShip').checked = false;
+                    document.getElementById('allocateDirectShipFields').classList.add('d-none');
+                    document.getElementById('allocateDsAddress').value = '';
+                    document.getElementById('allocateDsContact').value = '';
+                    document.getElementById('allocateDsPhone').value = '';
+                    originalPhone = '';
+                    new bootstrap.Modal(modal).show();
+                    loadEligibleItems(currentPoItemId);
+                });
+
+                document.getElementById('allocateIsDirectShip')?.addEventListener('change', function() {
+                    document.getElementById('allocateDirectShipFields').classList.toggle('d-none', !this.checked);
+                    if (this.checked && selectedRow) {
+                        prefillDsFromRow(selectedRow);
                     }
-                    function parseQty(v) {
-                        if (!v) return 0;
-                        const s = window.DecimalFields?.stripFormatting
-                            ? DecimalFields.stripFormatting(String(v), 2)
-                            : String(v).replace(/[^0-9.,]/g, '').replace(',', '.');
-                        const n = parseFloat(s);
-                        return isNaN(n) ? 0 : n;
-                    }
-
-                    document.addEventListener('click', function (e) {
-                        const btn = e.target.closest('.btn-allocate-to-order');
-                        if (!btn) return;
-                        currentPoId = btn.dataset.purchaseId;
-                        currentPoItemId = btn.dataset.itemId;
-                        selectedRow = null;
-                        document.getElementById('allocateModalItemName').textContent = btn.dataset.itemName || '';
-                        document.getElementById('allocateOrderItemsError').classList.add('d-none');
-                        document.getElementById('allocateSubmitError').classList.add('d-none');
-                        document.getElementById('allocateOrderItemsTableWrapper').classList.add('d-none');
-                        document.getElementById('allocateOrderItemsEmpty').classList.add('d-none');
-                        document.getElementById('allocateOrderItemsLoading').classList.remove('d-none');
-                        document.getElementById('btnAllocateToOrder').classList.add('d-none');
-                        document.getElementById('allocateIsDirectShip').checked = false;
-                        document.getElementById('allocateDirectShipFields').classList.add('d-none');
-                        document.getElementById('allocateDsAddress').value = '';
-                        document.getElementById('allocateDsContact').value = '';
-                        document.getElementById('allocateDsPhone').value = '';
+                    if (!this.checked) {
                         originalPhone = '';
-                        new bootstrap.Modal(modal).show();
-                        loadEligibleItems(currentPoItemId);
-                    });
-
-                    document.getElementById('allocateIsDirectShip')?.addEventListener('change', function () {
-                        document.getElementById('allocateDirectShipFields').classList.toggle('d-none', !this.checked);
-                        if (this.checked && selectedRow) {
-                            prefillDsFromRow(selectedRow);
-                        }
-                        if (!this.checked) {
-                            originalPhone = '';
-                        }
-                    });
-
-                    function loadEligibleItems(poItemId) {
-                        fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${currentPoId}&purchaseOrderItemId=${poItemId}`)
-                            .then(r => r.json())
-                            .then(items => {
-                                document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
-                                if (!items || items.length === 0) {
-                                    document.getElementById('allocateOrderItemsEmpty').classList.remove('d-none');
-                                    return;
-                                }
-                                const tbody = document.getElementById('allocateOrderItemsBody');
-                                tbody.innerHTML = '';
-                                items.forEach(item => {
-                                    const tr = document.createElement('tr');
-                                    tr.style.cursor = 'pointer';
-                                    tr.dataset.orderItemId = item.orderItemId;
-                                    tr.dataset.orderId = item.orderId;
-                                    tr.dataset.available = item.availableToAllocate;
-                                    tr.dataset.shippingAddress = item.shippingAddress || '';
-                                    tr.dataset.customerPhone = item.customerPhone || '';
-                                    tr.dataset.customerName = item.customerName || '';
-                                    tr.innerHTML = `
-                                        <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                        <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
-                                        <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
-                                        <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
-                                        <td class="pe-2">
-                                            <div class="d-flex align-items-center justify-content-end">
-                                                <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
-                                                       data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
-                                           </div>
-                                        </td>`;
-                                    tbody.appendChild(tr);
-                                    window.DecimalFields?.autoWrap?.(tr);
-                                    tr.addEventListener('click', e => {
-                                        if (e.target.closest('input')) return;
-                                        selectRow(tr);
-                                    });
-                                    tr.querySelector('input')?.addEventListener('focus', () => selectRow(tr));
-                                });
-                                document.getElementById('allocateOrderItemsTableWrapper').classList.remove('d-none');
-                            })
-                            .catch(() => {
-                                document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
-                                const err = document.getElementById('allocateOrderItemsError');
-                                err.textContent = 'Lỗi tải danh sách đơn hàng.';
-                                err.classList.remove('d-none');
-                            });
                     }
+                });
 
-                    function prefillDsFromRow(tr) {
-                        document.getElementById('allocateDsAddress').value = tr.dataset.shippingAddress || '';
-                        document.getElementById('allocateDsContact').value = tr.dataset.customerName || '';
-                        document.getElementById('allocateDsPhone').value = tr.dataset.customerPhone || '';
-                        originalPhone = tr.dataset.customerPhone || '';
-                    }
+                function loadEligibleItems(poItemId) {
+                    apiGet(`/PurchaseOrder/EligibleOrderItems?purchaseOrderId=${currentPoId}&purchaseOrderItemId=${poItemId}`)
+                        .then(response => {
+                            if (!response.success)
+                                throw new Error('Lỗi tải danh sách đơn hàng.');
 
-                    function selectRow(tr) {
-                        if (selectedRow) selectedRow.classList.remove('table-primary');
-                        selectedRow = tr;
-                        tr.classList.add('table-primary');
-                        document.getElementById('btnAllocateToOrder').classList.remove('d-none');
-                        if (document.getElementById('allocateIsDirectShip').checked) {
-                            prefillDsFromRow(tr);
-                        }
-                    }
-
-                    document.getElementById('btnAllocateToOrder')?.addEventListener('click', function () {
-                        if (!selectedRow || !currentPoItemId) return;
-                        const orderId = selectedRow.dataset.orderId;
-                        const orderItemId = selectedRow.dataset.orderItemId;
-                        const available = parseFloat(selectedRow.dataset.available) || 0;
-                        const qtyInput = selectedRow.querySelector('.allocate-qty-input');
-                        const qty = parseQty(qtyInput?.value);
-                        const errEl = document.getElementById('allocateSubmitError');
-                        errEl.classList.add('d-none');
-
-                        if (qty <= 0 || qty > available + 1e-9) {
-                            errEl.textContent = `Số lượng không hợp lệ (tối đa ${fmtQty(available)}).`;
-                            errEl.classList.remove('d-none');
-                            return;
-                        }
-
-                        const isDs = document.getElementById('allocateIsDirectShip').checked;
-                        const address = document.getElementById('allocateDsAddress').value.trim();
-                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
-                        if (isDs && !currentPhone) {
-                            errEl.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
-                            errEl.classList.remove('d-none');
-                            return;
-                        }
-                        if (isDs && !address) {
-                            errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
-                            errEl.classList.remove('d-none');
-                            return;
-                        }
-
-                        if (isDs && originalPhone && currentPhone !== originalPhone) {
-                            if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${originalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
+                            const items = response.data;
+                            document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
+                            if (!items || items.length === 0) {
+                                document.getElementById('allocateOrderItemsEmpty').classList.remove('d-none');
                                 return;
                             }
-                        }
-
-                        const btn = this;
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
-                        showPageLoading();
-
-                        fetch('/PurchaseOrder/AllocateToOrder', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
-                            body: JSON.stringify({
-                                purchaseOrderId: currentPoId,
-                                purchaseOrderItemId: currentPoItemId,
-                                orderItemId: orderItemId,
-                                orderId: orderId,
-                                quantity: qty,
-                                directShipAddress: isDs ? address : null,
-                                directShipContactName: isDs ? document.getElementById('allocateDsContact').value.trim() || null : null,
-                                directShipContactPhone: isDs ? document.getElementById('allocateDsPhone').value.trim() || null : null
-                            })
+                            const tbody = document.getElementById('allocateOrderItemsBody');
+                            tbody.innerHTML = '';
+                            items.forEach(item => {
+                                const tr = document.createElement('tr');
+                                tr.style.cursor = 'pointer';
+                                tr.dataset.orderItemId = item.orderItemId;
+                                tr.dataset.orderId = item.orderId;
+                                tr.dataset.available = item.availableToAllocate;
+                                tr.dataset.shippingAddress = item.shippingAddress || '';
+                                tr.dataset.customerPhone = item.customerPhone || '';
+                                tr.dataset.customerName = item.customerName || '';
+                                tr.innerHTML = `
+                                                <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                                <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                                <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                                <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                                <td class="pe-2">
+                                                    <div class="d-flex align-items-center justify-content-end">
+                                                        <input type="text" class="form-control form-control-sm text-end allocate-qty-input ui-w-90 d-inline-block" inputmode="decimal"
+                                                               data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" />
+                                                   </div>
+                                                </td>`;
+                                tbody.appendChild(tr);
+                                window.DecimalFields?.autoWrap?.(tr);
+                                tr.addEventListener('click', e => {
+                                    if (e.target.closest('input')) return;
+                                    selectRow(tr);
+                                });
+                                tr.querySelector('input')?.addEventListener('focus', () => selectRow(tr));
+                            });
+                            document.getElementById('allocateOrderItemsTableWrapper').classList.remove('d-none');
                         })
+                        .catch(() => {
+                            document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
+                            const err = document.getElementById('allocateOrderItemsError');
+                            err.textContent = 'Lỗi tải danh sách đơn hàng.';
+                            err.classList.remove('d-none');
+                        });
+                }
+
+                function prefillDsFromRow(tr) {
+                    document.getElementById('allocateDsAddress').value = tr.dataset.shippingAddress || '';
+                    document.getElementById('allocateDsContact').value = tr.dataset.customerName || '';
+                    document.getElementById('allocateDsPhone').value = tr.dataset.customerPhone || '';
+                    originalPhone = tr.dataset.customerPhone || '';
+                }
+
+                function selectRow(tr) {
+                    if (selectedRow) selectedRow.classList.remove('table-primary');
+                    selectedRow = tr;
+                    tr.classList.add('table-primary');
+                    document.getElementById('btnAllocateToOrder').classList.remove('d-none');
+                    if (document.getElementById('allocateIsDirectShip').checked) {
+                        prefillDsFromRow(tr);
+                    }
+                }
+
+                document.getElementById('btnAllocateToOrder')?.addEventListener('click', function() {
+                    if (!selectedRow || !currentPoItemId) return;
+                    const orderId = selectedRow.dataset.orderId;
+                    const orderItemId = selectedRow.dataset.orderItemId;
+                    const available = parseFloat(selectedRow.dataset.available) || 0;
+                    const qtyInput = selectedRow.querySelector('.allocate-qty-input');
+                    const qty = parseQty(qtyInput?.value);
+                    const errEl = document.getElementById('allocateSubmitError');
+                    errEl.classList.add('d-none');
+
+                    if (qty <= 0 || qty > available + 1e-9) {
+                        errEl.textContent = `Số lượng không hợp lệ (tối đa ${fmtQty(available)}).`;
+                        errEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    const isDs = document.getElementById('allocateIsDirectShip').checked;
+                    const address = document.getElementById('allocateDsAddress').value.trim();
+                    const currentPhone = document.getElementById('allocateDsPhone').value.trim();
+                    if (isDs && !currentPhone) {
+                        errEl.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                        errEl.classList.remove('d-none');
+                        return;
+                    }
+                    if (isDs && !address) {
+                        errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
+                        errEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    if (isDs && originalPhone && currentPhone !== originalPhone) {
+                        if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${originalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
+                            return;
+                        }
+                    }
+
+                    const btn = this;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+                    showPageLoading();
+
+                    fetch('/PurchaseOrder/AllocateToOrder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+                        body: JSON.stringify({
+                            purchaseOrderId: currentPoId,
+                            purchaseOrderItemId: currentPoItemId,
+                            orderItemId: orderItemId,
+                            orderId: orderId,
+                            quantity: qty,
+                            directShipAddress: isDs ? address : null,
+                            directShipContactName: isDs ? document.getElementById('allocateDsContact').value.trim() || null : null,
+                            directShipContactPhone: isDs ? document.getElementById('allocateDsPhone').value.trim() || null : null
+                        })
+                    })
                         .then(r => r.json())
                         .then(result => {
                             if (result.success) {
@@ -1976,15 +1551,16 @@
                             btn.disabled = false;
                             btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Xác nhận phân bổ';
                         });
-                    });
+                });
 
-                    function escHtml(s) {
-                        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                    }
-                })();
-                </script>
-            }
-    @if(Model.AllocationsPerItem.Values.Any(allocations => allocations.Count > 0))
+                function escHtml(s) {
+                    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                }
+            })();
+        </script>
+    }
+
+    @if (Model.AllocationsPerItem.Values.Any(allocations => allocations.Count > 0))
     {
         <script type="module">
             import { apiPost } from '/modules/ajax-helper.js';
@@ -1993,7 +1569,7 @@
             document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.btn-release-allocate').forEach(btn => {
                     btn.addEventListener('click', async () => {
-                        const { purchaseId, itemId} = btn.dataset;
+                        const { purchaseId, itemId } = btn.dataset;
                         if (!purchaseId || !itemId) return;
                         if (!await confirm('Hủy phân bổ', 'Bạn có chắc chắn muốn hủy phân bổ này?')) return;
                         btn.disabled = true;
@@ -2012,23 +1588,24 @@
                 });
             });
         </script>
+    }
 
     @if (Model.Info.CanReceiveGoods)
     {
         <script>
-            (function () {
+            (function() {
                 const markDsModal = document.getElementById('markDsModal');
                 if (!markDsModal) return;
-                markDsModal.addEventListener('show.bs.modal', function (e) {
+                markDsModal.addEventListener('show.bs.modal', function(e) {
                     const btn = e.relatedTarget;
                     markDsModal.querySelector('#markDsAllocationId').value = btn.dataset.allocationId;
                     markDsModal.querySelector('#markDsOrderCode').textContent = btn.dataset.orderCode;
-                    markDsModal.querySelector('#markDsAddress').value = '';
-                    markDsModal.querySelector('#markDsPhone').value = '';
-                    markDsModal.querySelector('#markDsContactName').value = '';
+                    markDsModal.querySelector('#markDsAddress').value = btn.dataset.address;
+                    markDsModal.querySelector('#markDsPhone').value = btn.dataset.phone;
+                    markDsModal.querySelector('#markDsContactName').value = btn.dataset.customer;
                 });
 
-                markDsModal.querySelector('form')?.addEventListener('submit', async function (e) {
+                markDsModal.querySelector('form')?.addEventListener('submit', async function(e) {
                     e.preventDefault();
 
                     if (!$(this).valid())
@@ -2064,136 +1641,92 @@
 
     @if (Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
     {
-        var splittableItems = Model.Info.Items.Where(i => i.QuantityOrdered - i.QuantityReceived > 0).ToList();
-        <div class="modal fade" id="splitPOModal" tabindex="-1" aria-labelledby="splitPOModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="splitPOModalLabel">
-                            <i class="bi bi-scissors me-2 text-secondary"></i>Chia đơn nhập <strong>@Model.Info.Code</strong>
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted small mb-3">
-                            Nhập số lượng chuyển sang đơn mới (PO2). Phần còn lại ở lại đơn hiện tại (PO1).
-                            Để trống hoặc nhập 0 để giữ nguyên.
-                        </p>
-                        <div class="table-responsive">
-                            <table class="table data-table align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end ui-w-120">Đặt hàng</th>
-                                        <th class="text-end ui-w-120">Đã nhận</th>
-                                        <th class="text-end ui-w-150">Chuyển sang PO2</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var si in splittableItems)
-                                    {
-                                        var available = si.QuantityOrdered - si.QuantityReceived;
-                                        <tr data-item-id="@si.Id" data-item-available="@available">
-                                            <td class="ps-3 fw-medium">@si.ProductName</td>
-                                            <td class="text-end text-muted">@si.QuantityOrdered.DisplayQuantity()</td>
-                                            <td class="text-end text-muted">
-                                                @if (si.QuantityReceived > 0)
-                                                {
-                                                    <span class="status-badge warning py-1">@si.QuantityReceived.DisplayQuantity()</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted fst-italic small">—</span>
-                                                }
-                                            </td>
-                                            <td class="text-end pe-3">
-                                                <input type="number" class="form-control form-control-sm text-end split-qty-input ui-w-100 ms-auto"
-                                                       min="0" max="@available" step="1" value="0" inputmode="decimal" />
-                                                <div class="small text-muted mt-1">Tối đa: @available.DisplayQuantity()</div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="splitErrorMsg" class="alert alert-danger mt-3 d-none small"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="button" class="btn btn-primary" id="btnConfirmSplit">
-                            <i class="bi bi-scissors me-1"></i>Chia đơn
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <script type="module" defer>
+            import { apiGet } from '/modules/ajax-helper.js';
 
-        <script>
-            (function () {
-                document.getElementById('btnConfirmSplit').addEventListener('click', async function () {
+            (function() {
+                document.getElementById('btnSplitPurchaseOrder').addEventListener('click', async function(e) {
+                    e.preventDefault();
                     const btn = this;
-                    const errEl = document.getElementById('splitErrorMsg');
-                    errEl.classList.add('d-none');
+                    btn.disabled = true;
+                    showPageLoading();
 
-                    const items = [];
-                    document.querySelectorAll('#splitPOModal tr[data-item-id]').forEach(row => {
-                        const qty = parseFloat(row.querySelector('.split-qty-input').value) || 0;
-                        const available = parseFloat(row.dataset.itemAvailable);
-                        if (qty > available) {
-                            errEl.textContent = `Số lượng không được vượt quá số lượng khả dụng.`;
-                            errEl.classList.remove('d-none');
+                    const response = await apiGet(`@Url.Action("SplitsPurchaseOrder")?id=@(Model.Info.Id)`);
+
+                    hidePageLoading();
+                    if (!response || (typeof response == 'object' && !response.success))
+                        return;
+
+                    document.body.insertAdjacentHTML('beforeend', response);
+
+                    const modalElement = document.getElementById('splitPurchaseOrderModal');
+                    attachEditEventHandler(modalElement);
+                    DecimalFields.autoWrap(modalElement);
+
+                    modalElement.addEventListener('hidden.bs.modal', () => {
+                        modalElement.remove();
+                    }, { once: true });
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    btn.disabled = false;
+                });
+                function attachEditEventHandler(modalElement) {
+                    const form = modalElement.querySelector('form');
+                    if (!form) return;
+                    reparseForm(form);
+                    form.addEventListener('submit', e => {
+                        e.preventDefault();
+                        if (!isFormValid(form)) return;
+
+                        let hasPositiveQuantity = false;
+                        form.querySelectorAll('.split-qty-input').forEach(inputQty => {
+                            const qty = DecimalFields.getValue(inputQty);
+                            if (qty > 0) {
+                                hasPositiveQuantity = true;
+                            }
+                        });
+                        if (!hasPositiveQuantity) {
+                            NotificationCenter.warning('Vui lòng nhập số lượng mặt hàng cần chia');
                             return;
                         }
-                        if (qty > 0) {
-                            items.push({ itemId: row.dataset.itemId, quantity: qty });
-                        }
+
+                        form.querySelector('[type="submit"]').disabled = true;
+                        showPageLoading();
+                        form.submit();
+                        form.querySelector('fieldset').disabled = true;
                     });
-
-                    if (errEl.textContent) return;
-
-                    if (items.length === 0) {
-                        errEl.textContent = 'Vui lòng nhập số lượng cho ít nhất một mặt hàng.';
-                        errEl.classList.remove('d-none');
-                        return;
-                    }
-
-                    btn.disabled = true;
-                    try {
-                        const resp = await fetch('@Url.Action("Split", "PurchaseOrder")', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ purchaseOrderId: '@Model.Info.Id', items })
-                        });
-                        const data = await resp.json();
-                        if (data.success) {
-                            window.location.href = '/PurchaseOrder/Details/' + data.data.newPurchaseOrderId;
-                        } else {
-                            errEl.textContent = data.message || 'Có lỗi xảy ra.';
-                            errEl.classList.remove('d-none');
-                        }
-                    } catch {
-                        errEl.textContent = 'Có lỗi xảy ra.';
-                        errEl.classList.remove('d-none');
-                    } finally {
-                        btn.disabled = false;
-                    }
-                });
+                }
             })();
         </script>
     }
 
-    @if (Model.CanModifyInfo && Model.ModifyInfo?.CanChangeVendor == true)
+    @if (Model.CanModifyInfo && Model.ModifyInfo != null)
     {
-        <script type="module">
+        <script type="module" defer>
             import VendorPicker from '/modules/VendorPicker.js';
+
             const modal = document.getElementById('poEditInfoModal');
+
             if (modal) {
+                const form = modal.querySelector('form');
+                form?.addEventListener('submit', e => {
+                    e.preventDefault();
+                    if (!isFormValid(form))
+                        return;
+                    showPageLoading();
+                    form.submit();
+                });
+
                 let picker = null;
                 modal.addEventListener('shown.bs.modal', () => {
                     if (picker) return;
+
                     const el = modal.querySelector('#vendorPicker');
                     if (!el) return;
+
                     picker = new VendorPicker(el);
+
                     const hiddenInput = modal.querySelector('input[name="VendorId"]');
                     el.addEventListener('select', e => {
                         if (hiddenInput) hiddenInput.value = e.detail?.vendor?.id ?? '';
@@ -2204,6 +1737,5 @@
                 });
             }
         </script>
-    }
     }
 }

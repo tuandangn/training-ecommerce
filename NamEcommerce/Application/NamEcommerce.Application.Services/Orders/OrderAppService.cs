@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -146,7 +145,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         if (!product.ProductVendors.Any())
         {
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(dto.ProductId).ConfigureAwait(false);
+            var (availableQuantity, _) = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(dto.ProductId).ConfigureAwait(false);
             if (availableQuantity < dto.Quantity)
             {
                 return new AddOrderItemResultAppDto
@@ -277,7 +276,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
         if (product.ProductVendors.Count == 0)
         {
             var needCheckQuantity = Math.Max(0, dto.Quantity - orderItem.Quantity);
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(orderItem.ProductId).ConfigureAwait(false);
+            var (availableQuantity, _) = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(orderItem.ProductId).ConfigureAwait(false);
             if (availableQuantity < dto.Quantity)
             {
                 return new UpdateOrderItemResultAppDto
@@ -479,26 +478,15 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        try
+        await orderManager.CompleteOrderAsync(new CompleteOrderDto
         {
-            await orderManager.CompleteOrderAsync(new CompleteOrderDto
-            {
-                OrderId = dto.OrderId
-            }).ConfigureAwait(false);
+            OrderId = dto.OrderId
+        }).ConfigureAwait(false);
 
-            return new CompleteOrderResultAppDto
-            {
-                Success = true
-            };
-        }
-        catch (NamEcommerceDomainException ex)
+        return new CompleteOrderResultAppDto
         {
-            return new CompleteOrderResultAppDto
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true
+        };
     }
 
     public async Task<OrderAppDto?> GetOrderByIdAsync(Guid id)
@@ -592,7 +580,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 continue;
 
             var requestedQuantity = itemGroup.Sum(item => item.Quantity);
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            var (availableQuantity, _) = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
             if (availableQuantity < requestedQuantity)
             {
                 return new CreateOrderResultAppDto
@@ -619,7 +607,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
             {
                 ProductId = orderItem.ProductId,
                 Quantity = orderItem.Quantity,
-                UnitPrice = orderItem.UnitPrice
+                UnitPrice = orderItem.UnitPrice,
+                WarehouseId = orderItem.WarehouseId
             });
         }
 
@@ -743,50 +732,48 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
     public async Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto)
     {
-        try
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var hasBlockingDeliveryNotes = await deliveryNoteDataReader.AnyAsync(new NotDirectShipDeliveryNotesOfOrderSpec(
+            dto.OrderId, [DeliveryNoteStatus.Cancelled, DeliveryNoteStatus.Confirmed, DeliveryNoteStatus.Draft])).ConfigureAwait(false);
+        if (hasBlockingDeliveryNotes)
         {
-            var hasBlockingDeliveryNotes = deliveryNoteDataReader.DataSource
-                .Any(d => d.OrderId == dto.OrderId
-                    && d.Status != DeliveryNoteStatus.Cancelled
-                    && (d.SourceType != DeliveryNoteSourceType.DirectShipToCustomer
-                        || d.Status != DeliveryNoteStatus.Confirmed));
-            if (hasBlockingDeliveryNotes)
+            return new CancelOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.OrderCannotCancel_Processing"
+            };
+        }
+
+        var hasReceivedDirectShipAllocations = await directShipManager
+            .HasReceivedDirectShipAllocationsAsync(dto.OrderId)
+            .ConfigureAwait(false);
+        if (hasReceivedDirectShipAllocations)
+        {
+            if (!dto.ReturnWarehouseId.HasValue || dto.ReturnWarehouseId == Guid.Empty)
+            {
                 return new CancelOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Error.OrderCannotCancel_Processing"
+                    ErrorMessage = "Error.OrderCancelling.WarehouseRequired"
                 };
-
-            var hasReceivedDirectShipAllocations = await directShipManager
-                .HasReceivedDirectShipAllocationsAsync(dto.OrderId)
-                .ConfigureAwait(false);
-            if (hasReceivedDirectShipAllocations)
-            {
-                if (!dto.ReturnWarehouseId.HasValue || dto.ReturnWarehouseId == Guid.Empty)
-                    return new CancelOrderResultAppDto
-                    {
-                        Success = false,
-                        ErrorMessage = "Vui lòng chọn kho nhận hàng trả về."
-                    };
-
-                await directShipManager.HandleSoCancelledForReceivedDirectShipAsync(
-                    dto.OrderId,
-                    dto.ReturnWarehouseId.Value,
-                    Guid.Empty,
-                    $"Đơn bán {dto.OrderId} bị hủy — chuyển hàng giao thẳng về kho đã chọn").ConfigureAwait(false);
             }
-
-            await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)
-            {
-                FullyReceivedAllocationIds = []
-            }).ConfigureAwait(false);
-
-            return new CancelOrderResultAppDto { Success = true };
         }
-        catch (NamEcommerceDomainException ex)
+
+        if (hasReceivedDirectShipAllocations)
         {
-            return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
+            await directShipManager.HandleSoCancelledForReceivedDirectShipAsync(
+                dto.OrderId, dto.ReturnWarehouseId!.Value, Guid.Empty, string.Empty).ConfigureAwait(false);
         }
+
+        //*TODO* handle paid order cancelling
+        await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)
+        {
+            //*TODO*
+            FullyReceivedAllocationIds = []
+        }).ConfigureAwait(false);
+
+        return new CancelOrderResultAppDto { Success = true };
     }
 
     public async Task<decimal> GetRemainShippingQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)
@@ -805,4 +792,5 @@ public sealed class OrderAppService(IOrderManager orderManager,
         var newRemainingQuantity = Math.Max(0, orderItem.Quantity - shippedQuantity);
         return newRemainingQuantity;
     }
+
 }
